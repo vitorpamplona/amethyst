@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="Layer_1"
+   data-name="Layer 1"
+   viewBox="0 0 511.99999 512.00001"
+   version="1.1"
+   sodipodi:docname="amethyst_squared_noborder.svg"
+   width="512"
+   height="512"
+   inkscape:version="1.2.2 (b0a84865, 2022-12-01)"
+   inkscape:export-filename="amethyst_squared_white.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview1064"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.3788937"
+     inkscape:cx="270.50671"
+     inkscape:cy="218.65355"
+     inkscape:window-width="1581"
+     inkscape:window-height="1205"
+     inkscape:window-x="439"
+     inkscape:window-y="122"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="Layer_1" />
+  <defs
+     id="defs1055">
+    <style
+       id="style1047">.cls-1{fill:url(#linear-gradient);}.cls-2{fill:url(#linear-gradient-2);}</style>
+    <linearGradient
+       id="linear-gradient"
+       x1="80.190002"
+       y1="57.169998"
+       x2="91.660004"
+       y2="57.169998"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0"
+         stop-color="#652d80"
+         id="stop1049" />
+      <stop
+         offset="1"
+         stop-color="#2598cf"
+         id="stop1051" />
+    </linearGradient>
+    <linearGradient
+       id="linear-gradient-2"
+       x1="335.87"
+       y1="297.64001"
+       x2="506.01999"
+       y2="297.64001"
+       xlink:href="#linear-gradient"
+       gradientTransform="matrix(2.3391597,0,0,2.3391597,-722.23303,-438.07433)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linear-gradient"
+       id="linearGradient1068"
+       gradientUnits="userSpaceOnUse"
+       x1="80.190002"
+       y1="57.169998"
+       x2="91.660004"
+       y2="57.169998"
+       gradientTransform="matrix(2.3391597,0,0,2.3391597,63.420535,40.377397)" />
+  </defs>
+  <title
+     id="title1057">Amethyst_svg_monogram</title>
+  <g
+     id="g1090"
+     transform="matrix(1.1731848,0,0,1.1731848,-51.803862,-46.943682)">
+    <ellipse
+       class="cls-1"
+       cx="264.4245"
+       cy="174.10715"
+       rx="13.426776"
+       ry="13.192861"
+       id="ellipse1059"
+       style="fill:url(#linearGradient1068);stroke-width:2.33916" />
+    <path
+       class="cls-2"
+       d="M 461.38176,373.8012 C 460.91393,372.37432 351.79215,112.54047 321.78071,40.470963 c -36.53767,0 -113.70654,0 -168.13879,0 -15.97646,39.508408 -57.215841,140.209227 -90.29156,221.331287 18.128489,43.25105 34.409039,82.10451 46.97033,112.06913 h 68.4672 a 4.6783194,4.6783194 0 0 0 4.37423,-5.49701 c -0.58479,-13.82444 -38.22187,-64.06959 -26.99391,-118.43166 2.99413,-11.6958 5.28651,-23.57873 8.56133,-35.22775 a 411.15409,411.15409 0 0 1 31.4383,-81.40275 c 2.08186,-3.95318 3.04091,-5.73094 7.83619,-2.73682 10.22213,6.36252 21.63723,5.98825 33.00554,5.16954 9.80108,-2.12863 14.57297,-6.83034 32.53771,-2.05846 3.55552,0 7.01748,0 10.64318,0.32749 8.6315,0.67835 16.72499,2.73681 21.91793,10.54961 5.66076,8.53793 6.57304,18.19866 5.66076,28.06991 -1.38011,14.7601 -0.39766,28.51436 12.09346,38.92362 a 134.54846,134.54846 0 0 0 14.03497,9.35664 c 6.19876,3.97657 13.68408,5.70755 18.99397,11.22796 3.13447,3.25143 4.98239,6.71339 3.62569,11.34493 -1.3567,4.63153 -4.98242,6.80695 -9.7543,7.32157 -12.07005,1.30993 -23.85942,-1.14619 -35.71897,-2.57308 -1.54385,-0.18712 -3.06429,-0.30409 -4.67832,-0.39765 a 26.830161,26.830161 0 0 1 -8.91219,0.30409 h -2.7836 a 62.455564,62.455564 0 0 0 -13.80104,3.29821 c -11.18119,4.07014 -21.35653,8.56133 -34.54939,8.32741 a 10.10517,10.10517 0 0 0 -4.79528,2.08185 c -10.33909,9.1929 -16.56125,20.79514 -11.39171,37.75405 14.17531,39.60195 50.54924,135.13324 66.17483,176.37263 -0.44444,-27.92958 -0.5614,-77.94082 -0.65497,-102.22127 62.40879,0.0936 158.10382,0.0467 165.72946,0.0467 z"
+       id="path1061"
+       style="fill:url(#linear-gradient-2);stroke-width:2.33916" />
+  </g>
+  <metadata
+     id="metadata1070">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Amethyst_svg_monogram</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
