@@ -19,6 +19,9 @@ class Nip05Verifier() {
         if (parts.size == 2) {
             return "https://${parts[1]}/.well-known/nostr.json?name=${parts[0]}"
         }
+        if (parts.size == 1) {
+            return "https://${parts[0]}/.well-known/nostr.json?name=_"
+        }
 
         return null
     }
@@ -92,7 +95,12 @@ class Nip05Verifier() {
                     null
                 }
 
-                val user = nip05.split("@")[0].lowercase()
+                val parts = nip05.split("@")
+                val user = if (parts.size == 2) {
+                    parts[0].lowercase()
+                } else {
+                    "_"
+                }
 
                 val hexKey = nip05url?.get("names")?.get(user)?.asText()
 

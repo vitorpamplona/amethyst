@@ -117,10 +117,7 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
 
     Crossfade(targetState = nip05, modifier = columnModifier) {
         if (it != null) {
-            val isValid = it.split("@").size == 2
-            if (isValid) {
-                DisplayNIP05Line(it, baseUser, columnModifier)
-            }
+            DisplayNIP05Line(it, baseUser, columnModifier)
         }
     }
 }
@@ -144,7 +141,12 @@ private fun DisplayNIP05(
 ) {
     val uri = LocalUriHandler.current
     val (user, domain) = remember(nip05) {
-        nip05.split("@")
+        val parts = nip05.split("@")
+        if (parts.size == 1) {
+            listOf("_", parts[0])
+        } else {
+            listOf(parts[0], parts[1])
+        }
     }
 
     if (user != "_") {
@@ -204,7 +206,7 @@ fun DisplayNip05ProfileStatus(user: User) {
     val uri = LocalUriHandler.current
 
     user.nip05()?.let { nip05 ->
-        if (nip05.split("@").size == 2) {
+        if (nip05.split("@").size <= 2) {
             val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (nip05Verified == null) {
@@ -232,9 +234,18 @@ fun DisplayNip05ProfileStatus(user: User) {
 
                 var domainPadStart = 5.dp
 
-                if (nip05.split("@")[0] != "_") {
+                val (user, domain) = remember(nip05) {
+                    val parts = nip05.split("@")
+                    if (parts.size == 1) {
+                        listOf("_", parts[0])
+                    } else {
+                        listOf(parts[0], parts[1])
+                    }
+                }
+
+                if (user != "_") {
                     Text(
-                        text = AnnotatedString(nip05.split("@")[0] + "@"),
+                        text = remember { AnnotatedString(user + "@") },
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -243,7 +254,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 }
 
                 ClickableText(
-                    text = AnnotatedString(nip05.split("@")[1]),
+                    text = AnnotatedString(domain),
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
                     style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
