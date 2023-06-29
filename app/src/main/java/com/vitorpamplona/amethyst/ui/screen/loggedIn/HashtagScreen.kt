@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -85,8 +86,10 @@ fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String
 }
 
 @Composable
-fun HashtagHeader(tag: String, account: AccountViewModel) {
-    Column() {
+fun HashtagHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
+    Column(
+        Modifier.clickable { onClick() }
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(
