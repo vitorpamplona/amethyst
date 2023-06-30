@@ -126,10 +126,10 @@
     <string name="unblock">Unblock</string>
     <string name="copy_user_id">Copy User ID</string>
     <string name="unblock_user">Unblock User</string>
-    <string name="npub_hex_username">"npub, hex, username "</string>
+    <string name="npub_hex_username">"npub, username, text"</string>
     <string name="clear">Clear</string>
     <string name="app_logo">App Logo</string>
-    <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
+    <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
     <string name="show_password">Show Password</string>
     <string name="hide_password">Hide Password</string>
     <string name="invalid_key">Invalid key</string>
