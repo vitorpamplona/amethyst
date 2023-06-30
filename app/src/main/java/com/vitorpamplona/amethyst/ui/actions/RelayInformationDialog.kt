@@ -292,32 +292,44 @@ fun loadRelayInfo(
     scope: CoroutineScope,
     onInfo: (RelayInformation) -> Unit
 ) {
-    val url = if (dirtyUrl.contains("://")) {
-        dirtyUrl
-            .replace("wss://", "https://")
-            .replace("ws://", "http://")
-    } else {
-        "https://$dirtyUrl"
-    }
+    try {
+        val url = if (dirtyUrl.contains("://")) {
+            dirtyUrl
+                .replace("wss://", "https://")
+                .replace("ws://", "http://")
+        } else {
+            "https://$dirtyUrl"
+        }
 
-    val request: Request = Request
-        .Builder()
-        .header("Accept", "application/nostr+json")
-        .url(url)
-        .build()
+        val request: Request = Request
+            .Builder()
+            .header("Accept", "application/nostr+json")
+            .url(url)
+            .build()
 
-    HttpClient.getHttpClient()
-        .newCall(request)
-        .enqueue(
-            object : Callback {
-                override fun onResponse(call: Call, response: Response) {
-                    checkNotInMainThread()
-                    response.use {
-                        val body = it.body.string()
-                        try {
-                            if (it.isSuccessful) {
-                                onInfo(RelayInformation.fromJson(body))
-                            } else {
+        HttpClient.getHttpClient()
+            .newCall(request)
+            .enqueue(
+                object : Callback {
+                    override fun onResponse(call: Call, response: Response) {
+                        checkNotInMainThread()
+                        response.use {
+                            val body = it.body.string()
+                            try {
+                                if (it.isSuccessful) {
+                                    onInfo(RelayInformation.fromJson(body))
+                                } else {
+                                    scope.launch {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("RelayInfoFail", "Resulting Message from Relay $dirtyUrl in not parseable: $body", e)
                                 scope.launch {
                                     Toast
                                         .makeText(
@@ -327,31 +339,31 @@ fun loadRelayInfo(
                                         ).show()
                                 }
                             }
-                        } catch (e: Exception) {
-                            Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable: $body", e)
-                            scope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                            }
+                        }
+                    }
+
+                    override fun onFailure(call: Call, e: IOException) {
+                        Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable $dirtyUrl", e)
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                         }
                     }
                 }
-
-                override fun onFailure(call: Call, e: IOException) {
-                    Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable", e)
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                    }
-                }
-            }
-        )
+            )
+    } catch (e: Exception) {
+        Log.e("RelayInfoFail", "Invalid URL $dirtyUrl", e)
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                    Toast.LENGTH_SHORT
+                ).show()
+        }
+    }
 }
