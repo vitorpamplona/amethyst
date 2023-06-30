@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -50,6 +49,9 @@ import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -82,7 +84,7 @@ fun UserReactionsRow(
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
-                modifier = Modifier.size(20.dp),
+                modifier = Size20Modifier,
                 tint = MaterialTheme.colors.placeholderText
             )
         }
@@ -343,11 +345,11 @@ fun UserReplyReaction(
     Icon(
         painter = painterResource(R.drawable.ic_comment),
         null,
-        modifier = Modifier.size(20.dp),
+        modifier = Size20Modifier,
         tint = RoyalBlue
     )
 
-    Spacer(modifier = Modifier.width(10.dp))
+    Spacer(modifier = StdHorzSpacer)
 
     Text(
         showCounts,
@@ -365,11 +367,11 @@ fun UserBoostReaction(
     Icon(
         painter = painterResource(R.drawable.ic_retweeted),
         null,
-        modifier = Modifier.size(24.dp),
+        modifier = Size24Modifier,
         tint = Color.Unspecified
     )
 
-    Spacer(modifier = Modifier.width(10.dp))
+    Spacer(modifier = StdHorzSpacer)
 
     Text(
         showCounts,
@@ -387,14 +389,14 @@ fun UserLikeReaction(
     Icon(
         painter = painterResource(R.drawable.ic_liked),
         null,
-        modifier = Modifier.size(20.dp),
+        modifier = Size20Modifier,
         tint = Color.Unspecified
     )
 
-    Spacer(modifier = Modifier.width(10.dp))
+    Spacer(modifier = StdHorzSpacer)
 
     Text(
-        showCounts,
+        text = showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -407,7 +409,7 @@ fun UserZapReaction(
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
-        modifier = Modifier.size(24.dp),
+        modifier = Size24Modifier,
         tint = BitcoinOrange
     )
 
