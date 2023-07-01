@@ -384,7 +384,7 @@ private fun RenderScreen(
             CreateAndRenderTabs(baseUser, pagerState)
         }
         HorizontalPager(
-            pageCount = 8,
+            pageCount = 9,
             state = pagerState,
             modifier = pagerModifier
         ) { page ->
