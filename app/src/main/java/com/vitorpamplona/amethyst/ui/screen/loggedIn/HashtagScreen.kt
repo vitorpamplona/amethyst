@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,12 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
@@ -126,7 +129,8 @@ private fun HashtagActionOptions(
     tag: String,
     accountViewModel: AccountViewModel
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val userState by accountViewModel.userProfile().live().follows.observeAsState()
     val isFollowingTag by remember(userState) {
@@ -136,8 +140,40 @@ private fun HashtagActionOptions(
     }
 
     if (isFollowingTag) {
-        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(tag) } }
+        UnfollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.account.unfollow(tag)
+                }
+            }
+        }
     } else {
-        FollowButton({ coroutineScope.launch(Dispatchers.IO) { accountViewModel.account.follow(tag) } })
+        FollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.account.follow(tag)
+                }
+            }
+        }
     }
 }

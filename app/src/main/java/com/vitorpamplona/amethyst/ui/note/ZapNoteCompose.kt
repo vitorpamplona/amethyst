@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,10 +20,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -194,6 +197,7 @@ fun ShowFollowingOrUnfollowingButton(
     accountViewModel: AccountViewModel
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var isFollowing by remember { mutableStateOf(false) }
     val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
@@ -210,9 +214,41 @@ fun ShowFollowingOrUnfollowingButton(
     }
 
     if (isFollowing) {
-        UnfollowButton { scope.launch(Dispatchers.IO) { accountViewModel.unfollow(baseAuthor) } }
+        UnfollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.unfollow(baseAuthor)
+                }
+            }
+        }
     } else {
-        FollowButton({ scope.launch(Dispatchers.IO) { accountViewModel.follow(baseAuthor) } })
+        FollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.follow(baseAuthor)
+                }
+            }
+        }
     }
 }
 

@@ -698,6 +698,7 @@ private fun ProfileActions(
     accountViewModel: AccountViewModel
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val accountLocalUserState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
@@ -734,18 +735,60 @@ private fun ProfileActions(
             account.showUser(baseUser.pubkeyHex)
         }
     } else if (isLoggedInFollowingUser) {
-        UnfollowButton { scope.launch(Dispatchers.IO) { account.unfollow(baseUser) } }
+        UnfollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    account.unfollow(baseUser)
+                }
+            }
+        }
     } else {
         if (isUserFollowingLoggedIn) {
-            FollowButton(
-                { scope.launch(Dispatchers.IO) { account.follow(baseUser) } },
-                R.string.follow_back
-            )
+            FollowButton(R.string.follow_back) {
+                if (!accountViewModel.isWriteable()) {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
+                } else {
+                    scope.launch(Dispatchers.IO) {
+                        account.follow(baseUser)
+                    }
+                }
+            }
         } else {
-            FollowButton(
-                { scope.launch(Dispatchers.IO) { account.follow(baseUser) } },
-                R.string.follow
-            )
+            FollowButton(R.string.follow) {
+                if (!accountViewModel.isWriteable()) {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
+                } else {
+                    scope.launch(Dispatchers.IO) {
+                        account.follow(baseUser)
+                    }
+                }
+            }
         }
     }
 }
@@ -1539,7 +1582,7 @@ fun UnfollowButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun FollowButton(onClick: () -> Unit, text: Int = R.string.follow) {
+fun FollowButton(text: Int = R.string.follow, onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
