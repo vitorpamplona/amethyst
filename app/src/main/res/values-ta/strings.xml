@@ -440,6 +440,6 @@
 	<string name="are_you_sure_you_want_to_log_out">வெளியேறு உங்கள் அனைத்து லோக்கல் விவரங்களையும் நீக்கிவிடும். வெளியேறும் முன் உங்கள் அக்கவுண்ட் தொலையாமல் இருக்க ரகசியசாவியை பத்திரமாக பிரதி செய்து சேமிக்கப்பட்டுள்ளதா என்று சரிபார்க்கவும். வெளியேற்றம் தொடர வேண்டுமா?</string>
 	<string name="followed_tags">பின்பற்றப்படும் டாகுகள்</string>
 
-	<string name="relay_setup">ரிலேகள்</string</string>
+	<string name="relay_setup">ரிலேகள்</string>
  
 </resources>
