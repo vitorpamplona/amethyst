@@ -3191,7 +3191,7 @@ fun PictureAndFollowingMark(
         modifier
             .size(size)
             .clip(shape = CircleShape)
-            .drawBehind { drawRect(backgroundColor) }
+            .background(backgroundColor)
     }
 
     RobohashAsyncImageProxy(
