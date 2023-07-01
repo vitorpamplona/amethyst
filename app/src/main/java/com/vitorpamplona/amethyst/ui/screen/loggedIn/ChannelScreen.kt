@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -57,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -87,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -584,29 +587,29 @@ fun ChannelHeader(
 
         Column(modifier = modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                channel.creator?.let {
-                    UserPicture(
-                        user = it,
-                        size = Size35dp,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
+                if (channel is LiveActivitiesChannel) {
+                    channel.creator?.let {
+                        UserPicture(
+                            user = it,
+                            size = Size35dp,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
+                    }
+                } else {
+                    channel.profilePicture()?.let {
+                        RobohashAsyncImageProxy(
+                            robot = channel.idHex,
+                            model = it,
+                            contentDescription = stringResource(R.string.profile_image),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.padding(start = 10.dp)
+                                .width(Size35dp)
+                                .height(Size35dp)
+                                .clip(shape = CircleShape)
+                        )
+                    }
                 }
-
-                /*
-                channel.profilePicture()?.let {
-                    RobohashAsyncImageProxy(
-                        robot = channel.idHex,
-                        model = it,
-                        contentDescription = stringResource(R.string.profile_image),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.padding(start = 10.dp)
-                            .width(Size35dp)
-                            .height(Size35dp)
-                            .clip(shape = CircleShape)
-                    )
-                }
-                 */
 
                 Column(
                     modifier = Modifier
