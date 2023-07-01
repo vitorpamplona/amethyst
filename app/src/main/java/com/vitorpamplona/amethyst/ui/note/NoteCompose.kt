@@ -550,7 +550,7 @@ private fun ClickableNote(
 ) {
     val scope = rememberCoroutineScope()
 
-    val updatedModifier = remember(backgroundColor) {
+    val updatedModifier = remember(backgroundColor.value) {
         modifier
             .combinedClickable(
                 onClick = {
