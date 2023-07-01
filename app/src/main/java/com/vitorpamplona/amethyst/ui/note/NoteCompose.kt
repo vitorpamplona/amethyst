@@ -3240,30 +3240,12 @@ fun FollowingIcon(iconSize: Dp) {
         Modifier.size(iconSize)
     }
 
-    val backgroundColor = MaterialTheme.colors.background
-
-    val myIconBackgroundModifier = remember {
-        Modifier
-            .clip(CircleShape)
-            .size(iconSize.times(0.6f))
-            .drawBehind { drawRect(backgroundColor) }
-    }
-
-    FollowingIcon(modifier, myIconBackgroundModifier)
-}
-
-@Composable
-fun FollowingIcon(modifier: Modifier, myIconBackgroundModifier: Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Box(myIconBackgroundModifier)
-
-        Icon(
-            painter = painterResource(R.drawable.ic_verified),
-            stringResource(id = R.string.following),
-            modifier = modifier,
-            tint = Following
-        )
-    }
+    Icon(
+        painter = painterResource(R.drawable.ic_verified),
+        stringResource(id = R.string.following),
+        modifier = modifier,
+        tint = Following
+    )
 }
 
 @Immutable

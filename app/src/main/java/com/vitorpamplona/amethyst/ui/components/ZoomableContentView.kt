@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
@@ -48,7 +47,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -599,15 +597,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
             .height(40.dp)
             .padding(10.dp)
     ) {
-        Box(
-            Modifier
-                .clip(CircleShape)
-                .fillMaxSize(0.6f)
-                .align(Alignment.Center)
-                .background(MaterialTheme.colors.background)
-        )
-
-        if (verifiedHash == true) {
+        if (verifiedHash) {
             IconButton(
                 onClick = {
                     scope.launch {
@@ -626,7 +616,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
                     modifier = Modifier.size(30.dp)
                 )
             }
-        } else if (verifiedHash == false) {
+        } else {
             IconButton(
                 onClick = {
                     scope.launch {
