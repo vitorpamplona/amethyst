@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 
@@ -15,7 +16,7 @@ fun ClickableEmail(email: String) {
     val context = LocalContext.current
 
     ClickableText(
-        text = AnnotatedString("$email "),
+        text = remember { AnnotatedString(email) },
         onClick = { runCatching { context.sendMail(email) } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
     )

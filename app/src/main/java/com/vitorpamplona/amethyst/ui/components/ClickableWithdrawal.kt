@@ -31,7 +31,7 @@ fun MayBeWithdrawal(lnurlWord: String) {
             ClickableWithdrawal(withdrawalString = it)
         } else {
             Text(
-                text = "$lnurlWord ",
+                text = lnurlWord,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
             )
         }

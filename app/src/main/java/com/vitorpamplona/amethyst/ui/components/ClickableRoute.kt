@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -78,7 +79,7 @@ fun ClickableRoute(
         else -> {
             Text(
                 remember {
-                    "@${nip19.hex}${nip19.additionalChars} "
+                    "@${nip19.hex}${nip19.additionalChars}"
                 }
             )
         }
@@ -111,7 +112,16 @@ private fun DisplayEvent(
     nav: (String) -> Unit
 ) {
     LoadNote(nip19.hex) {
-        DisplayNoteLink(it, nip19, nav)
+        if (it != null) {
+            DisplayNoteLink(it, nip19, nav)
+        } else {
+            CreateClickableText(
+                clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
+                suffix = nip19.additionalChars,
+                route = remember(nip19) { "Event/${nip19.hex}" },
+                nav = nav
+            )
+        }
     }
 }
 
@@ -121,7 +131,16 @@ private fun DisplayNote(
     nav: (String) -> Unit
 ) {
     LoadNote(nip19.hex) {
-        DisplayNoteLink(it, nip19, nav)
+        if (it != null) {
+            DisplayNoteLink(it, nip19, nav)
+        } else {
+            CreateClickableText(
+                clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
+                suffix = nip19.additionalChars,
+                route = remember(nip19) { "Event/${nip19.hex}" },
+                nav = nav
+            )
+        }
     }
 }
 
@@ -137,7 +156,7 @@ private fun DisplayNoteLink(
 
     val channelHex = remember(noteState) { note.channelHex() }
     val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
-    val addedCharts = remember { "${nip19.additionalChars} " }
+    val addedCharts = remember { "${nip19.additionalChars}" }
 
     if (note.event is ChannelCreateEvent || nip19.kind == ChannelCreateEvent.kind) {
         CreateClickableText(
@@ -199,7 +218,7 @@ private fun DisplayAddress(
 
         val route = remember(noteState) { "Note/${nip19.hex}" }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
-        val addedCharts = remember { "${nip19.additionalChars} " }
+        val addedCharts = remember { "${nip19.additionalChars}" }
 
         CreateClickableText(
             clickablePart = displayName,
@@ -212,7 +231,7 @@ private fun DisplayAddress(
     if (noteBase == null) {
         Text(
             remember {
-                "@${nip19.hex}${nip19.additionalChars} "
+                "@${nip19.hex}${nip19.additionalChars}"
             }
         )
     }
@@ -240,7 +259,7 @@ private fun DisplayUser(
     if (userBase == null) {
         Text(
             remember {
-                "@${nip19.hex}${nip19.additionalChars} "
+                "@${nip19.hex}${nip19.additionalChars}"
             }
         )
     }
@@ -268,7 +287,7 @@ private fun RenderUserAsClickableText(
     }
 
     val addedCharts = remember(nip19) {
-        "${nip19.additionalChars} "
+        "${nip19.additionalChars}"
     }
 
     userDisplayName?.let {
@@ -286,7 +305,7 @@ private fun RenderUserAsClickableText(
 @Composable
 fun CreateClickableText(
     clickablePart: String,
-    suffix: String,
+    suffix: String?,
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
@@ -310,8 +329,10 @@ fun CreateClickableText(
             withStyle(clickablePartStyle) {
                 append(clickablePart)
             }
-            withStyle(nonClickablePartStyle) {
-                append(suffix)
+            if (!suffix.isNullOrBlank()) {
+                withStyle(nonClickablePartStyle) {
+                    append(suffix)
+                }
             }
         }
     }
@@ -488,7 +509,7 @@ data class DoubleEmojiList(
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
-    suffix: String,
+    suffix: String?,
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
@@ -507,7 +528,7 @@ fun CreateClickableTextWithEmoji(
 
             if (emojis.isNotEmpty()) {
                 val newEmojiList1 = assembleAnnotatedList(clickablePart, emojis)
-                val newEmojiList2 = assembleAnnotatedList(suffix, emojis)
+                val newEmojiList2 = suffix?.let { assembleAnnotatedList(it, emojis) } ?: emptyList<Renderable>()
 
                 if (newEmojiList1.isNotEmpty() || newEmojiList2.isNotEmpty()) {
                     emojiLists = DoubleEmojiList(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())

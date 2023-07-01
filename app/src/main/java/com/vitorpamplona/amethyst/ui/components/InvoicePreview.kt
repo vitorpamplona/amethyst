@@ -56,7 +56,7 @@ fun MayBeInvoicePreview(lnbcWord: String) {
             InvoicePreview(it.first, it.second)
         } else {
             Text(
-                text = "$lnbcWord ",
+                text = lnbcWord,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
             )
         }
