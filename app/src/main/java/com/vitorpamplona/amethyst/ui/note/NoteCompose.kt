@@ -61,7 +61,6 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -563,9 +562,7 @@ private fun ClickableNote(
                 },
                 onLongClick = showPopup
             )
-            .drawBehind {
-                drawRect(backgroundColor.value)
-            }
+            .background(backgroundColor.value)
     }
 
     Column(modifier = updatedModifier) {
@@ -1293,16 +1290,7 @@ fun DisplayRelaySet(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .drawBehind {
-                        drawRect(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    backgroundColor.value.copy(alpha = 0f),
-                                    backgroundColor.value
-                                )
-                            )
-                        )
-                    }
+                    .background(getGradient(backgroundColor))
             ) {
                 ShowMoreButton {
                     expanded = !expanded
@@ -1409,16 +1397,7 @@ fun DisplayPeopleList(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .drawBehind {
-                        drawRect(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    backgroundColor.value.copy(alpha = 0f),
-                                    backgroundColor.value
-                                )
-                            )
-                        )
-                    }
+                    .background(getGradient(backgroundColor))
             ) {
                 ShowMoreButton {
                     expanded = !expanded
@@ -1618,16 +1597,7 @@ fun PinListHeader(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .drawBehind {
-                        drawRect(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    backgroundColor.value.copy(alpha = 0f),
-                                    backgroundColor.value
-                                )
-                            )
-                        )
-                    }
+                    .background(getGradient(backgroundColor))
             ) {
                 ShowMoreButton {
                     expanded = !expanded
@@ -1635,6 +1605,15 @@ fun PinListHeader(
             }
         }
     }
+}
+
+fun getGradient(backgroundColor: MutableState<Color>): Brush {
+    return Brush.verticalGradient(
+        colors = listOf(
+            backgroundColor.value.copy(alpha = 0f),
+            backgroundColor.value
+        )
+    )
 }
 
 @Composable
@@ -2017,7 +1996,7 @@ private fun ChannelNotePicture(baseChannel: Channel) {
             .width(30.dp)
             .height(30.dp)
             .clip(shape = CircleShape)
-            .drawBehind { drawRect(backgroundColor) }
+            .background(backgroundColor)
             .border(
                 2.dp,
                 backgroundColor,
@@ -3049,7 +3028,7 @@ fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
         modifier
             .size(size)
             .clip(shape = CircleShape)
-            .drawBehind { drawRect(backgroundColor) }
+            .background(backgroundColor)
     }
 
     RobohashAsyncImage(

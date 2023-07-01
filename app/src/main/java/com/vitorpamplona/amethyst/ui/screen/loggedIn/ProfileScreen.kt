@@ -25,7 +25,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -1189,7 +1188,7 @@ private fun WatchAndRenderBadgeImage(
                 pictureModifier
                     .width(size)
                     .height(size)
-                    .drawBehind { drawRect(bgColor) }
+                    .background(bgColor)
             }
         )
     } else {
@@ -1202,7 +1201,7 @@ private fun WatchAndRenderBadgeImage(
                     .width(size)
                     .height(size)
                     .clip(shape = CircleShape)
-                    .drawBehind { drawRect(bgColor) }
+                    .background(bgColor)
                     .run {
                         if (onClick != null) {
                             this.clickable(onClick = { onClick(eventId) })

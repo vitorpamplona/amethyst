@@ -53,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -734,7 +733,7 @@ fun LiveFlag() {
         modifier = remember {
             Modifier
                 .clip(SmallBorder)
-                .drawBehind { drawRect(Color.Red) }
+                .background(Color.Red)
                 .padding(horizontal = 5.dp)
         }
     )
@@ -749,7 +748,7 @@ fun EndedFlag() {
         modifier = remember {
             Modifier
                 .clip(SmallBorder)
-                .drawBehind { drawRect(Color.Black) }
+                .background(Color.Black)
                 .padding(horizontal = 5.dp)
         }
     )
@@ -764,7 +763,7 @@ fun OfflineFlag() {
         modifier = remember {
             Modifier
                 .clip(SmallBorder)
-                .drawBehind { drawRect(Color.Black) }
+                .background(Color.Black)
                 .padding(horizontal = 5.dp)
         }
     )
@@ -779,7 +778,7 @@ fun ScheduledFlag() {
         modifier = remember {
             Modifier
                 .clip(SmallBorder)
-                .drawBehind { drawRect(Color.Black) }
+                .background(Color.Black)
                 .padding(horizontal = 5.dp)
         }
     )

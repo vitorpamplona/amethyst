@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.theme
 
 import android.app.Activity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.compositeOver
@@ -123,12 +123,10 @@ val LightImageModifier = Modifier
 val DarkProfile35dpModifier = Modifier
     .size(Size35dp)
     .clip(shape = CircleShape)
-    .drawBehind { drawRect(DarkColorPalette.background) }
 
 val LightProfile35dpModifier = Modifier
     .fillMaxWidth()
     .clip(shape = CircleShape)
-    .drawBehind { drawRect(LightColorPalette.background) }
 
 val DarkReplyBorderModifier = Modifier
     .padding(top = 5.dp)
@@ -189,9 +187,7 @@ val MarkDownStyleOnDark = RichTextDefaults.copy(
                 DarkSubtleBorder,
                 QuoteBorder
             )
-            .drawBehind {
-                drawRect(DarkColorPalette.onSurface.copy(alpha = 0.05f))
-            }
+            .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
     ),
     stringStyle = RichTextDefaults.stringStyle?.copy(
         linkStyle = SpanStyle(
@@ -222,9 +218,7 @@ val MarkDownStyleOnLight = RichTextDefaults.copy(
                 LightSubtleBorder,
                 QuoteBorder
             )
-            .drawBehind {
-                drawRect(LightColorPalette.onSurface.copy(alpha = 0.05f))
-            }
+            .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
     ),
     stringStyle = RichTextDefaults.stringStyle?.copy(
         linkStyle = SpanStyle(
