@@ -459,7 +459,7 @@ class UserMetadata {
 
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     fun invalidateData() {
         bundler.invalidate() {
