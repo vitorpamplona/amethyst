@@ -184,7 +184,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .reversed()
 
-            singleList.chunked(50).map { chunk ->
+            singleList.chunked(30).map { chunk ->
                 MultiSetCard(
                     baseNote,
                     boostsInCard.filter { it in chunk }.toImmutableList(),
