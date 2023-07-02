@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
-import com.vitorpamplona.amethyst.ui.theme.hashVerified
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -612,7 +611,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
                 Icon(
                     painter = painterResource(R.drawable.ic_verified),
                     "Hash Verified",
-                    tint = MaterialTheme.colors.hashVerified,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(30.dp)
                 )
             }

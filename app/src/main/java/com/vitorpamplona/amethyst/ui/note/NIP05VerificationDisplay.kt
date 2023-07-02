@@ -182,7 +182,7 @@ private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>) {
         )
     } else if (nip05Verified.value == true) {
         Icon(
-            painter = painterResource(R.drawable.ic_verified),
+            painter = painterResource(R.drawable.ic_verified_transparent),
             "NIP-05 Verified",
             tint = Nip05.copy(0.52f),
             modifier = Modifier
@@ -218,7 +218,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                     )
                 } else if (nip05Verified == true) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_verified),
+                        painter = painterResource(R.drawable.ic_verified_transparent),
                         "NIP-05 Verified",
                         tint = Nip05,
                         modifier = Modifier.size(16.dp)
