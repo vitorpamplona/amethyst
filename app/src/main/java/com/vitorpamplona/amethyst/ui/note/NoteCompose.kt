@@ -152,7 +152,6 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.Following
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
@@ -3220,10 +3219,10 @@ fun FollowingIcon(iconSize: Dp) {
     }
 
     Icon(
-        painter = painterResource(R.drawable.ic_verified),
-        stringResource(id = R.string.following),
+        painter = painterResource(R.drawable.verified_follow_shield),
+        contentDescription = stringResource(id = R.string.following),
         modifier = modifier,
-        tint = Following
+        tint = Color.Unspecified
     )
 }
 
