@@ -72,6 +72,7 @@ import coil.imageLoader
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
@@ -177,8 +178,10 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
         mutableStateOf(false)
     }
 
+    val isOnMobileData by ConnectivityStatus.isOnMobileData
+
     val showImage = remember {
-        mutableStateOf(false)
+        mutableStateOf(!isOnMobileData)
     }
 
     var mainImageModifier = MaterialTheme.colors.imageModifier

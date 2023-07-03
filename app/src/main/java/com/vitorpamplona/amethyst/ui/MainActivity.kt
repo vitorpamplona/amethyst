@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -41,7 +42,6 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : FragmentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -130,6 +130,14 @@ class MainActivity : FragmentActivity() {
             networkCapabilities: NetworkCapabilities
         ) {
             super.onCapabilitiesChanged(network, networkCapabilities)
+            val hasMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+            val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $hasMobileData")
+            Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasWifi $hasWifi")
+            ConnectivityStatus.updateConnectivityStatus(
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            )
         }
 
         // lost network connection
