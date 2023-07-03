@@ -128,6 +128,11 @@ sealed class Route(
         icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
+
+    object Settings : Route(
+        route = "Settings",
+        icon = com.google.android.exoplayer2.R.drawable.exo_ic_settings
+    )
 }
 
 // **

@@ -355,6 +355,15 @@ fun ListContent(
             route = Route.BlockedUsers.route
         )
 
+        NavigationRow(
+            title = stringResource(R.string.settings),
+            icon = Route.Settings.icon,
+            tint = MaterialTheme.colors.onBackground,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = Route.Settings.route
+        )
+
         IconRow(
             title = stringResource(R.string.backup_keys),
             icon = R.drawable.ic_key,

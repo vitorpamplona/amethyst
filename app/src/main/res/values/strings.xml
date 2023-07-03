@@ -483,4 +483,5 @@
 
     <string name="add_sensitive_content_label">Sensitive Content</string>
     <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
+    <string name="settings">Settings</string>
 </resources>

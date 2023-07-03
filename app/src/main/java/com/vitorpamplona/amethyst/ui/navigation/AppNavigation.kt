@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
 import kotlinx.coroutines.delay
@@ -216,6 +217,15 @@ fun AppNavigation(
                 LoadRedirectScreen(
                     eventId = it.arguments?.getString("id"),
                     navController = navController
+                )
+            })
+        }
+
+        Route.Settings.let { route ->
+            composable(route.route, route.arguments, content = {
+                SettingsScreen(
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             })
         }
