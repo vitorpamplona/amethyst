@@ -11,6 +11,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
@@ -175,6 +177,10 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
         mutableStateOf(false)
     }
 
+    val showImage = remember {
+        mutableStateOf(false)
+    }
+
     var mainImageModifier = MaterialTheme.colors.imageModifier
 
     if (content is ZoomableUrlContent) {
@@ -194,7 +200,7 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
     }
 
     when (content) {
-        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier)
+        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, showImage)
         is ZoomableUrlVideo -> VideoView(content.url, content.description) { dialogOpen = true }
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier)
         is ZoomableLocalVideo ->
@@ -256,7 +262,8 @@ private fun LocalImageView(
 @Composable
 private fun UrlImageView(
     content: ZoomableUrlImage,
-    mainImageModifier: Modifier
+    mainImageModifier: Modifier,
+    showImage: MutableState<Boolean>
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val myModifier = remember {
@@ -280,17 +287,19 @@ private fun UrlImageView(
             mutableStateOf<AsyncImagePainter.State?>(null)
         }
 
-        AsyncImage(
-            model = content.url,
-            contentDescription = content.description,
-            contentScale = contentScale,
-            modifier = myModifier,
-            onState = {
-                painterState.value = it
-            }
-        )
+        if (showImage.value) {
+            AsyncImage(
+                model = content.url,
+                contentDescription = content.description,
+                contentScale = contentScale,
+                modifier = myModifier,
+                onState = {
+                    painterState.value = it
+                }
+            )
+        }
 
-        AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier)
+        AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier, showImage)
     }
 }
 
@@ -336,8 +345,18 @@ private fun AddedImageFeatures(
     content: ZoomableUrlImage,
     contentScale: ContentScale,
     myModifier: Modifier,
-    verifiedModifier: Modifier
+    verifiedModifier: Modifier,
+    showImage: MutableState<Boolean>
 ) {
+    if (!showImage.value) {
+        return Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            ClickableUrl(urlText = "${content.url} ", url = content.url)
+            Button(onClick = { showImage.value = true }) {
+                Text("Load image")
+            }
+        }
+    }
+
     var verifiedHash by remember {
         mutableStateOf<Boolean?>(null)
     }
@@ -548,9 +567,12 @@ fun RenderImageOrVideo(content: ZoomableContent) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
+    val showImage = remember {
+        mutableStateOf(true)
+    }
 
     if (content is ZoomableUrlImage) {
-        UrlImageView(content = content, mainImageModifier = mainModifier)
+        UrlImageView(content = content, mainImageModifier = mainModifier, showImage)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             VideoView(content.url, content.description)
