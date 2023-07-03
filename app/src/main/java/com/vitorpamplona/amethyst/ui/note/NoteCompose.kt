@@ -3043,12 +3043,14 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                         LoadThumbAndThenVideoView(
                             videoUri = media,
                             description = noteEvent.subject(),
-                            thumbUri = cover
+                            thumbUri = cover,
+                            showVideo = remember { mutableStateOf(true) }
                         )
                     }
                         ?: VideoView(
                             videoUri = media,
-                            noteEvent.subject()
+                            description = noteEvent.subject(),
+                            showVideo = remember { mutableStateOf(true) }
                         )
                 }
             }
@@ -3172,7 +3174,8 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 ) {
                     VideoView(
                         videoUri = media,
-                        description = subject
+                        description = subject,
+                        showVideo = remember { mutableStateOf(true) }
                     )
                 }
             } else {

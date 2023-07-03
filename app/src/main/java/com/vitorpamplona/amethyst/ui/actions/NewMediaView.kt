@@ -179,8 +179,11 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
                 )
             }
         } else {
+            val showVideo = remember {
+                mutableStateOf(true)
+            }
             postViewModel.galleryUri?.let {
-                VideoView(it.toString())
+                VideoView(it.toString(), showVideo = showVideo)
             }
         }
     }

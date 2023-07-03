@@ -204,11 +204,11 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
 
     when (content) {
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, showImage)
-        is ZoomableUrlVideo -> VideoView(content.url, content.description) { dialogOpen = true }
+        is ZoomableUrlVideo -> VideoView(content.url, content.description, showVideo = showImage) { dialogOpen = true }
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier)
         is ZoomableLocalVideo ->
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description) { dialogOpen = true }
+                VideoView(it.toUri().toString(), content.description, showVideo = showImage) { dialogOpen = true }
             }
     }
 
@@ -578,14 +578,14 @@ fun RenderImageOrVideo(content: ZoomableContent) {
         UrlImageView(content = content, mainImageModifier = mainModifier, showImage)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url, content.description)
+            VideoView(content.url, content.description, showVideo = showImage)
         }
     } else if (content is ZoomableLocalImage) {
         LocalImageView(content = content, mainImageModifier = mainModifier)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description)
+                VideoView(it.toUri().toString(), content.description, showVideo = showImage)
             }
         }
     }

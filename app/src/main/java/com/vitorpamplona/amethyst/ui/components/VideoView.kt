@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,7 +69,13 @@ import kotlin.time.measureTimedValue
 public var DefaultMutedSetting = mutableStateOf(true)
 
 @Composable
-fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thumbUri: String, onDialog: ((Boolean) -> Unit)? = null) {
+fun LoadThumbAndThenVideoView(
+    videoUri: String,
+    description: String? = null,
+    thumbUri: String,
+    showVideo: MutableState<Boolean>,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
     var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
 
     val context = LocalContext.current
@@ -92,9 +99,9 @@ fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thu
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            VideoView(videoUri, description, VideoThumb(loadingFinished.second), onDialog)
+            VideoView(videoUri, description, VideoThumb(loadingFinished.second), showVideo, onDialog)
         } else {
-            VideoView(videoUri, description, null, onDialog)
+            VideoView(videoUri, description, null, showVideo, onDialog)
         }
     }
 }
@@ -105,10 +112,11 @@ fun VideoView(
     videoUri: String,
     description: String? = null,
     thumb: VideoThumb? = null,
+    showVideo: MutableState<Boolean>,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, thumb, onDialog)
+        VideoView1(videoUri, description, thumb, onDialog, showVideo)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -118,7 +126,8 @@ fun VideoView1(
     videoUri: String,
     description: String? = null,
     thumb: VideoThumb? = null,
-    onDialog: ((Boolean) -> Unit)? = null
+    onDialog: ((Boolean) -> Unit)? = null,
+    showVideo: MutableState<Boolean>
 ) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
     val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
@@ -133,7 +142,7 @@ fun VideoView1(
     }
 
     exoPlayerData?.let {
-        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog)
+        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, showVideo = showVideo)
     }
 
     DisposableEffect(Unit) {
@@ -151,10 +160,11 @@ fun VideoView(
     exoPlayerData: VideoPlayer,
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
-    onDialog: ((Boolean) -> Unit)? = null
+    onDialog: ((Boolean) -> Unit)? = null,
+    showVideo: MutableState<Boolean>
 ) {
     val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog)
+        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, showVideo)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -166,7 +176,8 @@ fun VideoView1(
     exoPlayerData: VideoPlayer,
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
-    onDialog: ((Boolean) -> Unit)? = null
+    onDialog: ((Boolean) -> Unit)? = null,
+    showVideo: MutableState<Boolean>
 ) {
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
@@ -196,7 +207,7 @@ fun VideoView1(
         prepare()
     }
 
-    RenderVideoPlayer(exoPlayerData, thumb, onDialog)
+    RenderVideoPlayer(exoPlayerData, thumb, showVideo, onDialog)
 
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
@@ -230,6 +241,7 @@ data class VideoThumb(
 private fun RenderVideoPlayer(
     playerData: VideoPlayer,
     thumbData: VideoThumb?,
+    showVideo: MutableState<Boolean>,
     onDialog: ((Boolean) -> Unit)?
 ) {
     val context = LocalContext.current
@@ -241,7 +253,9 @@ private fun RenderVideoPlayer(
                 .defaultMinSize(minHeight = 70.dp)
                 .align(Alignment.Center)
                 .onVisibilityChanges { visible ->
-                    if (visible && !playerData.exoPlayer.isPlaying) {
+                    if (!showVideo.value && visible && !playerData.exoPlayer.isPlaying) {
+                        playerData.exoPlayer.pause()
+                    } else if (visible && !playerData.exoPlayer.isPlaying) {
                         playerData.exoPlayer.play()
                     } else if (!visible && playerData.exoPlayer.isPlaying) {
                         playerData.exoPlayer.pause()
