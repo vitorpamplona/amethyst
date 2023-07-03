@@ -35,7 +35,7 @@ object LocalCache {
     fun checkGetOrCreateUser(key: String): User? {
         checkNotInMainThread()
 
-        if (isValidHexNpub(key)) {
+        if (isValidHex(key)) {
             return getOrCreateUser(key)
         }
         return null
@@ -69,7 +69,7 @@ object LocalCache {
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
-        if (isValidHexNpub(key)) {
+        if (isValidHex(key)) {
             val note = getOrCreateNote(key)
             val noteEvent = note.event
             if (noteEvent is AddressableEvent) {
@@ -94,7 +94,7 @@ object LocalCache {
     fun checkGetOrCreateChannel(key: String): Channel? {
         checkNotInMainThread()
 
-        if (isValidHexNpub(key)) {
+        if (isValidHex(key)) {
             return getOrCreateChannel(key) {
                 PublicChatChannel(key)
             }
@@ -108,7 +108,7 @@ object LocalCache {
         return null
     }
 
-    private fun isValidHexNpub(key: String): Boolean {
+    private fun isValidHex(key: String): Boolean {
         if (key.isBlank()) return false
         if (key.contains(":")) return false
 
@@ -798,7 +798,7 @@ object LocalCache {
 
         note.loadEvent(event, author, replyTo)
 
-        // Log.d("CM", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
+        Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
 
         // Counts the replies
         replyTo.forEach {
