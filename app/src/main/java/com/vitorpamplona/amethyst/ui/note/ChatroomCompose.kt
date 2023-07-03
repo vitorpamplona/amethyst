@@ -150,19 +150,19 @@ private fun ChannelRoomCompose(
     nav: (String) -> Unit
 ) {
     val authorState by note.author!!.live().metadata.observeAsState()
-    val authorName = remember(authorState) {
+    val authorName = remember(note, authorState) {
         authorState?.user?.toBestDisplayName()
     }
 
     val chanHex = remember { channel.idHex }
 
     val channelState by channel.live.observeAsState()
-    val channelPicture by remember(channelState) {
+    val channelPicture by remember(note, channelState) {
         derivedStateOf {
             channel.profilePicture()
         }
     }
-    val channelName by remember(channelState) {
+    val channelName by remember(note, channelState) {
         derivedStateOf {
             channel.toBestDisplayName()
         }
@@ -182,7 +182,7 @@ private fun ChannelRoomCompose(
         noteEvent?.content()
     }
 
-    var hasNewMessages = remember { mutableStateOf<Boolean>(false) }
+    val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
