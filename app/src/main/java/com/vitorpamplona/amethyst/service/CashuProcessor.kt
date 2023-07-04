@@ -53,7 +53,7 @@ class CashuProcessor {
             LightningAddressResolver().lnAddressInvoice(
                 lnaddress = lud16,
                 milliSats = token.redeemInvoiceAmount * 1000, // Make invoice and leave room for fees
-                message = "Reedem Cashu",
+                message = "Redeem Cashu",
                 onSuccess = { invoice ->
                     meltInvoice(token, invoice, onSuccess, onError)
                 },
