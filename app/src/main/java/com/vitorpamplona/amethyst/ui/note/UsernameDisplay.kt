@@ -16,6 +16,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -33,20 +34,20 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
-fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier) {
+fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true) {
     val authorState by baseNote.live().metadata.map {
         it.note.author
     }.observeAsState(baseNote.author)
 
     Crossfade(targetState = authorState, modifier = weight) {
         it?.let {
-            UsernameDisplay(it, weight)
+            UsernameDisplay(it, weight, showPlayButton)
         }
     }
 }
 
 @Composable
-fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
+fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true) {
     val npubDisplay by remember {
         derivedStateOf {
             baseUser.pubkeyDisplayHex()
@@ -59,7 +60,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier) {
 
     Crossfade(targetState = userMetadata, modifier = weight) {
         if (it != null) {
-            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight)
+            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton)
         } else {
             NPubDisplay(npubDisplay, weight)
         }
@@ -72,14 +73,15 @@ private fun UserNameDisplay(
     bestDisplayName: String?,
     npubDisplay: String,
     tags: ImmutableListOfLists<String>?,
-    modifier: Modifier
+    modifier: Modifier,
+    showPlayButton: Boolean = true
 ) {
     if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
-        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier)
+        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier, showPlayButton)
     } else if (bestDisplayName != null) {
-        UserDisplay(bestDisplayName, tags, modifier)
+        UserDisplay(bestDisplayName, tags, modifier, showPlayButton)
     } else if (bestUserName != null) {
-        UserDisplay(bestUserName, tags, modifier)
+        UserDisplay(bestUserName, tags, modifier, showPlayButton)
     } else {
         NPubDisplay(npubDisplay, modifier)
     }
@@ -100,9 +102,10 @@ private fun NPubDisplay(npubDisplay: String, modifier: Modifier) {
 private fun UserDisplay(
     bestDisplayName: String,
     tags: ImmutableListOfLists<String>?,
-    modifier: Modifier
+    modifier: Modifier,
+    showPlayButton: Boolean = true
 ) {
-    Row(modifier = modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
@@ -111,8 +114,10 @@ private fun UserDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
-        Spacer(StdHorzSpacer)
-        DrawPlayName(bestDisplayName)
+        if (showPlayButton) {
+            Spacer(StdHorzSpacer)
+            DrawPlayName(bestDisplayName)
+        }
     }
 }
 
@@ -121,9 +126,10 @@ private fun UserAndUsernameDisplay(
     bestDisplayName: String,
     tags: ImmutableListOfLists<String>?,
     bestUserName: String,
-    modifier: Modifier
+    modifier: Modifier,
+    showPlayButton: Boolean = true
 ) {
-    Row(modifier = modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
@@ -138,8 +144,10 @@ private fun UserAndUsernameDisplay(
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
         )
-        Spacer(StdHorzSpacer)
-        DrawPlayName(bestDisplayName)
+        if (showPlayButton) {
+            Spacer(StdHorzSpacer)
+            DrawPlayName(bestDisplayName)
+        }
     }
 }
 

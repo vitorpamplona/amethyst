@@ -108,6 +108,8 @@ import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
@@ -538,7 +540,7 @@ private fun CheckNewAndRenderNote(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun ClickableNote(
+fun ClickableNote(
     baseNote: Note,
     modifier: Modifier,
     backgroundColor: MutableState<Color>,
@@ -549,7 +551,7 @@ private fun ClickableNote(
 ) {
     val scope = rememberCoroutineScope()
 
-    val updatedModifier = remember(backgroundColor.value) {
+    val updatedModifier = remember(baseNote, backgroundColor.value) {
         modifier
             .combinedClickable(
                 onClick = {
@@ -1785,7 +1787,7 @@ private fun ReplyNoteComposition(
 }
 
 @Composable
-private fun SecondUserInfoRow(
+fun SecondUserInfoRow(
     note: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -1809,7 +1811,7 @@ private fun SecondUserInfoRow(
 }
 
 @Composable
-private fun FirstUserInfoRow(
+fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
     accountViewModel: AccountViewModel,
@@ -1854,7 +1856,7 @@ private fun BoostedMark() {
 }
 
 @Composable
-private fun MoreOptionsButton(
+fun MoreOptionsButton(
     baseNote: Note,
     accountViewModel: AccountViewModel
 ) {
@@ -2690,12 +2692,12 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
 
         Crossfade(targetState = status) {
             when (it) {
-                "live" -> {
+                STATUS_LIVE -> {
                     if (isOnline) {
                         LiveFlag()
                     }
                 }
-                "planned" -> {
+                STATUS_PLANNED -> {
                     ScheduledFlag()
                 }
             }
@@ -2744,7 +2746,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
     }
 
     media?.let { media ->
-        if (status == "live") {
+        if (status == STATUS_LIVE) {
             if (isOnline) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -2841,7 +2843,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
 }
 
 @Composable
-private fun CreateImageHeader(
+fun CreateImageHeader(
     note: Note,
     accountViewModel: AccountViewModel
 ) {

@@ -17,6 +17,7 @@ object ScrollStateKeys {
     const val GLOBAL_SCREEN = "Global"
     const val NOTIFICATION_SCREEN = "Notifications"
     const val VIDEO_SCREEN = "Video"
+    const val DISCOVER_SCREEN = "Discover"
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
 }

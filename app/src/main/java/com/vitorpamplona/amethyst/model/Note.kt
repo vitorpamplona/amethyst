@@ -279,6 +279,20 @@ open class Note(val idHex: String) {
         }
     }
 
+    fun publicZapAuthors(): Set<HexKey> {
+        // Zaps who the requester was the user
+        return zaps.mapNotNull {
+            it.key.author?.pubkeyHex
+        }.toSet()
+    }
+
+    fun reactionAuthors(): Set<HexKey> {
+        // Zaps who the requester was the user
+        return reactions.values.map {
+            it.mapNotNull { it.author?.pubkeyHex }
+        }.flatten().toSet()
+    }
+
     fun isReactedBy(user: User): String? {
         return reactions.filter {
             it.value.any { it.author?.pubkeyHex == user.pubkeyHex }

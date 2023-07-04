@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
@@ -211,12 +212,22 @@ private fun FeedLoaded(
 
 @Composable
 fun CheckIfLiveActivityIsOnline(note: Note, whenOnline: @Composable () -> Unit) {
-    val noteState by note.live().metadata.observeAsState()
+    val url by note.live().metadata.map {
+        (note.event as? LiveActivitiesEvent)?.streaming()
+    }.observeAsState()
+
+    url?.let {
+        CheckIfUrlIsOnline(it, whenOnline)
+    }
+}
+
+@Composable
+fun CheckIfUrlIsOnline(url: String, whenOnline: @Composable () -> Unit) {
     var online by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = noteState) {
+    LaunchedEffect(key1 = url) {
         launch(Dispatchers.IO) {
-            online = OnlineChecker.isOnline((note.event as? LiveActivitiesEvent)?.streaming())
+            online = OnlineChecker.isOnline(url)
         }
     }
 

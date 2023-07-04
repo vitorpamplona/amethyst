@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import java.util.Date
 
 class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
@@ -41,7 +42,7 @@ class HomeLiveActivitiesFeedFilter(val account: Account) : AdditiveFeedFilter<No
             .asSequence()
             .filter { it ->
                 val noteEvent = it.event
-                (noteEvent is LiveActivitiesEvent && noteEvent.createdAt > twoHrs && noteEvent.status() == "live" && OnlineChecker.isOnline(noteEvent.streaming())) &&
+                (noteEvent is LiveActivitiesEvent && noteEvent.createdAt > twoHrs && noteEvent.status() == STATUS_LIVE && OnlineChecker.isOnline(noteEvent.streaming())) &&
                     (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true

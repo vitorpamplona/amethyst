@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
@@ -516,6 +517,7 @@ fun ChannelHeader(
     channelHex: String,
     showVideo: Boolean,
     showBottomDiviser: Boolean,
+    showFlag: Boolean = true,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -535,6 +537,7 @@ fun ChannelHeader(
             it,
             showVideo,
             showBottomDiviser,
+            showFlag,
             modifier,
             accountViewModel,
             nav
@@ -547,6 +550,7 @@ fun ChannelHeader(
     baseChannel: Channel,
     showVideo: Boolean,
     showBottomDiviser: Boolean,
+    showFlag: Boolean = true,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -564,27 +568,33 @@ fun ChannelHeader(
         val channelState by baseChannel.live.observeAsState()
         val channel = remember(channelState) { channelState?.channel } ?: return
 
-        val streamingUrl by remember(channelState) {
-            derivedStateOf {
-                val activity = channel as? LiveActivitiesChannel
-                val description = activity?.info?.title()
-                val url = activity?.info?.streaming()
-                if (url != null) {
-                    ZoomableUrlVideo(url, description = description)
-                } else {
-                    null
+        if (showVideo) {
+            val streamingUrl by remember(channelState) {
+                derivedStateOf {
+                    val activity = channel as? LiveActivitiesChannel
+                    val description = activity?.info?.title()
+                    val url = activity?.info?.streaming()
+                    if (url != null) {
+                        ZoomableUrlVideo(url, description = description)
+                    } else {
+                        null
+                    }
+                }
+            }
+
+            streamingUrl?.let {
+                CheckIfUrlIsOnline(it.url) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = remember { Modifier.heightIn(max = 300.dp) }
+                    ) {
+                        ZoomableContentView(
+                            content = it
+                        )
+                    }
                 }
             }
         }
-
-        if (streamingUrl != null && showVideo) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = remember { Modifier.heightIn(max = 300.dp) }) {
-                ZoomableContentView(
-                    content = streamingUrl!!
-                )
-            }
-        }
-
         Column(modifier = modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (channel is LiveActivitiesChannel) {
@@ -653,7 +663,7 @@ fun ChannelHeader(
                         ChannelActionOptions(channel, accountViewModel, nav)
                     }
                     if (channel is LiveActivitiesChannel) {
-                        LiveChannelActionOptions(channel, accountViewModel, nav)
+                        LiveChannelActionOptions(channel, showFlag, accountViewModel, nav)
                     }
                 }
             }
@@ -702,12 +712,13 @@ private fun ChannelActionOptions(
 @Composable
 private fun LiveChannelActionOptions(
     channel: LiveActivitiesChannel,
+    showFlag: Boolean = true,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val isLive by remember(channel) {
         derivedStateOf {
-            channel.info?.status() == "live"
+            channel.info?.status() == STATUS_LIVE
         }
     }
 
@@ -716,7 +727,7 @@ private fun LiveChannelActionOptions(
     }
 
     note?.let {
-        if (isLive) {
+        if (showFlag && isLive) {
             LiveFlag()
             Spacer(modifier = StdHorzSpacer)
         }

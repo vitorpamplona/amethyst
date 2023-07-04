@@ -57,6 +57,11 @@ sealed class Route(
         icon = R.drawable.ic_video
     )
 
+    object Discover : Route(
+        route = "Discover",
+        icon = R.drawable.ic_sensors
+    )
+
     object Notification : Route(
         route = "Notification",
         icon = R.drawable.ic_notifications,

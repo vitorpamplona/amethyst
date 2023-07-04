@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
@@ -238,6 +239,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     fun isFollowing(user: User?): Boolean {
         if (user == null) return false
+        return account.userProfile().isFollowingCached(user)
+    }
+
+    fun isFollowing(user: HexKey): Boolean {
         return account.userProfile().isFollowingCached(user)
     }
 

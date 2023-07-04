@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
+import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
@@ -66,6 +67,7 @@ object ServiceManager {
             NostrHomeDataSource.account = myAccount
             NostrChatroomListDataSource.account = myAccount
             NostrVideoDataSource.account = myAccount
+            NostrDiscoveryDataSource.account = myAccount
             ImageUploader.account = myAccount
 
             // Notification Elements
@@ -87,6 +89,7 @@ object ServiceManager {
         NostrHomeDataSource.stop()
         NostrChannelDataSource.stop()
         NostrChatroomListDataSource.stop()
+        NostrDiscoveryDataSource.stop()
 
         NostrSingleChannelDataSource.stop()
         NostrSingleEventDataSource.stop()

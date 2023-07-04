@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -22,6 +23,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
@@ -42,6 +44,7 @@ fun AppNavigation(
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
+    discoveryFeedViewModel: NostrDiscoverFeedViewModel,
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
 
@@ -100,6 +103,16 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 VideoScreen(
                     videoFeedView = videoFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Discover.let { route ->
+            composable(route.route, route.arguments, content = {
+                DiscoverScreen(
+                    discoveryFeedViewModel = discoveryFeedViewModel,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

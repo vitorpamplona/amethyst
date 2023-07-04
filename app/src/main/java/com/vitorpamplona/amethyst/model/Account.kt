@@ -62,6 +62,7 @@ class Account(
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
     var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,
+    var defaultDiscoveryFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -895,6 +896,12 @@ class Account(
 
     fun changeDefaultNotificationFollowList(name: String) {
         defaultNotificationFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeDefaultDiscoveryFollowList(name: String) {
+        defaultDiscoveryFollowList = name
         live.invalidateData()
         saveable.invalidateData()
     }

@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
@@ -98,6 +99,11 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         factory = NostrVideoFeedViewModel.Factory(accountViewModel.account)
     )
 
+    val discoveryFeedViewModel: NostrDiscoverFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryFeedViewModel",
+        factory = NostrDiscoverFeedViewModel.Factory(accountViewModel.account)
+    )
+
     val notifFeedViewModel: NotificationViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "NotificationViewModel",
         factory = NotificationViewModel.Factory(accountViewModel.account)
@@ -135,6 +141,9 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                     }
                     Route.Video.base -> {
                         videoFeedViewModel.sendToTop()
+                    }
+                    Route.Discover.base -> {
+                        discoveryFeedViewModel.sendToTop()
                     }
                     Route.Notification.base -> {
                         notifFeedViewModel.invalidateDataAndSendToTop()
@@ -184,6 +193,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                     knownFeedViewModel,
                     newFeedViewModel,
                     videoFeedViewModel,
+                    discoveryFeedViewModel,
                     notifFeedViewModel,
                     userReactionsStatsModel,
                     navController,
