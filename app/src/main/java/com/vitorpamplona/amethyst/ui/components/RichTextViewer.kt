@@ -340,9 +340,11 @@ private fun RefreshableContent(content: String, tags: ImmutableListOfLists<Strin
 @Composable
 fun ObserverAllNIP19References(content: String, tags: ImmutableListOfLists<String>?, onRefresh: () -> Unit) {
     var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
+
     LaunchedEffect(key1 = content) {
         launch(Dispatchers.IO) {
             nip19References = returnNIP19References(content, tags)
+            onRefresh()
         }
     }
 
