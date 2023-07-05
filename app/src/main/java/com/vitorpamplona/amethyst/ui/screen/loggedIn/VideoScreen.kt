@@ -62,6 +62,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.ui.actions.GallerySelect
@@ -192,7 +193,19 @@ fun RenderPage(
     nav: (String) -> Unit
 ) {
     val feedState by videoFeedView.feedContent.collectAsState()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val settings = accountState?.account?.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
 
+    val showImage = remember {
+        mutableStateOf(
+            when (settings?.automaticallyShowImages) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
     Box() {
         Column {
             Crossfade(
@@ -213,6 +226,7 @@ fun RenderPage(
                             state.feed,
                             pagerState,
                             accountViewModel,
+                            showImage,
                             nav
                         )
                     }
@@ -232,6 +246,7 @@ fun SlidingCarousel(
     feed: MutableState<ImmutableList<Note>>,
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     VerticalPager(
@@ -244,7 +259,7 @@ fun SlidingCarousel(
         }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            RenderVideoOrPictureNote(note, accountViewModel, nav)
+            RenderVideoOrPictureNote(note, accountViewModel, showImage, nav)
         }
     }
 }
@@ -253,6 +268,7 @@ fun SlidingCarousel(
 private fun RenderVideoOrPictureNote(
     note: Note,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(remember { Modifier.fillMaxSize(1f) }) {

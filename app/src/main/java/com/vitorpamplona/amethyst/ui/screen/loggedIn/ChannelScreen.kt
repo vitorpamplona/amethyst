@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
@@ -199,6 +200,20 @@ fun ChannelScreen(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val settings = accountState?.account?.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val showImage = remember {
+        mutableStateOf(
+            when (settings?.automaticallyShowImages) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     LaunchedEffect(Unit) {
         NostrChannelDataSource.start()
         feedViewModel.invalidateData()
@@ -239,6 +254,7 @@ fun ChannelScreen(
             showVideo = true,
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
+            showImage = showImage,
             nav = nav
         )
 
@@ -518,6 +534,7 @@ fun ChannelHeader(
     showBottomDiviser: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val channelHex by remember {
@@ -531,6 +548,7 @@ fun ChannelHeader(
             showVideo = showVideo,
             showBottomDiviser = showBottomDiviser,
             accountViewModel = accountViewModel,
+            showImage = showImage,
             nav = nav
         )
     }
@@ -544,6 +562,7 @@ fun ChannelHeader(
     showFlag: Boolean = true,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var baseChannel by remember { mutableStateOf(LocalCache.channels[channelHex]) }
@@ -564,6 +583,7 @@ fun ChannelHeader(
             showFlag,
             modifier,
             accountViewModel,
+            showImage,
             nav
         )
     }
@@ -577,6 +597,7 @@ fun ChannelHeader(
     showFlag: Boolean = true,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {

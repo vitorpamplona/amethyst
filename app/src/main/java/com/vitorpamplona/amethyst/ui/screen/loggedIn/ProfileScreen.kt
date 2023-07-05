@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -597,6 +598,20 @@ private fun ProfileHeader(
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
+
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val settings = accountState?.account?.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val showImage = remember {
+        mutableStateOf(
+            when (settings?.automaticallyShowImages) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
 
     Box {
         DrawBanner(baseUser)
@@ -1260,7 +1275,7 @@ private fun WatchAndRenderBadgeImage(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-public fun DrawBanner(baseUser: User) {
+fun DrawBanner(baseUser: User) {
     val userState by baseUser.live().metadata.observeAsState()
     val banner = remember(userState) { userState?.user?.info?.banner }
 

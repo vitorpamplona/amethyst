@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
@@ -244,6 +245,19 @@ fun NoteMaster(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
 
+    val settings = accountState?.account?.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val showImage = remember {
+        mutableStateOf(
+            when (settings?.automaticallyShowImages) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     var showHiddenNote by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -398,7 +412,7 @@ fun NoteMaster(
             ) {
                 Column() {
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
-                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
+                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, showImage = showImage, nav = nav)
                     } else if (noteEvent is FileHeaderEvent) {
                         FileHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
@@ -431,7 +445,7 @@ fun NoteMaster(
                             nav
                         )
                     } else if (noteEvent is AppDefinitionEvent) {
-                        RenderAppDefinition(baseNote, accountViewModel, nav)
+                        RenderAppDefinition(baseNote, accountViewModel, showImage, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),

@@ -253,6 +253,9 @@ private fun RenderVideoPlayer(
                 .defaultMinSize(minHeight = 70.dp)
                 .align(Alignment.Center)
                 .onVisibilityChanges { visible ->
+                    if (!showVideo.value) {
+                        playerData.exoPlayer.stop()
+                    }
                     if (!showVideo.value && visible && !playerData.exoPlayer.isPlaying) {
                         playerData.exoPlayer.pause()
                     } else if (visible && !playerData.exoPlayer.isPlaying) {

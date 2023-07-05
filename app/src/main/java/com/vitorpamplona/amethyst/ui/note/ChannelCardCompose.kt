@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
@@ -93,6 +94,20 @@ fun ChannelCardCompose(
         it.note.event == null
     }.distinctUntilChanged().observeAsState(baseNote.event == null)
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val settings = accountState?.account?.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val showImage = remember {
+        mutableStateOf(
+            when (settings?.automaticallyShowImages) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     Crossfade(targetState = isBlank) {
         if (it) {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -113,6 +128,7 @@ fun ChannelCardCompose(
                 modifier,
                 parentBackgroundColor,
                 accountViewModel,
+                showImage,
                 nav
             )
         }
@@ -126,6 +142,7 @@ fun CheckHiddenChannelCardCompose(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val isHidden by accountViewModel.accountLiveData.map {
@@ -140,6 +157,7 @@ fun CheckHiddenChannelCardCompose(
                 modifier,
                 parentBackgroundColor,
                 accountViewModel,
+                showImage,
                 nav
             )
         }
@@ -153,6 +171,7 @@ fun LoadedChannelCardCompose(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var state by remember {
@@ -184,6 +203,7 @@ fun LoadedChannelCardCompose(
             modifier,
             parentBackgroundColor,
             accountViewModel,
+            showImage,
             nav
         )
     }
@@ -197,6 +217,7 @@ fun RenderChannelCardReportState(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
@@ -218,6 +239,7 @@ fun RenderChannelCardReportState(
                 modifier,
                 parentBackgroundColor,
                 accountViewModel,
+                showImage,
                 nav
             )
         }
@@ -231,6 +253,7 @@ fun NormalChannelCard(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -240,6 +263,7 @@ fun NormalChannelCard(
             modifier,
             parentBackgroundColor,
             accountViewModel,
+            showImage,
             showPopup,
             nav
         )
@@ -253,6 +277,7 @@ private fun CheckNewAndRenderChannelCard(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
@@ -310,6 +335,7 @@ private fun CheckNewAndRenderChannelCard(
         InnerChannelCardWithReactions(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
+            showImage,
             nav = nav
         )
     }
@@ -319,6 +345,7 @@ private fun CheckNewAndRenderChannelCard(
 fun InnerChannelCardWithReactions(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(StdPadding) {
@@ -339,11 +366,12 @@ fun InnerChannelCardWithReactions(
 private fun RenderNoteRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (remember { baseNote.event }) {
         is LiveActivitiesEvent -> {
-            RenderLiveActivityThumb(baseNote, accountViewModel, nav)
+            RenderLiveActivityThumb(baseNote, accountViewModel, showImage, nav)
         }
         is CommunityDefinitionEvent -> {
             RenderCommunitiesThumb(baseNote, accountViewModel, nav)
@@ -355,7 +383,7 @@ private fun RenderNoteRow(
 }
 
 @Composable
-fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, showImage: MutableState<Boolean>, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
     val eventUpdates by baseNote.live().metadata.observeAsState()
@@ -492,6 +520,7 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
                 Modifier.padding(start = 0.dp, end = 0.dp, top = 5.dp, bottom = 5.dp)
             },
             accountViewModel = accountViewModel,
+            showImage = showImage,
             nav = nav
         )
     }

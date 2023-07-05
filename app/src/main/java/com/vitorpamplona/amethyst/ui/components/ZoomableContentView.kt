@@ -5,7 +5,6 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,7 +71,6 @@ import coil.imageLoader
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
@@ -170,18 +168,12 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList()) {
+fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(), showImage: MutableState<Boolean>) {
     val clipboardManager = LocalClipboardManager.current
 
     // store the dialog open or close state
     var dialogOpen by remember {
         mutableStateOf(false)
-    }
-
-    val isOnMobileData by ConnectivityStatus.isOnMobileData
-
-    val showImage = remember {
-        mutableStateOf(!isOnMobileData)
     }
 
     var mainImageModifier = MaterialTheme.colors.imageModifier
@@ -205,7 +197,7 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
     when (content) {
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, showImage)
         is ZoomableUrlVideo -> VideoView(content.url, content.description, showVideo = showImage) { dialogOpen = true }
-        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier)
+        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, showImage)
         is ZoomableLocalVideo ->
             content.localFile?.let {
                 VideoView(it.toUri().toString(), content.description, showVideo = showImage) { dialogOpen = true }
@@ -220,7 +212,8 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
 @Composable
 private fun LocalImageView(
     content: ZoomableLocalImage,
-    mainImageModifier: Modifier
+    mainImageModifier: Modifier,
+    showImage: MutableState<Boolean>
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
@@ -245,17 +238,19 @@ private fun LocalImageView(
                 mutableStateOf<AsyncImagePainter.State?>(null)
             }
 
-            AsyncImage(
-                model = content.localFile,
-                contentDescription = content.description,
-                contentScale = contentScale,
-                modifier = myModifier,
-                onState = {
-                    painterState.value = it
-                }
-            )
+            if (showImage.value) {
+                AsyncImage(
+                    model = content.localFile,
+                    contentDescription = content.description,
+                    contentScale = contentScale,
+                    modifier = myModifier,
+                    onState = {
+                        painterState.value = it
+                    }
+                )
+            }
 
-            AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier)
+            AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier, showImage)
         }
     } else {
         BlankNote()
@@ -313,8 +308,18 @@ private fun AddedImageFeatures(
     content: ZoomableLocalImage,
     contentScale: ContentScale,
     myModifier: Modifier,
-    verifiedModifier: Modifier
+    verifiedModifier: Modifier,
+    showImage: MutableState<Boolean>
 ) {
+    if (!showImage.value) {
+        return Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            ClickableUrl(urlText = "${content.uri} ", url = content.uri)
+            Button(onClick = { showImage.value = true }) {
+                Text("Load image")
+            }
+        }
+    }
+
     when (painter.value) {
         null, is AsyncImagePainter.State.Loading -> {
             if (content.blurhash != null) {
@@ -537,11 +542,11 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index])
+                            RenderImageOrVideo(allImages[index], remember { mutableStateOf(true) })
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl)
+                    RenderImageOrVideo(imageUrl, remember { mutableStateOf(true) })
                 }
 
                 Row(
@@ -566,13 +571,10 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
 }
 
 @Composable
-fun RenderImageOrVideo(content: ZoomableContent) {
+fun RenderImageOrVideo(content: ZoomableContent, showImage: MutableState<Boolean>) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
-    val showImage = remember {
-        mutableStateOf(true)
-    }
 
     if (content is ZoomableUrlImage) {
         UrlImageView(content = content, mainImageModifier = mainModifier, showImage)
@@ -581,7 +583,7 @@ fun RenderImageOrVideo(content: ZoomableContent) {
             VideoView(content.url, content.description, showVideo = showImage)
         }
     } else if (content is ZoomableLocalImage) {
-        LocalImageView(content = content, mainImageModifier = mainModifier)
+        LocalImageView(content = content, mainImageModifier = mainModifier, showImage)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {

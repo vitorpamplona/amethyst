@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.model.ATag
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
@@ -210,6 +211,20 @@ fun NoteCompose(
         it.note.event == null
     }.distinctUntilChanged().observeAsState(baseNote.event == null)
 
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val settings = accountState?.account?.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val showImage = remember {
+        mutableStateOf(
+            when (settings?.automaticallyShowImages) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     Crossfade(targetState = isBlank) {
         if (it) {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -235,6 +250,7 @@ fun NoteCompose(
                 addMarginTop,
                 parentBackgroundColor,
                 accountViewModel,
+                showImage,
                 nav
             )
         }
@@ -253,6 +269,7 @@ fun CheckHiddenNoteCompose(
     addMarginTop: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val isHidden by accountViewModel.accountLiveData.map {
@@ -272,6 +289,7 @@ fun CheckHiddenNoteCompose(
                 addMarginTop,
                 parentBackgroundColor,
                 accountViewModel,
+                showImage,
                 nav
             )
         }
@@ -297,6 +315,7 @@ fun LoadedNoteCompose(
     addMarginTop: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var state by remember {
@@ -333,6 +352,7 @@ fun LoadedNoteCompose(
             addMarginTop,
             parentBackgroundColor,
             accountViewModel,
+            showImage,
             nav
         )
     }
@@ -351,6 +371,7 @@ fun RenderReportState(
     addMarginTop: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
@@ -380,6 +401,7 @@ fun RenderReportState(
                 canPreview,
                 parentBackgroundColor,
                 accountViewModel,
+                showImage,
                 nav
             )
         }
@@ -415,6 +437,7 @@ fun NormalNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (baseNote.event) {
@@ -423,6 +446,7 @@ fun NormalNote(
             showVideo = !makeItShort,
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
+            showImage = showImage,
             nav = nav
         )
         is CommunityDefinitionEvent -> CommunityHeader(
@@ -448,6 +472,7 @@ fun NormalNote(
                     canPreview,
                     parentBackgroundColor,
                     accountViewModel,
+                    showImage,
                     showPopup,
                     nav
                 )
@@ -745,6 +770,7 @@ private fun CheckNewAndRenderNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
@@ -809,6 +835,7 @@ private fun CheckNewAndRenderNote(
             makeItShort = makeItShort,
             canPreview = canPreview,
             accountViewModel = accountViewModel,
+            showImage = showImage,
             nav = nav
         )
     }
@@ -859,6 +886,7 @@ fun InnerNoteWithReactions(
     makeItShort: Boolean,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
@@ -897,6 +925,7 @@ fun InnerNoteWithReactions(
                     showSecondRow = showSecondRow,
                     backgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
+                    showImage = showImage,
                     nav = nav
                 )
             }
@@ -942,6 +971,7 @@ private fun NoteBody(
     showSecondRow: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     FirstUserInfoRow(
@@ -967,6 +997,7 @@ private fun NoteBody(
             unPackReply,
             backgroundColor,
             accountViewModel,
+            showImage,
             nav
         )
     }
@@ -977,6 +1008,7 @@ private fun NoteBody(
         makeItShort,
         canPreview,
         accountViewModel,
+        showImage,
         nav
     )
 }
@@ -988,11 +1020,12 @@ private fun RenderNoteRow(
     makeItShort: Boolean,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (baseNote.event) {
         is AppDefinitionEvent -> {
-            RenderAppDefinition(baseNote, accountViewModel, nav)
+            RenderAppDefinition(baseNote, accountViewModel, showImage, nav)
         }
 
         is ReactionEvent -> {
@@ -1236,6 +1269,7 @@ fun RenderPoll(
 fun RenderAppDefinition(
     note: Note,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? AppDefinitionEvent ?: return
@@ -2065,6 +2099,7 @@ private fun ReplyRow(
     unPackReply: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event
@@ -2100,6 +2135,7 @@ private fun ReplyRow(
                     showBottomDiviser = false,
                     modifier = remember { Modifier.padding(vertical = 5.dp) },
                     accountViewModel = accountViewModel,
+                    showImage = showImage,
                     nav = nav
                 )
 
