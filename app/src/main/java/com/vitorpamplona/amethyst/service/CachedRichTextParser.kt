@@ -52,7 +52,8 @@ val shortDatePattern: Pattern = Pattern.compile("^\\d{2}-\\d{2}-\\d{2}$")
 val numberPattern: Pattern = Pattern.compile("^(-?[\\d.]+)([a-zA-Z%]*)$")
 
 // Group 1 = url, group 4 additional chars
-val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
+//val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
+val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]*[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
 
 class RichTextParser() {
     fun parseText(
@@ -70,7 +71,8 @@ class RichTextParser() {
             } else if (it.originalUrl.contains("。")) {
                 null
             } else {
-                if (Patterns.WEB_URL.matcher(it.originalUrl).matches()) {
+                val pattern = "^((http|https)://)?([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
+                if (pattern.matches(it.originalUrl)) {
                     it.originalUrl
                 } else {
                     null
@@ -178,7 +180,8 @@ class RichTextParser() {
         } else if (schemelessMatcher.find()) {
             val url = schemelessMatcher.group(1) // url
             val additionalChars = schemelessMatcher.group(4) // additional chars
-            if (url != null) {
+            val pattern = "^([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
+            if (pattern.matches(word)) {
                 SchemelessUrlSegment(word, url, additionalChars)
             } else {
                 RegularTextSegment(word)
