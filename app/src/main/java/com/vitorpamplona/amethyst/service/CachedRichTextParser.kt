@@ -70,8 +70,7 @@ class RichTextParser() {
             } else if (it.originalUrl.contains("。")) {
                 null
             } else {
-                val pattern = "^(http|https)://([A-Z0-9][A-Z0-9_-]*(?:.[A-Z0-9][A-Z0-9_-]*)+):?(d+)?/?".toRegex(RegexOption.IGNORE_CASE)
-                if (pattern.matches(it.originalUrl)) {
+                if (Patterns.WEB_URL.matcher(it.originalUrl).matches()) {
                     it.originalUrl
                 } else {
                     null
