@@ -23,8 +23,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import java.util.regex.Pattern
-import java.net.URI
-import java.net.URISyntaxException
 
 @Immutable
 data class RichTextViewerState(
