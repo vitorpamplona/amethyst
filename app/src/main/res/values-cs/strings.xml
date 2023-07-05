@@ -33,6 +33,8 @@
     <string name="login_with_a_private_key_to_like_posts">Přihlásit se pomocí soukromého klíče pro označení příspěvků jako líbivé</string>
     <string name="no_zap_amount_setup_long_press_to_change">Není nastaveno množství Zap. Dlouhým stisknutím změňte</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Přihlaste se pomocí soukromého klíče, abyste mohli odesílat Zapy</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Přihlaste se pomocí soukromého klíče, abyste mohli následovat</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Přihlaste se pomocí soukromého klíče, abyste mohli zrušit sledování</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Počet zobrazení</string>
     <string name="boost">Boost</string>
@@ -442,4 +444,7 @@
     <string name="live_stream_is_offline">Živé vysílání je offline</string>
     <string name="live_stream_has_ended">Živé vysílání ukončeno</string>
     <string name="are_you_sure_you_want_to_log_out">Odhlášení vymaže všechny vaše místní informace. Ujistěte se, že máte zálohované své privátní klíče, abyste se vyhnuli ztrátě účtu. Chcete pokračovat?</string>
+    <string name="followed_tags">Sledované značky</string>
+
+    <string name="relay_setup">Rele</string>
 </resources>
