@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ExposedDropdownMenuBox
 import androidx.compose.material.ExposedDropdownMenuDefaults
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -25,16 +30,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.navigation.IconRow
+import com.vitorpamplona.amethyst.ui.navigation.IconRowRelays
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.xmlpull.v1.XmlPullParser
@@ -74,6 +89,13 @@ fun Context.getLangPreferenceDropdownEntries(): Map<String, String> {
     return map
 }
 
+fun getLanguageIndex(languageEntries: Map<String, String>): Int {
+    var languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
+    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
+    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
+    return languageIndex
+}
+
 @Composable
 fun SettingsScreen(
     accountViewModel: AccountViewModel,
@@ -105,18 +127,68 @@ fun SettingsScreen(
 
     val languageEntries = context.getLangPreferenceDropdownEntries()
     val languageList = languageEntries.keys.toTypedArray()
-    var languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
-    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
-    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
+    val languageIndex = getLanguageIndex(languageEntries)
     val selectedLanguage = remember {
         mutableStateOf(languageList[languageIndex])
     }
+    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
+    var wantsToEditRelays by remember {
+        mutableStateOf(false)
+    }
+    var backupDialogOpen by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(accountViewModel.account.proxy != null) }
+    var disconnectTorDialog by remember { mutableStateOf(false) }
+    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
+    val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
 
     Column(
-        StdPadding,
+        StdPadding
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Section("Account preferences")
+
+        IconRowRelays(
+            relayViewModel = relayViewModel,
+            onClick = {
+                wantsToEditRelays = true
+            }
+        )
+
+        IconRow(
+            title = stringResource(R.string.security_filters),
+            icon = Route.BlockedUsers.icon,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = {
+                nav(Route.BlockedUsers.route)
+            }
+        )
+
+        IconRow(
+            title = stringResource(R.string.backup_keys),
+            icon = R.drawable.ic_key,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = {
+                backupDialogOpen = true
+            }
+        )
+
+        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
+        IconRow(
+            title = textTorProxy,
+            icon = R.drawable.ic_tor,
+            tint = MaterialTheme.colors.onBackground,
+            onLongClick = {
+                conectOrbotDialogOpen = true
+            },
+            onClick = {
+                if (checked) {
+                    disconnectTorDialog = true
+                } else {
+                    conectOrbotDialogOpen = true
+                }
+            }
+        )
 
         Section("Application preferences")
 
@@ -176,6 +248,74 @@ fun SettingsScreen(
                 Text(text = "Save")
             }
         }
+    }
+    if (wantsToEditRelays) {
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+    }
+    if (backupDialogOpen) {
+        AccountBackupDialog(accountViewModel.account, onClose = { backupDialogOpen = false })
+    }
+    if (conectOrbotDialogOpen) {
+        ConnectOrbotDialog(
+            onClose = { conectOrbotDialogOpen = false },
+            onPost = {
+                conectOrbotDialogOpen = false
+                disconnectTorDialog = false
+                checked = true
+                enableTor(accountViewModel.account, true, proxyPort, context, scope)
+            },
+            proxyPort
+        )
+    }
+
+    if (disconnectTorDialog) {
+        AlertDialog(
+            title = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_text))
+            },
+            onDismissRequest = {
+                disconnectTorDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        disconnectTorDialog = false
+                        checked = false
+                        enableTor(accountViewModel.account, false, proxyPort, context, scope)
+                    }
+                ) {
+                    Text(text = stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        disconnectTorDialog = false
+                    }
+                ) {
+                    Text(text = stringResource(R.string.no))
+                }
+            }
+        )
+    }
+}
+
+private fun enableTor(
+    account: Account,
+    checked: Boolean,
+    portNumber: MutableState<String>,
+    context: Context,
+    scope: CoroutineScope
+) {
+    account.proxyPort = portNumber.value.toInt()
+    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
+    scope.launch(Dispatchers.IO) {
+        LocalPreferences.saveToEncryptedStorage(account)
+        ServiceManager.pause()
+        ServiceManager.start(context)
     }
 }
 
