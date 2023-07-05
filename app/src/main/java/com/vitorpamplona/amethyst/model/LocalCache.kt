@@ -72,11 +72,11 @@ object LocalCache {
         if (isValidHex(key)) {
             val note = getOrCreateNote(key)
             val noteEvent = note.event
-            if (noteEvent is AddressableEvent) {
+            return if (noteEvent is AddressableEvent) {
                 // upgrade to the latest
-                return checkGetOrCreateAddressableNote(noteEvent.address().toTag())
+                checkGetOrCreateAddressableNote(noteEvent.address().toTag())
             } else {
-                return note
+                note
             }
         }
         return null

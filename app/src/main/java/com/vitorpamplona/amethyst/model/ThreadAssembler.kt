@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import kotlin.time.ExperimentalTime
@@ -43,16 +42,7 @@ class ThreadAssembler {
         checkNotInMainThread()
 
         val (result, elapsed) = measureTimedValue {
-            val note = if (noteId.contains(":")) {
-                val aTag = ATag.parse(noteId, null)
-                if (aTag != null) {
-                    LocalCache.getOrCreateAddressableNote(aTag)
-                } else {
-                    return emptySet()
-                }
-            } else {
-                LocalCache.getOrCreateNote(noteId)
-            }
+            val note = LocalCache.checkGetOrCreateNote(noteId) ?: return emptySet<Note>()
 
             if (note.event != null) {
                 val thread = mutableSetOf<Note>()

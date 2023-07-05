@@ -1148,7 +1148,7 @@ private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit
     LaunchedEffect(key1 = badgeAwardEventHex) {
         if (baseNote == null) {
             launch(Dispatchers.IO) {
-                baseNote = LocalCache.getOrCreateNote(badgeAwardEventHex)
+                baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEventHex)
             }
         }
     }
