@@ -51,6 +51,13 @@ fun SettingsScreen(
     val selectedVideoItem = remember {
         mutableStateOf(selectedItens[videoIndex])
     }
+
+    val themeItens = arrayOf("System", "Light", "Dark")
+    val themeIndex = themeItens.indexOf(accountViewModel.currentTheme())
+    val selectedTheme = remember {
+        mutableStateOf(themeItens[themeIndex])
+    }
+
     val context = LocalContext.current
     Column(
         StdPadding,
@@ -59,6 +66,17 @@ fun SettingsScreen(
         Section("Account preferences")
 
         Section("Application preferences")
+
+        Text(
+            "Theme",
+            fontWeight = FontWeight.Bold
+        )
+
+        DropDownSettings(
+            selectedItem = selectedTheme,
+            listItems = themeItens,
+            title = "Theme"
+        )
 
         Text(
             "Media",
@@ -95,9 +113,11 @@ fun SettingsScreen(
                         2 -> false
                         else -> null
                     }
+                    accountViewModel.changeTheme(selectedTheme.value)
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback)
                         LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                        LocalPreferences.updateTheme(selectedTheme.value)
                         ServiceManager.pause()
                         ServiceManager.start(context)
                     }

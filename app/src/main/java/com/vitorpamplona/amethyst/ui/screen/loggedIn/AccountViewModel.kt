@@ -22,6 +22,7 @@ import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -32,13 +33,21 @@ import java.math.BigDecimal
 import java.util.Locale
 
 @Stable
-class AccountViewModel(val account: Account) : ViewModel() {
+class AccountViewModel(val account: Account, private val themeViewModel: ThemeViewModel) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
+
+    fun changeTheme(newValue: String) {
+        themeViewModel.onChange(newValue)
+    }
+
+    fun currentTheme(): String {
+        return themeViewModel.theme.value ?: "System"
+    }
 
     fun updateGlobalSettings(automaticallyShowImages: Boolean?, automaticallyStartPlayback: Boolean?) {
         account.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback)
@@ -303,9 +312,9 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
+    class Factory(val account: Account, private val themeViewModel: ThemeViewModel) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
-            return AccountViewModel(account) as AccountViewModel
+            return AccountViewModel(account, themeViewModel) as AccountViewModel
         }
     }
 }

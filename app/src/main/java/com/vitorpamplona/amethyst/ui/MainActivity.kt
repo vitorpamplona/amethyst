@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.navigation.debugState
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -50,16 +51,18 @@ class MainActivity : FragmentActivity() {
         val startingPage = uriToRoute(uri)
 
         LocalPreferences.migrateSingleUserPrefs()
+        val themeViewModel = ThemeViewModel()
+        themeViewModel.onChange(LocalPreferences.getTheme())
 
         setContent {
-            AmethystTheme {
+            AmethystTheme(themeViewModel) {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
                         AccountStateViewModel(this@MainActivity)
                     }
 
-                    AccountScreen(accountStateViewModel, startingPage)
+                    AccountScreen(accountStateViewModel, themeViewModel, startingPage)
                 }
             }
         }

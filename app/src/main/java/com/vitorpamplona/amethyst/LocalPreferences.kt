@@ -70,6 +70,7 @@ private object PrefKeys {
     const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
     const val AUTOMATICALLY_SHOW_IMAGES = "automatically_show_images"
     const val AUTOMATICALLY_START_PLAYBACK = "automatically_start_playback"
+    const val THEME = "theme"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -254,6 +255,20 @@ object LocalPreferences {
                 putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback!!)
             }
         }.apply()
+    }
+
+    fun updateTheme(theme: String) {
+        encryptedPreferences().edit().apply {
+            putString(PrefKeys.THEME, theme)
+        }.apply()
+    }
+
+    fun getTheme(): String {
+        var theme = "System"
+        encryptedPreferences().apply {
+            theme = getString(PrefKeys.THEME, "System") ?: "System"
+        }
+        return theme
     }
 
     fun loadFromEncryptedStorage(): Account? {

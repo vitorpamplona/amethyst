@@ -14,6 +14,7 @@ import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 
 private val DarkColorPalette = darkColors(
     primary = Purple200,
@@ -304,12 +306,14 @@ val Colors.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
 
 @Composable
-fun AmethystTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colors = if (darkTheme) {
-        DarkColorPalette
-    } else {
-        LightColorPalette
+fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Unit) {
+    val theme = themeViewModel.theme.observeAsState()
+    val darkTheme = when (theme.value) {
+        "Dark" -> true
+        "Light" -> false
+        else -> if (isSystemInDarkTheme()) true else false
     }
+    val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 
     MaterialTheme(
         colors = colors,
