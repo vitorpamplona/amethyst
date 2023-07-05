@@ -73,7 +73,8 @@ class Account(
     var showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
-    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>()
+    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
+    var settings: Settings = Settings(null, null)
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -84,6 +85,13 @@ class Account(
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
+
+    fun updateGlobalSettings(automaticallyShowImages: Boolean?, automaticallyStartPlayback: Boolean?) {
+        settings.automaticallyStartPlayback = automaticallyStartPlayback
+        settings.automaticallyShowImages = automaticallyShowImages
+        live.invalidateData()
+        saveable.invalidateData()
+    }
 
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports

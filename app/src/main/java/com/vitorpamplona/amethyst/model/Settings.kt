@@ -1,4 +1,9 @@
 package com.vitorpamplona.amethyst.model
 
-class Settings {
-}
+import androidx.compose.runtime.Stable
+
+@Stable
+class Settings(
+    var automaticallyShowImages: Boolean?,
+    var automaticallyStartPlayback: Boolean?
+)

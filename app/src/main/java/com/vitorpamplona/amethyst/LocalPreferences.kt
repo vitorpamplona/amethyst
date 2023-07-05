@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
@@ -67,6 +68,8 @@ private object PrefKeys {
     const val WARN_ABOUT_REPORTS = "warn_about_reports"
     const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
     const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
+    const val AUTOMATICALLY_SHOW_IMAGES = "automatically_show_images"
+    const val AUTOMATICALLY_START_PLAYBACK = "automatically_start_playback"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -236,6 +239,21 @@ object LocalPreferences {
                 putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
             }
         }.apply()
+
+        val globalPrefs = encryptedPreferences()
+        globalPrefs.edit().apply {
+            if (account.settings.automaticallyShowImages == null) {
+                remove(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)
+            } else {
+                putBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, account.settings.automaticallyShowImages!!)
+            }
+
+            if (account.settings.automaticallyStartPlayback == null) {
+                remove(PrefKeys.AUTOMATICALLY_START_PLAYBACK)
+            } else {
+                putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback!!)
+            }
+        }.apply()
     }
 
     fun loadFromEncryptedStorage(): Account? {
@@ -340,6 +358,21 @@ object LocalPreferences {
                 mapOf()
             }
 
+            val settings = Settings(null, null)
+            encryptedPreferences().apply {
+                settings.automaticallyShowImages = if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
+                    getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false)
+                } else {
+                    null
+                }
+
+                settings.automaticallyStartPlayback = if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
+                    getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false)
+                } else {
+                    null
+                }
+            }
+
             val a = Account(
                 loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels = followingChannels,
@@ -366,7 +399,8 @@ object LocalPreferences {
                 showSensitiveContent = showSensitiveContent,
                 warnAboutPostsWithReports = warnAboutReports,
                 filterSpamFromStrangers = filterSpam,
-                lastReadPerRoute = lastReadPerRoute
+                lastReadPerRoute = lastReadPerRoute,
+                settings = settings
             )
 
             return a

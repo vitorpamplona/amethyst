@@ -40,6 +40,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
+    fun updateGlobalSettings(automaticallyShowImages: Boolean?, automaticallyStartPlayback: Boolean?) {
+        account.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback)
+    }
+
     fun isWriteable(): Boolean {
         return account.isWriteable()
     }
