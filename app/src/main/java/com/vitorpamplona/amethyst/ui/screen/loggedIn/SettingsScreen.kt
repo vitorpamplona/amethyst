@@ -1,10 +1,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExperimentalMaterialApi
@@ -23,13 +26,53 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
+import java.io.IOException
+
+fun Context.getLocaleListFromXml(): LocaleListCompat {
+    val tagsList = mutableListOf<CharSequence>()
+    try {
+        val xpp: XmlPullParser = resources.getXml(R.xml.locales_config)
+        while (xpp.eventType != XmlPullParser.END_DOCUMENT) {
+            if (xpp.eventType == XmlPullParser.START_TAG) {
+                if (xpp.name == "locale") {
+                    tagsList.add(xpp.getAttributeValue(0))
+                }
+            }
+            xpp.next()
+        }
+    } catch (e: XmlPullParserException) {
+        e.printStackTrace()
+    } catch (e: IOException) {
+        e.printStackTrace()
+    }
+
+    return LocaleListCompat.forLanguageTags(tagsList.joinToString(","))
+}
+
+fun Context.getLangPreferenceDropdownEntries(): Map<String, String> {
+    val localeList = getLocaleListFromXml()
+    val map = mutableMapOf<String, String>()
+
+    for (a in 0 until localeList.size()) {
+        localeList[a].let {
+            map.put(it!!.getDisplayName(it).replaceFirstChar { char -> char.uppercase() }, it.toLanguageTag())
+        }
+    }
+    return map
+}
 
 @Composable
 fun SettingsScreen(
@@ -59,6 +102,16 @@ fun SettingsScreen(
     }
 
     val context = LocalContext.current
+
+    val languageEntries = context.getLangPreferenceDropdownEntries()
+    val languageList = languageEntries.keys.toTypedArray()
+    var languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
+    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
+    if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
+    val selectedLanguage = remember {
+        mutableStateOf(languageList[languageIndex])
+    }
+
     Column(
         StdPadding,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -67,9 +120,10 @@ fun SettingsScreen(
 
         Section("Application preferences")
 
-        Text(
-            "Theme",
-            fontWeight = FontWeight.Bold
+        DropDownSettings(
+            selectedItem = selectedLanguage,
+            listItems = languageList,
+            title = "Language"
         )
 
         DropDownSettings(
@@ -78,18 +132,11 @@ fun SettingsScreen(
             title = "Theme"
         )
 
-        Text(
-            "Media",
-            fontWeight = FontWeight.Bold
-        )
-
         DropDownSettings(
             selectedItem = selectedItem,
             listItems = selectedItens,
             title = "Automatically load images/gifs"
         )
-
-        Spacer(modifier = DoubleVertSpacer)
 
         DropDownSettings(
             selectedItem = selectedVideoItem,
@@ -114,12 +161,15 @@ fun SettingsScreen(
                         else -> null
                     }
                     accountViewModel.changeTheme(selectedTheme.value)
+
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback)
                         LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                         LocalPreferences.updateTheme(selectedTheme.value)
                         ServiceManager.pause()
                         ServiceManager.start(context)
+                        val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[selectedLanguage.value])
+                        AppCompatDelegate.setApplicationLocales(appLocale)
                     }
                 }
             ) {
@@ -140,6 +190,7 @@ fun DropDownSettings(
         mutableStateOf(false)
     }
     ExposedDropdownMenuBox(
+        modifier = Modifier.padding(8.dp),
         expanded = expanded,
         onExpandedChange = {
             expanded = !expanded

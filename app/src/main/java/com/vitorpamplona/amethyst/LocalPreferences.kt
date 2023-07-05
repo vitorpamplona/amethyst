@@ -71,6 +71,7 @@ private object PrefKeys {
     const val AUTOMATICALLY_SHOW_IMAGES = "automatically_show_images"
     const val AUTOMATICALLY_START_PLAYBACK = "automatically_start_playback"
     const val THEME = "theme"
+    const val PREFERRED_LANGUAGE = "preferred_Language"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -254,6 +255,7 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback!!)
             }
+            putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
         }.apply()
     }
 
@@ -269,6 +271,14 @@ object LocalPreferences {
             theme = getString(PrefKeys.THEME, "System") ?: "System"
         }
         return theme
+    }
+
+    fun getPreferredLanguage(): String {
+        var language = ""
+        encryptedPreferences().apply {
+            language = getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
+        }
+        return language
     }
 
     fun loadFromEncryptedStorage(): Account? {
@@ -373,7 +383,7 @@ object LocalPreferences {
                 mapOf()
             }
 
-            val settings = Settings(null, null)
+            val settings = Settings()
             encryptedPreferences().apply {
                 settings.automaticallyShowImages = if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
                     getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false)
@@ -386,6 +396,8 @@ object LocalPreferences {
                 } else {
                     null
                 }
+
+                settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")
             }
 
             val a = Account(
