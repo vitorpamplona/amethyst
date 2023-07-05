@@ -317,6 +317,25 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun consume(event: CommunityDefinitionEvent, relay: Relay?) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     private fun consume(event: LiveActivitiesEvent, relay: Relay?) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -648,6 +667,30 @@ object LocalCache {
         // Counts the replies
         repliesTo.forEach {
             it.addBoost(note)
+        }
+
+        refreshObservers(note)
+    }
+
+    fun consume(event: CommunityPostApprovalEvent) {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        // Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+
+        note.loadEvent(event, author, repliesTo)
+
+        // Prepares user's profile view.
+        author.addNote(note)
+
+        // Counts the replies
+        repliesTo.forEach {
+            it.addReply(note)
         }
 
         refreshObservers(note)
@@ -1218,6 +1261,13 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is CommunityDefinitionEvent -> consume(event, relay)
+                is CommunityPostApprovalEvent -> {
+                    event.containedPost()?.let {
+                        verifyAndConsume(it, relay)
+                    }
+                    consume(event)
+                }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
 
