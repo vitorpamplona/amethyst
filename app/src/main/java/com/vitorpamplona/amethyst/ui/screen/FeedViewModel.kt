@@ -233,7 +233,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
 
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
-        if (localFilter is AdditiveFeedFilter && lastFeedKey != localFilter.feedKey()) {
+        if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
                 val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).toImmutableList()
                 if (!equalImmutableLists(newList, oldNotesState.feed.value)) {

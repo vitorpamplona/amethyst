@@ -122,6 +122,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     }
 
     val singleEventChannel = requestNewChannel { time, relayUrl ->
+        checkNotInMainThread()
+
         eventsToWatch.forEach {
             val eose = it.lastReactionsDownloadTime[relayUrl]
             if (eose == null) {
@@ -159,16 +161,16 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         }
     }
 
-    fun addAddress(aTag: Note) {
-        if (!addressesToWatch.contains(aTag)) {
-            addressesToWatch = addressesToWatch.plus(aTag)
+    fun addAddress(addressableNote: Note) {
+        if (!addressesToWatch.contains(addressableNote)) {
+            addressesToWatch = addressesToWatch.plus(addressableNote)
             invalidateFilters()
         }
     }
 
-    fun removeAddress(aTag: Note) {
-        if (addressesToWatch.contains(aTag)) {
-            addressesToWatch = addressesToWatch.minus(aTag)
+    fun removeAddress(addressableNote: Note) {
+        if (addressesToWatch.contains(addressableNote)) {
+            addressesToWatch = addressesToWatch.minus(addressableNote)
             invalidateFilters()
         }
     }

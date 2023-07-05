@@ -235,9 +235,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
 
-        if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded) {
-            lastFeedKey = localFilter.feedKey()
-
+        if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded && lastFeedKey == localFilter.feedKey()) {
             val filteredNewList = localFilter.applyFilter(newItems)
 
             if (filteredNewList.isEmpty()) return

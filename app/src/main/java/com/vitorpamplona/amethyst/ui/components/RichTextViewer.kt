@@ -112,7 +112,7 @@ fun RichTextViewer(
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
-            RenderContentAsMarkdown(content, backgroundColor, tags, nav)
+            RenderContentAsMarkdown(content, tags, nav)
         } else {
             RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
         }
@@ -292,7 +292,7 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: MutableState<Color>, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
+private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
     val uri = LocalUriHandler.current
     val onClick = remember {
         { link: String ->
@@ -391,10 +391,12 @@ private fun ObserveNIP19Event(
 
 @Composable
 fun ObserveNote(note: Note, onRefresh: () -> Unit) {
-    val noteState by note.live().metadata.observeAsState()
+    val loadedNoteId by note.live().metadata.map {
+        it.note.event?.id()
+    }.distinctUntilChanged().observeAsState(note.event?.id())
 
-    LaunchedEffect(key1 = noteState) {
-        if (noteState?.note?.event != null) {
+    LaunchedEffect(key1 = loadedNoteId) {
+        if (loadedNoteId != null) {
             launch(Dispatchers.IO) {
                 onRefresh()
             }
@@ -428,10 +430,12 @@ private fun ObserveNIP19User(
 
 @Composable
 private fun ObserveUser(user: User, onRefresh: () -> Unit) {
-    val userState by user.live().metadata.observeAsState()
+    val loadedUserMetaId by user.live().metadata.map {
+        it.user.info?.latestMetadata?.id
+    }.distinctUntilChanged().observeAsState(user.info?.latestMetadata?.id)
 
-    LaunchedEffect(key1 = userState) {
-        if (userState?.user?.info != null) {
+    LaunchedEffect(key1 = loadedUserMetaId) {
+        if (loadedUserMetaId != null) {
             launch(Dispatchers.IO) {
                 onRefresh()
             }

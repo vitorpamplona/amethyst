@@ -89,8 +89,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    val account = remember(accountViewModel) { accountViewModel.account }
 
     val postViewModel: NewPostViewModel = viewModel()
 
