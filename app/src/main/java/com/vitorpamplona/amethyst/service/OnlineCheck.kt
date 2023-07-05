@@ -10,7 +10,7 @@ import okhttp3.Request
 data class OnlineCheckResult(val timeInMs: Long, val online: Boolean)
 
 object OnlineChecker {
-    val checkOnlineCache = LruCache<String, OnlineCheckResult>(10)
+    val checkOnlineCache = LruCache<String, OnlineCheckResult>(100)
     val fiveMinutes = 1000 * 60 * 5
 
     fun isOnline(url: String?): Boolean {

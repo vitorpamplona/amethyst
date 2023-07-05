@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.ST
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
 
-class DiscoverFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+open class DiscoverFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList
     }
@@ -27,7 +27,7 @@ class DiscoverFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
         return innerApplyFilter(collection)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = System.currentTimeMillis() / 1000
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
 
@@ -37,8 +37,8 @@ class DiscoverFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
         val activities = collection
             .asSequence()
             .filter { it.event is LiveActivitiesEvent }
-            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet }
-            .filter { account.isAcceptable(it) }
+            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) == true }
+            .filter { it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
             .filter { (it.createdAt() ?: 0) <= now }
             .toSet()
 

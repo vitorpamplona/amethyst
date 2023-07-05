@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
@@ -70,7 +71,7 @@ fun DiscoverScreen(
         ) {
             RefresheableView(discoveryFeedViewModel, true) {
                 SaveableFeedState(discoveryFeedViewModel, scrollStateKey = ScrollStateKeys.DISCOVER_SCREEN) { listState ->
-                    RenderDiscoverFeed(discoveryFeedViewModel, accountViewModel, listState, nav)
+                    RenderDiscoverFeed(discoveryFeedViewModel, Route.Discover.base, accountViewModel, listState, nav)
                 }
             }
         }
@@ -80,6 +81,7 @@ fun DiscoverScreen(
 @Composable
 private fun RenderDiscoverFeed(
     viewModel: FeedViewModel,
+    routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: (String) -> Unit
@@ -106,6 +108,7 @@ private fun RenderDiscoverFeed(
             is FeedState.Loaded -> {
                 DiscoverFeedLoaded(
                     state,
+                    routeForLastRead,
                     listState,
                     accountViewModel,
                     nav
@@ -133,6 +136,7 @@ fun WatchAccountForDiscoveryScreen(discoveryViewModel: NostrDiscoverFeedViewMode
 @Composable
 private fun DiscoverFeedLoaded(
     state: FeedState.Loaded,
+    routeForLastRead: String?,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -150,7 +154,8 @@ private fun DiscoverFeedLoaded(
             }
 
             ChannelCardCompose(
-                item,
+                baseNote = item,
+                routeForLastRead = routeForLastRead,
                 modifier = defaultModifier,
                 accountViewModel = accountViewModel,
                 nav = nav

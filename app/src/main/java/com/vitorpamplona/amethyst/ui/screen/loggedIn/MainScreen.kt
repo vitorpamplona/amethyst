@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -87,11 +86,6 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
     val repliesFeedViewModel: NostrHomeRepliesFeedViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "NostrHomeRepliesFeedViewModel",
         factory = NostrHomeRepliesFeedViewModel.Factory(accountViewModel.account)
-    )
-
-    val liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel = viewModel(
-        key = accountViewModel.userProfile().pubkeyHex + "NostrHomeLiveActivitiesFeedViewModel",
-        factory = NostrHomeFeedLiveActivitiesViewModel.Factory(accountViewModel.account)
     )
 
     val videoFeedViewModel: NostrVideoFeedViewModel = viewModel(
@@ -187,18 +181,17 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         ) {
             Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
                 AppNavigation(
-                    homeFeedViewModel,
-                    repliesFeedViewModel,
-                    liveActivitiesViewModel,
-                    knownFeedViewModel,
-                    newFeedViewModel,
-                    videoFeedViewModel,
-                    discoveryFeedViewModel,
-                    notifFeedViewModel,
-                    userReactionsStatsModel,
-                    navController,
-                    accountViewModel,
-                    startingPage
+                    homeFeedViewModel = homeFeedViewModel,
+                    repliesFeedViewModel = repliesFeedViewModel,
+                    knownFeedViewModel = knownFeedViewModel,
+                    newFeedViewModel = newFeedViewModel,
+                    videoFeedViewModel = videoFeedViewModel,
+                    discoveryFeedViewModel = discoveryFeedViewModel,
+                    notifFeedViewModel = notifFeedViewModel,
+                    userReactionsStatsModel = userReactionsStatsModel,
+                    navController = navController,
+                    accountViewModel = accountViewModel,
+                    nextPage = startingPage
                 )
             }
         }

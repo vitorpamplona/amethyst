@@ -17,6 +17,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveNowFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import kotlinx.collections.immutable.ImmutableList
@@ -59,7 +60,8 @@ sealed class Route(
 
     object Discover : Route(
         route = "Discover",
-        icon = R.drawable.ic_sensors
+        icon = R.drawable.ic_sensors,
+        hasNewItems = { accountViewModel, newNotes -> DiscoverLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 
     object Notification : Route(
@@ -181,6 +183,21 @@ object HomeLatestItem : LatestItem() {
         val lastTime = account.loadLastRead("HomeFollows")
 
         val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter(account))
+
+        return (newestItem?.createdAt() ?: 0) > lastTime
+    }
+}
+
+object DiscoverLatestItem : LatestItem() {
+    fun hasNewItems(
+        account: Account,
+        newNotes: Set<Note>
+    ): Boolean {
+        checkNotInMainThread()
+
+        val lastTime = account.loadLastRead(Route.Discover.base)
+
+        val newestItem = updateNewestItem(newNotes, account, DiscoverLiveNowFeedFilter(account))
 
         return (newestItem?.createdAt() ?: 0) > lastTime
     }

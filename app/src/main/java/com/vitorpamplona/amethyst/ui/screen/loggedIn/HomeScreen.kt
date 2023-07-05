@@ -1,15 +1,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.MaterialTheme
@@ -20,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -33,17 +27,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
-import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedLiveActivitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
@@ -60,7 +49,6 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
-    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     nip47: String? = null
@@ -69,7 +57,7 @@ fun HomeScreen(
 
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN)
 
-    WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, liveActivitiesViewModel, accountViewModel)
+    WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, accountViewModel)
 
     if (wantsToAddNip47 != null) {
         UpdateZapAmountDialog({ wantsToAddNip47 = null }, wantsToAddNip47, accountViewModel)
@@ -77,8 +65,6 @@ fun HomeScreen(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
-        liveActivitiesViewModel.invalidateData(true)
-
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrHomeDataSource.invalidateFilters()
@@ -104,7 +90,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            HomePages(pagerState, tabs, liveActivitiesViewModel, accountViewModel, nav)
+            HomePages(pagerState, tabs, accountViewModel, nav)
         }
     }
 }
@@ -114,7 +100,6 @@ fun HomeScreen(
 private fun HomePages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,
-    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -137,12 +122,6 @@ private fun HomePages(
         }
     }
 
-    LiveActivities(
-        liveActivitiesViewModel = liveActivitiesViewModel,
-        accountViewModel = accountViewModel,
-        nav = nav
-    )
-
     HorizontalPager(pageCount = 2, state = pagerState) { page ->
         RefresheableFeedView(
             viewModel = tabs[page].viewModel,
@@ -151,73 +130,6 @@ private fun HomePages(
             accountViewModel = accountViewModel,
             nav = nav
         )
-    }
-}
-
-@Composable
-fun LiveActivities(
-    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    val feedState by liveActivitiesViewModel.feedContent.collectAsState()
-
-    Crossfade(
-        targetState = feedState,
-        animationSpec = tween(durationMillis = 100)
-    ) { state ->
-        when (state) {
-            is FeedState.Loaded -> {
-                FeedLoaded(
-                    state,
-                    accountViewModel,
-                    nav
-                )
-            }
-
-            else -> {
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeedLoaded(
-    state: FeedState.Loaded,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    val listState = rememberLazyListState()
-
-    LazyColumn(
-        contentPadding = PaddingValues(),
-        state = listState
-    ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            CheckIfLiveActivityIsOnline(item) {
-                ChannelHeader(
-                    channelHex = remember { item.idHex },
-                    showVideo = false,
-                    showBottomDiviser = true,
-                    modifier = remember {
-                        Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp)
-                    },
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CheckIfLiveActivityIsOnline(note: Note, whenOnline: @Composable () -> Unit) {
-    val url by note.live().metadata.map {
-        (note.event as? LiveActivitiesEvent)?.streaming()
-    }.observeAsState()
-
-    url?.let {
-        CheckIfUrlIsOnline(it, whenOnline)
     }
 }
 
@@ -242,7 +154,6 @@ fun CheckIfUrlIsOnline(url: String, whenOnline: @Composable () -> Unit) {
 fun WatchAccountForHomeScreen(
     homeFeedViewModel: NostrHomeFeedViewModel,
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
-    liveActivitiesViewModel: NostrHomeFeedLiveActivitiesViewModel,
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -253,7 +164,6 @@ fun WatchAccountForHomeScreen(
             NostrHomeDataSource.invalidateFilters()
             homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
             repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-            liveActivitiesViewModel.checkKeysInvalidateDataAndSendToTop()
         }
     }
 }
