@@ -23,6 +23,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import java.util.regex.Pattern
+import java.net.URI
+import java.net.URISyntaxException
 
 @Immutable
 data class RichTextViewerState(
@@ -67,8 +69,15 @@ class RichTextParser() {
                 null
             } else if (isNumber(it.originalUrl)) {
                 null
+            } else if (it.originalUrl.contains("。")) {
+                null
             } else {
-                it.originalUrl
+                val pattern = "^(http|https)://([A-Z0-9][A-Z0-9_-]*(?:.[A-Z0-9][A-Z0-9_-]*)+):?(d+)?/?".toRegex(RegexOption.IGNORE_CASE)
+                if (pattern.matches(it.originalUrl)) {
+                    it.originalUrl
+                } else {
+                    null
+                }
             }
         }
 
