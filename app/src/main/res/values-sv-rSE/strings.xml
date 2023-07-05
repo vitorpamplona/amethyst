@@ -32,6 +32,8 @@
     <string name="login_with_a_private_key_to_like_posts">Logga in med en privat nyckel för att gilla inlägg</string>
     <string name="no_zap_amount_setup_long_press_to_change">Ingen konfiguration av Zap-belopp. Tryck länge för att ändra</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Logga in med en privat nyckel för att kunna skicka Zaps</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Logga in med en privat nyckel för att kunna följa</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Logga in med en privat nyckel för att kunna sluta följa</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Antal visningar</string>
     <string name="boost">Boost</string>
@@ -439,6 +441,9 @@
     <string name="live_stream_is_offline">Direktsändning är offline</string>
     <string name="live_stream_has_ended">Direktsändning avslutad</string>
     <string name="are_you_sure_you_want_to_log_out">Att logga ut raderar all din lokala information. Se till att ha dina privata nycklar säkerhetskopierade för att undvika att förlora ditt konto. Vill du fortsätta?</string>
+    <string name="followed_tags">Följda taggar</string>
+
+    <string name="relay_setup">Reläer</string>
 </resources>
 
 
