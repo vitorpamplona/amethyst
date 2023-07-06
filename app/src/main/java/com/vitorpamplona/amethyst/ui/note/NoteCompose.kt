@@ -2447,7 +2447,7 @@ private fun getCommunityShortName(communityTag: ATag): String {
         communityTag.dTag.take(10)
     }
 
-    return "/c/$name"
+    return "/n/$name"
 }
 
 @OptIn(ExperimentalLayoutApi::class)
