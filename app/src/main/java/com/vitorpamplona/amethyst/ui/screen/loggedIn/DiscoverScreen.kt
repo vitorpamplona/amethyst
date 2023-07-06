@@ -27,7 +27,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
@@ -118,7 +118,8 @@ private fun DiscoverPages(
 ) {
     TabRow(
         backgroundColor = MaterialTheme.colors.background,
-        selectedTabIndex = pagerState.currentPage
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight
     ) {
         val coroutineScope = rememberCoroutineScope()
 

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -101,7 +102,7 @@ private fun RenderBottomMenu(
     navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit
 ) {
-    Column(modifier = Modifier.height(50.dp)) {
+    Column(modifier = BottomTopHeight) {
         Divider(
             thickness = 0.25.dp
         )

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -54,7 +55,8 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
 
                 TabRow(
                     backgroundColor = MaterialTheme.colors.background,
-                    selectedTabIndex = pagerState.currentPage
+                    selectedTabIndex = pagerState.currentPage,
+                    modifier = TabRowHeight
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
 @Composable
@@ -105,7 +106,8 @@ fun HiddenUsersScreen(
 
             TabRow(
                 backgroundColor = MaterialTheme.colors.background,
-                selectedTabIndex = pagerState.currentPage
+                selectedTabIndex = pagerState.currentPage,
+                modifier = TabRowHeight
             ) {
                 Tab(
                     selected = pagerState.currentPage == 0,

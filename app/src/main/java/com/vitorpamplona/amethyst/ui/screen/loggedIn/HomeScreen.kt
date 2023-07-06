@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -105,7 +106,8 @@ private fun HomePages(
 ) {
     TabRow(
         backgroundColor = MaterialTheme.colors.background,
-        selectedTabIndex = pagerState.currentPage
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight
     ) {
         val coroutineScope = rememberCoroutineScope()
 

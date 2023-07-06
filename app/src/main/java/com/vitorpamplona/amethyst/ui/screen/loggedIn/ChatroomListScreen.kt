@@ -38,13 +38,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -97,7 +97,8 @@ fun ChatroomListScreen(
                 Box(Modifier.fillMaxWidth()) {
                     TabRow(
                         backgroundColor = MaterialTheme.colors.background,
-                        selectedTabIndex = pagerState.currentPage
+                        selectedTabIndex = pagerState.currentPage,
+                        modifier = TabRowHeight
                     ) {
                         tabs.forEachIndexed { index, tab ->
                             Tab(

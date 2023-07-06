@@ -23,6 +23,9 @@ val Shapes = Shapes(
 
 val RippleRadius45dp = 45.dp // Ripple should be +10.dp over the component size
 
+val BottomTopHeight = Modifier.height(50.dp)
+val TabRowHeight = Modifier.height(40.dp)
+
 val SmallBorder = RoundedCornerShape(7.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
 val ButtonBorder = RoundedCornerShape(20.dp)

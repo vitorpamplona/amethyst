@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
+import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -208,7 +209,7 @@ fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel,
 fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit, content: @Composable (AccountViewModel) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.height(50.dp)) {
+    Column(modifier = BottomTopHeight) {
         TopAppBar(
             elevation = 0.dp,
             backgroundColor = MaterialTheme.colors.surface,
