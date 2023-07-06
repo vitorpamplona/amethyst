@@ -88,6 +88,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -104,6 +105,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -497,7 +499,8 @@ fun CommunityHeader(
                         model = it,
                         contentDescription = stringResource(R.string.profile_image),
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.padding(start = 10.dp)
+                        modifier = Modifier
+                            .padding(start = 10.dp)
                             .width(Size35dp)
                             .height(Size35dp)
                             .clip(shape = CircleShape)
@@ -708,7 +711,8 @@ fun InnerNoteWithReactions(
 
     Row(
         modifier = remember {
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(
                     start = if (!isBoostedNote) 12.dp else 0.dp,
                     end = if (!isBoostedNote) 12.dp else 0.dp,
@@ -905,6 +909,17 @@ private fun RenderNoteRow(
 
         is PollNoteEvent -> {
             RenderPoll(
+                baseNote,
+                makeItShort,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav
+            )
+        }
+
+        is CommunityPostApprovalEvent -> {
+            RenderPostApproval(
                 baseNote,
                 makeItShort,
                 canPreview,
@@ -1642,6 +1657,76 @@ fun RenderRepost(
             nav = nav
         )
     }
+}
+
+@Composable
+fun RenderPostApproval(
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    if (note.replyTo.isNullOrEmpty()) return
+
+    val noteEvent = note.event as? CommunityPostApprovalEvent ?: return
+
+    Column(Modifier.fillMaxWidth()) {
+        noteEvent.communities().forEach {
+            LoadAddressableNote(it) {
+                it?.let {
+                    NoteCompose(
+                        it,
+                        parentBackgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = stringResource(id = R.string.community_approved_posts),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(5.dp),
+            textAlign = TextAlign.Center
+        )
+
+        note.replyTo?.forEach {
+            NoteCompose(
+                it,
+                modifier = MaterialTheme.colors.replyModifier,
+                unPackReply = false,
+                makeItShort = true,
+                isQuotedNote = true,
+                parentBackgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
+    }
+}
+
+@Composable
+fun LoadAddressableNote(aTag: ATag, content: @Composable (AddressableNote?) -> Unit) {
+    var note by remember(aTag) {
+        mutableStateOf<AddressableNote?>(LocalCache.getAddressableNoteIfExists(aTag.toTag()))
+    }
+
+    if (note == null) {
+        LaunchedEffect(key1 = aTag) {
+            launch(Dispatchers.IO) {
+                note = LocalCache.getOrCreateAddressableNote(aTag)
+            }
+        }
+    }
+
+    content(note)
 }
 
 @Composable

@@ -849,7 +849,7 @@ object LocalCache {
 
         note.loadEvent(event, author, replyTo)
 
-        Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
+        // Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content()} ${formattedDateTime(event.createdAt)}")
 
         // Counts the replies
         replyTo.forEach {

@@ -20,13 +20,21 @@ class CommunityFeedFilter(val note: AddressableNote, val account: Account) : Add
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection
+        val myUnapprovedPosts = collection.asSequence()
+            .filter { it.author?.pubkeyHex == account.userProfile().pubkeyHex } // made by the logged in user
+            .filter { it.event?.isTaggedAddressableNote(note.idHex) == true } // for this community
+            .filter { it.isNewThread() } // check if it is a new thread
+            .toSet()
+
+        val approvedPosts = collection
             .asSequence()
             .filter { it.event is CommunityPostApprovalEvent } // Only Approvals
             .filter { it.event?.isTaggedAddressableNote(note.idHex) == true } // Of the given community
             .mapNotNull { it.replyTo }.flatten() // get approved posts
             .filter { it.isNewThread() } // check if it is a new thread
             .toSet()
+
+        return myUnapprovedPosts + approvedPosts
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
