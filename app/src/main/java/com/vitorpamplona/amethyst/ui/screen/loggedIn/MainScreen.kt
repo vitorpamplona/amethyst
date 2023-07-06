@@ -30,6 +30,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
+import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
@@ -254,5 +255,16 @@ private fun WritePermissionButtons(
         Route.Home.base -> NewNoteButton(accountViewModel, nav)
         Route.Message.base -> ChannelFabColumn(accountViewModel, nav)
         Route.Video.base -> NewImageButton(accountViewModel, nav)
+        Route.Community.base -> {
+            val communityId by remember(navEntryState.value) {
+                derivedStateOf {
+                    navEntryState.value?.arguments?.getString("id")
+                }
+            }
+
+            communityId?.let {
+                NewCommunityNoteButton(it, accountViewModel, nav)
+            }
+        }
     }
 }

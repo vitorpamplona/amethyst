@@ -18,6 +18,7 @@ import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.model.AddressableEvent
 import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
@@ -89,15 +90,17 @@ open class NewPostViewModel() : ViewModel() {
                 this.replyTos = listOf(replyNote)
             }
 
-            replyNote.author?.let { replyUser ->
-                val currentMentions = (replyNote.event as? TextNoteEvent)
-                    ?.mentions()
-                    ?.map { LocalCache.getOrCreateUser(it) } ?: emptyList()
+            if (replyNote.event !is CommunityDefinitionEvent) {
+                replyNote.author?.let { replyUser ->
+                    val currentMentions = (replyNote.event as? TextNoteEvent)
+                        ?.mentions()
+                        ?.map { LocalCache.getOrCreateUser(it) } ?: emptyList()
 
-                if (currentMentions.contains(replyUser)) {
-                    this.mentions = currentMentions
-                } else {
-                    this.mentions = currentMentions.plus(replyUser)
+                    if (currentMentions.contains(replyUser)) {
+                        this.mentions = currentMentions
+                    } else {
+                        this.mentions = currentMentions.plus(replyUser)
+                    }
                 }
             }
         } ?: run {

@@ -832,7 +832,7 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    when (remember { baseNote.event }) {
+    when (baseNote.event) {
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }

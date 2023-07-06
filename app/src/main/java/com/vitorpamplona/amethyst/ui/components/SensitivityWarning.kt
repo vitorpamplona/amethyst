@@ -43,7 +43,7 @@ fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit
 ) {
-    val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+    val hasSensitiveContent = remember(note) { note.event?.isSensitive() ?: false }
 
     if (hasSensitiveContent) {
         SensitivityWarning(accountViewModel, content)

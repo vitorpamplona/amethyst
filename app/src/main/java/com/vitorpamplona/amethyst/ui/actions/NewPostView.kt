@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.*
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -177,6 +179,18 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 .fillMaxWidth()
                                 .verticalScroll(scrollState)
                         ) {
+                            postViewModel.originalNote?.let {
+                                NoteCompose(
+                                    baseNote = it,
+                                    makeItShort = true,
+                                    unPackReply = false,
+                                    isQuotedNote = true,
+                                    modifier = MaterialTheme.colors.replyModifier,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav
+                                )
+                            }
+
                             Notifying(postViewModel.mentions?.toImmutableList()) {
                                 postViewModel.removeFromReplyList(it)
                             }
@@ -496,7 +510,9 @@ private fun AddZapraiserButton(
                 Icon(
                     imageVector = Icons.Default.ShowChart,
                     null,
-                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.TopStart),
                     tint = MaterialTheme.colors.onBackground
                 )
                 Icon(
@@ -511,7 +527,9 @@ private fun AddZapraiserButton(
                 Icon(
                     imageVector = Icons.Default.ShowChart,
                     null,
-                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.TopStart),
                     tint = BitcoinOrange
                 )
                 Icon(

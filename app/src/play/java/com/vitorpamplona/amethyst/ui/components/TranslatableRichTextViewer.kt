@@ -60,7 +60,7 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var translatedTextState by remember {
+    var translatedTextState by remember(content) {
         mutableStateOf(TranslationConfig(content, null, null, false))
     }
 
