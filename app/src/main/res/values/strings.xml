@@ -472,4 +472,8 @@
     <string name="followed_tags">Followed Tags</string>
 
     <string name="relay_setup">Relays</string>
+
+    <string name="discover_live">Live</string>
+    <string name="discover_community">Communities</string>
+    <string name="discover_chat">Chats Groups</string>
 </resources>

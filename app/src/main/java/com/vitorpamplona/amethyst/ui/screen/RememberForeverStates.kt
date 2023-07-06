@@ -20,10 +20,15 @@ object ScrollStateKeys {
     const val DISCOVER_SCREEN = "Discover"
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
+
+    val DISCOVER_LIVE = Route.Home.base + "Live"
+    val DISCOVER_COMMUNITY = Route.Home.base + "Communities"
+    val DISCOVER_CHATS = Route.Home.base + "Chats"
 }
 
 object PagerStateKeys {
-    const val HOME_SCREEN = "Home"
+    const val HOME_SCREEN = "PagerHome"
+    const val DISCOVER_SCREEN = "PagerDiscover"
 }
 
 @Composable

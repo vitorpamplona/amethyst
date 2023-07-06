@@ -582,7 +582,7 @@ fun IconRowRelays(relayViewModel: RelayPoolViewModel, onClick: () -> Unit) {
 
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = stringResource(id = R.string.relays),
+                text = stringResource(id = R.string.relay_setup),
                 fontSize = 18.sp
             )
 

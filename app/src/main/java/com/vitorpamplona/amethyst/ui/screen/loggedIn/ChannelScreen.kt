@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -703,9 +704,9 @@ private fun ChannelActionOptions(
     }
 
     if (isFollowing) {
-        LeaveButton(accountViewModel, channel, nav)
+        LeaveChatButton(accountViewModel, channel, nav)
     } else {
-        JoinButton(accountViewModel, channel, nav)
+        JoinChatButton(accountViewModel, channel, nav)
     }
 }
 
@@ -784,9 +785,12 @@ fun OfflineFlag() {
 }
 
 @Composable
-fun ScheduledFlag() {
+fun ScheduledFlag(starts: Long?) {
+    val context = LocalContext.current
+    val startsIn = starts?.let { timeAgo(it, context) }
+
     Text(
-        text = stringResource(id = R.string.live_stream_planned_tag),
+        text = startsIn ?: stringResource(id = R.string.live_stream_planned_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier = remember {
@@ -864,7 +868,7 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatCh
 }
 
 @Composable
-private fun JoinButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
+fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
@@ -882,12 +886,48 @@ private fun JoinButton(accountViewModel: AccountViewModel, channel: Channel, nav
 }
 
 @Composable
-private fun LeaveButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
+fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             accountViewModel.account.leaveChannel(channel.idHex)
             nav(Route.Message.route)
+        },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(R.string.leave), color = Color.White)
+    }
+}
+
+@Composable
+fun JoinCommunityButton(accountViewModel: AccountViewModel, note: Note, nav: (String) -> Unit) {
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = {
+            accountViewModel.account.joinCommunity(note.idHex)
+        },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(R.string.join), color = Color.White)
+    }
+}
+
+@Composable
+fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: Note, nav: (String) -> Unit) {
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = {
+            accountViewModel.account.leaveCommunity((note.idHex))
         },
         shape = ButtonBorder,
         colors = ButtonDefaults

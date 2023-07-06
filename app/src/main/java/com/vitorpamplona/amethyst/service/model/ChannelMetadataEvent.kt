@@ -15,8 +15,9 @@ class ChannelMetadataEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun channel() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+) : Event(id, pubKey, createdAt, kind, tags, content, sig), IsInPublicChatChannel {
+
+    override fun channel() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
     fun channelInfo() =
         try {
             MetadataEvent.gson.fromJson(content, ChannelCreateEvent.ChannelData::class.java)

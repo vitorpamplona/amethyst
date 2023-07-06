@@ -6,7 +6,7 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 
-class DiscoverLiveNowFeedFilter(account: Account) : DiscoverFeedFilter(account) {
+class DiscoverLiveNowFeedFilter(account: Account) : DiscoverLiveFeedFilter(account) {
     override fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val allItems = super.innerApplyFilter(collection)
 

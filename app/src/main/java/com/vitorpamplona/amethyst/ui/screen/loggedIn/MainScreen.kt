@@ -43,7 +43,9 @@ import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -93,9 +95,19 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         factory = NostrVideoFeedViewModel.Factory(accountViewModel.account)
     )
 
-    val discoveryFeedViewModel: NostrDiscoverFeedViewModel = viewModel(
-        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryFeedViewModel",
-        factory = NostrDiscoverFeedViewModel.Factory(accountViewModel.account)
+    val discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryLiveFeedViewModel",
+        factory = NostrDiscoverLiveFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryCommunityFeedViewModel",
+        factory = NostrDiscoverCommunityFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryChatFeedViewModel",
+        factory = NostrDiscoverChatFeedViewModel.Factory(accountViewModel.account)
     )
 
     val notifFeedViewModel: NotificationViewModel = viewModel(
@@ -137,7 +149,9 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                         videoFeedViewModel.sendToTop()
                     }
                     Route.Discover.base -> {
-                        discoveryFeedViewModel.sendToTop()
+                        discoveryLiveFeedViewModel.sendToTop()
+                        discoveryCommunityFeedViewModel.sendToTop()
+                        discoveryChatFeedViewModel.sendToTop()
                     }
                     Route.Notification.base -> {
                         notifFeedViewModel.invalidateDataAndSendToTop()
@@ -186,7 +200,9 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                     knownFeedViewModel = knownFeedViewModel,
                     newFeedViewModel = newFeedViewModel,
                     videoFeedViewModel = videoFeedViewModel,
-                    discoveryFeedViewModel = discoveryFeedViewModel,
+                    discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                    discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                    discoveryChatFeedViewModel = discoveryChatFeedViewModel,
                     notifFeedViewModel = notifFeedViewModel,
                     userReactionsStatsModel = userReactionsStatsModel,
                     navController = navController,

@@ -6,7 +6,7 @@ import com.vitorpamplona.amethyst.model.User
 
 class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + HashtagFeedFilter.tag
+        return account.userProfile().pubkeyHex
     }
 
     override fun feed(): List<User> {

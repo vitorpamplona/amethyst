@@ -71,9 +71,28 @@ open class Event(
 
     override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
 
+    override fun isTaggedAddressableNote(idHex: String) = tags.any { it.size > 1 && it[0] == "a" && it[1] == idHex }
+
     override fun isTaggedHash(hashtag: String) = tags.any { it.size > 1 && it[0] == "t" && it[1].equals(hashtag, true) }
     override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }
     override fun firstIsTaggedHashes(hashtags: Set<String>) = tags.firstOrNull { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }?.getOrNull(1)
+
+    override fun firstIsTaggedAddressableNote(addressableNotes: Set<String>) = tags.firstOrNull { it.size > 1 && it[0] == "a" && it[1] in addressableNotes }?.getOrNull(1)
+
+    override fun isTaggedAddressableKind(kind: Int): Boolean {
+        val kindStr = kind.toString()
+        return tags.any { it.size > 1 && it[0] == "a" && it[1].startsWith(kindStr) }
+    }
+
+    override fun getTagOfAddressableKind(kind: Int): ATag? {
+        val kindStr = kind.toString()
+        val aTag = tags
+            .firstOrNull { it.size > 1 && it[0] == "a" && it[1].startsWith(kindStr) }
+            ?.getOrNull(1)
+            ?: return null
+
+        return ATag.parse(aTag, null)
+    }
 
     override fun getPoWRank(): Int {
         var rank = 0

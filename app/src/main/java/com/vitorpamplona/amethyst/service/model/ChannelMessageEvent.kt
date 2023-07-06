@@ -14,9 +14,9 @@ class ChannelMessageEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig), IsInPublicChatChannel {
 
-    fun channel() = tags.firstOrNull {
+    override fun channel() = tags.firstOrNull {
         it.size > 3 && it[0] == "e" && it[3] == "root"
     }?.get(1) ?: tags.firstOrNull {
         it.size > 1 && it[0] == "e"
@@ -64,4 +64,8 @@ class ChannelMessageEvent(
             return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }
+}
+
+interface IsInPublicChatChannel {
+    open fun channel(): String?
 }

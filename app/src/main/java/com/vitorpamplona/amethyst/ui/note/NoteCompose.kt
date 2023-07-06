@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
@@ -102,6 +103,7 @@ import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -147,6 +149,8 @@ import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
@@ -156,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
@@ -170,6 +175,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
@@ -432,6 +438,12 @@ fun NormalNote(
             accountViewModel = accountViewModel,
             nav = nav
         )
+        is CommunityDefinitionEvent -> CommunityHeader(
+            baseNote = baseNote,
+            showBottomDiviser = true,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
         is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
         is FileHeaderEvent -> FileHeaderDisplay(baseNote)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote)
@@ -453,6 +465,113 @@ fun NormalNote(
                     nav
                 )
             }
+    }
+}
+
+@Composable
+fun CommunityHeader(
+    baseNote: Note,
+    showBottomDiviser: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable {
+                scope.launch {
+                    nav("Community/${baseNote.idHex}")
+                }
+            }
+    ) {
+        val channelState by baseNote.live().metadata.observeAsState()
+        val noteEvent = remember(channelState) { channelState?.note?.event as? CommunityDefinitionEvent } ?: return
+
+        Column(modifier = modifier) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                noteEvent.image()?.let {
+                    RobohashAsyncImageProxy(
+                        robot = baseNote.idHex,
+                        model = it,
+                        contentDescription = stringResource(R.string.profile_image),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.padding(start = 10.dp)
+                            .width(Size35dp)
+                            .height(Size35dp)
+                            .clip(shape = CircleShape)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = remember(channelState) { noteEvent.dTag() },
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    val summary = remember(channelState) {
+                        noteEvent.description()?.ifBlank { null }
+                    }
+
+                    if (summary != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = summary,
+                                color = MaterialTheme.colors.placeholderText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .height(Size35dp)
+                        .padding(start = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CommunityActionOptions(baseNote, accountViewModel, nav)
+                }
+            }
+        }
+
+        if (showBottomDiviser) {
+            Divider(
+                thickness = 0.25.dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommunityActionOptions(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val isFollowing by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.followingCommunities?.contains(note.idHex) ?: false
+        }
+    }
+
+    if (isFollowing) {
+        LeaveCommunityButton(accountViewModel, note, nav)
+    } else {
+        JoinCommunityButton(accountViewModel, note, nav)
     }
 }
 
@@ -821,6 +940,8 @@ fun routeFor(note: Note, loggedIn: User): String? {
         }
     } else if (noteEvent is PrivateDmEvent) {
         return "Room/${noteEvent.talkingWith(loggedIn.pubkeyHex)}"
+    } else if (noteEvent is CommunityDefinitionEvent) {
+        return "Community/${note.idHex}"
     } else {
         return "Note/${note.idHex}"
     }
@@ -849,7 +970,7 @@ fun RenderTextEvent(
         val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
         val body = accountViewModel.decrypt(note)
 
-        if (subject != null) {
+        if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
             "## $subject\n$body"
         } else {
             body
@@ -1716,7 +1837,7 @@ private fun ReplyRow(
     }
 
     if (showReply) {
-        val replyingDirectlyTo = remember { note.replyTo?.lastOrNull() }
+        val replyingDirectlyTo = remember { note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.kind } }
         if (replyingDirectlyTo != null && unPackReply) {
             ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)
@@ -1818,9 +1939,15 @@ fun FirstUserInfoRow(
     nav: (String) -> Unit
 ) {
     Row(verticalAlignment = CenterVertically, modifier = remember { UserNameRowHeight }) {
-        val isRepost by remember {
+        val isRepost by remember(baseNote) {
             derivedStateOf {
                 baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
+            }
+        }
+
+        val isCommunityPost by remember(baseNote) {
+            derivedStateOf {
+                baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.kind) == true
             }
         }
 
@@ -1834,6 +1961,8 @@ fun FirstUserInfoRow(
 
         if (isRepost) {
             BoostedMark()
+        } else if (isCommunityPost) {
+            DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
         } else {
             DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
         }
@@ -2143,6 +2272,19 @@ private fun LoadAndDisplayUser(
 }
 
 @Composable
+fun DisplayFollowingCommunityInPost(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    Column(HalfStartPadding) {
+        Row(verticalAlignment = CenterVertically) {
+            DisplayCommunity(baseNote, nav)
+        }
+    }
+}
+
+@Composable
 fun DisplayFollowingHashtagsInPost(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -2190,6 +2332,37 @@ private fun DisplayTagList(firstTag: String, nav: (String) -> Unit) {
         ),
         maxLines = 1
     )
+}
+
+@Composable
+private fun DisplayCommunity(note: Note, nav: (String) -> Unit) {
+    val communityTag = remember(note) {
+        note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.kind)
+    } ?: return
+
+    val displayTag = remember(note) { AnnotatedString(getCommunityShortName(communityTag)) }
+    val route = remember(note) { "Community/${communityTag.toTag()}" }
+
+    ClickableText(
+        text = displayTag,
+        onClick = { nav(route) },
+        style = LocalTextStyle.current.copy(
+            color = MaterialTheme.colors.primary.copy(
+                alpha = 0.52f
+            )
+        ),
+        maxLines = 1
+    )
+}
+
+private fun getCommunityShortName(communityTag: ATag): String {
+    val name = if (communityTag.dTag.length > 10) {
+        communityTag.dTag.take(10) + "..."
+    } else {
+        communityTag.dTag.take(10)
+    }
+
+    return "/c/$name"
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -2663,6 +2836,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
     val content = remember(eventUpdates) { noteEvent.summary() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
     val status = remember(eventUpdates) { noteEvent.status() }
+    val starts = remember(eventUpdates) { noteEvent.starts() }
 
     var isOnline by remember { mutableStateOf(false) }
 
@@ -2698,7 +2872,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                     }
                 }
                 STATUS_PLANNED -> {
-                    ScheduledFlag()
+                    ScheduledFlag(starts)
                 }
             }
         }

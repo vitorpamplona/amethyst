@@ -74,6 +74,7 @@ object ServiceManager {
             NostrHomeDataSource.start()
             NostrAccountDataSource.start()
             NostrChatroomListDataSource.start()
+            NostrDiscoveryDataSource.start()
 
             // More Info Data Sources
             NostrSingleEventDataSource.start()

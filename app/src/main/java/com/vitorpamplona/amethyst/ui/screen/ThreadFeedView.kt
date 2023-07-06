@@ -33,6 +33,7 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -295,7 +297,17 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
-                        DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+                        val isCommunityPost by remember(baseNote) {
+                            derivedStateOf {
+                                baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.kind) == true
+                            }
+                        }
+
+                        if (isCommunityPost) {
+                            DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
+                        } else {
+                            DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+                        }
 
                         Text(
                             timeAgo(note.createdAt(), context = context),

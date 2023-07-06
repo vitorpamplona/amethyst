@@ -26,6 +26,22 @@ class CommunityPostApprovalEvent(
         null
     }
 
+    fun communities() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
+        val aTag = ATag.parse(it[1], it.getOrNull(2))
+
+        if (aTag?.kind == CommunityDefinitionEvent.kind) {
+            aTag
+        } else {
+            null
+        }
+    }
+
+    fun approvedEvents() = tags.filter {
+        it.size > 1 && (it[0] == "e" || (it[0] == "a" && ATag.parse(it[1], null)?.kind != CommunityDefinitionEvent.kind))
+    }.map {
+        it[1]
+    }
+
     companion object {
         const val kind = 4550
 

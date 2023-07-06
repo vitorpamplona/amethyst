@@ -3,15 +3,20 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -23,20 +28,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.BottomStart
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
@@ -48,9 +62,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
@@ -300,7 +318,7 @@ fun InnerChannelCardWithReactions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Column() {
+    Column(StdPadding) {
         RenderNoteRow(
             baseNote,
             accountViewModel,
@@ -318,6 +336,12 @@ private fun RenderNoteRow(
     when (remember { baseNote.event }) {
         is LiveActivitiesEvent -> {
             RenderLiveActivityThumb(baseNote, accountViewModel, nav)
+        }
+        is CommunityDefinitionEvent -> {
+            RenderCommunitiesThumb(baseNote, accountViewModel, nav)
+        }
+        is ChannelCreateEvent -> {
+            RenderChannelThumb(baseNote, accountViewModel, nav)
         }
     }
 }
@@ -339,6 +363,7 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
     val content = remember(eventUpdates) { noteEvent.summary() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
     val status = remember(eventUpdates) { noteEvent.status() }
+    val starts = remember(eventUpdates) { noteEvent.starts() }
 
     var isOnline by remember { mutableStateOf(false) }
 
@@ -359,29 +384,31 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
 
     LaunchedEffect(key1 = eventUpdates) {
         launch(Dispatchers.IO) {
-            val channel = LocalCache.getChannelIfExists(baseNote.idHex)
-            val repliesByFollows = channel?.notes?.mapNotNull { it.value.author?.pubkeyHex }?.toSet() ?: emptySet()
-
-            val zappers = baseNote.publicZapAuthors()
-            val likeAuthors = baseNote.reactionAuthors()
-
-            val allParticipants = (repliesByFollows + zappers + likeAuthors).filter { accountViewModel.isFollowing(it) }
-
-            val newParticipantUsers = (
-                participants.mapNotNull { part ->
-                    if (part.key != baseNote.author?.pubkeyHex) {
-                        LocalCache.checkGetOrCreateUser(part.key)
-                    } else {
-                        null
-                    }
-                } + allParticipants.mapNotNull {
-                    if (it != baseNote.author?.pubkeyHex) {
-                        LocalCache.checkGetOrCreateUser(it)
-                    } else {
-                        null
-                    }
+            val hosts = participants.mapNotNull { part ->
+                if (part.key != baseNote.author?.pubkeyHex) {
+                    LocalCache.checkGetOrCreateUser(part.key)
+                } else {
+                    null
                 }
-                ).toImmutableList()
+            }
+
+            val hostsAuthor = hosts + (
+                baseNote.author?.let {
+                    listOf(it)
+                } ?: emptyList<User>()
+                )
+
+            val followingKeySet = accountViewModel.account.selectedUsersFollowList(accountViewModel.account.defaultDiscoveryFollowList)
+            val allParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hostsAuthor)
+
+            val newParticipantUsers = if (followingKeySet == null) {
+                val allFollows = accountViewModel.account.selectedUsersFollowList(KIND3_FOLLOWS)
+                val followingParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hostsAuthor)
+
+                (hosts + followingParticipants + (allParticipants - followingParticipants)).toImmutableList()
+            } else {
+                (hosts + allParticipants).toImmutableList()
+            }
 
             if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
                 participantUsers = newParticipantUsers
@@ -429,7 +456,7 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
                             EndedFlag()
                         }
                         STATUS_PLANNED -> {
-                            ScheduledFlag()
+                            ScheduledFlag(starts)
                         }
                         else -> {
                             EndedFlag()
@@ -438,13 +465,13 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
                 }
             }
 
-            Box(Modifier.padding(10.dp).align(BottomStart)) {
+            Box(
+                Modifier
+                    .padding(10.dp)
+                    .align(BottomStart)
+            ) {
                 if (participantUsers.isNotEmpty()) {
-                    FlowRow() {
-                        participantUsers.forEach {
-                            ClickableUserPicture(it, Size35dp, accountViewModel)
-                        }
-                    }
+                    Gallery(participantUsers, accountViewModel)
                 }
             }
         }
@@ -460,6 +487,244 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
             accountViewModel = accountViewModel,
             nav = nav
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteEvent = baseNote.event as? CommunityDefinitionEvent ?: return
+
+    val eventUpdates by baseNote.live().metadata.observeAsState()
+
+    val name = remember(eventUpdates) { noteEvent.dTag() }
+    val description = remember(eventUpdates) { noteEvent.description() }
+    val cover by remember(eventUpdates) {
+        derivedStateOf {
+            noteEvent.image()?.ifBlank { null }
+        }
+    }
+    val moderators = remember(eventUpdates) { noteEvent.moderators() }
+
+    var participantUsers by remember {
+        mutableStateOf<ImmutableList<User>>(
+            persistentListOf()
+        )
+    }
+
+    LaunchedEffect(key1 = eventUpdates) {
+        launch(Dispatchers.IO) {
+            val hosts = moderators.mapNotNull { part ->
+                if (part.key != baseNote.author?.pubkeyHex) {
+                    LocalCache.checkGetOrCreateUser(part.key)
+                } else {
+                    null
+                }
+            }
+
+            val followingKeySet = accountViewModel.account.selectedUsersFollowList(accountViewModel.account.defaultDiscoveryFollowList)
+            val allParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
+
+            val newParticipantUsers = if (followingKeySet == null) {
+                val allFollows = accountViewModel.account.selectedUsersFollowList(KIND3_FOLLOWS)
+                val followingParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hosts)
+
+                (hosts + followingParticipants + (allParticipants - followingParticipants)).toImmutableList()
+            } else {
+                (hosts + allParticipants).toImmutableList()
+            }
+
+            if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
+                participantUsers = newParticipantUsers
+            }
+        }
+    }
+
+    Row(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.3f)
+                .aspectRatio(ratio = 1f)
+        ) {
+            cover?.let {
+                Box(contentAlignment = BottomStart) {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(QuoteBorder)
+                    )
+                }
+            } ?: run {
+                baseNote.author?.let {
+                    DisplayAuthorBanner(it)
+                }
+            }
+        }
+
+        Spacer(modifier = DoubleHorzSpacer)
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row() {
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            description?.let {
+                Spacer(modifier = StdVertSpacer)
+                Row() {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colors.placeholderText,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            if (participantUsers.isNotEmpty()) {
+                Spacer(modifier = StdVertSpacer)
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Gallery(participantUsers, accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderChannelThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteEvent = baseNote.event as? ChannelCreateEvent ?: return
+
+    LoadChannel(baseChannelHex = baseNote.idHex) {
+        RenderChannelThumb(baseNote = baseNote, channel = it, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val channelUpdates by channel.live.observeAsState()
+
+    val name = remember(channelUpdates) { channel.toBestDisplayName() }
+    val description = remember(channelUpdates) { channel.summary() }
+    val cover by remember(channelUpdates) {
+        derivedStateOf {
+            channel.profilePicture()?.ifBlank { null }
+        }
+    }
+
+    var participantUsers by remember(baseNote) {
+        mutableStateOf<ImmutableList<User>>(
+            persistentListOf()
+        )
+    }
+
+    LaunchedEffect(key1 = channelUpdates) {
+        launch(Dispatchers.IO) {
+            val followingKeySet = accountViewModel.account.selectedUsersFollowList(accountViewModel.account.defaultDiscoveryFollowList)
+            val allParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).toImmutableList()
+
+            val newParticipantUsers = if (followingKeySet == null) {
+                val allFollows = accountViewModel.account.selectedUsersFollowList(KIND3_FOLLOWS)
+                val followingParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).toList()
+
+                (followingParticipants + (allParticipants - followingParticipants)).toImmutableList()
+            } else {
+                allParticipants.toImmutableList()
+            }
+
+            if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
+                participantUsers = newParticipantUsers
+            }
+        }
+    }
+
+    Row(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.3f)
+                .aspectRatio(ratio = 1f)
+        ) {
+            cover?.let {
+                Box(contentAlignment = BottomStart) {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(QuoteBorder)
+                    )
+                }
+            } ?: run {
+                baseNote.author?.let {
+                    DisplayAuthorBanner(it)
+                }
+            }
+        }
+
+        Spacer(modifier = DoubleHorzSpacer)
+
+        Column(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight()
+        ) {
+            Row() {
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            description?.let {
+                Spacer(modifier = StdVertSpacer)
+                Row() {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colors.placeholderText,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            if (participantUsers.isNotEmpty()) {
+                Spacer(modifier = StdVertSpacer)
+                Row() {
+                    Gallery(participantUsers, accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun Gallery(users: List<User>, accountViewModel: AccountViewModel) {
+    FlowRow(verticalAlignment = CenterVertically) {
+        users.take(6).forEach {
+            ClickableUserPicture(it, Size35dp, accountViewModel)
+        }
+
+        if (users.size > 6) {
+            Text(
+                text = remember(users) { " + " + (showCount(users.size - 6)).toString() },
+                fontSize = 13.sp,
+                color = MaterialTheme.colors.onSurface
+            )
+        }
     }
 }
 

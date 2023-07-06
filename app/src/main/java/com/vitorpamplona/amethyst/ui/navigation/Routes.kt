@@ -104,6 +104,12 @@ sealed class Route(
         arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
+    object Community : Route(
+        route = "Community/{id}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
+    )
+
     object Room : Route(
         route = "Room/{id}",
         icon = R.drawable.ic_moments,
@@ -195,7 +201,7 @@ object DiscoverLatestItem : LatestItem() {
     ): Boolean {
         checkNotInMainThread()
 
-        val lastTime = account.loadLastRead(Route.Discover.base)
+        val lastTime = account.loadLastRead(Route.Discover.base + "Live")
 
         val newestItem = updateNewestItem(newNotes, account, DiscoverLiveNowFeedFilter(account))
 

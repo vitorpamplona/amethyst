@@ -50,6 +50,7 @@ val KIND3_FOLLOWS = " All Follows "
 class Account(
     val loggedIn: Persona,
     var followingChannels: Set<String> = DefaultChannels,
+    var followingCommunities: Set<String> = setOf(),
     var hiddenUsers: Set<String> = setOf(),
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
@@ -105,6 +106,10 @@ class Account(
 
     fun followingChannels(): List<Channel> {
         return followingChannels.mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
+    }
+
+    fun followingCommunities(): List<AddressableNote> {
+        return followingCommunities.mapNotNull { LocalCache.checkGetOrCreateAddressableNote(it) }
     }
 
     fun isWriteable(): Boolean {
@@ -857,6 +862,20 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun joinCommunity(idHex: String) {
+        followingCommunities = followingCommunities + idHex
+        live.invalidateData()
+
+        saveable.invalidateData()
+    }
+
+    fun leaveCommunity(idHex: String) {
+        followingCommunities = followingCommunities - idHex
+        live.invalidateData()
+
+        saveable.invalidateData()
+    }
+
     fun hideUser(pubkeyHex: String) {
         hiddenUsers = hiddenUsers + pubkeyHex
         live.invalidateData()
@@ -1151,6 +1170,10 @@ class Account(
 
     fun isFollowing(user: User): Boolean {
         return user.pubkeyHex in followingKeySet()
+    }
+
+    fun isFollowing(user: HexKey): Boolean {
+        return user in followingKeySet()
     }
 
     fun isAcceptable(note: Note): Boolean {

@@ -43,6 +43,7 @@ private object PrefKeys {
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val FOLLOWING_CHANNELS = "following_channels"
+    const val FOLLOWING_COMMUNITIES = "following_communities"
     const val HIDDEN_USERS = "hidden_users"
     const val RELAYS = "relays"
     const val DONT_TRANSLATE_FROM = "dontTranslateFrom"
@@ -205,6 +206,7 @@ object LocalPreferences {
             account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHex()) }
             account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHex()) }
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
+            putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
             putString(PrefKeys.RELAYS, gson.toJson(account.localRelays))
             putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
@@ -247,6 +249,7 @@ object LocalPreferences {
             val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return null
             val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
+            val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
             val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
             val localRelays = gson.fromJson(
                 getString(PrefKeys.RELAYS, "[]"),
@@ -340,6 +343,7 @@ object LocalPreferences {
             val a = Account(
                 loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels = followingChannels,
+                followingCommunities = followingCommunities,
                 hiddenUsers = hiddenUsers,
                 localRelays = localRelays,
                 dontTranslateFrom = dontTranslateFrom,

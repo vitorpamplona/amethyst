@@ -12,7 +12,9 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -22,6 +24,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
@@ -42,7 +45,9 @@ fun AppNavigation(
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
-    discoveryFeedViewModel: NostrDiscoverFeedViewModel,
+    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
+    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
+    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
 
@@ -109,7 +114,9 @@ fun AppNavigation(
         Route.Discover.let { route ->
             composable(route.route, route.arguments, content = {
                 DiscoverScreen(
-                    discoveryFeedViewModel = discoveryFeedViewModel,
+                    discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                    discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                    discoveryChatFeedViewModel = discoveryChatFeedViewModel,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )
@@ -163,6 +170,16 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 HashtagScreen(
                     tag = it.arguments?.getString("id"),
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Community.let { route ->
+            composable(route.route, route.arguments, content = {
+                CommunityScreen(
+                    aTagHex = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

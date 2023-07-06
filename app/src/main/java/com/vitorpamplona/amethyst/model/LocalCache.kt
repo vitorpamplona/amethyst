@@ -55,6 +55,10 @@ object LocalCache {
         return users.get(key)
     }
 
+    fun getAddressableNoteIfExists(key: String): AddressableNote? {
+        return addressables[key]
+    }
+
     fun getNoteIfExists(key: String): Note? {
         return addressables[key] ?: notes[key]
     }
@@ -681,16 +685,20 @@ object LocalCache {
         // Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
         val author = getOrCreateUser(event.pubKey)
-        val repliesTo = event.taggedAddresses().map { getOrCreateAddressableNote(it) }
 
-        note.loadEvent(event, author, repliesTo)
+        val communities = event.communities()
+        val eventsApproved = event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) }
+
+        val repliesTo = communities.map { getOrCreateAddressableNote(it) }
+
+        note.loadEvent(event, author, eventsApproved)
 
         // Prepares user's profile view.
         author.addNote(note)
 
         // Counts the replies
         repliesTo.forEach {
-            it.addReply(note)
+            it.addBoost(note)
         }
 
         refreshObservers(note)
@@ -1181,7 +1189,7 @@ object LocalCache {
                 }
             }
 
-            println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}")
+            println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
         }
     }
 

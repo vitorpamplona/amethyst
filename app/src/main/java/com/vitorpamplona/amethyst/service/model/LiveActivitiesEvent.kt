@@ -23,13 +23,13 @@ class LiveActivitiesEvent(
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
     fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
     fun streaming() = tags.firstOrNull { it.size > 1 && it[0] == "streaming" }?.get(1)
-    fun starts() = tags.firstOrNull { it.size > 1 && it[0] == "starts" }?.get(1)
+    fun starts() = tags.firstOrNull { it.size > 1 && it[0] == "starts" }?.get(1)?.toLongOrNull()
     fun ends() = tags.firstOrNull { it.size > 1 && it[0] == "ends" }?.get(1)
     fun status() = checkStatus(tags.firstOrNull { it.size > 1 && it[0] == "status" }?.get(1))
     fun currentParticipants() = tags.firstOrNull { it.size > 1 && it[0] == "current_participants" }?.get(1)
     fun totalParticipants() = tags.firstOrNull { it.size > 1 && it[0] == "total_participants" }?.get(1)
 
-    fun participants() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(2)) }
+    fun participants() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(3)) }
 
     fun checkStatus(eventStatus: String?): String? {
         return if (eventStatus == STATUS_LIVE && createdAt < Date().time / 1000 - (60 * 60 * 8)) { // 2 hours {

@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,61 +30,77 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    if (tag == null) return
+
+    PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
+}
+
+@Composable
+fun PrepareViewModelsHashtagScreen(tag: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val followsFeedViewModel: NostrHashtagFeedViewModel = viewModel(
+        key = tag + "HashtagFeedViewModel",
+        factory = NostrHashtagFeedViewModel.Factory(
+            tag,
+            accountViewModel.account
+        )
+    )
+
+    HashtagScreen(tag, followsFeedViewModel, accountViewModel, nav)
+}
+
+@Composable
+fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    if (tag != null) {
-        HashtagFeedFilter.loadHashtag(accountViewModel.account, tag)
-        val feedViewModel: NostrHashtagFeedViewModel = viewModel()
+    NostrHashtagDataSource.loadHashtag(tag)
 
-        LaunchedEffect(tag) {
-            HashtagFeedFilter.loadHashtag(accountViewModel.account, tag)
-            NostrHashtagDataSource.loadHashtag(tag)
-            feedViewModel.invalidateData()
-        }
+    LaunchedEffect(tag) {
+        NostrHashtagDataSource.start()
+        feedViewModel.invalidateData()
+    }
 
-        DisposableEffect(accountViewModel) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Hashtag Start")
-                    HashtagFeedFilter.loadHashtag(accountViewModel.account, tag)
-                    NostrHashtagDataSource.loadHashtag(tag)
-                    NostrHashtagDataSource.start()
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Hashtag Stop")
-                    HashtagFeedFilter.loadHashtag(accountViewModel.account, null)
-                    NostrHashtagDataSource.loadHashtag(null)
-                    NostrHashtagDataSource.stop()
-                }
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Hashtag Start")
+                NostrHashtagDataSource.loadHashtag(tag)
+                NostrHashtagDataSource.start()
+                feedViewModel.invalidateData()
             }
-
-            lifeCycleOwner.lifecycle.addObserver(observer)
-            onDispose {
-                lifeCycleOwner.lifecycle.removeObserver(observer)
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Hashtag Stop")
+                NostrHashtagDataSource.loadHashtag(null)
+                NostrHashtagDataSource.stop()
             }
         }
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                HashtagHeader(tag, accountViewModel)
-                RefresheableFeedView(
-                    feedViewModel,
-                    null,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+            NostrHashtagDataSource.loadHashtag(null)
+            NostrHashtagDataSource.stop()
+        }
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            HashtagHeader(tag, accountViewModel)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
@@ -93,7 +110,7 @@ fun HashtagHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = 
     Column(
         Modifier.clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = HalfPadding) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(
                     modifier = Modifier
