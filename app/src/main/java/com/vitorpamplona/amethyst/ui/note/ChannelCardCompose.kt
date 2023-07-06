@@ -490,7 +490,6 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
     }
 }
 
-
 @Composable
 fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? CommunityDefinitionEvent ?: return
