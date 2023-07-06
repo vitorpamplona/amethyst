@@ -22,7 +22,7 @@ class CommunityPostApprovalEvent(
             fromJson(it, Client.lenient)
         }
     } catch (e: Exception) {
-        Log.e("LnZapEvent", "Failed to Parse Contained Post $content", e)
+        Log.e("CommunityPostEvent", "Failed to Parse Contained Post $content", e)
         null
     }
 

@@ -490,7 +490,7 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+
 @Composable
 fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? CommunityDefinitionEvent ?: return

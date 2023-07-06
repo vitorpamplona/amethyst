@@ -52,6 +52,12 @@ class ParticipantListBuilder {
             addFollowsThatDirectlyParticipateOnToSet(it, followingSet, mySet)
         }
 
+        baseNote.boosts.forEach {
+            it.replyTo?.forEach {
+                addFollowsThatDirectlyParticipateOnToSet(it, followingSet, mySet)
+            }
+        }
+
         LocalCache.getChannelIfExists(baseNote.idHex)?.notes?.values?.forEach {
             addFollowsThatDirectlyParticipateOnToSet(it, followingSet, mySet)
         }
