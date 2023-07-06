@@ -49,4 +49,9 @@ class CharsetTest {
     fun testTeacher() {
         Assert.assertEquals("\uD83E\uDDD1\uD83C\uDFFF\u200D\uD83C\uDFEB", "\uD83E\uDDD1\uD83C\uDFFF\u200D\uD83C\uDFEBasdf".firstFullChar())
     }
+
+    @Test
+    fun testVariation() {
+        Assert.assertEquals("\uD83D\uDC68\u200D\u2764\uFE0F\u200D\uD83D\uDC8B\u200D\uD83D\uDC68", "\uD83D\uDC68\u200D\u2764\uFE0F\u200D\uD83D\uDC8B\u200D\uD83D\uDC68ddd".firstFullChar())
+    }
 }

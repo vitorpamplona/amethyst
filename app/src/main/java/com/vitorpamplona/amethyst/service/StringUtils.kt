@@ -41,7 +41,8 @@ fun String.firstFullChar(): String {
             start = next
         } else {
             // If join, searches for the next char
-            if (codePoint == 0x200D) {
+            if (codePoint == 0xFE0F) {
+            } else if (codePoint == 0x200D) {
                 isInJoin = true
             } else {
                 // stops when two chars are not joined together
