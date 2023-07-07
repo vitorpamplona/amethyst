@@ -116,6 +116,8 @@ private fun RenderTopRouteBar(
     when (currentRoute) {
         Route.Channel.base -> NoTopBar()
         Route.Room.base -> NoTopBar()
+        Route.Community.base -> NoTopBar()
+        Route.Hashtag.base -> NoTopBar()
         // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel, nav)
