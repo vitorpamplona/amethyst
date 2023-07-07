@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -321,11 +322,16 @@ fun InnerChannelCardWithReactions(
     nav: (String) -> Unit
 ) {
     Column(StdPadding) {
-        RenderNoteRow(
-            baseNote,
-            accountViewModel,
-            nav
-        )
+        SensitivityWarning(
+            note = baseNote,
+            accountViewModel = accountViewModel
+        ) {
+            RenderNoteRow(
+                baseNote,
+                accountViewModel,
+                nav
+            )
+        }
     }
 }
 

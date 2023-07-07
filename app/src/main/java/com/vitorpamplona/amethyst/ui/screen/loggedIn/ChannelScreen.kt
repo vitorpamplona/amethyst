@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
@@ -580,7 +581,7 @@ fun ChannelHeader(
 ) {
     Column(Modifier.fillMaxWidth()) {
         if (showVideo && baseChannel is LiveActivitiesChannel) {
-            ShowVideoStreaming(baseChannel)
+            ShowVideoStreaming(baseChannel, accountViewModel)
         }
 
         var expanded = remember { mutableStateOf(false) }
@@ -607,26 +608,34 @@ fun ChannelHeader(
 
 @Composable
 private fun ShowVideoStreaming(
-    baseChannel: LiveActivitiesChannel
+    baseChannel: LiveActivitiesChannel,
+    accountViewModel: AccountViewModel
 ) {
-    val streamingUrl by baseChannel.live.map {
-        val activity = it.channel as? LiveActivitiesChannel
-        activity?.info?.streaming()
-    }.distinctUntilChanged().observeAsState(baseChannel.info?.streaming())
+    baseChannel.info?.let {
+        SensitivityWarning(
+            event = it,
+            accountViewModel = accountViewModel
+        ) {
+            val streamingUrl by baseChannel.live.map {
+                val activity = it.channel as? LiveActivitiesChannel
+                activity?.info?.streaming()
+            }.distinctUntilChanged().observeAsState(baseChannel.info?.streaming())
 
-    streamingUrl?.let {
-        CheckIfUrlIsOnline(it) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = remember { Modifier.heightIn(max = 300.dp) }
-            ) {
-                val zoomableUrlVideo = remember(it) {
-                    ZoomableUrlVideo(url = it)
+            streamingUrl?.let {
+                CheckIfUrlIsOnline(it) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = remember { Modifier.heightIn(max = 300.dp) }
+                    ) {
+                        val zoomableUrlVideo = remember(it) {
+                            ZoomableUrlVideo(url = it)
+                        }
+
+                        ZoomableContentView(
+                            content = zoomableUrlVideo
+                        )
+                    }
                 }
-
-                ZoomableContentView(
-                    content = zoomableUrlVideo
-                )
             }
         }
     }
