@@ -5,7 +5,6 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
@@ -35,6 +33,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -48,23 +47,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -338,21 +333,22 @@ private fun UrlImageView(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun LoadImageBox(showImage: MutableState<Boolean>) {
-    Box(
-        modifier = Modifier
-            .height(300.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color.LightGray)
-            .clickable { showImage.value = true },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = stringResource(R.string.load_image),
-            style = TextStyle(color = Color.Black, fontSize = 18.sp)
-        )
+fun ImageUrlWithDownloadButton(url: String, showImage: MutableState<Boolean>) {
+    FlowRow() {
+        ClickableUrl(urlText = url, url = url)
+        IconButton(
+            modifier = Modifier.size(20.dp),
+            onClick = { showImage.value = true }
+        ) {
+            Icon(
+                imageVector = Icons.Default.DownloadForOffline,
+                null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colors.primary
+            )
+        }
     }
 }
 
@@ -367,7 +363,7 @@ private fun AddedImageFeatures(
     showImage: MutableState<Boolean>
 ) {
     if (!showImage.value) {
-        LoadImageBox(showImage)
+        ImageUrlWithDownloadButton(content.uri, showImage)
     } else {
         when (painter.value) {
             null, is AsyncImagePainter.State.Loading -> {
@@ -407,7 +403,7 @@ private fun AddedImageFeatures(
     showImage: MutableState<Boolean>
 ) {
     if (!showImage.value) {
-        LoadImageBox(showImage)
+        ImageUrlWithDownloadButton(content.url, showImage)
     } else {
         var verifiedHash by remember {
             mutableStateOf<Boolean?>(null)
