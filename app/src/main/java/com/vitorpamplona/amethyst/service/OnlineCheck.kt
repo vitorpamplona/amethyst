@@ -21,13 +21,13 @@ object OnlineChecker {
             return checkOnlineCache.get(url).online
         }
 
-        val request = Request.Builder()
-            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-            .url(url)
-            .get()
-            .build()
-
         return try {
+            val request = Request.Builder()
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .url(url)
+                .get()
+                .build()
+
             val result = HttpClient.getHttpClient().newCall(request).execute().code == 200
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), result))
             result
