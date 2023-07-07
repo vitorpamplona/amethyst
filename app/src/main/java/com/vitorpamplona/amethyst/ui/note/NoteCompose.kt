@@ -85,8 +85,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
