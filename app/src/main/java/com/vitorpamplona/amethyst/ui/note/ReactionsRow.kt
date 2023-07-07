@@ -308,7 +308,9 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
     }
 
     LinearProgressIndicator(
-        modifier = Modifier.fillMaxWidth().height(if (details) 24.dp else 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (details) 24.dp else 4.dp),
         color = color,
         progress = zapraiserProgress
     )
@@ -558,12 +560,17 @@ fun ReplyCounter(baseNote: Note, textColor: Color) {
         it.note.replies.size
     }.observeAsState(baseNote.replies.size)
 
-    SlidingAnimation(repliesState, textColor)
+    SlidingAnimationCount(repliesState, textColor)
+}
+
+@Composable
+private fun SlidingAnimationCount(baseCount: MutableState<Int>, textColor: Color) {
+    SlidingAnimationCount(baseCount.value, textColor)
 }
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-private fun SlidingAnimation(baseCount: Int, textColor: Color) {
+private fun SlidingAnimationCount(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
         targetState = baseCount,
         transitionSpec = AnimatedContentScope<Int>::transitionSpec
@@ -597,9 +604,9 @@ private fun TextCount(count: Int, textColor: Color) {
 
 @Composable
 @OptIn(ExperimentalAnimationApi::class)
-private fun SlidingAnimation(amount: String, textColor: Color) {
+private fun SlidingAnimationAmount(amount: MutableState<String>, textColor: Color) {
     AnimatedContent(
-        targetState = amount,
+        targetState = amount.value,
         transitionSpec = AnimatedContentScope<String>::transitionSpec
     ) { count ->
         Text(
@@ -694,7 +701,7 @@ fun BoostText(baseNote: Note, grayTint: Color) {
         it.note.boosts.size
     }.distinctUntilChanged().observeAsState(baseNote.boosts.size)
 
-    SlidingAnimation(boostState, grayTint)
+    SlidingAnimationCount(boostState, grayTint)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -771,28 +778,37 @@ fun LikeIcon(
     grayTint: Color,
     accountViewModel: AccountViewModel
 ) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
-    var reactionType by remember(baseNote) {
+    val reactionType = remember(baseNote) {
         mutableStateOf<String?>(null)
     }
 
-    LaunchedEffect(key1 = reactionsState) {
-        launch(Dispatchers.Default) {
-            val newReactionType = reactionsState?.note?.isReactedBy(accountViewModel.userProfile())?.firstFullChar()
-            if (reactionType != newReactionType) {
-                launch(Dispatchers.Main) {
-                    reactionType = newReactionType
-                }
+    val scope = rememberCoroutineScope()
+
+    WatchReactionTypeForNote(baseNote, accountViewModel) { newReactionType ->
+        if (reactionType.value != newReactionType) {
+            scope.launch(Dispatchers.Main) {
+                reactionType.value = newReactionType
             }
         }
     }
 
     Crossfade(targetState = reactionType) {
-        if (it != null) {
-            RenderReactionType(it, iconSize, iconFontSize)
+        val value = it.value
+        if (value != null) {
+            RenderReactionType(value, iconSize, iconFontSize)
         } else {
             RenderLikeIcon(iconSize, grayTint)
+        }
+    }
+}
+
+@Composable
+private fun WatchReactionTypeForNote(baseNote: Note, accountViewModel: AccountViewModel, onNewReactionType: (String?) -> Unit) {
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    LaunchedEffect(key1 = reactionsState) {
+        launch(Dispatchers.Default) {
+            onNewReactionType(reactionsState?.note?.getReactionBy(accountViewModel.userProfile())?.firstFullChar())
         }
     }
 }
@@ -841,24 +857,32 @@ private fun RenderReactionType(
 
 @Composable
 fun LikeText(baseNote: Note, grayTint: Color) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
-    var reactionsCount by remember(baseNote) {
+    val reactionsCount = remember(baseNote) {
         mutableStateOf(baseNote.reactions.size)
     }
 
-    LaunchedEffect(key1 = reactionsState) {
-        launch(Dispatchers.Default) {
-            val newReactionsCount = reactionsState?.note?.countReactions() ?: 0
-            if (reactionsCount != newReactionsCount) {
-                launch(Dispatchers.Main) {
-                    reactionsCount = newReactionsCount
-                }
+    val scope = rememberCoroutineScope()
+
+    WatchReactionCountForNote(baseNote) { newReactionsCount ->
+        if (reactionsCount.value != newReactionsCount) {
+            scope.launch(Dispatchers.Main) {
+                reactionsCount.value = newReactionsCount
             }
         }
     }
 
-    SlidingAnimation(reactionsCount, grayTint)
+    SlidingAnimationCount(reactionsCount, grayTint)
+}
+
+@Composable
+private fun WatchReactionCountForNote(baseNote: Note, onNewReactionCount: (Int) -> Unit) {
+    val reactionsState by baseNote.live().reactions.observeAsState()
+
+    LaunchedEffect(key1 = reactionsState) {
+        launch(Dispatchers.Default) {
+            onNewReactionCount(reactionsState?.note?.countReactions() ?: 0)
+        }
+    }
 }
 
 private fun likeClick(
@@ -1072,27 +1096,22 @@ private fun ZapIcon(
     grayTint: Color,
     accountViewModel: AccountViewModel
 ) {
-    var wasZappedByLoggedInUser by remember { mutableStateOf(false) }
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val wasZappedByLoggedInUser = remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            zapsState?.note?.let {
-                if (!wasZappedByLoggedInUser) {
-                    val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(it)
+    val scope = rememberCoroutineScope()
 
-                    if (wasZappedByLoggedInUser != newWasZapped) {
-                        launch(Dispatchers.Main) {
-                            wasZappedByLoggedInUser = newWasZapped
-                        }
-                    }
+    if (!wasZappedByLoggedInUser.value) {
+        WatchZapsForNote(baseNote, accountViewModel) { newWasZapped ->
+            if (wasZappedByLoggedInUser.value != newWasZapped) {
+                scope.launch(Dispatchers.Main) {
+                    wasZappedByLoggedInUser.value = newWasZapped
                 }
             }
         }
     }
 
     Crossfade(targetState = wasZappedByLoggedInUser) {
-        if (it) {
+        if (it.value) {
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = stringResource(R.string.zaps),
@@ -1111,29 +1130,46 @@ private fun ZapIcon(
 }
 
 @Composable
+private fun WatchZapsForNote(baseNote: Note, accountViewModel: AccountViewModel, onWasZapped: (Boolean) -> Unit) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    LaunchedEffect(key1 = zapsState) {
+        launch(Dispatchers.Default) {
+            onWasZapped(accountViewModel.calculateIfNoteWasZappedByAccount(baseNote))
+        }
+    }
+}
+
+@Composable
 private fun ZapAmountText(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapAmountTxt = remember(baseNote) { mutableStateOf("") }
 
-    var zapAmountTxt by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            zapsState?.note?.let {
-                val newZapAmount = showAmount(accountViewModel.calculateZapAmount(it))
-                if (newZapAmount != zapAmountTxt) {
-                    launch(Dispatchers.Main) {
-                        zapAmountTxt = newZapAmount
-                    }
-                }
+    WatchZapAmountsForNote(baseNote, accountViewModel) { newZapAmount ->
+        if (zapAmountTxt.value != newZapAmount) {
+            scope.launch(Dispatchers.Main) {
+                zapAmountTxt.value = newZapAmount
             }
         }
     }
 
-    SlidingAnimation(zapAmountTxt, grayTint)
+    SlidingAnimationAmount(zapAmountTxt, grayTint)
+}
+
+@Composable
+fun WatchZapAmountsForNote(baseNote: Note, accountViewModel: AccountViewModel, onZapAmount: (String) -> Unit) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    LaunchedEffect(key1 = zapsState) {
+        launch(Dispatchers.Default) {
+            onZapAmount(showAmount(accountViewModel.calculateZapAmount(baseNote)))
+        }
+    }
 }
 
 @Composable

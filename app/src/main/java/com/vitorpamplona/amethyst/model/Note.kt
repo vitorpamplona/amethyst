@@ -328,10 +328,14 @@ open class Note(val idHex: String) {
         }.toSet()
     }
 
-    fun isReactedBy(user: User): String? {
-        return reactions.filter {
-            it.value.any { it.author?.pubkeyHex == user.pubkeyHex }
-        }.keys.firstOrNull()
+    fun getReactionBy(user: User): String? {
+        return reactions.firstNotNullOfOrNull {
+            if (it.value.any { it.author?.pubkeyHex == user.pubkeyHex }) {
+                it.key
+            } else {
+                null
+            }
+        }
     }
 
     fun isBoostedBy(user: User): Boolean {

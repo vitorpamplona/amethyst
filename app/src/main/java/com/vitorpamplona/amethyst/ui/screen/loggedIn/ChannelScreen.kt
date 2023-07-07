@@ -584,7 +584,7 @@ fun ChannelHeader(
             ShowVideoStreaming(baseChannel, accountViewModel)
         }
 
-        var expanded = remember { mutableStateOf(false) }
+        val expanded = remember { mutableStateOf(false) }
 
         Column(
             modifier = modifier.clickable {
