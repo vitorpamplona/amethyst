@@ -313,7 +313,8 @@ private fun UrlImageView(
 fun LoadImageBox(showImage: MutableState<Boolean>) {
     Box(
         modifier = Modifier
-            .size(300.dp)
+            .height(300.dp)
+            .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(Color.LightGray)
             .clickable { showImage.value = true },
@@ -337,31 +338,31 @@ private fun AddedImageFeatures(
     showImage: MutableState<Boolean>
 ) {
     if (!showImage.value) {
-        return LoadImageBox(showImage)
-    }
-
-    when (painter.value) {
-        null, is AsyncImagePainter.State.Loading -> {
-            if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-            } else {
-                FlowRow() {
-                    DisplayUrlWithLoadingSymbol(content)
+        LoadImageBox(showImage)
+    } else {
+        when (painter.value) {
+            null, is AsyncImagePainter.State.Loading -> {
+                if (content.blurhash != null) {
+                    DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                } else {
+                    FlowRow() {
+                        DisplayUrlWithLoadingSymbol(content)
+                    }
                 }
             }
-        }
 
-        is AsyncImagePainter.State.Error -> {
-            BlankNote()
-        }
-
-        is AsyncImagePainter.State.Success -> {
-            if (content.isVerified != null) {
-                HashVerificationSymbol(content.isVerified, verifiedModifier)
+            is AsyncImagePainter.State.Error -> {
+                BlankNote()
             }
-        }
 
-        else -> {
+            is AsyncImagePainter.State.Success -> {
+                if (content.isVerified != null) {
+                    HashVerificationSymbol(content.isVerified, verifiedModifier)
+                }
+            }
+
+            else -> {
+            }
         }
     }
 }
@@ -377,47 +378,47 @@ private fun AddedImageFeatures(
     showImage: MutableState<Boolean>
 ) {
     if (!showImage.value) {
-        return LoadImageBox(showImage)
-    }
-
-    var verifiedHash by remember {
-        mutableStateOf<Boolean?>(null)
-    }
-
-    when (painter.value) {
-        null, is AsyncImagePainter.State.Loading -> {
-            if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-            } else {
-                FlowRow() {
-                    DisplayUrlWithLoadingSymbol(content)
-                }
-            }
+        LoadImageBox(showImage)
+    } else {
+        var verifiedHash by remember {
+            mutableStateOf<Boolean?>(null)
         }
 
-        is AsyncImagePainter.State.Error -> {
-            ClickableUrl(urlText = "${content.url} ", url = content.url)
-        }
-
-        is AsyncImagePainter.State.Success -> {
-            if (content.hash != null) {
-                val context = LocalContext.current
-                LaunchedEffect(key1 = content.url) {
-                    launch(Dispatchers.IO) {
-                        val newVerifiedHash = verifyHash(content, context)
-                        if (newVerifiedHash != verifiedHash) {
-                            verifiedHash = newVerifiedHash
-                        }
+        when (painter.value) {
+            null, is AsyncImagePainter.State.Loading -> {
+                if (content.blurhash != null) {
+                    DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                } else {
+                    FlowRow() {
+                        DisplayUrlWithLoadingSymbol(content)
                     }
                 }
             }
 
-            verifiedHash?.let {
-                HashVerificationSymbol(it, verifiedModifier)
+            is AsyncImagePainter.State.Error -> {
+                ClickableUrl(urlText = "${content.url} ", url = content.url)
             }
-        }
 
-        else -> {
+            is AsyncImagePainter.State.Success -> {
+                if (content.hash != null) {
+                    val context = LocalContext.current
+                    LaunchedEffect(key1 = content.url) {
+                        launch(Dispatchers.IO) {
+                            val newVerifiedHash = verifyHash(content, context)
+                            if (newVerifiedHash != verifiedHash) {
+                                verifiedHash = newVerifiedHash
+                            }
+                        }
+                    }
+                }
+
+                verifiedHash?.let {
+                    HashVerificationSymbol(it, verifiedModifier)
+                }
+            }
+
+            else -> {
+            }
         }
     }
 }
