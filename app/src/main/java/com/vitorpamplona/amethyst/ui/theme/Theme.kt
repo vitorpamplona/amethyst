@@ -323,10 +323,14 @@ fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Uni
     )
 
     val view = LocalView.current
-    if (!view.isInEditMode && darkTheme) {
+    if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colors.background.toArgb()
+            if (darkTheme) {
+                window.statusBarColor = colors.background.toArgb()
+            } else {
+                window.statusBarColor = colors.primary.toArgb()
+            }
         }
     }
 }
