@@ -2237,14 +2237,14 @@ fun MoreOptionsButton(
 
 @Composable
 fun TimeAgo(note: Note) {
-    val time = remember { note.createdAt() } ?: return
+    val time = remember(note) { note.createdAt() } ?: return
     TimeAgo(time)
 }
 
 @Composable
 fun TimeAgo(time: Long) {
     val context = LocalContext.current
-    val timeStr by remember { mutableStateOf(timeAgo(time, context = context)) }
+    val timeStr by remember(time) { mutableStateOf(timeAgo(time, context = context)) }
 
     Text(
         text = timeStr,
