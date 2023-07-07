@@ -478,88 +478,229 @@ fun CommunityHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
+    var expanded = remember { mutableStateOf(false) }
+
     Column(
+        modifier = modifier.clickable {
+            expanded.value = !expanded.value
+        }
+    ) {
+        ShortCommunityHeader(baseNote, expanded, accountViewModel, nav)
+
+        if (expanded.value) {
+            LongCommunityHeader(baseNote, accountViewModel, nav)
+        }
+    }
+
+    if (showBottomDiviser) {
+        Divider(
+            thickness = 0.25.dp
+        )
+    }
+}
+
+@Composable
+fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteState by baseNote.live().metadata.observeAsState()
+    val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
+
+    Row(
         Modifier
             .fillMaxWidth()
-            .clickable {
-                scope.launch {
-                    nav("Community/${baseNote.idHex}")
-                }
-            }
+            .padding(top = 10.dp)
     ) {
-        val channelState by baseNote.live().metadata.observeAsState()
-        val noteEvent = remember(channelState) { channelState?.note?.event as? CommunityDefinitionEvent } ?: return
+        val summary = remember(noteState) {
+            noteEvent.description()?.ifBlank { null }
+        }
 
-        Column(modifier = modifier) {
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(start = 10.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                noteEvent.image()?.let {
-                    RobohashAsyncImageProxy(
-                        robot = baseNote.idHex,
-                        model = it,
-                        contentDescription = stringResource(R.string.profile_image),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .padding(start = 10.dp)
-                            .width(Size35dp)
-                            .height(Size35dp)
-                            .clip(shape = CircleShape)
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = remember(channelState) { noteEvent.dTag() },
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    val summary = remember(channelState) {
-                        noteEvent.description()?.ifBlank { null }
-                    }
-
-                    if (summary != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = summary,
-                                color = MaterialTheme.colors.placeholderText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .height(Size35dp)
-                        .padding(start = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CommunityActionOptions(baseNote, accountViewModel, nav)
-                }
+                Text(
+                    text = summary ?: "This group does not have a description or rules. Talk to the owner to add one"
+                )
             }
         }
 
-        if (showBottomDiviser) {
-            Divider(
-                thickness = 0.25.dp
+        Column() {
+            Row() {
+                Spacer(DoubleHorzSpacer)
+                LongCommunityActionOptions(baseNote, accountViewModel, nav)
+            }
+        }
+    }
+
+    val rules = remember(noteState) {
+        noteEvent.rules()?.ifBlank { null }
+    }
+
+    rules?.let {
+        Spacer(DoubleVertSpacer)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp)
+        ) {
+            Text(
+                text = it
             )
+        }
+    }
+
+    Spacer(DoubleVertSpacer)
+
+    Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(id = R.string.owner),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(75.dp)
+        )
+        Spacer(DoubleHorzSpacer)
+        NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
+        Spacer(DoubleHorzSpacer)
+        NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
+        TimeAgo(baseNote)
+        MoreOptionsButton(baseNote, accountViewModel)
+    }
+
+    var participantUsers by remember(baseNote) {
+        mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+            persistentListOf()
+        )
+    }
+
+    LaunchedEffect(key1 = noteState) {
+        launch(Dispatchers.IO) {
+            val noteEvent = (noteState?.note?.event as? CommunityDefinitionEvent)
+            val newParticipantUsers = noteEvent?.moderators()?.mapNotNull { part ->
+                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+            }?.toImmutableList()
+
+            if (newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)) {
+                participantUsers = newParticipantUsers
+            }
+        }
+    }
+
+    participantUsers.forEach {
+        Row(
+            Modifier.fillMaxWidth()
+                .padding(start = 10.dp, top = 10.dp)
+                .clickable {
+                    nav("User/${it.second.pubkeyHex}")
+                },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            it.first.role?.let { it1 ->
+                Text(
+                    text = it1.capitalize(Locale.ROOT),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(75.dp)
+                )
+            }
+            Spacer(DoubleHorzSpacer)
+            ClickableUserPicture(it.second, Size25dp, accountViewModel)
+            Spacer(DoubleHorzSpacer)
+            UsernameDisplay(it.second, remember { Modifier.weight(1f) })
         }
     }
 }
 
 @Composable
-private fun CommunityActionOptions(
+fun ShortCommunityHeader(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteState by baseNote.live().metadata.observeAsState()
+    val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        noteEvent.image()?.let {
+            RobohashAsyncImageProxy(
+                robot = baseNote.idHex,
+                model = it,
+                contentDescription = stringResource(R.string.profile_image),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .width(Size35dp)
+                    .height(Size35dp)
+                    .clip(shape = CircleShape)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .height(Size35dp)
+                .weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = remember(noteState) { noteEvent.dTag() },
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            val summary = remember(noteState) {
+                noteEvent.description()?.ifBlank { null }
+            }
+
+            if (summary != null && !expanded.value) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = summary,
+                        color = MaterialTheme.colors.placeholderText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .height(Size35dp)
+                .padding(start = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ShortCommunityActionOptions(baseNote, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun ShortCommunityActionOptions(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val isFollowing by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.followingCommunities?.contains(note.idHex) ?: false
+        }
+    }
+
+    Spacer(modifier = StdHorzSpacer)
+    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+    Spacer(modifier = StdHorzSpacer)
+    ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+
+    if (!isFollowing) {
+        Spacer(modifier = StdHorzSpacer)
+        JoinCommunityButton(accountViewModel, note, nav)
+    }
+}
+
+@Composable
+private fun LongCommunityActionOptions(
     note: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -573,8 +714,6 @@ private fun CommunityActionOptions(
 
     if (isFollowing) {
         LeaveCommunityButton(accountViewModel, note, nav)
-    } else {
-        JoinCommunityButton(accountViewModel, note, nav)
     }
 }
 

@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
@@ -347,7 +348,6 @@ private fun RenderNoteRow(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
@@ -570,7 +570,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Row() {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = name,
                     fontWeight = FontWeight.Bold,
@@ -684,7 +684,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
         Column(
             modifier = Modifier.fillMaxWidth().fillMaxHeight()
         ) {
-            Row() {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = name,
                     fontWeight = FontWeight.Bold,

@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -75,6 +76,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
@@ -82,35 +85,50 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.amethyst.service.model.Participant
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
-import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @Composable
 fun ChannelScreen(
@@ -556,117 +574,22 @@ fun ChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clickable {
-                scope.launch {
-                    nav("Channel/${baseChannel.idHex}")
-                }
-            }
-    ) {
-        val channelState by baseChannel.live.observeAsState()
-        val channel = remember(channelState) { channelState?.channel } ?: return
-
-        if (showVideo) {
-            val streamingUrl by remember(channelState) {
-                derivedStateOf {
-                    val activity = channel as? LiveActivitiesChannel
-                    val description = activity?.info?.title()
-                    val url = activity?.info?.streaming()
-                    if (url != null) {
-                        ZoomableUrlVideo(url, description = description)
-                    } else {
-                        null
-                    }
-                }
-            }
-
-            streamingUrl?.let {
-                CheckIfUrlIsOnline(it.url) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = remember { Modifier.heightIn(max = 300.dp) }
-                    ) {
-                        ZoomableContentView(
-                            content = it
-                        )
-                    }
-                }
-            }
+    Column(Modifier.fillMaxWidth()) {
+        if (showVideo && baseChannel is LiveActivitiesChannel) {
+            ShowVideoStreaming(baseChannel)
         }
-        Column(modifier = modifier) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (channel is LiveActivitiesChannel) {
-                    channel.creator?.let {
-                        UserPicture(
-                            user = it,
-                            size = Size35dp,
-                            accountViewModel = accountViewModel,
-                            nav = nav
-                        )
-                    }
-                } else {
-                    channel.profilePicture()?.let {
-                        RobohashAsyncImageProxy(
-                            robot = channel.idHex,
-                            model = it,
-                            contentDescription = stringResource(R.string.profile_image),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.padding(start = 10.dp)
-                                .width(Size35dp)
-                                .height(Size35dp)
-                                .clip(shape = CircleShape)
-                        )
-                    }
-                }
 
-                Column(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = remember(channelState) { channel.toBestDisplayName() },
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+        var expanded = remember { mutableStateOf(false) }
 
-                    val summary = remember(channelState) {
-                        channel.summary()?.ifBlank { null }
-                    }
+        Column(
+            modifier = modifier.clickable {
+                expanded.value = !expanded.value
+            }
+        ) {
+            ShortChannelHeader(baseChannel, expanded, accountViewModel, nav, showFlag)
 
-                    if (summary != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = summary,
-                                color = MaterialTheme.colors.placeholderText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .height(Size35dp)
-                        .padding(start = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (channel is PublicChatChannel) {
-                        ChannelActionOptions(channel, accountViewModel, nav)
-                    }
-                    if (channel is LiveActivitiesChannel) {
-                        LiveChannelActionOptions(channel, showFlag, accountViewModel, nav)
-                    }
-                }
+            if (expanded.value) {
+                LongChannelHeader(baseChannel, accountViewModel, nav)
             }
         }
 
@@ -679,13 +602,264 @@ fun ChannelHeader(
 }
 
 @Composable
-private fun ChannelActionOptions(
+private fun ShowVideoStreaming(
+    baseChannel: LiveActivitiesChannel
+) {
+    val streamingUrl by baseChannel.live.map {
+        val activity = it.channel as? LiveActivitiesChannel
+        activity?.info?.streaming()
+    }.distinctUntilChanged().observeAsState(baseChannel.info?.streaming())
+
+    streamingUrl?.let {
+        CheckIfUrlIsOnline(it) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = remember { Modifier.heightIn(max = 300.dp) }
+            ) {
+                val zoomableUrlVideo = remember(it) {
+                    ZoomableUrlVideo(url = it)
+                }
+
+                ZoomableContentView(
+                    content = zoomableUrlVideo
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShortChannelHeader(
+    baseChannel: Channel,
+    expanded: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    showFlag: Boolean
+) {
+    val channelState = baseChannel.live.observeAsState()
+    val channel = remember(channelState) {
+        channelState.value?.channel
+    } ?: return
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (channel is LiveActivitiesChannel) {
+            channel.creator?.let {
+                UserPicture(
+                    user = it,
+                    size = Size35dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+        } else {
+            channel.profilePicture()?.let {
+                RobohashAsyncImageProxy(
+                    robot = channel.idHex,
+                    model = it,
+                    contentDescription = stringResource(R.string.profile_image),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .width(Size35dp)
+                        .height(Size35dp)
+                        .clip(shape = CircleShape)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .height(35.dp)
+                .weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = remember(channelState) { channel.toBestDisplayName() },
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            val summary = remember(channelState) {
+                channel.summary()?.ifBlank { null }
+            }
+
+            if (summary != null && !expanded.value) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = summary,
+                        color = MaterialTheme.colors.placeholderText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .height(Size35dp)
+                .padding(start = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (channel is PublicChatChannel) {
+                ShortChannelActionOptions(channel, accountViewModel, nav)
+            }
+            if (channel is LiveActivitiesChannel) {
+                LiveChannelActionOptions(channel, showFlag, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LongChannelHeader(
+    baseChannel: Channel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val channelState = baseChannel.live.observeAsState()
+    val channel = remember(channelState) {
+        channelState.value?.channel
+    } ?: return
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp)
+    ) {
+        val summary = remember(channelState) {
+            channel.summary()?.ifBlank { null }
+        }
+
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(start = 10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = summary ?: "This group does not have a description or rules. Talk to the owner to add one"
+                )
+            }
+        }
+
+        Column() {
+            if (channel is PublicChatChannel) {
+                Row() {
+                    Spacer(DoubleHorzSpacer)
+                    LongChannelActionOptions(channel, accountViewModel, nav)
+                }
+            }
+        }
+    }
+
+    Spacer(DoubleVertSpacer)
+
+    Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        LoadNote(baseNoteHex = channel.idHex) {
+            it?.let {
+                Text(
+                    text = stringResource(id = R.string.owner),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(55.dp)
+                )
+                Spacer(DoubleHorzSpacer)
+                NoteAuthorPicture(it, nav, accountViewModel, Size25dp)
+                Spacer(DoubleHorzSpacer)
+                NoteUsernameDisplay(it, remember { Modifier.weight(1f) })
+                TimeAgo(it)
+                MoreOptionsButton(it, accountViewModel)
+            }
+        }
+    }
+
+    var participantUsers by remember(baseChannel) {
+        mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+            persistentListOf()
+        )
+    }
+
+    if (channel is LiveActivitiesChannel) {
+        LaunchedEffect(key1 = channelState) {
+            launch(Dispatchers.IO) {
+                val newParticipantUsers = channel.info?.participants()?.mapNotNull { part ->
+                    LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+                }?.toImmutableList()
+
+                if (newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)) {
+                    participantUsers = newParticipantUsers
+                }
+            }
+        }
+
+        participantUsers.forEach {
+            Row(
+                Modifier.fillMaxWidth()
+                    .padding(start = 10.dp, top = 10.dp)
+                    .clickable {
+                        nav("User/${it.second.pubkeyHex}")
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                it.first.role?.let { it1 ->
+                    Text(
+                        text = it1.capitalize(Locale.ROOT),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(55.dp)
+                    )
+                }
+                Spacer(DoubleHorzSpacer)
+                ClickableUserPicture(it.second, Size25dp, accountViewModel)
+                Spacer(DoubleHorzSpacer)
+                UsernameDisplay(it.second, remember { Modifier.weight(1f) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShortChannelActionOptions(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    NoteCopyButton(channel)
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val isFollowing by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.followingChannels?.contains(channel.idHex) ?: false
+        }
+    }
 
+    LoadNote(baseNoteHex = channel.idHex) {
+        it?.let {
+            var popupExpanded by remember { mutableStateOf(false) }
+
+            Spacer(modifier = StdHorzSpacer)
+            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            Spacer(modifier = StdHorzSpacer)
+        }
+    }
+
+    if (!isFollowing) {
+        JoinChatButton(accountViewModel, channel, nav)
+    }
+}
+
+@Composable
+private fun LongChannelActionOptions(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val isMe by remember(accountViewModel) {
         derivedStateOf {
             channel.creator == accountViewModel.account.userProfile()
@@ -705,8 +879,6 @@ private fun ChannelActionOptions(
 
     if (isFollowing) {
         LeaveChatButton(accountViewModel, channel, nav)
-    } else {
-        JoinChatButton(accountViewModel, channel, nav)
     }
 }
 
@@ -891,7 +1063,6 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             accountViewModel.account.leaveChannel(channel.idHex)
-            nav(Route.Message.route)
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
