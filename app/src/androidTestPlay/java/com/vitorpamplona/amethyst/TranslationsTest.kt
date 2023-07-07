@@ -11,17 +11,17 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TranslationsTest {
 
-    fun translatePT(text: String, translateTo: String): String? {
+    fun translateTo(text: String, translateTo: String): String? {
         val task = LanguageTranslatorService.autoTranslate(text, emptySet(), translateTo)
         return Tasks.await(task).result
     }
 
     fun assertTranslate(expected: String, input: String, translateTo: String) {
-        assertEquals(null, expected, translatePT(input, translateTo))
+        assertEquals(null, expected, translateTo(input, translateTo))
     }
 
     fun assertTranslateContains(expected: String, input: String, translateTo: String) {
-        val translated = translatePT(input, translateTo)!!
+        val translated = translateTo(input, translateTo)!!
         assertTrue("'$translated' does not contain '$expected'", translated.contains(expected))
     }
 
@@ -83,6 +83,19 @@ class TranslationsTest {
         assertTranslateContains(
             "nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy",
             "sure, nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy",
+            "en"
+        )
+    }
+
+    @Test
+    fun testJapaneseTranslationsOfUrl() {
+        assertTranslateContains(
+            "https://youtu.be/wMYFmCDy_Eg",
+            "うちの会社の小さい先輩の話 第1話「うちの会社の先輩は小さくて可愛い」\n" +
+                "\n" +
+                "https://youtu.be/wMYFmCDy_Eg\n" +
+                "\n" +
+                "先輩がうざい後輩の話と似たような話かと思ったけど、もっとオタクの妄想あるある的なものを詰め込んだやつだ。ワードとかシチュエーションとか、ヒロインのサイズ感とか。知らんけど",
             "en"
         )
     }
