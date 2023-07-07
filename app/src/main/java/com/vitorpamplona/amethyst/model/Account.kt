@@ -74,7 +74,7 @@ class Account(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
-    var settings: Settings = Settings(null, null)
+    var settings: Settings = Settings()
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 

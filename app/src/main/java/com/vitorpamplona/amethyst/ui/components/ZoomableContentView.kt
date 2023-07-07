@@ -75,10 +75,12 @@ import coil.imageLoader
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
@@ -175,7 +177,7 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 fun ZoomableContentView(
     content: ZoomableContent,
     images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
-    showImage: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
     automaticallyStartPlayback: MutableState<Boolean>
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -204,9 +206,9 @@ fun ZoomableContentView(
     }
 
     when (content) {
-        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, showImage)
+        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel)
         is ZoomableUrlVideo -> VideoView(content.url, content.description, automaticallyStartPlayback = automaticallyStartPlayback) { dialogOpen = true }
-        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, showImage)
+        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel)
         is ZoomableLocalVideo ->
             content.localFile?.let {
                 VideoView(it.toUri().toString(), content.description, automaticallyStartPlayback = automaticallyStartPlayback) { dialogOpen = true }
@@ -222,10 +224,23 @@ fun ZoomableContentView(
 private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier,
-    showImage: MutableState<Boolean>
+    accountViewModel: AccountViewModel?
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
+            val settings = accountViewModel?.account?.settings
+            val isMobile = ConnectivityStatus.isOnMobileData.value
+
+            val showImage = remember {
+                mutableStateOf(
+                    when (settings?.automaticallyShowImages) {
+                        true -> !isMobile
+                        false -> false
+                        else -> true
+                    }
+                )
+            }
+
             val myModifier = remember {
                 mainImageModifier
                     .widthIn(max = maxWidth)
@@ -270,9 +285,22 @@ private fun LocalImageView(
 private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier,
-    showImage: MutableState<Boolean>
+    accountViewModel: AccountViewModel?
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val settings = accountViewModel?.account?.settings
+        val isMobile = ConnectivityStatus.isOnMobileData.value
+
+        val showImage = remember {
+            mutableStateOf(
+                when (settings?.automaticallyShowImages) {
+                    true -> !isMobile
+                    false -> false
+                    else -> true
+                }
+            )
+        }
+
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)
@@ -559,11 +587,11 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index], remember { mutableStateOf(true) }, remember { mutableStateOf(true) })
+                            RenderImageOrVideo(allImages[index], null, remember { mutableStateOf(true) })
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl, remember { mutableStateOf(true) }, remember { mutableStateOf(true) })
+                    RenderImageOrVideo(imageUrl, null, remember { mutableStateOf(true) })
                 }
 
                 Row(
@@ -588,19 +616,19 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
 }
 
 @Composable
-fun RenderImageOrVideo(content: ZoomableContent, showImage: MutableState<Boolean>, automaticallyStartPlayback: MutableState<Boolean>) {
+fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel?, automaticallyStartPlayback: MutableState<Boolean>) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
 
     if (content is ZoomableUrlImage) {
-        UrlImageView(content = content, mainImageModifier = mainModifier, showImage)
+        UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             VideoView(content.url, content.description, automaticallyStartPlayback = automaticallyStartPlayback)
         }
     } else if (content is ZoomableLocalImage) {
-        LocalImageView(content = content, mainImageModifier = mainModifier, showImage)
+        LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {

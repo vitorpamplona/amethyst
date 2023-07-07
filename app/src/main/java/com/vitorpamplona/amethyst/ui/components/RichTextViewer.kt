@@ -162,7 +162,6 @@ private fun RenderRegular(
                                 backgroundColor,
                                 textStyle,
                                 accountViewModel,
-                                showImage,
                                 automaticallyStartPlayback,
                                 automaticallyShowUrlPreview,
                                 nav
@@ -244,13 +243,12 @@ private fun RenderWordWithPreview(
     backgroundColor: MutableState<Color>,
     style: TextStyle,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, state, showImage, automaticallyStartPlayback)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel, automaticallyStartPlayback)
         is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, automaticallyShowUrlPreview)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
@@ -271,11 +269,11 @@ private fun RenderWordWithPreview(
 private fun ZoomableContentView(
     word: String,
     state: RichTextViewerState,
-    showImage: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
     automaticallyStartPlayback: MutableState<Boolean>
 ) {
     state.imagesForPager[word]?.let {
-        ZoomableContentView(it, state.imageList, showImage, automaticallyStartPlayback)
+        ZoomableContentView(it, state.imageList, accountViewModel, automaticallyStartPlayback)
     }
 }
 
