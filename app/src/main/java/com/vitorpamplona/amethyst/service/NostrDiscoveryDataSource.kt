@@ -8,12 +8,16 @@ import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     lateinit var account: Account
+
+    val latestEOSEs = EOSEAccount()
+    val dataSource = "Discovery"
 
     fun createLiveStreamFilter(): TypedFilter {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
@@ -27,7 +31,8 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
             filter = JsonFilter(
                 authors = followKeys,
                 kinds = listOf(LiveActivitiesChatMessageEvent.kind, LiveActivitiesEvent.kind),
-                limit = 500
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
             )
         )
     }
@@ -40,11 +45,12 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         }
 
         return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
+            types = setOf(FeedType.PUBLIC_CHATS),
             filter = JsonFilter(
                 authors = followKeys,
                 kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
-                limit = 500
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
             )
         )
     }
@@ -61,7 +67,8 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
             filter = JsonFilter(
                 authors = followKeys,
                 kinds = listOf(CommunityDefinitionEvent.kind, CommunityPostApprovalEvent.kind),
-                limit = 500
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
             )
         )
     }
@@ -80,7 +87,8 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
                     }.flatten()
                 ),
-                limit = 500
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
             )
         )
     }
@@ -91,7 +99,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
+            types = setOf(FeedType.PUBLIC_CHATS),
             filter = JsonFilter(
                 kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
                 tags = mapOf(
@@ -99,7 +107,8 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
                     }.flatten()
                 ),
-                limit = 500
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
             )
         )
     }
@@ -118,7 +127,8 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
                     }.flatten()
                 ),
-                limit = 500
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
             )
         )
     }
