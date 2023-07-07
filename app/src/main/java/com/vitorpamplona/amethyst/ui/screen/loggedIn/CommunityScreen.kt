@@ -93,7 +93,7 @@ fun CommunityScreen(note: AddressableNote, feedViewModel: NostrCommunityFeedView
         }
     }
 
-    Column(Modifier.fillMaxHeight()) {
+    Column(Modifier.fillMaxSize()) {
         CommunityHeader(baseNote = note, showBottomDiviser = true, accountViewModel = accountViewModel, nav = nav)
         RefresheableFeedView(
             feedViewModel,
