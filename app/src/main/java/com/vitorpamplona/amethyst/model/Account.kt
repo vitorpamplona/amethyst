@@ -85,18 +85,30 @@ class Account(
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
-
-    fun updateGlobalSettings(
-        automaticallyShowImages: Boolean?,
+    fun updateAutomaticallyStartPlayback(
         automaticallyStartPlayback: Boolean?,
-        automaticallyShowUrlPreview: Boolean?
     ) {
         settings.automaticallyStartPlayback = automaticallyStartPlayback
-        settings.automaticallyShowImages = automaticallyShowImages
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun updateAutomaticallyShowUrlPreview(
+        automaticallyShowUrlPreview: Boolean?,
+    ) {
         settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
         live.invalidateData()
         saveable.invalidateData()
     }
+
+    fun updateAutomaticallyShowImages(
+        automaticallyShowImages: Boolean?,
+    ) {
+        settings.automaticallyShowImages = automaticallyShowImages
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
 
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports

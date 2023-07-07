@@ -5,10 +5,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 class ThemeViewModel : ViewModel() {
-    private val _theme = MutableLiveData("System")
-    val theme: LiveData<String> = _theme
+    private val _theme = MutableLiveData(0)
+    val theme: LiveData<Int> = _theme
 
-    fun onChange(newValue: String) {
+    fun onChange(newValue: Int) {
         _theme.value = newValue
     }
 }

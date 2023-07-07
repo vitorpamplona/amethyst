@@ -309,9 +309,9 @@ val Colors.innerPostModifier: Modifier
 fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Unit) {
     val theme = themeViewModel.theme.observeAsState()
     val darkTheme = when (theme.value) {
-        "Dark" -> true
-        "Light" -> false
-        else -> if (isSystemInDarkTheme()) true else false
+        2 -> true
+        1 -> false
+        else -> isSystemInDarkTheme()
     }
     val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 

@@ -265,18 +265,16 @@ object LocalPreferences {
         }.apply()
     }
 
-    fun updateTheme(theme: String) {
+    fun updateTheme(theme: Int) {
         encryptedPreferences().edit().apply {
-            putString(PrefKeys.THEME, theme)
+            putInt(PrefKeys.THEME, theme)
         }.apply()
     }
 
-    fun getTheme(): String {
-        var theme = "System"
+    fun getTheme(): Int {
         encryptedPreferences().apply {
-            theme = getString(PrefKeys.THEME, "System") ?: "System"
+            return getInt(PrefKeys.THEME, 0)
         }
-        return theme
     }
 
     fun getPreferredLanguage(): String {

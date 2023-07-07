@@ -41,20 +41,30 @@ class AccountViewModel(val account: Account, private val themeViewModel: ThemeVi
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
-    fun changeTheme(newValue: String) {
+    fun changeTheme(newValue: Int) {
         themeViewModel.onChange(newValue)
     }
 
-    fun currentTheme(): String {
-        return themeViewModel.theme.value ?: "System"
+    fun currentTheme(): Int {
+        return themeViewModel.theme.value ?: 0
     }
 
-    fun updateGlobalSettings(
-        automaticallyShowImages: Boolean?,
+    fun updateAutomaticallyStartPlayback(
         automaticallyStartPlayback: Boolean?,
-        automaticallyShowUrlPreview: Boolean?
     ) {
-        account.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback, automaticallyShowUrlPreview)
+        account.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
+    }
+
+    fun updateAutomaticallyShowUrlPreview(
+        automaticallyShowUrlPreview: Boolean?,
+    ) {
+        account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
+    }
+
+    fun updateAutomaticallyShowImages(
+        automaticallyShowImages: Boolean?,
+    ) {
+        account.updateAutomaticallyShowImages(automaticallyShowImages)
     }
 
     fun isWriteable(): Boolean {

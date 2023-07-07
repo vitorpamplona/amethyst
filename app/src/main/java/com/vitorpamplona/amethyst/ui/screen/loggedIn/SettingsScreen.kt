@@ -2,15 +2,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ExposedDropdownMenuBox
@@ -34,9 +34,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.xmlpull.v1.XmlPullParser
@@ -89,7 +90,7 @@ fun SettingsScreen(
     nav: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val selectedItens = arrayOf("Always", "Wifi-only", "Never")
+    val selectedItens = persistentListOf("Always", "Wifi-only", "Never")
     val settings = accountViewModel.account.settings
     val index = if (settings.automaticallyShowImages == null) { 0 } else {
         if (settings.automaticallyShowImages == true) 1 else 2
@@ -97,33 +98,18 @@ fun SettingsScreen(
     val videoIndex = if (settings.automaticallyStartPlayback == null) { 0 } else {
         if (settings.automaticallyShowImages == true) 1 else 2
     }
-    val selectedItem = remember {
-        mutableStateOf(selectedItens[index])
-    }
-    val selectedVideoItem = remember {
-        mutableStateOf(selectedItens[videoIndex])
-    }
     val linkIndex = if (settings.automaticallyShowUrlPreview == null) { 0 } else {
         if (settings.automaticallyShowUrlPreview == true) 1 else 2
     }
-    val selectedLinkItem = remember {
-        mutableStateOf(selectedItens[linkIndex])
-    }
 
-    val themeItens = arrayOf("System", "Light", "Dark")
-    val themeIndex = themeItens.indexOf(accountViewModel.currentTheme())
-    val selectedTheme = remember {
-        mutableStateOf(themeItens[themeIndex])
-    }
+    val themeItens = persistentListOf("System", "Light", "Dark")
+    val themeIndex = accountViewModel.currentTheme()
 
     val context = LocalContext.current
 
     val languageEntries = context.getLangPreferenceDropdownEntries()
-    val languageList = languageEntries.keys.toTypedArray()
+    val languageList = languageEntries.keys.toImmutableList()
     val languageIndex = getLanguageIndex(languageEntries)
-    val selectedLanguage = remember {
-        mutableStateOf(languageList[languageIndex])
-    }
 
     Column(
         StdPadding
@@ -132,72 +118,125 @@ fun SettingsScreen(
     ) {
         Section("Application preferences")
 
-        DropDownSettings(
-            selectedItem = selectedLanguage,
-            listItems = languageList,
-            title = "Language"
-        )
-
-        DropDownSettings(
-            selectedItem = selectedTheme,
-            listItems = themeItens,
-            title = "Theme"
-        )
-
-        DropDownSettings(
-            selectedItem = selectedItem,
-            listItems = selectedItens,
-            title = "Automatically load images/gifs"
-        )
-
-        DropDownSettings(
-            selectedItem = selectedVideoItem,
-            listItems = selectedItens,
-            title = "Automatically play videos"
-        )
-
-        DropDownSettings(
-            selectedItem = selectedLinkItem,
-            listItems = selectedItens,
-            title = "Automatically show url preview"
-        )
-
         Row(
-            Modifier.fillMaxWidth(),
-            Arrangement.Center
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Button(
-                onClick = {
-                    val automaticallyShowImages = when (selectedItens.indexOf(selectedItem.value)) {
-                        1 -> true
-                        2 -> false
-                        else -> null
-                    }
-                    val automaticallyStartPlayback = when (selectedItens.indexOf(selectedVideoItem.value)) {
-                        1 -> true
-                        2 -> false
-                        else -> null
-                    }
-                    val automaticallyShowUrlPreview = when (selectedItens.indexOf(selectedLinkItem.value)) {
-                        1 -> true
-                        2 -> false
-                        else -> null
-                    }
-                    accountViewModel.changeTheme(selectedTheme.value)
-
+            TextSpinner(
+                label = "Language",
+                placeholder = languageList[languageIndex],
+                options = languageList,
+                onSelect = {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback, automaticallyShowUrlPreview)
+                        val locale = languageEntries[languageList[it]]
+                        accountViewModel.account.settings.preferredLanguage = locale
                         LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-                        LocalPreferences.updateTheme(selectedTheme.value)
-                        ServiceManager.pause()
-                        ServiceManager.start(context)
-                        val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[selectedLanguage.value])
+                        val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it]])
                         AppCompatDelegate.setApplicationLocales(appLocale)
                     }
-                }
-            ) {
-                Text(text = "Save")
-            }
+                },
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    .weight(1f)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextSpinner(
+                label = "Theme",
+                placeholder = themeItens[themeIndex],
+                options = themeItens,
+                onSelect = {
+                    accountViewModel.changeTheme(it)
+                    scope.launch(Dispatchers.IO) {
+                        LocalPreferences.updateTheme(it)
+                    }
+                },
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    .weight(1f)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextSpinner(
+                label = "Automatically load images/gifs",
+                placeholder = selectedItens[index],
+                options = selectedItens,
+                onSelect = {
+                    val automaticallyShowImages = when (it) {
+                        1 -> true
+                        2 -> false
+                        else -> null
+                    }
+
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.updateAutomaticallyShowImages(automaticallyShowImages)
+                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                    }
+                },
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    .weight(1f)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextSpinner(
+                label = "Automatically play videos",
+                placeholder = selectedItens[videoIndex],
+                options = selectedItens,
+                onSelect = {
+                    val automaticallyStartPlayback = when (it) {
+                        1 -> true
+                        2 -> false
+                        else -> null
+                    }
+
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
+                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                    }
+                },
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    .weight(1f)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextSpinner(
+                label = "Automatically show url preview",
+                placeholder = selectedItens[linkIndex],
+                options = selectedItens,
+                onSelect = {
+                    val automaticallyShowUrlPreview = when (it) {
+                        1 -> true
+                        2 -> false
+                        else -> null
+                    }
+
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.updateAutomaticallyStartPlayback(automaticallyShowUrlPreview)
+                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                    }
+                },
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                    .weight(1f)
+            )
         }
     }
 }
