@@ -477,4 +477,7 @@
     <string name="discover_community">Community</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Approved Posts</string>
+
+    <string name="groups_no_descriptor">This group does not have a description or rules. Talk to the owner to add one</string>
+    <string name="community_no_descriptor">This community does not have a description. Talk to the owner to add one</string>
 </resources>

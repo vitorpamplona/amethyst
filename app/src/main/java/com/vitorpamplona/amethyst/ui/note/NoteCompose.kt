@@ -519,10 +519,23 @@ fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav:
                 .padding(start = 10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = summary ?: "This group does not have a description or rules. Talk to the owner to add one"
+                val defaultBackground = MaterialTheme.colors.background
+                val background = remember {
+                    mutableStateOf(defaultBackground)
+                }
+
+                TranslatableRichTextViewer(
+                    content = summary ?: stringResource(id = R.string.community_no_descriptor),
+                    canPreview = false,
+                    tags = remember { ImmutableListOfLists(emptyList()) },
+                    backgroundColor = background,
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
+
+            val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
+            DisplayUncitedHashtags(hashtags, summary ?: "", nav)
         }
 
         Column() {
@@ -544,15 +557,31 @@ fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav:
                 .fillMaxWidth()
                 .padding(start = 10.dp)
         ) {
-            Text(
-                text = it
+            val defaultBackground = MaterialTheme.colors.background
+            val background = remember {
+                mutableStateOf(defaultBackground)
+            }
+            val tags = remember(noteEvent) { noteEvent?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = false,
+                tags = tags,
+                backgroundColor = background,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
     }
 
     Spacer(DoubleVertSpacer)
 
-    Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             text = stringResource(id = R.string.owner),
             maxLines = 1,
@@ -588,7 +617,8 @@ fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav:
 
     participantUsers.forEach {
         Row(
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 10.dp, top = 10.dp)
                 .clickable {
                     nav("User/${it.second.pubkeyHex}")

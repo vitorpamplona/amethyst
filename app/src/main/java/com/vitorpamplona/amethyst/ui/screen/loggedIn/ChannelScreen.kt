@@ -89,18 +89,22 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.amethyst.service.model.Participant
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -742,9 +746,32 @@ private fun LongChannelHeader(
                 .padding(start = 10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = summary ?: "This group does not have a description or rules. Talk to the owner to add one"
+                val defaultBackground = MaterialTheme.colors.background
+                val background = remember {
+                    mutableStateOf(defaultBackground)
+                }
+
+                val tags = remember(channelState) {
+                    if (baseChannel is LiveActivitiesChannel) {
+                        baseChannel.info?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+                    } else {
+                        ImmutableListOfLists()
+                    }
+                }
+
+                TranslatableRichTextViewer(
+                    content = summary ?: stringResource(id = R.string.groups_no_descriptor),
+                    canPreview = false,
+                    tags = tags,
+                    backgroundColor = background,
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
+            }
+
+            if (baseChannel is LiveActivitiesChannel) {
+                val hashtags = remember(baseChannel.info) { baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                DisplayUncitedHashtags(hashtags, summary ?: "", nav)
             }
         }
 
@@ -760,7 +787,12 @@ private fun LongChannelHeader(
 
     Spacer(DoubleVertSpacer)
 
-    Row(Modifier.fillMaxWidth().padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         LoadNote(baseNoteHex = channel.idHex) {
             it?.let {
                 Text(
@@ -800,7 +832,8 @@ private fun LongChannelHeader(
 
         participantUsers.forEach {
             Row(
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .padding(start = 10.dp, top = 10.dp)
                     .clickable {
                         nav("User/${it.second.pubkeyHex}")
