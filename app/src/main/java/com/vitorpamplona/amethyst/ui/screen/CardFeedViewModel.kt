@@ -141,7 +141,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         notes
             .filter { it.event is LnZapEvent }
             .forEach { zapEvent ->
-                val zappedPost = zapEvent.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
+                val zappedPost = zapEvent.replyTo?.lastOrNull()
                 if (zappedPost != null) {
                     val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                     if (zapRequest != null) {
