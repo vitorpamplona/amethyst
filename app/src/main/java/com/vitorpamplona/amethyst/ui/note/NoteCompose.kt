@@ -225,6 +225,16 @@ fun NoteCompose(
         )
     }
 
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings?.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     Crossfade(targetState = isBlank) {
         if (it) {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -251,6 +261,7 @@ fun NoteCompose(
                 parentBackgroundColor,
                 accountViewModel,
                 showImage,
+                automaticallyStartPlayback,
                 nav
             )
         }
@@ -270,6 +281,7 @@ fun CheckHiddenNoteCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val isHidden by accountViewModel.accountLiveData.map {
@@ -290,6 +302,7 @@ fun CheckHiddenNoteCompose(
                 parentBackgroundColor,
                 accountViewModel,
                 showImage,
+                automaticallyStartPlayback,
                 nav
             )
         }
@@ -316,6 +329,7 @@ fun LoadedNoteCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var state by remember {
@@ -353,6 +367,7 @@ fun LoadedNoteCompose(
             parentBackgroundColor,
             accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             nav
         )
     }
@@ -372,6 +387,7 @@ fun RenderReportState(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
@@ -402,6 +418,7 @@ fun RenderReportState(
                 parentBackgroundColor,
                 accountViewModel,
                 showImage,
+                automaticallyStartPlayback,
                 nav
             )
         }
@@ -438,6 +455,7 @@ fun NormalNote(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (baseNote.event) {
@@ -447,6 +465,7 @@ fun NormalNote(
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
             showImage = showImage,
+            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
         is CommunityDefinitionEvent -> CommunityHeader(
@@ -473,6 +492,7 @@ fun NormalNote(
                     parentBackgroundColor,
                     accountViewModel,
                     showImage,
+                    automaticallyStartPlayback,
                     showPopup,
                     nav
                 )
@@ -771,6 +791,7 @@ private fun CheckNewAndRenderNote(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
@@ -836,6 +857,7 @@ private fun CheckNewAndRenderNote(
             canPreview = canPreview,
             accountViewModel = accountViewModel,
             showImage = showImage,
+            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
     }
@@ -887,6 +909,7 @@ fun InnerNoteWithReactions(
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
@@ -926,6 +949,7 @@ fun InnerNoteWithReactions(
                     backgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     showImage = showImage,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
                     nav = nav
                 )
             }
@@ -972,6 +996,7 @@ private fun NoteBody(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     FirstUserInfoRow(
@@ -998,6 +1023,7 @@ private fun NoteBody(
             backgroundColor,
             accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             nav
         )
     }
@@ -2100,6 +2126,7 @@ private fun ReplyRow(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event
@@ -2136,6 +2163,7 @@ private fun ReplyRow(
                     modifier = remember { Modifier.padding(vertical = 5.dp) },
                     accountViewModel = accountViewModel,
                     showImage = showImage,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
                     nav = nav
                 )
 
@@ -3086,7 +3114,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                         ?: VideoView(
                             videoUri = media,
                             description = noteEvent.subject(),
-                            showVideo = remember { mutableStateOf(true) }
+                            automaticallyStartPlayback = remember { mutableStateOf(true) }
                         )
                 }
             }
@@ -3211,7 +3239,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                     VideoView(
                         videoUri = media,
                         description = subject,
-                        showVideo = remember { mutableStateOf(true) }
+                        automaticallyStartPlayback = remember { mutableStateOf(true) }
                     )
                 }
             } else {

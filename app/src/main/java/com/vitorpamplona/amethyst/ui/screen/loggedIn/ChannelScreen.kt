@@ -214,6 +214,16 @@ fun ChannelScreen(
         )
     }
 
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings?.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     LaunchedEffect(Unit) {
         NostrChannelDataSource.start()
         feedViewModel.invalidateData()
@@ -255,6 +265,7 @@ fun ChannelScreen(
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
             showImage = showImage,
+            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
 
@@ -535,6 +546,7 @@ fun ChannelHeader(
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val channelHex by remember {
@@ -549,6 +561,7 @@ fun ChannelHeader(
             showBottomDiviser = showBottomDiviser,
             accountViewModel = accountViewModel,
             showImage = showImage,
+            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
     }
@@ -563,6 +576,7 @@ fun ChannelHeader(
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var baseChannel by remember { mutableStateOf(LocalCache.channels[channelHex]) }
@@ -584,6 +598,7 @@ fun ChannelHeader(
             modifier,
             accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             nav
         )
     }
@@ -598,6 +613,7 @@ fun ChannelHeader(
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {

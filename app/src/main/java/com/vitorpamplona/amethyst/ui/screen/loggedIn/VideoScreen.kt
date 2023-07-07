@@ -206,6 +206,17 @@ fun RenderPage(
             }
         )
     }
+
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings?.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     Box() {
         Column {
             Crossfade(
@@ -227,6 +238,7 @@ fun RenderPage(
                             pagerState,
                             accountViewModel,
                             showImage,
+                            automaticallyStartPlayback,
                             nav
                         )
                     }
@@ -247,6 +259,7 @@ fun SlidingCarousel(
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     VerticalPager(
@@ -259,7 +272,7 @@ fun SlidingCarousel(
         }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            RenderVideoOrPictureNote(note, accountViewModel, showImage, nav)
+            RenderVideoOrPictureNote(note, accountViewModel, showImage, automaticallyStartPlayback, nav)
         }
     }
 }
@@ -269,6 +282,7 @@ private fun RenderVideoOrPictureNote(
     note: Note,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(remember { Modifier.fillMaxSize(1f) }) {

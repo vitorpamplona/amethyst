@@ -330,7 +330,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                     )
                                             )
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                            VideoView(myUrlPreview, showVideo = remember { mutableStateOf(true) })
+                                            VideoView(myUrlPreview, automaticallyStartPlayback = remember { mutableStateOf(true) })
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
@@ -966,7 +966,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri.toString(), showVideo = remember { mutableStateOf(true) })
+                    VideoView(uri.toString(), automaticallyStartPlayback = remember { mutableStateOf(true) })
                 }
             }
 

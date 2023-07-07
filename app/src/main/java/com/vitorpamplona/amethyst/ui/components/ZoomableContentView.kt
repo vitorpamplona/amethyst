@@ -171,7 +171,12 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(), showImage: MutableState<Boolean>) {
+fun ZoomableContentView(
+    content: ZoomableContent,
+    images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
+    showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>
+) {
     val clipboardManager = LocalClipboardManager.current
 
     // store the dialog open or close state
@@ -199,11 +204,11 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
 
     when (content) {
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, showImage)
-        is ZoomableUrlVideo -> VideoView(content.url, content.description, showVideo = showImage) { dialogOpen = true }
+        is ZoomableUrlVideo -> VideoView(content.url, content.description, automaticallyStartPlayback = automaticallyStartPlayback) { dialogOpen = true }
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, showImage)
         is ZoomableLocalVideo ->
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description, showVideo = showImage) { dialogOpen = true }
+                VideoView(it.toUri().toString(), content.description, automaticallyStartPlayback = automaticallyStartPlayback) { dialogOpen = true }
             }
     }
 
@@ -552,11 +557,11 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index], remember { mutableStateOf(true) })
+                            RenderImageOrVideo(allImages[index], remember { mutableStateOf(true) }, remember { mutableStateOf(true) })
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl, remember { mutableStateOf(true) })
+                    RenderImageOrVideo(imageUrl, remember { mutableStateOf(true) }, remember { mutableStateOf(true) })
                 }
 
                 Row(
@@ -581,7 +586,7 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
 }
 
 @Composable
-fun RenderImageOrVideo(content: ZoomableContent, showImage: MutableState<Boolean>) {
+fun RenderImageOrVideo(content: ZoomableContent, showImage: MutableState<Boolean>, automaticallyStartPlayback: MutableState<Boolean>) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
@@ -590,14 +595,14 @@ fun RenderImageOrVideo(content: ZoomableContent, showImage: MutableState<Boolean
         UrlImageView(content = content, mainImageModifier = mainModifier, showImage)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url, content.description, showVideo = showImage)
+            VideoView(content.url, content.description, automaticallyStartPlayback = automaticallyStartPlayback)
         }
     } else if (content is ZoomableLocalImage) {
         LocalImageView(content = content, mainImageModifier = mainModifier, showImage)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description, showVideo = showImage)
+                VideoView(it.toUri().toString(), content.description, automaticallyStartPlayback = automaticallyStartPlayback)
             }
         }
     }

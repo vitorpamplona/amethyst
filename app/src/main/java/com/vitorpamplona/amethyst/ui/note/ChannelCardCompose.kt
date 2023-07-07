@@ -108,6 +108,16 @@ fun ChannelCardCompose(
         )
     }
 
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings?.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     Crossfade(targetState = isBlank) {
         if (it) {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -129,6 +139,7 @@ fun ChannelCardCompose(
                 parentBackgroundColor,
                 accountViewModel,
                 showImage,
+                automaticallyStartPlayback,
                 nav
             )
         }
@@ -143,6 +154,7 @@ fun CheckHiddenChannelCardCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val isHidden by accountViewModel.accountLiveData.map {
@@ -158,6 +170,7 @@ fun CheckHiddenChannelCardCompose(
                 parentBackgroundColor,
                 accountViewModel,
                 showImage,
+                automaticallyStartPlayback,
                 nav
             )
         }
@@ -172,6 +185,7 @@ fun LoadedChannelCardCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var state by remember {
@@ -204,6 +218,7 @@ fun LoadedChannelCardCompose(
             parentBackgroundColor,
             accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             nav
         )
     }
@@ -218,6 +233,7 @@ fun RenderChannelCardReportState(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
@@ -240,6 +256,7 @@ fun RenderChannelCardReportState(
                 parentBackgroundColor,
                 accountViewModel,
                 showImage,
+                automaticallyStartPlayback,
                 nav
             )
         }
@@ -254,6 +271,7 @@ fun NormalChannelCard(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -264,6 +282,7 @@ fun NormalChannelCard(
             parentBackgroundColor,
             accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             showPopup,
             nav
         )
@@ -278,6 +297,7 @@ private fun CheckNewAndRenderChannelCard(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
@@ -336,6 +356,7 @@ private fun CheckNewAndRenderChannelCard(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             nav = nav
         )
     }
@@ -346,6 +367,7 @@ fun InnerChannelCardWithReactions(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(StdPadding) {
@@ -367,11 +389,12 @@ private fun RenderNoteRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (remember { baseNote.event }) {
         is LiveActivitiesEvent -> {
-            RenderLiveActivityThumb(baseNote, accountViewModel, showImage, nav)
+            RenderLiveActivityThumb(baseNote, accountViewModel, showImage, automaticallyStartPlayback, nav)
         }
         is CommunityDefinitionEvent -> {
             RenderCommunitiesThumb(baseNote, accountViewModel, nav)
@@ -383,7 +406,13 @@ private fun RenderNoteRow(
 }
 
 @Composable
-fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, showImage: MutableState<Boolean>, nav: (String) -> Unit) {
+fun RenderLiveActivityThumb(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
+    nav: (String) -> Unit
+) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
     val eventUpdates by baseNote.live().metadata.observeAsState()
@@ -521,6 +550,7 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
             },
             accountViewModel = accountViewModel,
             showImage = showImage,
+            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
     }

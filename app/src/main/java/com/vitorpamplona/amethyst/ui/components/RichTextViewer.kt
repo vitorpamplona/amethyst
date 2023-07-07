@@ -109,13 +109,14 @@ fun RichTextViewer(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, showImage, nav)
+            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, showImage, automaticallyStartPlayback, nav)
         }
     }
 }
@@ -129,6 +130,7 @@ private fun RenderRegular(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val state by remember(content) {
@@ -159,6 +161,7 @@ private fun RenderRegular(
                                 textStyle,
                                 accountViewModel,
                                 showImage,
+                                automaticallyStartPlayback,
                                 nav
                             )
                         }
@@ -239,10 +242,11 @@ private fun RenderWordWithPreview(
     style: TextStyle,
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, state, showImage)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, showImage, automaticallyStartPlayback)
         is LinkSegment -> UrlPreview(word.segmentText, word.segmentText)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
@@ -260,9 +264,14 @@ private fun RenderWordWithPreview(
 }
 
 @Composable
-private fun ZoomableContentView(word: String, state: RichTextViewerState, showImage: MutableState<Boolean>) {
+private fun ZoomableContentView(
+    word: String,
+    state: RichTextViewerState,
+    showImage: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>
+) {
     state.imagesForPager[word]?.let {
-        ZoomableContentView(it, state.imageList, showImage)
+        ZoomableContentView(it, state.imageList, showImage, automaticallyStartPlayback)
     }
 }
 

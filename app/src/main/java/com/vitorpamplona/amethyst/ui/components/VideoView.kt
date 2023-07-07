@@ -112,11 +112,11 @@ fun VideoView(
     videoUri: String,
     description: String? = null,
     thumb: VideoThumb? = null,
-    showVideo: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, thumb, onDialog, showVideo)
+        VideoView1(videoUri, description, thumb, onDialog, automaticallyStartPlayback)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -127,7 +127,7 @@ fun VideoView1(
     description: String? = null,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    showVideo: MutableState<Boolean>
+    automaticallyStartPlayback: MutableState<Boolean>
 ) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
     val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
@@ -142,7 +142,7 @@ fun VideoView1(
     }
 
     exoPlayerData?.let {
-        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, showVideo = showVideo)
+        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, automaticallyStartPlayback = automaticallyStartPlayback)
     }
 
     DisposableEffect(Unit) {
@@ -161,10 +161,10 @@ fun VideoView(
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    showVideo: MutableState<Boolean>
+    automaticallyStartPlayback: MutableState<Boolean>
 ) {
     val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, showVideo)
+        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, automaticallyStartPlayback)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -177,7 +177,7 @@ fun VideoView1(
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    showVideo: MutableState<Boolean>
+    automaticallyStartPlayback: MutableState<Boolean>
 ) {
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
@@ -207,7 +207,7 @@ fun VideoView1(
         prepare()
     }
 
-    RenderVideoPlayer(exoPlayerData, thumb, showVideo, onDialog)
+    RenderVideoPlayer(exoPlayerData, thumb, automaticallyStartPlayback, onDialog)
 
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
@@ -241,7 +241,7 @@ data class VideoThumb(
 private fun RenderVideoPlayer(
     playerData: VideoPlayer,
     thumbData: VideoThumb?,
-    showVideo: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
     onDialog: ((Boolean) -> Unit)?
 ) {
     val context = LocalContext.current
@@ -253,10 +253,10 @@ private fun RenderVideoPlayer(
                 .defaultMinSize(minHeight = 70.dp)
                 .align(Alignment.Center)
                 .onVisibilityChanges { visible ->
-                    if (!showVideo.value) {
+                    if (!automaticallyStartPlayback.value) {
                         playerData.exoPlayer.stop()
                     }
-                    if (!showVideo.value && visible && !playerData.exoPlayer.isPlaying) {
+                    if (!automaticallyStartPlayback.value && visible && !playerData.exoPlayer.isPlaying) {
                         playerData.exoPlayer.pause()
                     } else if (visible && !playerData.exoPlayer.isPlaying) {
                         playerData.exoPlayer.play()

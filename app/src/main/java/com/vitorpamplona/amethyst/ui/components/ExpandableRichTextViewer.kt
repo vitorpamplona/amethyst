@@ -58,6 +58,16 @@ fun ExpandableRichTextViewer(
         )
     }
 
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings?.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     var showFullText by remember { mutableStateOf(false) }
 
     val whereToCut = remember(content) {
@@ -87,6 +97,7 @@ fun ExpandableRichTextViewer(
             backgroundColor,
             accountViewModel,
             showImage,
+            automaticallyStartPlayback,
             nav
         )
 

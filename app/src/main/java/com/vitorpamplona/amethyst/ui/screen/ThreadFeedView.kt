@@ -258,6 +258,16 @@ fun NoteMaster(
         )
     }
 
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings?.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
+
     var showHiddenNote by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -412,7 +422,15 @@ fun NoteMaster(
             ) {
                 Column() {
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
-                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, showImage = showImage, nav = nav)
+                        ChannelHeader(
+                            channelHex = note.channelHex()!!,
+                            showVideo = true,
+                            showBottomDiviser = false,
+                            accountViewModel = accountViewModel,
+                            showImage = showImage,
+                            automaticallyStartPlayback = automaticallyStartPlayback,
+                            nav = nav
+                        )
                     } else if (noteEvent is FileHeaderEvent) {
                         FileHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
