@@ -47,13 +47,15 @@ object CachedRichTextParser {
     }
 }
 
-val longDatePattern: Pattern = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$")
-val shortDatePattern: Pattern = Pattern.compile("^\\d{2}-\\d{2}-\\d{2}$")
-val numberPattern: Pattern = Pattern.compile("^(-?[\\d.]+)([a-zA-Z%]*)$")
-
 // Group 1 = url, group 4 additional chars
 // val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
-val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]*[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
+
+// Android9 seems to have an issue starting this regex.
+val noProtocolUrlValidator = try {
+    Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]*[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
+} catch (e: Exception) {
+    Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
+}
 
 class RichTextParser() {
     fun parseText(
@@ -231,6 +233,12 @@ class RichTextParser() {
         }
 
         return RegularTextSegment(word)
+    }
+
+    companion object {
+        val longDatePattern: Pattern = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$")
+        val shortDatePattern: Pattern = Pattern.compile("^\\d{2}-\\d{2}-\\d{2}$")
+        val numberPattern: Pattern = Pattern.compile("^(-?[\\d.]+)([a-zA-Z%]*)$")
     }
 }
 
