@@ -62,7 +62,7 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             compareBy(
                 { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.status()) },
                 { counter.countFollowsThatParticipateOn(it, followingKeySet) },
-                { it.createdAt() },
+                { (it.event as? LiveActivitiesEvent)?.starts() ?: it.createdAt() },
                 { it.idHex }
             )
         ).reversed()

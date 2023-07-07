@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
@@ -205,7 +206,15 @@ object DiscoverLatestItem : LatestItem() {
 
         val newestItem = updateNewestItem(newNotes, account, DiscoverLiveNowFeedFilter(account))
 
-        return (newestItem?.createdAt() ?: 0) > lastTime
+        val noteEvent = newestItem?.event
+
+        val dateToUse = if (noteEvent is LiveActivitiesEvent) {
+            noteEvent.starts() ?: newestItem.createdAt()
+        } else {
+            newestItem?.createdAt()
+        }
+
+        return (dateToUse ?: 0) > lastTime
     }
 }
 
