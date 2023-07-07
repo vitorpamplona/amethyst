@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
-import com.vitorpamplona.amethyst.ui.screen.NostrCommunityFeedViewModel
 
 object ServiceManager {
     private var account: Account? = null
