@@ -6,5 +6,6 @@ import androidx.compose.runtime.Stable
 class Settings(
     var automaticallyShowImages: Boolean? = null,
     var automaticallyStartPlayback: Boolean? = null,
-    var preferredLanguage: String? = null
+    var preferredLanguage: String? = null,
+    var automaticallyShowUrlPreview: Boolean? = null
 )

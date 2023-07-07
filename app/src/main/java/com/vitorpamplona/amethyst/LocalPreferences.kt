@@ -72,6 +72,7 @@ private object PrefKeys {
     const val AUTOMATICALLY_START_PLAYBACK = "automatically_start_playback"
     const val THEME = "theme"
     const val PREFERRED_LANGUAGE = "preferred_Language"
+    const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -255,6 +256,11 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback!!)
             }
+            if (account.settings.automaticallyShowUrlPreview == null) {
+                remove(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)
+            } else {
+                putBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, account.settings.automaticallyShowUrlPreview!!)
+            }
             putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
         }.apply()
     }
@@ -393,6 +399,11 @@ object LocalPreferences {
 
                 settings.automaticallyStartPlayback = if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
                     getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false)
+                } else {
+                    null
+                }
+                settings.automaticallyShowUrlPreview = if (contains(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)) {
+                    getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false)
                 } else {
                     null
                 }

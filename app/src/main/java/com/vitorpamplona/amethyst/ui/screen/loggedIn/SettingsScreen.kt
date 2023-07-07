@@ -116,6 +116,12 @@ fun SettingsScreen(
     val selectedVideoItem = remember {
         mutableStateOf(selectedItens[videoIndex])
     }
+    val linkIndex = if (settings.automaticallyShowUrlPreview == null) { 0 } else {
+        if (settings.automaticallyShowUrlPreview == true) 1 else 2
+    }
+    val selectedLinkItem = remember {
+        mutableStateOf(selectedItens[linkIndex])
+    }
 
     val themeItens = arrayOf("System", "Light", "Dark")
     val themeIndex = themeItens.indexOf(accountViewModel.currentTheme())
@@ -216,6 +222,12 @@ fun SettingsScreen(
             title = "Automatically play videos"
         )
 
+        DropDownSettings(
+            selectedItem = selectedLinkItem,
+            listItems = selectedItens,
+            title = "Automatically show url preview"
+        )
+
         Row(
             Modifier.fillMaxWidth(),
             Arrangement.Center
@@ -232,10 +244,15 @@ fun SettingsScreen(
                         2 -> false
                         else -> null
                     }
+                    val automaticallyShowUrlPreview = when (selectedItens.indexOf(selectedLinkItem.value)) {
+                        1 -> true
+                        2 -> false
+                        else -> null
+                    }
                     accountViewModel.changeTheme(selectedTheme.value)
 
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback)
+                        accountViewModel.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback, automaticallyShowUrlPreview)
                         LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                         LocalPreferences.updateTheme(selectedTheme.value)
                         ServiceManager.pause()

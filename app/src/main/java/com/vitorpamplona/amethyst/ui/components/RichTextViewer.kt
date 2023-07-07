@@ -110,13 +110,14 @@ fun RichTextViewer(
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
+    automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, showImage, automaticallyStartPlayback, nav)
+            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, showImage, automaticallyStartPlayback, automaticallyShowUrlPreview, nav)
         }
     }
 }
@@ -131,6 +132,7 @@ private fun RenderRegular(
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
+    automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val state by remember(content) {
@@ -162,6 +164,7 @@ private fun RenderRegular(
                                 accountViewModel,
                                 showImage,
                                 automaticallyStartPlayback,
+                                automaticallyShowUrlPreview,
                                 nav
                             )
                         }
@@ -243,11 +246,12 @@ private fun RenderWordWithPreview(
     accountViewModel: AccountViewModel,
     showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
+    automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, showImage, automaticallyStartPlayback)
-        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText)
+        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, automaticallyShowUrlPreview)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText)

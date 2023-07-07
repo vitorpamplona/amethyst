@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,33 +14,41 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun UrlPreview(url: String, urlText: String) {
-    var urlPreviewState by remember(url) {
-        mutableStateOf(
-            UrlCachedPreviewer.cache.get(url)?.let { it } ?: UrlPreviewState.Loading
-        )
-    }
+fun UrlPreview(url: String, urlText: String, automaticallyShowUrlPreview: MutableState<Boolean>) {
+    if (!automaticallyShowUrlPreview.value) {
+        ClickableUrl(urlText, url)
+    } else {
+        var urlPreviewState by remember(url) {
+            mutableStateOf(
+                UrlCachedPreviewer.cache.get(url)?.let { it } ?: UrlPreviewState.Loading
+            )
+        }
 
-    // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
-    if (urlPreviewState == UrlPreviewState.Loading) {
-        LaunchedEffect(url) {
-            launch(Dispatchers.IO) {
-                UrlCachedPreviewer.previewInfo(url) {
-                    launch(Dispatchers.Main) {
-                        urlPreviewState = it
+        // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
+        if (urlPreviewState == UrlPreviewState.Loading) {
+            LaunchedEffect(url) {
+                launch(Dispatchers.IO) {
+                    UrlCachedPreviewer.previewInfo(url) {
+                        launch(Dispatchers.Main) {
+                            urlPreviewState = it
+                        }
                     }
                 }
             }
         }
-    }
 
-    Crossfade(targetState = urlPreviewState, animationSpec = tween(durationMillis = 100)) { state ->
-        when (state) {
-            is UrlPreviewState.Loaded -> {
-                UrlPreviewCard(url, state.previewInfo)
-            }
-            else -> {
-                ClickableUrl(urlText, url)
+        Crossfade(
+            targetState = urlPreviewState,
+            animationSpec = tween(durationMillis = 100)
+        ) { state ->
+            when (state) {
+                is UrlPreviewState.Loaded -> {
+                    UrlPreviewCard(url, state.previewInfo, automaticallyShowUrlPreview)
+                }
+
+                else -> {
+                    ClickableUrl(urlText, url)
+                }
             }
         }
     }

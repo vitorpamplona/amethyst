@@ -86,9 +86,14 @@ class Account(
 
     var userProfileCache: User? = null
 
-    fun updateGlobalSettings(automaticallyShowImages: Boolean?, automaticallyStartPlayback: Boolean?) {
+    fun updateGlobalSettings(
+        automaticallyShowImages: Boolean?,
+        automaticallyStartPlayback: Boolean?,
+        automaticallyShowUrlPreview: Boolean?
+    ) {
         settings.automaticallyStartPlayback = automaticallyStartPlayback
         settings.automaticallyShowImages = automaticallyShowImages
+        settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
         live.invalidateData()
         saveable.invalidateData()
     }

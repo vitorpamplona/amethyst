@@ -49,8 +49,12 @@ class AccountViewModel(val account: Account, private val themeViewModel: ThemeVi
         return themeViewModel.theme.value ?: "System"
     }
 
-    fun updateGlobalSettings(automaticallyShowImages: Boolean?, automaticallyStartPlayback: Boolean?) {
-        account.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback)
+    fun updateGlobalSettings(
+        automaticallyShowImages: Boolean?,
+        automaticallyStartPlayback: Boolean?,
+        automaticallyShowUrlPreview: Boolean?
+    ) {
+        account.updateGlobalSettings(automaticallyShowImages, automaticallyStartPlayback, automaticallyShowUrlPreview)
     }
 
     fun isWriteable(): Boolean {

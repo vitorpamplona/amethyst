@@ -332,7 +332,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                             VideoView(myUrlPreview, automaticallyStartPlayback = remember { mutableStateOf(true) })
                                         } else {
-                                            UrlPreview(myUrlPreview, myUrlPreview)
+                                            UrlPreview(myUrlPreview, myUrlPreview, remember { mutableStateOf(true) })
                                         }
                                     } else if (startsWithNIP19Scheme(myUrlPreview)) {
                                         val bgColor = MaterialTheme.colors.background
@@ -348,7 +348,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                             nav
                                         )
                                     } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
-                                        UrlPreview("https://$myUrlPreview", myUrlPreview)
+                                        UrlPreview("https://$myUrlPreview", myUrlPreview, remember { mutableStateOf(true) })
                                     }
                                 }
                             }

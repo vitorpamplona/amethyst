@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -26,8 +27,12 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 @Composable
 fun UrlPreviewCard(
     url: String,
-    previewInfo: UrlInfoItem
+    previewInfo: UrlInfoItem,
+    automaticallyShowUrlPreview: MutableState<Boolean>
 ) {
+    if (!automaticallyShowUrlPreview.value) {
+        return ClickableUrl(url, url)
+    }
     val uri = LocalUriHandler.current
 
     Row(
