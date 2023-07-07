@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
@@ -90,7 +91,13 @@ fun SettingsScreen(
     nav: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val selectedItens = persistentListOf("Always", "Wifi-only", "Never")
+    val selectedItens = persistentListOf(
+        stringResource(R.string.always),
+        stringResource(R.string.wifi_only),
+        stringResource(R.string.never).replaceFirstChar {
+            it.uppercase()
+        }
+    )
     val settings = accountViewModel.account.settings
     val index = if (settings.automaticallyShowImages == null) { 0 } else {
         if (settings.automaticallyShowImages == true) 1 else 2
@@ -102,7 +109,11 @@ fun SettingsScreen(
         if (settings.automaticallyShowUrlPreview == true) 1 else 2
     }
 
-    val themeItens = persistentListOf("System", "Light", "Dark")
+    val themeItens = persistentListOf(
+        stringResource(R.string.system),
+        stringResource(R.string.light),
+        stringResource(R.string.dark)
+    )
     val themeIndex = accountViewModel.currentTheme()
 
     val context = LocalContext.current
@@ -116,14 +127,14 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Section("Application preferences")
+        Section(stringResource(R.string.application_preferences))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
             TextSpinner(
-                label = "Language",
+                label = stringResource(R.string.language),
                 placeholder = languageList[languageIndex],
                 options = languageList,
                 onSelect = {
@@ -146,7 +157,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             TextSpinner(
-                label = "Theme",
+                label = stringResource(R.string.theme),
                 placeholder = themeItens[themeIndex],
                 options = themeItens,
                 onSelect = {
@@ -166,7 +177,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             TextSpinner(
-                label = "Automatically load images/gifs",
+                label = stringResource(R.string.automatically_load_images_gifs),
                 placeholder = selectedItens[index],
                 options = selectedItens,
                 onSelect = {
@@ -192,7 +203,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             TextSpinner(
-                label = "Automatically play videos",
+                label = stringResource(R.string.automatically_play_videos),
                 placeholder = selectedItens[videoIndex],
                 options = selectedItens,
                 onSelect = {
@@ -218,7 +229,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             TextSpinner(
-                label = "Automatically show url preview",
+                label = stringResource(R.string.automatically_show_url_preview),
                 placeholder = selectedItens[linkIndex],
                 options = selectedItens,
                 onSelect = {
@@ -229,7 +240,7 @@ fun SettingsScreen(
                     }
 
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.updateAutomaticallyStartPlayback(automaticallyShowUrlPreview)
+                        accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
                         LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                     }
                 },

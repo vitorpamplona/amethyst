@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -321,7 +322,7 @@ fun LoadImageBox(showImage: MutableState<Boolean>) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Load Image",
+            text = stringResource(R.string.load_image),
             style = TextStyle(color = Color.Black, fontSize = 18.sp)
         )
     }

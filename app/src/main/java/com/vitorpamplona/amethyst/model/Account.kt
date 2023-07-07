@@ -86,7 +86,7 @@ class Account(
 
     var userProfileCache: User? = null
     fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: Boolean?,
+        automaticallyStartPlayback: Boolean?
     ) {
         settings.automaticallyStartPlayback = automaticallyStartPlayback
         live.invalidateData()
@@ -94,7 +94,7 @@ class Account(
     }
 
     fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: Boolean?,
+        automaticallyShowUrlPreview: Boolean?
     ) {
         settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
         live.invalidateData()
@@ -102,13 +102,12 @@ class Account(
     }
 
     fun updateAutomaticallyShowImages(
-        automaticallyShowImages: Boolean?,
+        automaticallyShowImages: Boolean?
     ) {
         settings.automaticallyShowImages = automaticallyShowImages
         live.invalidateData()
         saveable.invalidateData()
     }
-
 
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports

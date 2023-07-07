@@ -50,19 +50,19 @@ class AccountViewModel(val account: Account, private val themeViewModel: ThemeVi
     }
 
     fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: Boolean?,
+        automaticallyStartPlayback: Boolean?
     ) {
         account.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
     }
 
     fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: Boolean?,
+        automaticallyShowUrlPreview: Boolean?
     ) {
         account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
     }
 
     fun updateAutomaticallyShowImages(
-        automaticallyShowImages: Boolean?,
+        automaticallyShowImages: Boolean?
     ) {
         account.updateAutomaticallyShowImages(automaticallyShowImages)
     }
