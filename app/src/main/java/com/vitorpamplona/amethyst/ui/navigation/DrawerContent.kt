@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
@@ -28,8 +30,10 @@ import androidx.compose.material.ModalBottomSheetState
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,24 +46,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -287,6 +301,17 @@ fun ListContent(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
     val coroutineScope = rememberCoroutineScope()
+    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
+    var wantsToEditRelays by remember {
+        mutableStateOf(false)
+    }
+
+    var backupDialogOpen by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(accountViewModel.account.proxy != null) }
+    var disconnectTorDialog by remember { mutableStateOf(false) }
+    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
+    val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -311,6 +336,60 @@ fun ListContent(
             route = Route.Bookmarks.route
         )
 
+        IconRowRelays(
+            relayViewModel = relayViewModel,
+            onClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                wantsToEditRelays = true
+            }
+        )
+
+        NavigationRow(
+            title = stringResource(R.string.security_filters),
+            icon = Route.BlockedUsers.icon,
+            tint = MaterialTheme.colors.onBackground,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = Route.BlockedUsers.route
+        )
+
+        IconRow(
+            title = stringResource(R.string.backup_keys),
+            icon = R.drawable.ic_key,
+            tint = MaterialTheme.colors.onBackground,
+            onClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                backupDialogOpen = true
+            }
+        )
+
+        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
+        IconRow(
+            title = textTorProxy,
+            icon = R.drawable.ic_tor,
+            tint = MaterialTheme.colors.onBackground,
+            onLongClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                conectOrbotDialogOpen = true
+            },
+            onClick = {
+                if (checked) {
+                    disconnectTorDialog = true
+                } else {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                    conectOrbotDialogOpen = true
+                }
+            }
+        )
+
         NavigationRow(
             title = stringResource(R.string.settings),
             icon = Route.Settings.icon,
@@ -328,6 +407,75 @@ fun ListContent(
             tint = MaterialTheme.colors.onBackground,
             onClick = { coroutineScope.launch { sheetState.show() } }
         )
+    }
+
+    if (wantsToEditRelays) {
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+    }
+    if (backupDialogOpen) {
+        AccountBackupDialog(accountViewModel.account, onClose = { backupDialogOpen = false })
+    }
+    if (conectOrbotDialogOpen) {
+        ConnectOrbotDialog(
+            onClose = { conectOrbotDialogOpen = false },
+            onPost = {
+                conectOrbotDialogOpen = false
+                disconnectTorDialog = false
+                checked = true
+                enableTor(accountViewModel.account, true, proxyPort, context, coroutineScope)
+            },
+            proxyPort
+        )
+    }
+
+    if (disconnectTorDialog) {
+        AlertDialog(
+            title = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_text))
+            },
+            onDismissRequest = {
+                disconnectTorDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        disconnectTorDialog = false
+                        checked = false
+                        enableTor(accountViewModel.account, false, proxyPort, context, coroutineScope)
+                    }
+                ) {
+                    Text(text = stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        disconnectTorDialog = false
+                    }
+                ) {
+                    Text(text = stringResource(R.string.no))
+                }
+            }
+        )
+    }
+}
+
+private fun enableTor(
+    account: Account,
+    checked: Boolean,
+    portNumber: MutableState<String>,
+    context: Context,
+    scope: CoroutineScope
+) {
+    account.proxyPort = portNumber.value.toInt()
+    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
+    scope.launch(Dispatchers.IO) {
+        LocalPreferences.saveToEncryptedStorage(account)
+        ServiceManager.pause()
+        ServiceManager.start(context)
     }
 }
 
