@@ -248,16 +248,6 @@ fun NoteMaster(
     val settings = accountState?.account?.settings
     val isMobile = ConnectivityStatus.isOnMobileData.value
 
-    val showImage = remember {
-        mutableStateOf(
-            when (settings?.automaticallyShowImages) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
     val automaticallyStartPlayback = remember {
         mutableStateOf(
             when (settings?.automaticallyStartPlayback) {
@@ -427,7 +417,6 @@ fun NoteMaster(
                             showVideo = true,
                             showBottomDiviser = false,
                             accountViewModel = accountViewModel,
-                            showImage = showImage,
                             automaticallyStartPlayback = automaticallyStartPlayback,
                             nav = nav
                         )
@@ -463,7 +452,7 @@ fun NoteMaster(
                             nav
                         )
                     } else if (noteEvent is AppDefinitionEvent) {
-                        RenderAppDefinition(baseNote, accountViewModel, showImage, nav)
+                        RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),

@@ -204,16 +204,6 @@ fun ChannelScreen(
     val settings = accountState?.account?.settings
     val isMobile = ConnectivityStatus.isOnMobileData.value
 
-    val showImage = remember {
-        mutableStateOf(
-            when (settings?.automaticallyShowImages) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
     val automaticallyStartPlayback = remember {
         mutableStateOf(
             when (settings?.automaticallyStartPlayback) {
@@ -264,7 +254,6 @@ fun ChannelScreen(
             showVideo = true,
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
-            showImage = showImage,
             automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
@@ -545,7 +534,6 @@ fun ChannelHeader(
     showBottomDiviser: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -560,7 +548,6 @@ fun ChannelHeader(
             showVideo = showVideo,
             showBottomDiviser = showBottomDiviser,
             accountViewModel = accountViewModel,
-            showImage = showImage,
             automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
@@ -575,7 +562,6 @@ fun ChannelHeader(
     showFlag: Boolean = true,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -597,7 +583,6 @@ fun ChannelHeader(
             showFlag,
             modifier,
             accountViewModel,
-            showImage,
             automaticallyStartPlayback,
             nav
         )
@@ -612,7 +597,6 @@ fun ChannelHeader(
     showFlag: Boolean = true,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {

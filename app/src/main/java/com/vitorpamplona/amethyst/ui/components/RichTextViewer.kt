@@ -108,7 +108,6 @@ fun RichTextViewer(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
@@ -117,7 +116,7 @@ fun RichTextViewer(
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, showImage, automaticallyStartPlayback, automaticallyShowUrlPreview, nav)
+            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, automaticallyStartPlayback, automaticallyShowUrlPreview, nav)
         }
     }
 }
@@ -130,7 +129,6 @@ private fun RenderRegular(
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit

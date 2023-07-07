@@ -98,16 +98,6 @@ fun ChannelCardCompose(
     val settings = accountState?.account?.settings
     val isMobile = ConnectivityStatus.isOnMobileData.value
 
-    val showImage = remember {
-        mutableStateOf(
-            when (settings?.automaticallyShowImages) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
     val automaticallyStartPlayback = remember {
         mutableStateOf(
             when (settings?.automaticallyStartPlayback) {
@@ -138,7 +128,6 @@ fun ChannelCardCompose(
                 modifier,
                 parentBackgroundColor,
                 accountViewModel,
-                showImage,
                 automaticallyStartPlayback,
                 nav
             )
@@ -153,7 +142,6 @@ fun CheckHiddenChannelCardCompose(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -169,7 +157,6 @@ fun CheckHiddenChannelCardCompose(
                 modifier,
                 parentBackgroundColor,
                 accountViewModel,
-                showImage,
                 automaticallyStartPlayback,
                 nav
             )
@@ -184,7 +171,6 @@ fun LoadedChannelCardCompose(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -217,7 +203,6 @@ fun LoadedChannelCardCompose(
             modifier,
             parentBackgroundColor,
             accountViewModel,
-            showImage,
             automaticallyStartPlayback,
             nav
         )
@@ -232,7 +217,6 @@ fun RenderChannelCardReportState(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -255,7 +239,6 @@ fun RenderChannelCardReportState(
                 modifier,
                 parentBackgroundColor,
                 accountViewModel,
-                showImage,
                 automaticallyStartPlayback,
                 nav
             )
@@ -270,7 +253,6 @@ fun NormalChannelCard(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -281,7 +263,6 @@ fun NormalChannelCard(
             modifier,
             parentBackgroundColor,
             accountViewModel,
-            showImage,
             automaticallyStartPlayback,
             showPopup,
             nav
@@ -296,7 +277,6 @@ private fun CheckNewAndRenderChannelCard(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     showPopup: () -> Unit,
     nav: (String) -> Unit
@@ -355,7 +335,6 @@ private fun CheckNewAndRenderChannelCard(
         InnerChannelCardWithReactions(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
-            showImage,
             automaticallyStartPlayback,
             nav = nav
         )
@@ -366,7 +345,6 @@ private fun CheckNewAndRenderChannelCard(
 fun InnerChannelCardWithReactions(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -388,13 +366,12 @@ fun InnerChannelCardWithReactions(
 private fun RenderNoteRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (remember { baseNote.event }) {
         is LiveActivitiesEvent -> {
-            RenderLiveActivityThumb(baseNote, accountViewModel, showImage, automaticallyStartPlayback, nav)
+            RenderLiveActivityThumb(baseNote, accountViewModel, automaticallyStartPlayback, nav)
         }
         is CommunityDefinitionEvent -> {
             RenderCommunitiesThumb(baseNote, accountViewModel, nav)
@@ -409,7 +386,6 @@ private fun RenderNoteRow(
 fun RenderLiveActivityThumb(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -549,7 +525,6 @@ fun RenderLiveActivityThumb(
                 Modifier.padding(start = 0.dp, end = 0.dp, top = 5.dp, bottom = 5.dp)
             },
             accountViewModel = accountViewModel,
-            showImage = showImage,
             automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )

@@ -48,16 +48,6 @@ fun ExpandableRichTextViewer(
     val settings = accountState?.account?.settings
     val isMobile = ConnectivityStatus.isOnMobileData.value
 
-    val showImage = remember {
-        mutableStateOf(
-            when (settings?.automaticallyShowImages) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
     val automaticallyStartPlayback = remember {
         mutableStateOf(
             when (settings?.automaticallyStartPlayback) {
@@ -106,7 +96,6 @@ fun ExpandableRichTextViewer(
             tags,
             backgroundColor,
             accountViewModel,
-            showImage,
             automaticallyStartPlayback,
             automaticallyShowUrlPreview,
             nav

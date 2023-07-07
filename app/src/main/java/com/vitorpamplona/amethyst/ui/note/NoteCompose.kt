@@ -464,7 +464,6 @@ fun NormalNote(
             showVideo = !makeItShort,
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
-            showImage = showImage,
             automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
@@ -948,7 +947,6 @@ fun InnerNoteWithReactions(
                     showSecondRow = showSecondRow,
                     backgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
-                    showImage = showImage,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     nav = nav
                 )
@@ -995,7 +993,6 @@ private fun NoteBody(
     showSecondRow: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -1022,7 +1019,6 @@ private fun NoteBody(
             unPackReply,
             backgroundColor,
             accountViewModel,
-            showImage,
             automaticallyStartPlayback,
             nav
         )
@@ -1034,7 +1030,6 @@ private fun NoteBody(
         makeItShort,
         canPreview,
         accountViewModel,
-        showImage,
         nav
     )
 }
@@ -1046,12 +1041,11 @@ private fun RenderNoteRow(
     makeItShort: Boolean,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (baseNote.event) {
         is AppDefinitionEvent -> {
-            RenderAppDefinition(baseNote, accountViewModel, showImage, nav)
+            RenderAppDefinition(baseNote, accountViewModel, nav)
         }
 
         is ReactionEvent -> {
@@ -1295,7 +1289,6 @@ fun RenderPoll(
 fun RenderAppDefinition(
     note: Note,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? AppDefinitionEvent ?: return
@@ -2125,7 +2118,6 @@ private fun ReplyRow(
     unPackReply: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
@@ -2162,7 +2154,6 @@ private fun ReplyRow(
                     showBottomDiviser = false,
                     modifier = remember { Modifier.padding(vertical = 5.dp) },
                     accountViewModel = accountViewModel,
-                    showImage = showImage,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     nav = nav
                 )
