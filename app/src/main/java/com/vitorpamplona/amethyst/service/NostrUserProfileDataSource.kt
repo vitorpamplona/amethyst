@@ -28,7 +28,16 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, RepostEvent.kind, LongTextNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind, PollNoteEvent.kind, HighlightEvent.kind),
+                kinds = listOf(
+                    TextNoteEvent.kind,
+                    GenericRepostEvent.kind,
+                    RepostEvent.kind,
+                    LongTextNoteEvent.kind,
+                    AudioTrackEvent.kind,
+                    PinListEvent.kind,
+                    PollNoteEvent.kind,
+                    HighlightEvent.kind
+                ),
                 authors = listOf(it.pubkeyHex),
                 limit = 200
             )
@@ -81,9 +90,9 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind),
+                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind, AppRecommendationEvent.kind),
                 authors = listOf(it.pubkeyHex),
-                limit = 1
+                limit = 100
             )
         )
     }

@@ -2,7 +2,12 @@ package com.vitorpamplona.amethyst.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +39,7 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : FragmentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -55,6 +61,15 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+            .build()
+
+        val connectivityManager = getSystemService(ConnectivityManager::class.java) as ConnectivityManager
+        connectivityManager.requestNetwork(networkRequest, networkCallback)
 
         Client.lenient = true
     }
@@ -86,7 +101,40 @@ class MainActivity : FragmentActivity() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         println("Trim Memory $level")
-        ServiceManager.cleanUp()
+        GlobalScope.launch(Dispatchers.Default) {
+            ServiceManager.cleanUp()
+        }
+    }
+
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        // network is available for use
+        override fun onAvailable(network: Network) {
+            super.onAvailable(network)
+            Log.d("NETWORKCALLBACK", "onAvailable: Disconnecting and connecting again")
+            // Only starts after login
+            GlobalScope.launch(Dispatchers.IO) {
+                ServiceManager.pause()
+                ServiceManager.start(this@MainActivity)
+            }
+        }
+
+        // Network capabilities have changed for the network
+        override fun onCapabilitiesChanged(
+            network: Network,
+            networkCapabilities: NetworkCapabilities
+        ) {
+            super.onCapabilitiesChanged(network, networkCapabilities)
+        }
+
+        // lost network connection
+        override fun onLost(network: Network) {
+            super.onLost(network)
+            Log.d("NETWORKCALLBACK", "onLost: Disconnecting and pausing relay's connection")
+            // Only starts after login
+            GlobalScope.launch(Dispatchers.IO) {
+                ServiceManager.pause()
+            }
+        }
     }
 }
 

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
@@ -49,33 +50,51 @@ val KIND3_FOLLOWS = " All Follows "
 class Account(
     val loggedIn: Persona,
     var followingChannels: Set<String> = DefaultChannels,
+    var followingCommunities: Set<String> = setOf(),
     var hiddenUsers: Set<String> = setOf(),
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
+    var reactionChoices: List<String> = listOf("+"),
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
     var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
     var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,
+    var defaultDiscoveryFollowList: String = GLOBAL_FOLLOWS,
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
     var proxyPort: Int,
-    var showSensitiveContent: Boolean? = null
+    var showSensitiveContent: Boolean? = null,
+    var warnAboutPostsWithReports: Boolean = true,
+    var filterSpamFromStrangers: Boolean = true,
+    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>()
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
     val liveLanguages: AccountLiveData = AccountLiveData(this)
+    val liveLastRead: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
+
+    fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
+        warnAboutPostsWithReports = warnReports
+        filterSpamFromStrangers = filterSpam
+        OptOutFromFilters.start(warnAboutPostsWithReports, filterSpamFromStrangers)
+        if (!filterSpamFromStrangers) {
+            transientHiddenUsers = setOf()
+        }
+        live.invalidateData()
+        saveable.invalidateData()
+    }
 
     fun userProfile(): User {
         return userProfileCache ?: run {
@@ -86,11 +105,11 @@ class Account(
     }
 
     fun followingChannels(): List<Channel> {
-        return followingChannels.map { LocalCache.getOrCreateChannel(it) }
+        return followingChannels.mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
     }
 
-    fun hiddenUsers(): List<User> {
-        return (hiddenUsers + transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
+    fun followingCommunities(): List<AddressableNote> {
+        return followingCommunities.mapNotNull { LocalCache.checkGetOrCreateAddressableNote(it) }
     }
 
     fun isWriteable(): Boolean {
@@ -133,8 +152,8 @@ class Account(
         }
     }
 
-    fun reactionTo(note: Note): List<Note> {
-        return note.reactedBy(userProfile(), "+")
+    fun reactionTo(note: Note, reaction: String): List<Note> {
+        return note.reactedBy(userProfile(), reaction)
     }
 
     fun hasBoosted(note: Note): Boolean {
@@ -145,20 +164,20 @@ class Account(
         return note.boostedBy(userProfile())
     }
 
-    fun hasReacted(note: Note): Boolean {
-        return note.hasReacted(userProfile(), "+")
+    fun hasReacted(note: Note, reaction: String): Boolean {
+        return note.hasReacted(userProfile(), reaction)
     }
 
-    fun reactTo(note: Note) {
+    fun reactTo(note: Note, reaction: String) {
         if (!isWriteable()) return
 
-        if (hasReacted(note)) {
+        if (hasReacted(note, reaction)) {
             // has already liked this note
             return
         }
 
         note.event?.let {
-            val event = ReactionEvent.createLike(it, loggedIn.privKey!!)
+            val event = ReactionEvent.create(reaction, it, loggedIn.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -309,6 +328,12 @@ class Account(
         }
     }
 
+    fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {
+        if (!isWriteable()) return null
+
+        return HTTPAuthorizationEvent.create(url, method, body, loggedIn.privKey!!)
+    }
+
     fun boost(note: Note) {
         if (!isWriteable()) return
 
@@ -318,9 +343,15 @@ class Account(
         }
 
         note.event?.let {
-            val event = RepostEvent.create(it, loggedIn.privKey!!)
-            Client.send(event)
-            LocalCache.consume(event)
+            if (it.kind() == 1) {
+                val event = RepostEvent.create(it, loggedIn.privKey!!)
+                Client.send(event)
+                LocalCache.consume(event)
+            } else {
+                val event = GenericRepostEvent.create(it, loggedIn.privKey!!)
+                Client.send(event)
+                LocalCache.consume(event)
+            }
         }
     }
 
@@ -487,7 +518,11 @@ class Account(
         mentions: List<User>?,
         tags: List<String>? = null,
         zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        replyingTo: String?,
+        root: String?,
+        directMentions: Set<HexKey>
     ) {
         if (!isWriteable()) return
 
@@ -503,6 +538,10 @@ class Account(
             extraTags = tags,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            replyingTo = replyingTo,
+            root = root,
+            directMentions = directMentions,
             privateKey = loggedIn.privKey!!
         )
 
@@ -520,7 +559,8 @@ class Account(
         consensusThreshold: Int?,
         closedAt: Int?,
         zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null
     ) {
         if (!isWriteable()) return
 
@@ -540,14 +580,15 @@ class Account(
             consensusThreshold = consensusThreshold,
             closedAt = closedAt,
             zapReceiver = zapReceiver,
-            markAsSensitive = wantsToMarkAsSensitive
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -561,27 +602,49 @@ class Account(
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
             privateKey = loggedIn.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: String, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean) {
+    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null) {
         if (!isWriteable()) return
-        val user = LocalCache.users[toUser] ?: return
+
+        // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+        val repliesToHex = replyTo?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+
+        val signedEvent = LiveActivitiesChatMessageEvent.create(
+            message = message,
+            activity = toChannel,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            privateKey = loggedIn.privKey!!
+        )
+        Client.send(signedEvent)
+        LocalCache.consume(signedEvent, null)
+    }
+
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null) {
+        if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = PrivateDmEvent.create(
-            recipientPubKey = user.pubkey(),
-            publishedRecipientPubKey = user.pubkey(),
+            recipientPubKey = toUser.pubkey(),
+            publishedRecipientPubKey = toUser.pubkey(),
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
             privateKey = loggedIn.privKey!!,
             advertiseNip18 = false
         )
@@ -799,6 +862,20 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun joinCommunity(idHex: String) {
+        followingCommunities = followingCommunities + idHex
+        live.invalidateData()
+
+        saveable.invalidateData()
+    }
+
+    fun leaveCommunity(idHex: String) {
+        followingCommunities = followingCommunities - idHex
+        live.invalidateData()
+
+        saveable.invalidateData()
+    }
+
     fun hideUser(pubkeyHex: String) {
         hiddenUsers = hiddenUsers + pubkeyHex
         live.invalidateData()
@@ -842,8 +919,20 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun changeDefaultDiscoveryFollowList(name: String) {
+        defaultDiscoveryFollowList = name
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>) {
         zapAmountChoices = newAmounts
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun changeReactionTypes(newTypes: List<String>) {
+        reactionChoices = newTypes
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -1004,10 +1093,10 @@ class Account(
     }
 
     private fun updateContactListTo(newContactList: ContactListEvent?) {
-        if (newContactList?.unverifiedFollowKeySet().isNullOrEmpty()) return
+        if (newContactList == null || newContactList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
-        if (backupContactList?.id != newContactList?.id) {
+        if (backupContactList?.id != newContactList.id) {
             backupContactList = newContactList
             saveable.invalidateData()
         }
@@ -1062,12 +1151,19 @@ class Account(
     }
 
     fun isAcceptable(user: User): Boolean {
+        if (!warnAboutPostsWithReports) {
+            return !isHidden(user) && // if user hasn't hided this author
+                user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
+        }
         return !isHidden(user) && // if user hasn't hided this author
             user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             user.countReportAuthorsBy(followingKeySet()) < 5
     }
 
-    fun isAcceptableDirect(note: Note): Boolean {
+    private fun isAcceptableDirect(note: Note): Boolean {
+        if (!warnAboutPostsWithReports) {
+            return note.reportsBy(userProfile()).isEmpty()
+        }
         return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }
@@ -1076,11 +1172,15 @@ class Account(
         return user.pubkeyHex in followingKeySet()
     }
 
+    fun isFollowing(user: HexKey): Boolean {
+        return user in followingKeySet()
+    }
+
     fun isAcceptable(note: Note): Boolean {
         return note.author?.let { isAcceptable(it) } ?: true && // if user hasn't hided this author
             isAcceptableDirect(note) &&
             (
-                note.event !is RepostEvent ||
+                (note.event !is RepostEvent && note.event !is GenericRepostEvent) ||
                     (note.replyTo?.firstOrNull { isAcceptableDirect(it) } != null)
                 ) // is not a reaction about a blocked post
     }
@@ -1088,7 +1188,7 @@ class Account(
     fun getRelevantReports(note: Note): Set<Note> {
         val followsPlusMe = userProfile().latestContactList?.verifiedFollowKeySetAndMe ?: emptySet()
 
-        val innerReports = if (note.event is RepostEvent) {
+        val innerReports = if (note.event is RepostEvent || note.event is GenericRepostEvent) {
             note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
         } else {
             emptyList()
@@ -1125,6 +1225,19 @@ class Account(
         live.invalidateData()
     }
 
+    fun markAsRead(route: String, timestampInSecs: Long) {
+        val lastTime = lastReadPerRoute[route]
+        if (lastTime == null || timestampInSecs > lastTime) {
+            lastReadPerRoute = lastReadPerRoute + Pair(route, timestampInSecs)
+            saveable.invalidateData()
+            liveLastRead.invalidateData()
+        }
+    }
+
+    fun loadLastRead(route: String): Long {
+        return lastReadPerRoute[route] ?: 0
+    }
+
     fun registerObservers() {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
@@ -1135,7 +1248,9 @@ class Account(
 
         // saves contact list for the next time.
         userProfile().live().follows.observeForever {
-            updateContactListTo(userProfile().latestContactList)
+            GlobalScope.launch(Dispatchers.IO) {
+                updateContactListTo(userProfile().latestContactList)
+            }
         }
 
         // imports transient blocks due to spam.
@@ -1143,8 +1258,7 @@ class Account(
             GlobalScope.launch(Dispatchers.IO) {
                 it.cache.spamMessages.snapshot().values.forEach {
                     if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
-                        val userToBlock = LocalCache.getOrCreateUser(it.pubkeyHex)
-                        if (userToBlock != userProfile() && userToBlock.pubkeyHex !in followingKeySet()) {
+                        if (it.pubkeyHex != userProfile().pubkeyHex && it.pubkeyHex !in followingKeySet()) {
                             transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
                             live.invalidateData()
                         }
@@ -1155,6 +1269,7 @@ class Account(
     }
 
     init {
+        Log.d("Init", "Account")
         backupContactList?.let {
             println("Loading saved contacts ${it.toJson()}")
             if (userProfile().latestContactList == null) {

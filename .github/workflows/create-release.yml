@@ -47,7 +47,7 @@ jobs:
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Build APK
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Sign APK (Google Play)
         uses: r0adkll/sign-android-release@v1

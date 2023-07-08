@@ -13,15 +13,24 @@ import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class EventNotificationConsumer(private val applicationContext: Context) {
     fun consume(event: Event) {
-        // adds to database
-        LocalCache.consume(event, null)
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        scope.launch {
+            if (LocalCache.notes[event.id] == null) {
+                // adds to database
+                LocalCache.verifyAndConsume(event, null)
 
-        when (event) {
-            is PrivateDmEvent -> notify(event)
-            is LnZapEvent -> notify(event)
+                when (event) {
+                    is PrivateDmEvent -> notify(event)
+                    is LnZapEvent -> notify(event)
+                }
+            }
         }
     }
 
@@ -54,6 +63,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
     private fun notify(event: LnZapEvent) {
         val noteZapEvent = LocalCache.notes[event.id] ?: return
+
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) }
         val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) }
 

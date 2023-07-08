@@ -18,15 +18,19 @@ import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
+import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
 import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
@@ -35,13 +39,14 @@ import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
 import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.currentRoute
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -60,7 +65,9 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         skipHalfExpanded = true
     )
 
-    val nav = remember {
+    val navState = navController.currentBackStackEntryAsState()
+
+    val nav = remember(navController) {
         { route: String ->
             if (getRouteWithArguments(navController) != route) {
                 navController.navigate(route)
@@ -84,14 +91,24 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         factory = NostrHomeRepliesFeedViewModel.Factory(accountViewModel.account)
     )
 
-    val searchFeedViewModel: NostrGlobalFeedViewModel = viewModel(
-        key = accountViewModel.userProfile().pubkeyHex + "NostrGlobalFeedViewModel",
-        factory = NostrGlobalFeedViewModel.Factory(accountViewModel.account)
-    )
-
     val videoFeedViewModel: NostrVideoFeedViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "NostrVideoFeedViewModel",
         factory = NostrVideoFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryLiveFeedViewModel",
+        factory = NostrDiscoverLiveFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryCommunityFeedViewModel",
+        factory = NostrDiscoverCommunityFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    val discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel = viewModel(
+        key = accountViewModel.userProfile().pubkeyHex + "NostrDiscoveryChatFeedViewModel",
+        factory = NostrDiscoverChatFeedViewModel.Factory(accountViewModel.account)
     )
 
     val notifFeedViewModel: NotificationViewModel = viewModel(
@@ -114,6 +131,42 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
         factory = NostrChatroomListNewFeedViewModel.Factory(accountViewModel.account)
     )
 
+    val navBottomRow = remember(navController) {
+        { route: Route, selected: Boolean ->
+            if (!selected) {
+                navController.navigate(route.base) {
+                    popUpTo(Route.Home.route)
+                    launchSingleTop = true
+                }
+            } else {
+                // deals with scroll to top here to avoid passing as parameter
+                // and having to deal with all recompositions with scroll to top true
+                when (route.base) {
+                    Route.Home.base -> {
+                        homeFeedViewModel.sendToTop()
+                        repliesFeedViewModel.sendToTop()
+                    }
+                    Route.Video.base -> {
+                        videoFeedViewModel.sendToTop()
+                    }
+                    Route.Discover.base -> {
+                        discoveryLiveFeedViewModel.sendToTop()
+                        discoveryCommunityFeedViewModel.sendToTop()
+                        discoveryChatFeedViewModel.sendToTop()
+                    }
+                    Route.Notification.base -> {
+                        notifFeedViewModel.invalidateDataAndSendToTop()
+                    }
+                }
+
+                navController.navigate(route.route) {
+                    popUpTo(route.route)
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
     ModalBottomSheetLayout(
         sheetState = sheetState,
         sheetContent = {
@@ -125,10 +178,10 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 .background(MaterialTheme.colors.primaryVariant)
                 .statusBarsPadding(),
             bottomBar = {
-                AppBottomBar(navController, accountViewModel)
+                AppBottomBar(accountViewModel, navState, navBottomRow)
             },
             topBar = {
-                AppTopBar(followLists, navController, scaffoldState, accountViewModel)
+                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav)
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
@@ -137,23 +190,25 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navController, accountViewModel, accountStateViewModel)
+                FloatingButtons(navState, accountViewModel, accountStateViewModel, nav)
             },
             scaffoldState = scaffoldState
         ) {
             Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
                 AppNavigation(
-                    homeFeedViewModel,
-                    repliesFeedViewModel,
-                    knownFeedViewModel,
-                    newFeedViewModel,
-                    searchFeedViewModel,
-                    videoFeedViewModel,
-                    notifFeedViewModel,
-                    userReactionsStatsModel,
-                    navController,
-                    accountViewModel,
-                    startingPage
+                    homeFeedViewModel = homeFeedViewModel,
+                    repliesFeedViewModel = repliesFeedViewModel,
+                    knownFeedViewModel = knownFeedViewModel,
+                    newFeedViewModel = newFeedViewModel,
+                    videoFeedViewModel = videoFeedViewModel,
+                    discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                    discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                    discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+                    notifFeedViewModel = notifFeedViewModel,
+                    userReactionsStatsModel = userReactionsStatsModel,
+                    navController = navController,
+                    accountViewModel = accountViewModel,
+                    nextPage = startingPage
                 )
             }
         }
@@ -161,16 +216,13 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 }
 
 @Composable
-fun FloatingButtons(navController: NavHostController, accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel) {
+fun FloatingButtons(
+    navEntryState: State<NavBackStackEntry?>,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
+    nav: (String) -> Unit
+) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
-
-    val nav = remember {
-        { route: String ->
-            if (getRouteWithArguments(navController) != route) {
-                navController.navigate(route)
-            }
-        }
-    }
 
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
@@ -181,15 +233,37 @@ fun FloatingButtons(navController: NavHostController, accountViewModel: AccountV
                 // Does nothing.
             }
             is AccountState.LoggedIn -> {
-                if (currentRoute(navController)?.substringBefore("?") == Route.Home.base) {
-                    NewNoteButton(accountViewModel, nav)
+                WritePermissionButtons(navEntryState, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WritePermissionButtons(
+    navEntryState: State<NavBackStackEntry?>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val currentRoute by remember(navEntryState.value) {
+        derivedStateOf {
+            navEntryState.value?.destination?.route?.substringBefore("?")
+        }
+    }
+
+    when (currentRoute) {
+        Route.Home.base -> NewNoteButton(accountViewModel, nav)
+        Route.Message.base -> ChannelFabColumn(accountViewModel, nav)
+        Route.Video.base -> NewImageButton(accountViewModel, nav)
+        Route.Community.base -> {
+            val communityId by remember(navEntryState.value) {
+                derivedStateOf {
+                    navEntryState.value?.arguments?.getString("id")
                 }
-                if (currentRoute(navController) == Route.Message.base) {
-                    ChannelFabColumn(state.account, nav)
-                }
-                if (currentRoute(navController)?.substringBefore("?") == Route.Video.base) {
-                    NewImageButton(accountViewModel, nav)
-                }
+            }
+
+            communityId?.let {
+                NewCommunityNoteButton(it, accountViewModel, nav)
             }
         }
     }

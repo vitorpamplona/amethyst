@@ -49,6 +49,8 @@ object BlurHashDecoder {
      *                 By default it is true.
      */
     fun decode(blurHash: String?, width: Int, height: Int, punch: Float = 1f, useCache: Boolean = true): Bitmap? {
+        checkNotInMainThread()
+
         if (blurHash == null || blurHash.length < 6) {
             return null
         }

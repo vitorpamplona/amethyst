@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,15 +29,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -103,7 +106,8 @@ private fun HomePages(
 ) {
     TabRow(
         backgroundColor = MaterialTheme.colors.background,
-        selectedTabIndex = pagerState.currentPage
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight
     ) {
         val coroutineScope = rememberCoroutineScope()
 
@@ -121,13 +125,30 @@ private fun HomePages(
     }
 
     HorizontalPager(pageCount = 2, state = pagerState) { page ->
-        RefresheableView(
+        RefresheableFeedView(
             viewModel = tabs[page].viewModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
             routeForLastRead = tabs[page].routeForLastRead,
-            scrollStateKey = tabs[page].scrollStateKey
+            scrollStateKey = tabs[page].scrollStateKey,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
+    }
+}
+
+@Composable
+fun CheckIfUrlIsOnline(url: String, whenOnline: @Composable () -> Unit) {
+    var online by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = url) {
+        launch(Dispatchers.IO) {
+            online = OnlineChecker.isOnline(url)
+        }
+    }
+
+    Crossfade(targetState = online) {
+        if (it) {
+            whenOnline()
+        }
     }
 }
 
@@ -138,17 +159,21 @@ fun WatchAccountForHomeScreen(
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-    val scope = rememberCoroutineScope()
+    val followState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
-    LaunchedEffect(accountViewModel, account.defaultHomeFollowList) {
-        scope.launch(Dispatchers.IO) {
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList, followState) {
+        launch(Dispatchers.IO) {
             NostrHomeDataSource.invalidateFilters()
-            homeFeedViewModel.invalidateDataAndSendToTop(true)
-            repliesFeedViewModel.invalidateDataAndSendToTop(true)
+            homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+            repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         }
     }
 }
 
 @Immutable
-class TabItem(val resource: Int, val viewModel: FeedViewModel, val routeForLastRead: String, val scrollStateKey: String)
+class TabItem(
+    val resource: Int,
+    val viewModel: FeedViewModel,
+    val routeForLastRead: String,
+    val scrollStateKey: String
+)

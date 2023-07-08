@@ -13,13 +13,18 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -30,6 +35,10 @@ import java.util.Locale
 class AccountViewModel(val account: Account) : ViewModel() {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
+    val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
+
+    val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
+    val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
     fun isWriteable(): Boolean {
         return account.isWriteable()
@@ -39,16 +48,30 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.userProfile()
     }
 
-    fun reactTo(note: Note) {
-        account.reactTo(note)
+    fun reactTo(note: Note, reaction: String) {
+        account.reactTo(note, reaction)
     }
 
-    fun hasReactedTo(baseNote: Note): Boolean {
-        return account.hasReacted(baseNote)
+    fun reactToOrDelete(note: Note, reaction: String) {
+        val currentReactions = account.reactionTo(note, reaction)
+        if (currentReactions.isNotEmpty()) {
+            account.delete(currentReactions)
+        } else {
+            account.reactTo(note, reaction)
+        }
     }
 
-    fun deleteReactionTo(note: Note) {
-        account.delete(account.reactionTo(note))
+    fun isNoteHidden(note: Note): Boolean {
+        val isSensitive = note.event?.isSensitive() ?: false
+        return account.isHidden(note.author!!) || (isSensitive && account.showSensitiveContent == false)
+    }
+
+    fun hasReactedTo(baseNote: Note, reaction: String): Boolean {
+        return account.hasReacted(baseNote, reaction)
+    }
+
+    fun deleteReactionTo(note: Note, reaction: String) {
+        account.delete(account.reactionTo(note, reaction))
     }
 
     fun hasBoosted(baseNote: Note): Boolean {
@@ -57,10 +80,6 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     fun deleteBoostsTo(note: Note) {
         account.delete(account.boostsTo(note))
-    }
-
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit) {
-        zap(note, amount, pollOption, message, context, onError, onProgress, account.defaultZapType)
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
@@ -223,6 +242,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.userProfile().isFollowingCached(user)
     }
 
+    fun isFollowing(user: HexKey): Boolean {
+        return account.userProfile().isFollowingCached(user)
+    }
+
     val hideDeleteRequestDialog: Boolean
         get() = account.hideDeleteRequestDialog
 
@@ -251,6 +274,29 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     fun defaultZapType(): LnZapEvent.ZapType {
         return account.defaultZapType
+    }
+
+    fun isNoteAcceptable(note: Note, onReady: (Boolean, Boolean, ImmutableSet<Note>) -> Unit) {
+        val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+        val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
+
+        if (isFromLoggedIn || isFromLoggedInFollow) {
+            // No need to process if from trusted people
+            onReady(true, true, persistentSetOf())
+        } else {
+            val newCanPreview = !note.hasAnyReports()
+
+            val newIsAcceptable = account.isAcceptable(note)
+
+            if (newCanPreview && newIsAcceptable) {
+                // No need to process reports if nothing is wrong
+                onReady(true, true, persistentSetOf())
+            } else {
+                val newRelevantReports = account.getRelevantReports(note)
+
+                onReady(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+            }
+        }
     }
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

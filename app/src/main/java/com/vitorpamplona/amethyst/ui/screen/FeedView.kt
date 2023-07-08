@@ -1,11 +1,14 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,34 +36,55 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
+
+@Composable
+fun RefresheableFeedView(
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    enablePullRefresh: Boolean = true,
+    scrollStateKey: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    RefresheableView(viewModel, enablePullRefresh) {
+        SaveableFeedState(viewModel, routeForLastRead, scrollStateKey, accountViewModel, nav)
+    }
+}
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun RefresheableView(
-    viewModel: FeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    routeForLastRead: String?,
-    scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true
+    viewModel: InvalidatableViewModel,
+    enablePullRefresh: Boolean = true,
+    content: @Composable () -> Unit
 ) {
     var refreshing by remember { mutableStateOf(false) }
     val refresh = { refreshing = true; viewModel.invalidateData(); refreshing = false }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    val modifier = if (enablePullRefresh) {
-        Modifier.pullRefresh(pullRefreshState)
-    } else {
-        Modifier
+    val modifier = remember {
+        if (enablePullRefresh) {
+            Modifier.pullRefresh(pullRefreshState)
+        } else {
+            Modifier
+        }
     }
 
     Box(modifier) {
         Column {
-            SaveableFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+            content()
         }
 
         if (enablePullRefresh) {
-            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+            PullRefreshIndicator(
+                refreshing = refreshing,
+                state = pullRefreshState,
+                modifier = remember {
+                    Modifier.align(Alignment.TopCenter)
+                }
+            )
         }
     }
 }
@@ -68,10 +92,21 @@ fun RefresheableView(
 @Composable
 private fun SaveableFeedState(
     viewModel: FeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
     routeForLastRead: String?,
-    scrollStateKey: String? = null
+    scrollStateKey: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    SaveableFeedState(viewModel, scrollStateKey) { listState ->
+        RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    }
+}
+
+@Composable
+fun SaveableFeedState(
+    viewModel: FeedViewModel,
+    scrollStateKey: String? = null,
+    content: @Composable (LazyListState) -> Unit
 ) {
     val listState = if (scrollStateKey != null) {
         rememberForeverLazyListState(scrollStateKey)
@@ -81,7 +116,7 @@ private fun SaveableFeedState(
 
     WatchScrollToTop(viewModel, listState)
 
-    RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    content(listState)
 }
 
 @Composable
@@ -143,6 +178,7 @@ private fun WatchScrollToTop(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
@@ -163,14 +199,24 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            NoteCompose(
-                item,
-                routeForLastRead = routeForLastRead,
-                modifier = baseModifier,
-                isBoostedNote = false,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
+            val (value, elapsed) = measureTimedValue {
+                val defaultModifier = remember {
+                    Modifier.fillMaxWidth().animateItemPlacement()
+                }
+
+                Row(defaultModifier) {
+                    NoteCompose(
+                        item,
+                        routeForLastRead = routeForLastRead,
+                        modifier = baseModifier,
+                        isBoostedNote = false,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+            }
+
+            Log.d("Rendering Metrics", "Complete: ${item.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
     }
 }

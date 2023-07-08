@@ -1,15 +1,22 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,11 +25,32 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrUserProfileFollowsUserFeedViewModel : UserFeedViewModel(UserProfileFollowsFeedFilter)
-class NostrUserProfileFollowersUserFeedViewModel : UserFeedViewModel(UserProfileFollowersFeedFilter)
-class NostrHiddenAccountsFeedViewModel : UserFeedViewModel(HiddenAccountsFeedFilter)
+class NostrUserProfileFollowsUserFeedViewModel(val user: User, val account: Account) : UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>): NostrUserProfileFollowsUserFeedViewModel {
+            return NostrUserProfileFollowsUserFeedViewModel(user, account) as NostrUserProfileFollowsUserFeedViewModel
+        }
+    }
+}
 
-open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
+class NostrUserProfileFollowersUserFeedViewModel(val user: User, val account: Account) : UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>): NostrUserProfileFollowersUserFeedViewModel {
+            return NostrUserProfileFollowersUserFeedViewModel(user, account) as NostrUserProfileFollowersUserFeedViewModel
+        }
+    }
+}
+
+class NostrHiddenAccountsFeedViewModel(val account: Account) : UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenAccountsFeedViewModel>): NostrHiddenAccountsFeedViewModel {
+            return NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
+        }
+    }
+}
+
+@Stable
+open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -34,12 +62,14 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     }
 
     private fun refreshSuspended() {
-        val notes = dataSource.loadTop()
+        checkNotInMainThread()
+
+        val notes = dataSource.loadTop().toImmutableList()
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is UserFeedState.Loaded) {
             // Using size as a proxy for has changed.
-            if (notes != oldNotesState.feed.value) {
+            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
                 updateFeed(notes)
             }
         } else {
@@ -47,7 +77,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
         }
     }
 
-    private fun updateFeed(notes: List<User>) {
+    private fun updateFeed(notes: ImmutableList<User>) {
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             val currentState = _feedContent.value
@@ -64,8 +94,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
 
     private val bundler = BundledUpdate(250, Dispatchers.IO)
 
-    fun invalidateData() {
-        bundler.invalidate() {
+    override fun invalidateData(ignoreIfDoing: Boolean) {
+        bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
             refreshSuspended()
@@ -75,7 +105,10 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName}")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            checkNotInMainThread()
+
             LocalCache.live.newEventBundles.collect { newNotes ->
                 invalidateData()
             }
@@ -86,4 +119,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel() {
         collectorJob?.cancel()
         super.onCleared()
     }
+}
+
+interface InvalidatableViewModel {
+    fun invalidateData(ignoreIfDoing: Boolean = false)
 }

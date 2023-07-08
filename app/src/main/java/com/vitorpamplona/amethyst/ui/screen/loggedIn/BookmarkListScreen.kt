@@ -24,7 +24,8 @@ import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPublicFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -54,7 +55,8 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
 
                 TabRow(
                     backgroundColor = MaterialTheme.colors.background,
-                    selectedTabIndex = pagerState.currentPage
+                    selectedTabIndex = pagerState.currentPage,
+                    modifier = TabRowHeight
                 ) {
                     Tab(
                         selected = pagerState.currentPage == 0,
@@ -73,8 +75,18 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
                 }
                 HorizontalPager(pageCount = 2, state = pagerState) { page ->
                     when (page) {
-                        0 -> RefresheableView(privateFeedViewModel, accountViewModel, nav, null)
-                        1 -> RefresheableView(publicFeedViewModel, accountViewModel, nav, null)
+                        0 -> RefresheableFeedView(
+                            privateFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
+                        1 -> RefresheableFeedView(
+                            publicFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
                     }
                 }
             }

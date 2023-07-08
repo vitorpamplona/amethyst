@@ -1,10 +1,10 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -39,13 +39,20 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,31 +84,51 @@ fun UserReactionsRow(
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colors.placeholderText
             )
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val replies by model.replies.collectAsState()
-            UserReplyReaction(replies[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReplyModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val boosts by model.boosts.collectAsState()
-            UserBoostReaction(boosts[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserBoostModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val reactions by model.reactions.collectAsState()
-            UserLikeReaction(reactions[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReactionModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
-            val zaps by model.zaps.collectAsState()
-            UserZapReaction(zaps[model.today()])
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserZapModel(model)
         }
     }
+}
+
+@Composable
+private fun UserZapModel(model: UserReactionsViewModel) {
+    val zaps by model.zaps.collectAsState()
+    UserZapReaction(showAmountAxis(zaps[model.today()]))
+}
+
+@Composable
+private fun UserReactionModel(model: UserReactionsViewModel) {
+    val reactions by model.reactions.collectAsState()
+    UserLikeReaction(reactions[model.today()])
+}
+
+@Composable
+private fun UserBoostModel(model: UserReactionsViewModel) {
+    val boosts by model.boosts.collectAsState()
+    UserBoostReaction(boosts[model.today()])
+}
+
+@Composable
+private fun UserReplyModel(model: UserReactionsViewModel) {
+    val replies by model.replies.collectAsState()
+    UserReplyReaction(replies[model.today()])
 }
 
 @Stable
@@ -138,6 +165,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     fun today() = sdf.format(LocalDateTime.now())
 
     private suspend fun initializeSuspend() {
+        checkNotInMainThread()
+
         val currentUser = user.pubkeyHex
 
         val reactions = mutableMapOf<String, Int>()
@@ -155,9 +184,9 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         reactions[netDate] = (reactions[netDate] ?: 0) + 1
                         takenIntoAccount.add(noteEvent.id())
                     }
-                } else if (noteEvent is RepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
+                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt())
                         boosts[netDate] = (boosts[netDate] ?: 0) + 1
                         takenIntoAccount.add(noteEvent.id())
                     }
@@ -187,6 +216,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     }
 
     suspend fun addToStatsSuspend(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
         val currentUser = user.pubkeyHex
 
         val reactions = this._reactions.value.toMutableMap()
@@ -206,9 +237,9 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         takenIntoAccount.add(noteEvent.id())
                         hasNewElements = true
                     }
-                } else if (noteEvent is RepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
+                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt())
                         boosts[netDate] = (boosts[netDate] ?: 0) + 1
                         takenIntoAccount.add(noteEvent.id())
                         hasNewElements = true
@@ -243,6 +274,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     }
 
     private suspend fun refreshChartModel() {
+        checkNotInMainThread()
+
         val day = 24 * 60 * 60L
         val now = LocalDateTime.now()
         val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
@@ -269,24 +302,30 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
-        _reactions.value = emptyMap()
-        _boosts.value = emptyMap()
-        _zaps.value = emptyMap()
-        _replies.value = emptyMap()
-        takenIntoAccount = emptySet()
-
+        Log.d("Init", "User Reactions Row")
         viewModelScope.launch(Dispatchers.IO) {
             initializeSuspend()
 
             collectorJob = viewModelScope.launch(Dispatchers.IO) {
                 LocalCache.live.newEventBundles.collect { newNotes ->
-                    addToStatsSuspend(newNotes)
+                    checkNotInMainThread()
+
+                    invalidateInsertData(newNotes)
                 }
             }
         }
     }
 
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
+
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) {
+            addToStatsSuspend(it.flatten().toSet())
+        }
+    }
+
     override fun onCleared() {
+        collectorJob?.cancel()
         super.onCleared()
     }
 
@@ -306,11 +345,11 @@ fun UserReplyReaction(
     Icon(
         painter = painterResource(R.drawable.ic_comment),
         null,
-        modifier = Modifier.size(20.dp),
+        modifier = Size20Modifier,
         tint = RoyalBlue
     )
 
-    Spacer(modifier = Modifier.width(10.dp))
+    Spacer(modifier = StdHorzSpacer)
 
     Text(
         showCounts,
@@ -328,11 +367,11 @@ fun UserBoostReaction(
     Icon(
         painter = painterResource(R.drawable.ic_retweeted),
         null,
-        modifier = Modifier.size(24.dp),
+        modifier = Size24Modifier,
         tint = Color.Unspecified
     )
 
-    Spacer(modifier = Modifier.width(10.dp))
+    Spacer(modifier = StdHorzSpacer)
 
     Text(
         showCounts,
@@ -350,14 +389,14 @@ fun UserLikeReaction(
     Icon(
         painter = painterResource(R.drawable.ic_liked),
         null,
-        modifier = Modifier.size(20.dp),
+        modifier = Size20Modifier,
         tint = Color.Unspecified
     )
 
-    Spacer(modifier = Modifier.width(10.dp))
+    Spacer(modifier = StdHorzSpacer)
 
     Text(
-        showCounts,
+        text = showCounts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -365,21 +404,19 @@ fun UserLikeReaction(
 
 @Composable
 fun UserZapReaction(
-    amount: BigDecimal?
+    amount: String
 ) {
-    val showAmounts = remember(amount) { showAmountAxis(amount) }
-
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
-        modifier = Modifier.size(24.dp),
+        modifier = Size24Modifier,
         tint = BitcoinOrange
     )
 
     Spacer(modifier = Modifier.width(8.dp))
 
     Text(
-        showAmounts,
+        amount,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )

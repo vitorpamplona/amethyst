@@ -2,6 +2,8 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import coil.ImageLoader
@@ -11,7 +13,7 @@ import coil.fetch.Fetcher
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
-import coil.size.Size
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import okio.Buffer
 import java.security.MessageDigest
 
@@ -20,8 +22,6 @@ private fun toHex(color: Color): String {
     val rgb = argb and 0x00FFFFFF // Mask out the alpha channel
     return String.format("#%06X", rgb)
 }
-
-private val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
 
 private fun byteMod10(byte: Byte): Int {
     val ub = byte.toUByte().toInt()
@@ -33,7 +33,9 @@ private fun bytesToRGB(b1: Byte, b2: Byte, b3: Byte): Color {
 }
 
 private fun svgString(msg: String): String {
-    val hash = sha256.digest(msg.toByteArray())
+    checkNotInMainThread()
+
+    val hash = MessageDigest.getInstance("SHA-256").digest(msg.toByteArray())
     val hashHex = hash.joinToString(separator = "") { b -> "%02x".format(b) }
     val bgColor = bytesToRGB(hash[0], hash[1], hash[2])
     val fgColor = bytesToRGB(hash[3], hash[4], hash[5])
@@ -60,13 +62,14 @@ private fun svgString(msg: String): String {
 </svg>"""
 }
 
+@Stable
 class HashImageFetcher(
     private val context: Context,
-    private val size: Size,
     private val data: Uri
 ) : Fetcher {
 
     override suspend fun fetch(): SourceResult {
+        checkNotInMainThread()
         val source = try {
             Buffer().apply { write(svgString(data.toString()).toByteArray()) }
         } finally {
@@ -81,21 +84,21 @@ class HashImageFetcher(
 
     object Factory : Fetcher.Factory<Uri> {
         override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher {
-            return HashImageFetcher(options.context, options.size, data)
+            return HashImageFetcher(options.context, data)
         }
     }
 }
 object Robohash {
-    fun imageRequest(context: Context, message: String, robotSize: Size): ImageRequest {
+    fun imageRequest(context: Context, message: String): ImageRequest {
         return ImageRequest
             .Builder(context)
             .data("robohash:$message")
             .fetcherFactory(HashImageFetcher.Factory)
-            .size(robotSize)
             .build()
     }
 }
 
+@Immutable
 private data class Part(val style: String, val paths: String)
 
 private const val background = """<polyline class="cls-bg" points="150.3 7.4 55.1 97.9 55.1 203.1 150.3 293.6 245.9 203.1 245.9 97.9 150.3 7.4"/>"""

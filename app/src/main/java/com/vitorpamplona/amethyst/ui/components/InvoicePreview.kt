@@ -2,13 +2,13 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,21 +25,22 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.math.BigDecimal
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 @Composable
 fun MayBeInvoicePreview(lnbcWord: String) {
-    var lnInvoice by remember { mutableStateOf<Pair<String, BigDecimal?>?>(null) }
+    var lnInvoice by remember { mutableStateOf<Pair<String, String?>?>(null) }
 
     LaunchedEffect(key1 = lnbcWord) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)
             if (myInvoice != null) {
                 val myInvoiceAmount = try {
-                    LnInvoiceUtil.getAmountInSats(myInvoice)
+                    NumberFormat.getInstance().format(LnInvoiceUtil.getAmountInSats(myInvoice))
                 } catch (e: Exception) {
                     e.printStackTrace()
                     null
@@ -50,25 +51,28 @@ fun MayBeInvoicePreview(lnbcWord: String) {
         }
     }
 
-    lnInvoice?.let {
-        InvoicePreview(it.first, it.second)
+    Crossfade(targetState = lnInvoice) {
+        if (it != null) {
+            InvoicePreview(it.first, it.second)
+        } else {
+            Text(
+                text = lnbcWord,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
     }
-        ?: Text(
-            text = "$lnbcWord ",
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-        )
 }
 
 @Composable
-fun InvoicePreview(lnInvoice: String, amount: BigDecimal?) {
+fun InvoicePreview(lnInvoice: String, amount: String?) {
     val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
-            .clip(shape = RoundedCornerShape(10.dp))
-            .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
+            .border(1.dp, MaterialTheme.colors.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
@@ -100,9 +104,7 @@ fun InvoicePreview(lnInvoice: String, amount: BigDecimal?) {
 
             amount?.let {
                 Text(
-                    text = "${
-                    NumberFormat.getInstance().format(amount)
-                    } ${stringResource(id = R.string.sats)}",
+                    text = "$it ${stringResource(id = R.string.sats)}",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier
@@ -121,7 +123,7 @@ fun InvoicePreview(lnInvoice: String, amount: BigDecimal?) {
                         startActivity(context, intent, null)
                     }
                 },
-                shape = RoundedCornerShape(15.dp),
+                shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = MaterialTheme.colors.primary
                 )

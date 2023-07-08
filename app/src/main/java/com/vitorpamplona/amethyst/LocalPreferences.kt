@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.Immutable
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
@@ -30,6 +31,7 @@ import java.util.Locale
 private const val DEBUG_PLAINTEXT_PREFERENCES = false
 private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 
+@Immutable
 data class AccountInfo(
     val npub: String,
     val hasPrivKey: Boolean = false
@@ -41,17 +43,20 @@ private object PrefKeys {
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val FOLLOWING_CHANNELS = "following_channels"
+    const val FOLLOWING_COMMUNITIES = "following_communities"
     const val HIDDEN_USERS = "hidden_users"
     const val RELAYS = "relays"
     const val DONT_TRANSLATE_FROM = "dontTranslateFrom"
     const val LANGUAGE_PREFS = "languagePreferences"
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
+    const val REACTION_CHOICES = "reactionChoices"
     const val DEFAULT_ZAPTYPE = "defaultZapType"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
+    const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
@@ -59,6 +64,9 @@ private object PrefKeys {
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
+    const val WARN_ABOUT_REPORTS = "warn_about_reports"
+    const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
+    const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -198,23 +206,29 @@ object LocalPreferences {
             account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHex()) }
             account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHex()) }
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
+            putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
             putString(PrefKeys.RELAYS, gson.toJson(account.localRelays))
             putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
             putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(account.languagePreferences))
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
             putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
+            putString(PrefKeys.REACTION_CHOICES, gson.toJson(account.reactionChoices))
             putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
             putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
             putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
             putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList)
             putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, account.defaultNotificationFollowList)
+            putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, account.defaultDiscoveryFollowList)
             putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
+            putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
+            putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
+            putString(PrefKeys.LAST_READ_PER_ROUTE, gson.toJson(account.lastReadPerRoute))
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -235,6 +249,7 @@ object LocalPreferences {
             val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return null
             val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
+            val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
             val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
             val localRelays = gson.fromJson(
                 getString(PrefKeys.RELAYS, "[]"),
@@ -246,11 +261,17 @@ object LocalPreferences {
             val defaultHomeFollowList = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: KIND3_FOLLOWS
             val defaultStoriesFollowList = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
             val defaultNotificationFollowList = getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
+            val defaultDiscoveryFollowList = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
             val zapAmountChoices = gson.fromJson(
                 getString(PrefKeys.ZAP_AMOUNTS, "[]"),
                 object : TypeToken<List<Long>>() {}.type
             ) ?: listOf(500L, 1000L, 5000L)
+
+            val reactionChoices = gson.fromJson<List<String>>(
+                getString(PrefKeys.REACTION_CHOICES, "[]"),
+                object : TypeToken<List<String>>() {}.type
+            ).ifEmpty { listOf("+") } ?: listOf("+")
 
             val defaultZapType = gson.fromJson(
                 getString(PrefKeys.DEFAULT_ZAPTYPE, "PUBLIC"),
@@ -304,43 +325,51 @@ object LocalPreferences {
             } else {
                 null
             }
+            val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
+            val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
+
+            val lastReadPerRoute = try {
+                getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
+                    gson.fromJson(
+                        it,
+                        object : TypeToken<Map<String, Long>>() {}.type
+                    ) as Map<String, Long>
+                } ?: mapOf()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                mapOf()
+            }
 
             val a = Account(
-                Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
-                followingChannels,
-                hiddenUsers,
-                localRelays,
-                dontTranslateFrom,
-                languagePreferences,
-                translateTo,
-                zapAmountChoices,
-                defaultZapType,
-                defaultFileServer,
-                defaultHomeFollowList,
-                defaultStoriesFollowList,
-                defaultNotificationFollowList,
-                zapPaymentRequestServer,
-                hideDeleteRequestDialog,
-                hideBlockAlertDialog,
-                latestContactList,
-                proxy,
-                proxyPort,
-                showSensitiveContent
+                loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
+                followingChannels = followingChannels,
+                followingCommunities = followingCommunities,
+                hiddenUsers = hiddenUsers,
+                localRelays = localRelays,
+                dontTranslateFrom = dontTranslateFrom,
+                languagePreferences = languagePreferences,
+                translateTo = translateTo,
+                zapAmountChoices = zapAmountChoices,
+                reactionChoices = reactionChoices,
+                defaultZapType = defaultZapType,
+                defaultFileServer = defaultFileServer,
+                defaultHomeFollowList = defaultHomeFollowList,
+                defaultStoriesFollowList = defaultStoriesFollowList,
+                defaultNotificationFollowList = defaultNotificationFollowList,
+                defaultDiscoveryFollowList = defaultDiscoveryFollowList,
+                zapPaymentRequest = zapPaymentRequestServer,
+                hideDeleteRequestDialog = hideDeleteRequestDialog,
+                hideBlockAlertDialog = hideBlockAlertDialog,
+                backupContactList = latestContactList,
+                proxy = proxy,
+                proxyPort = proxyPort,
+                showSensitiveContent = showSensitiveContent,
+                warnAboutPostsWithReports = warnAboutReports,
+                filterSpamFromStrangers = filterSpam,
+                lastReadPerRoute = lastReadPerRoute
             )
 
             return a
-        }
-    }
-
-    fun saveLastRead(route: String, timestampInSecs: Long) {
-        encryptedPreferences(currentAccount()).edit().apply {
-            putLong(PrefKeys.LAST_READ(route), timestampInSecs)
-        }.apply()
-    }
-
-    fun loadLastRead(route: String): Long {
-        encryptedPreferences(currentAccount()).run {
-            return getLong(PrefKeys.LAST_READ(route), 0)
         }
     }
 

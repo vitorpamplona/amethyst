@@ -13,13 +13,14 @@ import okhttp3.Request
 import okhttp3.Response
 
 class Nip05Verifier() {
-    val client = HttpClient.getHttpClient()
-
     fun assembleUrl(nip05address: String): String? {
         val parts = nip05address.trim().split("@")
 
         if (parts.size == 2) {
             return "https://${parts[1]}/.well-known/nostr.json?name=${parts[0]}"
+        }
+        if (parts.size == 1) {
+            return "https://${parts[0]}/.well-known/nostr.json?name=_"
         }
 
         return null
@@ -33,6 +34,8 @@ class Nip05Verifier() {
     }
 
     private suspend fun fetchNip05JsonSuspend(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        checkNotInMainThread()
+
         val url = assembleUrl(nip05)
 
         if (url == null) {
@@ -47,8 +50,10 @@ class Nip05Verifier() {
                     .url(url)
                     .build()
 
-                client.newCall(request).enqueue(object : Callback {
+                HttpClient.getHttpClient().newCall(request).enqueue(object : Callback {
                     override fun onResponse(call: Call, response: Response) {
+                        checkNotInMainThread()
+
                         response.use {
                             if (it.isSuccessful) {
                                 onSuccess(it.body.string())
@@ -70,11 +75,16 @@ class Nip05Verifier() {
     }
 
     fun verifyNip05(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        // check fails on tests
+        checkNotInMainThread()
+
         val mapper = jacksonObjectMapper()
 
         fetchNip05Json(
             nip05,
             onSuccess = {
+                checkNotInMainThread()
+
                 // NIP05 usernames are case insensitive, but JSON properties are not
                 // converts the json to lowercase and then tries to access the username via a
                 // lowercase version of the username.
@@ -85,7 +95,12 @@ class Nip05Verifier() {
                     null
                 }
 
-                val user = nip05.split("@")[0].lowercase()
+                val parts = nip05.split("@")
+                val user = if (parts.size == 2) {
+                    parts[0].lowercase()
+                } else {
+                    "_"
+                }
 
                 val hexKey = nip05url?.get("names")?.get(user)?.asText()
 

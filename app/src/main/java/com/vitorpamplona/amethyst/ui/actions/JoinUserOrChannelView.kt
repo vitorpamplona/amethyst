@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Divider
@@ -28,8 +29,11 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -52,14 +56,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.ChannelName
-import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -72,14 +79,28 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -> Unit) {
-    val searchBarViewModel: SearchBarViewModel = viewModel()
-    searchBarViewModel.account = account
+fun JoinUserOrChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val searchBarViewModel: SearchBarViewModel = viewModel(
+        key = accountViewModel.account.userProfile().pubkeyHex + "SearchBarViewModel",
+        factory = SearchBarViewModel.Factory(
+            accountViewModel.account
+        )
+    )
 
+    JoinUserOrChannelView(
+        searchBarViewModel = searchBarViewModel,
+        onClose = onClose,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
+}
+
+@Composable
+fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () -> Unit, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     Dialog(
         onDismissRequest = {
             NostrSearchEventOrUserDataSource.clear()
-            searchBarViewModel.clean()
+            searchBarViewModel.clear()
             onClose()
         },
         properties = DialogProperties(
@@ -88,7 +109,9 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -
     ) {
         Surface() {
             Column(
-                modifier = Modifier.padding(10.dp).heightIn(min = 500.dp)
+                modifier = Modifier
+                    .padding(10.dp)
+                    .heightIn(min = 500.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -96,7 +119,7 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CloseButton(onCancel = {
-                        searchBarViewModel.clean()
+                        searchBarViewModel.clear()
                         NostrSearchEventOrUserDataSource.clear()
                         onClose()
                     })
@@ -108,34 +131,26 @@ fun JoinUserOrChannelView(onClose: () -> Unit, account: Account, nav: (String) -
 
                     Text(
                         text = "",
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                        color = MaterialTheme.colors.placeholderText,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
                 Spacer(modifier = Modifier.height(15.dp))
 
-                RenderSeach(searchBarViewModel, account, nav)
+                RenderSearch(searchBarViewModel, accountViewModel, nav)
             }
         }
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun RenderSeach(
+private fun RenderSearch(
     searchBarViewModel: SearchBarViewModel,
-    account: Account,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-
-    // initialize focus reference to be able to request focus programmatically
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val onlineSearch = NostrSearchEventOrUserDataSource
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -147,7 +162,8 @@ private fun RenderSeach(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
-                if (searchBarViewModel.isSearching()) {
+                checkNotInMainThread()
+                if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
             }
@@ -155,9 +171,6 @@ private fun RenderSeach(
     }
 
     LaunchedEffect(Unit) {
-        delay(100)
-        focusRequester.requestFocus()
-
         // Wait for text changes to stop for 300 ms before firing off search.
         withContext(Dispatchers.IO) {
             searchTextChanges.receiveAsFlow()
@@ -166,13 +179,13 @@ private fun RenderSeach(
                 .debounce(300)
                 .collectLatest {
                     if (it.length >= 2) {
-                        onlineSearch.search(it.trim())
+                        NostrSearchEventOrUserDataSource.search(it.trim())
                     }
 
                     searchBarViewModel.invalidateData()
 
                     // makes sure to show the top of the search
-                    scope.launch(Dispatchers.Main) {
+                    launch(Dispatchers.Main) {
                         listState.animateScrollToItem(0)
                     }
                 }
@@ -200,8 +213,34 @@ private fun RenderSeach(
     }
 
     // LAST ROW
+    SearchEditTextForJoin(searchBarViewModel, searchTextChanges)
+
+    RenderSearchResults(searchBarViewModel, listState, accountViewModel, nav)
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun SearchEditTextForJoin(
+    searchBarViewModel: SearchBarViewModel,
+    searchTextChanges: Channel<String>
+) {
+    val scope = rememberCoroutineScope()
+
+    // initialize focus reference to be able to request focus programmatically
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        launch {
+            delay(100)
+            focusRequester.requestFocus()
+        }
+    }
+
     Row(
-        modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(horizontal = 10.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -234,15 +273,15 @@ private fun RenderSeach(
             placeholder = {
                 Text(
                     text = stringResource(R.string.channel_list_user_or_group_id_demo),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
             },
             trailingIcon = {
-                if (searchBarViewModel.isTrailingIconVisible) {
+                if (searchBarViewModel.isSearching) {
                     IconButton(
                         onClick = {
-                            searchBarViewModel.clean()
-                            onlineSearch.clear()
+                            searchBarViewModel.clear()
+                            NostrSearchEventOrUserDataSource.clear()
                         }
                     ) {
                         Icon(
@@ -254,10 +293,24 @@ private fun RenderSeach(
             }
         )
     }
+}
 
-    if (searchBarViewModel.searchValue.isNotBlank()) {
+@Composable
+private fun RenderSearchResults(
+    searchBarViewModel: SearchBarViewModel,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    if (searchBarViewModel.isSearching) {
+        val users by searchBarViewModel.searchResultsUsers.collectAsState()
+        val channels by searchBarViewModel.searchResultsChannels.collectAsState()
+
         Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(vertical = 10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(vertical = 10.dp)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxHeight(),
@@ -268,34 +321,23 @@ private fun RenderSeach(
                 state = listState
             ) {
                 itemsIndexed(
-                    searchBarViewModel.searchResultsUsers.value,
+                    users,
                     key = { _, item -> "u" + item.pubkeyHex }
                 ) { _, item ->
-                    UserComposeForChat(
-                        item,
-                        account = account,
-                        nav = nav
-                    )
+                    UserComposeForChat(item, accountViewModel) {
+                        nav("Room/${item.pubkeyHex}")
+                        searchBarViewModel.clear()
+                    }
                 }
 
                 itemsIndexed(
-                    searchBarViewModel.searchResultsChannels.value,
+                    channels,
                     key = { _, item -> "c" + item.idHex }
                 ) { _, item ->
-                    ChannelName(
-                        channelIdHex = item.idHex,
-                        channelPicture = item.profilePicture(),
-                        channelTitle = {
-                            Text(
-                                "${item.info.name}",
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        channelLastTime = null,
-                        channelLastContent = item.info.about,
-                        false,
-                        onClick = { nav("Channel/${item.idHex}") }
-                    )
+                    RenderChannel(item) {
+                        nav("Channel/${item.idHex}")
+                        searchBarViewModel.clear()
+                    }
                 }
             }
         }
@@ -303,15 +345,40 @@ private fun RenderSeach(
 }
 
 @Composable
+private fun RenderChannel(
+    item: com.vitorpamplona.amethyst.model.Channel,
+    onClick: () -> Unit
+) {
+    val hasNewMessages = remember {
+        mutableStateOf(false)
+    }
+
+    ChannelName(
+        channelIdHex = item.idHex,
+        channelPicture = item.profilePicture(),
+        channelTitle = {
+            Text(
+                item.toBestDisplayName(),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        channelLastTime = null,
+        channelLastContent = item.summary(),
+        hasNewMessages,
+        onClick = onClick
+    )
+}
+
+@Composable
 fun UserComposeForChat(
     baseUser: User,
-    account: Account,
-    nav: (String) -> Unit
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit
 ) {
     Column(
         modifier =
         Modifier.clickable(
-            onClick = { nav("Room/${baseUser.pubkeyHex}") }
+            onClick = onClick
         )
     ) {
         Row(
@@ -323,22 +390,18 @@ fun UserComposeForChat(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserPicture(baseUser, nav, account.userProfile(), 55.dp)
+            ClickableUserPicture(baseUser, Size55dp, accountViewModel)
 
-            Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UsernameDisplay(baseUser)
                 }
 
-                val baseUserState by baseUser.live().metadata.observeAsState()
-                val user = baseUserState?.user ?: return
-
-                Text(
-                    user.info?.about ?: "",
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                DisplayUserAboutInfo(baseUser)
             }
         }
 
@@ -347,4 +410,21 @@ fun UserComposeForChat(
             thickness = 0.25.dp
         )
     }
+}
+
+@Composable
+private fun DisplayUserAboutInfo(baseUser: User) {
+    val baseUserState by baseUser.live().metadata.observeAsState()
+    val about by remember(baseUserState) {
+        derivedStateOf {
+            baseUserState?.user?.info?.about ?: ""
+        }
+    }
+
+    Text(
+        text = about,
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }

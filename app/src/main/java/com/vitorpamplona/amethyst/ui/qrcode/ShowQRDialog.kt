@@ -34,10 +34,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 
 @Composable
 fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
@@ -74,7 +75,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                                 RobohashAsyncImageProxy(
                                     robot = user.pubkeyHex,
-                                    model = ResizeImage(user.profilePicture(), 100.dp),
+                                    model = user.profilePicture(),
                                     contentDescription = stringResource(R.string.profile_image),
                                     modifier = Modifier
                                         .width(100.dp)
@@ -87,7 +88,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
                                 CreateTextWithEmoji(
                                     text = user.bestDisplayName() ?: user.bestUsername() ?: "",
-                                    tags = user.info?.latestMetadata?.tags,
+                                    tags = user.info?.latestMetadata?.tags?.toImmutableListOfLists(),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
                                 )
@@ -98,7 +99,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 35.dp)
+                                .padding(horizontal = Size35dp)
                         ) {
                             QrCodeDrawer("nostr:${user.pubkeyNpub()}")
                         }
@@ -111,7 +112,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                         ) {
                             Button(
                                 onClick = { presenting = false },
-                                shape = RoundedCornerShape(35.dp),
+                                shape = RoundedCornerShape(Size35dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp),

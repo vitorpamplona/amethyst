@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.flowlayout.FlowRow
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -86,9 +87,14 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun VideoScreen(
@@ -122,7 +128,12 @@ fun VideoScreen(
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            SaveableFeedState(videoFeedView, accountViewModel, nav, ScrollStateKeys.VIDEO_SCREEN)
+            SaveableFeedState(
+                videoFeedView = videoFeedView,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                scrollStateKey = ScrollStateKeys.VIDEO_SCREEN
+            )
         }
     }
 }
@@ -130,11 +141,10 @@ fun VideoScreen(
 @Composable
 fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountViewModel: AccountViewModel) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
-    LaunchedEffect(accountViewModel, account.defaultStoriesFollowList) {
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultStoriesFollowList) {
         NostrVideoDataSource.resetFilters()
-        videoFeedView.invalidateDataAndSendToTop(true)
+        videoFeedView.checkKeysInvalidateDataAndSendToTop()
     }
 }
 
@@ -144,7 +154,6 @@ private fun SaveableFeedState(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    routeForLastRead: String?,
     scrollStateKey: String? = null
 ) {
     val pagerState = if (scrollStateKey != null) {
@@ -246,16 +255,9 @@ private fun RenderVideoOrPictureNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val noteEvent = note.event
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-    val loggedIn = account.userProfile()
-
-    var moreActionsExpanded by remember { mutableStateOf(false) }
-
-    Column(Modifier.fillMaxSize(1f)) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+    Column(remember { Modifier.fillMaxSize(1f) }) {
+        Row(remember { Modifier.weight(1f) }, verticalAlignment = Alignment.CenterVertically) {
+            val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note)
             } else if (noteEvent is FileStorageHeaderEvent) {
@@ -264,51 +266,17 @@ private fun RenderVideoOrPictureNote(
         }
     }
 
-    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxSize(1f)) {
-        Column(Modifier.weight(1f)) {
-            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.size(55.dp), verticalArrangement = Arrangement.Center) {
-                    NoteAuthorPicture(note, nav, loggedIn, 55.dp)
-                }
-
-                Column(
-                    Modifier
-                        .padding(start = 10.dp, end = 10.dp)
-                        .height(60.dp)
-                        .weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        NoteUsernameDisplay(note, Modifier.weight(1f))
-
-                        IconButton(
-                            modifier = Modifier.size(24.dp),
-                            onClick = { moreActionsExpanded = true }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                            )
-
-                            NoteDropDownMenu(note, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(note.author!!, Modifier.weight(1f))
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp)) {
-                        RelayBadges(baseNote = note)
-                    }
-                }
-            }
+    Row(verticalAlignment = Alignment.Bottom, modifier = remember { Modifier.fillMaxSize(1f) }) {
+        Column(remember { Modifier.weight(1f) }) {
+            RenderVideoOrPicture(note, nav, accountViewModel)
         }
 
         Column(
-            Modifier
-                .width(65.dp)
-                .padding(bottom = 10.dp),
+            remember {
+                Modifier
+                    .width(65.dp)
+                    .padding(bottom = 10.dp)
+            },
             verticalArrangement = Arrangement.Center
         ) {
             Row(horizontalArrangement = Arrangement.Center) {
@@ -319,7 +287,75 @@ private fun RenderVideoOrPictureNote(
 }
 
 @Composable
-private fun RelayBadges(baseNote: Note) {
+private fun RenderVideoOrPicture(
+    note: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    Row(remember { Modifier.padding(10.dp) }, verticalAlignment = Alignment.Bottom) {
+        Column(remember { Modifier.size(55.dp) }, verticalArrangement = Arrangement.Center) {
+            NoteAuthorPicture(note, nav, accountViewModel, 55.dp)
+        }
+
+        Column(
+            remember {
+                Modifier
+                    .padding(start = 10.dp, end = 10.dp)
+                    .height(65.dp)
+                    .weight(1f)
+            },
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                VideoUserOptionAction(note, accountViewModel)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ObserveDisplayNip05Status(
+                    remember { note.author!! },
+                    remember { Modifier.weight(1f) }
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 2.dp)
+            ) {
+                RelayBadges(baseNote = note, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoUserOptionAction(
+    note: Note,
+    accountViewModel: AccountViewModel
+) {
+    var moreActionsExpanded by remember { mutableStateOf(false) }
+
+    IconButton(
+        modifier = remember { Modifier.size(22.dp) },
+        onClick = { moreActionsExpanded = true }
+    ) {
+        Icon(
+            imageVector = Icons.Default.MoreVert,
+            null,
+            modifier = remember { Modifier.size(20.dp) },
+            tint = MaterialTheme.colors.placeholderText
+        )
+
+        NoteDropDownMenu(
+            note,
+            moreActionsExpanded,
+            { moreActionsExpanded = false },
+            accountViewModel
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteRelaysState by baseNote.live().relays.observeAsState()
     val noteRelays = remember(noteRelaysState) {
         noteRelaysState?.note?.relays ?: emptySet()
@@ -327,7 +363,7 @@ private fun RelayBadges(baseNote: Note) {
 
     FlowRow() {
         noteRelays.forEach { dirtyUrl ->
-            RenderRelay(dirtyUrl)
+            RenderRelay(dirtyUrl, accountViewModel, nav)
         }
     }
 }
@@ -360,9 +396,9 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
         BoostReaction(baseNote, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
         }*/
-        LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, heartSize = 35.dp)
-        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = 35.dp)
-        ViewCountReaction(baseNote.idHex, grayTint = MaterialTheme.colors.onBackground, iconSize = 40.dp, barChartSize = 39.dp)
+        LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
+        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp)
+        ViewCountReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colors.onBackgroundColorFilter)
     }
 }
 
@@ -381,11 +417,13 @@ fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
 
     val postViewModel: NewMediaModel = viewModel()
     postViewModel.onceUploaded {
-        scope.launch {
+        scope.launch(Dispatchers.Default) {
             // awaits an refresh on the list
             delay(250)
-            val route = Route.Video.route.replace("{scrollToTop}", "true")
-            nav(route)
+            withContext(Dispatchers.Main) {
+                val route = Route.Video.route.replace("{scrollToTop}", "true")
+                nav(route)
+            }
         }
     }
 
@@ -456,8 +494,8 @@ private fun ShowProgress(postViewModel: NewMediaModel) {
             progress = postViewModel.uploadingPercentage.value,
             modifier = Modifier
                 .size(55.dp)
-                .background(MaterialTheme.colors.background)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .background(MaterialTheme.colors.background),
             strokeWidth = 5.dp
         )
         postViewModel.uploadingDescription.value?.let {

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,108 +20,234 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 
 @Composable
-fun ZapNoteCompose(baseNote: Pair<Note, Note>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+fun ZapNoteCompose(baseReqResponse: ZapReqResponse, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val baseNoteRequest by baseReqResponse.zapRequest.live().metadata.observeAsState()
 
-    val userState by account.userProfile().live().follows.observeAsState()
-    val userFollows = userState?.user ?: return
+    var baseAuthor by remember {
+        mutableStateOf<User?>(null)
+    }
 
-    val noteState by baseNote.second.live().metadata.observeAsState()
-    val noteZap = noteState?.note ?: return
-
-    val baseNoteRequest by baseNote.first.live().metadata.observeAsState()
-    val noteZapRequest = baseNoteRequest?.note ?: return
-
-    val baseAuthor = noteZapRequest.author
-
-    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(baseNoteRequest) {
+        launch(Dispatchers.Default) {
+            (baseNoteRequest?.note?.event as? LnZapRequestEvent)?.let {
+                baseNoteRequest?.note?.let {
+                    val decryptedContent = accountViewModel.decryptZap(it)
+                    if (decryptedContent != null) {
+                        baseAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                    } else {
+                        baseAuthor = it.author
+                    }
+                }
+            }
+        }
+    }
 
     if (baseAuthor == null) {
         BlankNote()
     } else {
+        val route = remember(baseAuthor) {
+            "User/${baseAuthor?.pubkeyHex}"
+        }
+
         Column(
             modifier =
             Modifier.clickable(
-                onClick = { nav("User/${baseAuthor.pubkeyHex}") }
+                onClick = { nav(route) }
             ),
             verticalArrangement = Arrangement.Center
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 10.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                UserPicture(baseAuthor, nav, account.userProfile(), 55.dp)
-
-                Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        UsernameDisplay(baseAuthor)
-                    }
-
-                    AboutDisplay(baseAuthor)
-                }
-
-                var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
-
-                LaunchedEffect(key1 = noteZap) {
-                    launch(Dispatchers.IO) {
-                        zapAmount = (noteZap.event as? LnZapEvent)?.amount
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.padding(start = 10.dp),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "${showAmount(zapAmount)} ${stringResource(R.string.sats)}",
-                        color = BitcoinOrange,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.W500
-                    )
-                }
-
-                Column(modifier = Modifier.padding(start = 10.dp)) {
-                    if (account.isHidden(baseAuthor)) {
-                        ShowUserButton {
-                            account.showUser(baseAuthor.pubkeyHex)
-                        }
-                    } else if (userFollows.isFollowingCached(baseAuthor)) {
-                        UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(baseAuthor) } }
-                    } else {
-                        FollowButton({ coroutineScope.launch(Dispatchers.IO) { account.follow(baseAuthor) } })
-                    }
-                }
+            baseAuthor?.let {
+                RenderZapNote(it, baseReqResponse.zapEvent, nav, accountViewModel)
             }
 
             Divider(
                 modifier = Modifier.padding(top = 10.dp),
                 thickness = 0.25.dp
             )
+        }
+    }
+}
+
+@Composable
+private fun RenderZapNote(
+    baseAuthor: User,
+    zapNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    Row(
+        modifier = remember {
+            Modifier
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp
+                )
+        },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        UserPicture(baseAuthor, Size55dp, accountViewModel = accountViewModel, nav = nav)
+
+        Column(
+            modifier = remember {
+                Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f)
+            }
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UsernameDisplay(baseAuthor)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AboutDisplay(baseAuthor)
+            }
+        }
+
+        Column(
+            modifier = remember {
+                Modifier.padding(start = 10.dp)
+            },
+            verticalArrangement = Arrangement.Center
+        ) {
+            ZapAmount(zapNote)
+        }
+
+        Column(modifier = Modifier.padding(start = 10.dp)) {
+            UserActionOptions(baseAuthor, accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun ZapAmount(zapEventNote: Note) {
+    val noteState by zapEventNote.live().metadata.observeAsState()
+
+    var zapAmount by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(key1 = noteState) {
+        launch(Dispatchers.IO) {
+            val newZapAmount = showAmountAxis((noteState?.note?.event as? LnZapEvent)?.amount)
+            if (zapAmount != newZapAmount) {
+                zapAmount = newZapAmount
+            }
+        }
+    }
+
+    zapAmount?.let {
+        Text(
+            text = it,
+            color = BitcoinOrange,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.W500
+        )
+    }
+}
+
+@Composable
+fun UserActionOptions(
+    baseAuthor: User,
+    accountViewModel: AccountViewModel
+) {
+    val scope = rememberCoroutineScope()
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val isHidden by remember(accountState) {
+        derivedStateOf {
+            accountState?.account?.isHidden(baseAuthor) ?: false
+        }
+    }
+
+    if (isHidden) {
+        ShowUserButton {
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.show(baseAuthor)
+            }
+        }
+    } else {
+        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
+    }
+}
+
+@Composable
+fun ShowFollowingOrUnfollowingButton(
+    baseAuthor: User,
+    accountViewModel: AccountViewModel
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    var isFollowing by remember { mutableStateOf(false) }
+    val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
+
+    LaunchedEffect(key1 = accountFollowsState) {
+        launch(Dispatchers.Default) {
+            val newShowFollowingMark =
+                accountFollowsState?.user?.isFollowing(baseAuthor) == true
+
+            if (newShowFollowingMark != isFollowing) {
+                isFollowing = newShowFollowingMark
+            }
+        }
+    }
+
+    if (isFollowing) {
+        UnfollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.unfollow(baseAuthor)
+                }
+            }
+        }
+    } else {
+        FollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.follow(baseAuthor)
+                }
+            }
         }
     }
 }
@@ -136,7 +263,7 @@ fun AboutDisplay(baseAuthor: User) {
 
     Text(
         userAboutMe,
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+        color = MaterialTheme.colors.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )

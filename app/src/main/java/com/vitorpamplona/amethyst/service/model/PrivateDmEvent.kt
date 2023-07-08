@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.HexValidator
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Utils
 import nostr.postr.toHex
@@ -23,11 +24,18 @@ class PrivateDmEvent(
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used
      * for initial messages.
      */
-    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }
+    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this[1]) }?.getOrNull()
+    fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this) }?.getOrNull()
 
-    fun verifiedRecipientPubKey() = recipientPubKey()?.runCatching { Hex.decode(this[1]).toHexKey() }?.getOrNull() // makes sure its a valid one
+    fun verifiedRecipientPubKey(): HexKey? {
+        val recipient = recipientPubKey()
+        return if (HexValidator.isHex(recipient)) {
+            recipient
+        } else {
+            null
+        }
+    }
 
     fun talkingWith(oneSideHex: String): HexKey {
         return if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
@@ -78,7 +86,8 @@ class PrivateDmEvent(
             createdAt: Long = Date().time / 1000,
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
-            markAsSensitive: Boolean
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?
         ): PrivateDmEvent {
             val content = Utils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
@@ -101,6 +110,9 @@ class PrivateDmEvent(
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let {
+                tags.add(listOf("zapraiser", "$it"))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)

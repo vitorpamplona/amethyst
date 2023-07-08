@@ -32,7 +32,9 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -48,8 +50,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -58,12 +62,18 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.ResizeImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -74,16 +84,13 @@ fun DrawerContent(
     sheetState: ModalBottomSheetState,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.background
     ) {
         Column() {
             ProfileContent(
-                account.userProfile(),
+                accountViewModel.account.userProfile(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 25.dp)
@@ -96,17 +103,16 @@ fun DrawerContent(
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
-                account.userProfile().pubkeyHex,
                 nav,
                 scaffoldState,
                 sheetState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                account
+                accountViewModel
             )
 
-            BottomContent(account.userProfile(), scaffoldState, nav)
+            BottomContent(accountViewModel.account.userProfile(), scaffoldState, nav)
         }
     }
 }
@@ -121,20 +127,15 @@ fun ProfileContent(
     val coroutineScope = rememberCoroutineScope()
 
     val accountUserState by baseAccountUser.live().metadata.observeAsState()
-    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
 
     val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
 
     val profileBanner = remember(accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
-    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture()?.ifBlank { null }?.let { ResizeImage(it, 100.dp) } }
+    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
     val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
     val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
-    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags }
+    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
-
-    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-    val followingCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--" }
-    val followerCount = remember(accountUserFollowsState) { accountUserFollowsState?.user?.cachedFollowerCount()?.toString() ?: "--" }
 
     Box {
         if (profileBanner != null) {
@@ -191,14 +192,18 @@ fun ProfileContent(
                             }
                         }),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             if (bestUserName != null) {
                 CreateTextWithEmoji(
-                    text = " @$bestUserName",
-                    tags = accountUser.info?.latestMetadata?.tags,
+                    text = remember { " @$bestUserName" },
+                    tags = tags,
                     color = Color.LightGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(top = 15.dp)
                         .clickable(
@@ -221,21 +226,64 @@ fun ProfileContent(
                         }
                     })
             ) {
-                Row() {
-                    Text(
-                        text = followingCount,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(stringResource(R.string.following))
-                }
-                Row(modifier = Modifier.padding(start = 10.dp)) {
-                    Text(
-                        text = followerCount,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(stringResource(R.string.followers))
-                }
+                FollowingAndFollowerCounts(baseAccountUser)
             }
+        }
+    }
+}
+
+@Composable
+private fun FollowingAndFollowerCounts(baseAccountUser: User) {
+    var followingCount by remember { mutableStateOf("--") }
+    var followerCount by remember { mutableStateOf("--") }
+
+    WatchFollow(baseAccountUser = baseAccountUser) { newFollowing ->
+        if (followingCount != newFollowing) {
+            followingCount = newFollowing
+        }
+    }
+
+    WatchFollower(baseAccountUser = baseAccountUser) { newFollower ->
+        if (followerCount != newFollower) {
+            followerCount = newFollower
+        }
+    }
+
+    Text(
+        text = followingCount,
+        fontWeight = FontWeight.Bold
+    )
+
+    Text(stringResource(R.string.following))
+
+    Spacer(modifier = DoubleHorzSpacer)
+
+    Text(
+        text = followerCount,
+        fontWeight = FontWeight.Bold
+    )
+
+    Text(stringResource(R.string.followers))
+}
+
+@Composable
+fun WatchFollow(baseAccountUser: User, onReady: (String) -> Unit) {
+    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
+
+    LaunchedEffect(key1 = accountUserFollowsState) {
+        launch(Dispatchers.IO) {
+            onReady(accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--")
+        }
+    }
+}
+
+@Composable
+fun WatchFollower(baseAccountUser: User, onReady: (String) -> Unit) {
+    val accountUserFollowersState by baseAccountUser.live().followers.observeAsState()
+
+    LaunchedEffect(key1 = accountUserFollowersState) {
+        launch(Dispatchers.IO) {
+            onReady(accountUserFollowersState?.user?.cachedFollowerCount()?.toString() ?: "--")
         }
     }
 }
@@ -243,13 +291,15 @@ fun ProfileContent(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListContent(
-    accountUserPubKey: String?,
     nav: (String) -> Unit,
     scaffoldState: ScaffoldState,
     sheetState: ModalBottomSheetState,
     modifier: Modifier,
-    account: Account
+    accountViewModel: AccountViewModel
 ) {
+    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val account = remember(accountState) { accountState?.account } ?: return
+
     val coroutineScope = rememberCoroutineScope()
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(account.proxy != null) }
@@ -257,26 +307,44 @@ fun ListContent(
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
     var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
 
-    Column(modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
-        if (accountUserPubKey != null) {
-            NavigationRow(
-                title = stringResource(R.string.profile),
-                icon = Route.Profile.icon,
-                tint = MaterialTheme.colors.primary,
-                nav = nav,
-                scaffoldState = scaffoldState,
-                route = "User/$accountUserPubKey"
-            )
+    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
 
-            NavigationRow(
-                title = stringResource(R.string.bookmarks),
-                icon = Route.Bookmarks.icon,
-                tint = MaterialTheme.colors.onBackground,
-                nav = nav,
-                scaffoldState = scaffoldState,
-                route = Route.Bookmarks.route
-            )
-        }
+    var wantsToEditRelays by remember {
+        mutableStateOf(false)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+    ) {
+        NavigationRow(
+            title = stringResource(R.string.profile),
+            icon = Route.Profile.icon,
+            tint = MaterialTheme.colors.primary,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = "User/${account.userProfile().pubkeyHex}"
+        )
+
+        NavigationRow(
+            title = stringResource(R.string.bookmarks),
+            icon = Route.Bookmarks.icon,
+            tint = MaterialTheme.colors.onBackground,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = Route.Bookmarks.route
+        )
+
+        IconRowRelays(
+            relayViewModel = relayViewModel,
+            onClick = {
+                coroutineScope.launch {
+                    scaffoldState.drawerState.close()
+                }
+                wantsToEditRelays = true
+            }
+        )
 
         NavigationRow(
             title = stringResource(R.string.security_filters),
@@ -385,6 +453,10 @@ fun ListContent(
             }
         )
     }
+
+    if (wantsToEditRelays) {
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+    }
 }
 
 private fun enableTor(
@@ -398,6 +470,44 @@ private fun enableTor(
     LocalPreferences.saveToEncryptedStorage(account)
     ServiceManager.pause()
     ServiceManager.start(context)
+}
+
+@Composable
+private fun RelayStatus(
+    relayViewModel: RelayPoolViewModel
+) {
+    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
+    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
+
+    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
+        derivedStateOf {
+            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
+        }
+    }
+
+    val isConnected by remember(connectedRelaysLiveData) {
+        derivedStateOf {
+            (connectedRelaysLiveData.value ?: 0) > 0
+        }
+    }
+
+    RenderRelayStatus(connectedRelaysText, isConnected)
+}
+
+@Composable
+private fun RenderRelayStatus(
+    connectedRelaysText: String,
+    isConnected: Boolean
+) {
+    Text(
+        text = connectedRelaysText,
+        color = if (isConnected) {
+            MaterialTheme.colors.placeholderText
+        } else {
+            Color.Red
+        },
+        style = MaterialTheme.typography.subtitle1
+    )
 }
 
 @Composable
@@ -446,6 +556,39 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongCl
                 text = title,
                 fontSize = 18.sp
             )
+        }
+    }
+}
+
+@Composable
+fun IconRowRelays(relayViewModel: RelayPoolViewModel, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 15.dp, horizontal = 25.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.relays),
+                null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colors.onSurface
+            )
+
+            Text(
+                modifier = Modifier.padding(start = 16.dp),
+                text = stringResource(id = R.string.relay_setup),
+                fontSize = 18.sp
+            )
+
+            Spacer(modifier = Modifier.width(Size16dp))
+
+            RelayStatus(relayViewModel = relayViewModel)
         }
     }
 }

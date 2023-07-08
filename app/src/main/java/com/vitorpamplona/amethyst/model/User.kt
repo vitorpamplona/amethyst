@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
@@ -11,6 +12,8 @@ import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -95,10 +98,10 @@ class User(val pubkeyHex: String) {
         // Update Followers of the past user list
         // Update Followers of the new contact list
         (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.users[it]?.liveSet?.follows?.invalidateData()
+            LocalCache.users[it]?.liveSet?.followers?.invalidateData()
         }
         (latestContactList)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.users[it]?.liveSet?.follows?.invalidateData()
+            LocalCache.users[it]?.liveSet?.followers?.invalidateData()
         }
 
         liveSet?.relays?.invalidateData()
@@ -143,8 +146,10 @@ class User(val pubkeyHex: String) {
     }
 
     fun updateAcceptedBadges(note: AddressableNote) {
-        acceptedBadges = note
-        liveSet?.badges?.invalidateData()
+        if (acceptedBadges?.idHex != note.idHex) {
+            acceptedBadges = note
+            liveSet?.badges?.invalidateData()
+        }
     }
 
     fun addZap(zapRequest: Note, zap: Note?) {
@@ -184,28 +189,34 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
+    private fun getOrCreatePrivateChatroomSync(user: User): Chatroom {
+        checkNotInMainThread()
+
         return privateChatrooms[user] ?: run {
-            val privateChatroom = Chatroom(setOf<Note>())
+            val privateChatroom = Chatroom()
             privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
             privateChatroom
         }
     }
 
-    @Synchronized
+    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
+        return privateChatrooms[user] ?: getOrCreatePrivateChatroomSync(user)
+    }
+
     fun addMessage(user: User, msg: Note) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
-            privateChatroom.roomMessages = privateChatroom.roomMessages + msg
+            privateChatroom.addMessageSync(msg)
             liveSet?.messages?.invalidateData()
         }
     }
 
-    @Synchronized
     fun removeMessage(user: User, msg: Note) {
+        checkNotInMainThread()
+
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
-            privateChatroom.roomMessages = privateChatroom.roomMessages - msg
+            privateChatroom.removeMessageSync(msg)
             liveSet?.messages?.invalidateData()
         }
     }
@@ -228,6 +239,7 @@ class User(val pubkeyHex: String) {
         info = newUserInfo
         info?.latestMetadata = latestMetadata
         info?.updatedMetadataAt = latestMetadata.createdAt
+        info?.tags = latestMetadata.tags.toImmutableListOfLists()
 
         if (newUserInfo.lud16.isNullOrBlank() && newUserInfo.lud06?.lowercase()?.startsWith("lnurl") == true) {
             try {
@@ -249,15 +261,11 @@ class User(val pubkeyHex: String) {
     }
 
     fun isFollowing(user: User): Boolean {
-        return latestContactList?.unverifiedFollowKeySet()?.toSet()?.let {
-            return user.pubkeyHex in it
-        } ?: false
+        return latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
     }
 
     fun isFollowingHashtag(tag: String): Boolean {
-        return latestContactList?.unverifiedFollowTagSet()?.toSet()?.let {
-            return tag in it
-        } ?: false
+        return latestContactList?.isTaggedHash(tag) ?: false
     }
 
     fun isFollowingHashtagCached(tag: String): Boolean {
@@ -272,11 +280,17 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingCached(userHex: String): Boolean {
+        return latestContactList?.verifiedFollowKeySet?.let {
+            return userHex in it
+        } ?: false
+    }
+
     fun transientFollowCount(): Int? {
         return latestContactList?.unverifiedFollowKeySet()?.size
     }
 
-    fun transientFollowerCount(): Int {
+    suspend fun transientFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
@@ -292,7 +306,7 @@ class User(val pubkeyHex: String) {
         return latestContactList?.verifiedFollowKeySet?.size
     }
 
-    fun cachedFollowerCount(): Int {
+    suspend fun cachedFollowerCount(): Int {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
@@ -331,6 +345,7 @@ class User(val pubkeyHex: String) {
 class UserLiveSet(u: User) {
     // UI Observers line up here.
     val follows: UserLiveData = UserLiveData(u)
+    val followers: UserLiveData = UserLiveData(u)
     val reports: UserLiveData = UserLiveData(u)
     val messages: UserLiveData = UserLiveData(u)
     val relays: UserLiveData = UserLiveData(u)
@@ -342,6 +357,7 @@ class UserLiveSet(u: User) {
 
     fun isInUse(): Boolean {
         return follows.hasObservers() ||
+            followers.hasObservers() ||
             reports.hasObservers() ||
             messages.hasObservers() ||
             relays.hasObservers() ||
@@ -353,13 +369,34 @@ class UserLiveSet(u: User) {
     }
 }
 
+@Immutable
 data class RelayInfo(
     val url: String,
     var lastEvent: Long,
     var counter: Long
 )
 
-data class Chatroom(var roomMessages: Set<Note>)
+class Chatroom() {
+    var roomMessages: Set<Note> = setOf()
+
+    @Synchronized
+    fun addMessageSync(msg: Note) {
+        checkNotInMainThread()
+
+        if (msg !in roomMessages) {
+            roomMessages = roomMessages + msg
+        }
+    }
+
+    @Synchronized
+    fun removeMessageSync(msg: Note) {
+        checkNotInMainThread()
+
+        if (msg !in roomMessages) {
+            roomMessages = roomMessages + msg
+        }
+    }
+}
 
 @Stable
 class UserMetadata {
@@ -387,20 +424,42 @@ class UserMetadata {
 
     var updatedMetadataAt: Long = 0
     var latestMetadata: MetadataEvent? = null
+    var tags: ImmutableListOfLists<String>? = null
+
+    fun anyName(): String? {
+        return display_name ?: displayName ?: name ?: username
+    }
 
     fun anyNameStartsWith(prefix: String): Boolean {
         return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
-            .any { it.startsWith(prefix, true) }
+            .any { it.contains(prefix, true) }
     }
 
     fun lnAddress(): String? {
         return (lud16?.trim() ?: lud06?.trim())?.ifBlank { null }
     }
+
+    fun bestUsername(): String? {
+        return name?.ifBlank { null } ?: username?.ifBlank { null }
+    }
+
+    fun bestDisplayName(): String? {
+        return displayName?.ifBlank { null } ?: display_name?.ifBlank { null }
+    }
+
+    fun nip05(): String? {
+        return nip05?.ifBlank { null }
+    }
+
+    fun profilePicture(): String? {
+        if (picture.isNullOrBlank()) picture = null
+        return picture
+    }
 }
 
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     fun invalidateData() {
         bundler.invalidate() {

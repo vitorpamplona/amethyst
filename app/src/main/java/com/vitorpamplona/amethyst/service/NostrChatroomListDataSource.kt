@@ -74,7 +74,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
                     kinds = listOf(ChannelMessageEvent.kind),
                     tags = mapOf("e" to listOf(it)),
                     since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
-                    limit = 25 // Remember to consider spam that is being removed from the UI
+                    limit = 50 // Remember to consider spam that is being removed from the UI
                 )
             )
         }

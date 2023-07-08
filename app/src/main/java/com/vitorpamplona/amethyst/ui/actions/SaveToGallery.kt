@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.Manifest
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Text
@@ -12,11 +11,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -75,7 +74,7 @@ fun SaveToGallery(url: String) {
                 writeStoragePermissionState.launchPermissionRequest()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = Color.Gray
@@ -135,7 +134,7 @@ fun SaveToGallery(localFile: File, mimeType: String?) {
                 writeStoragePermissionState.launchPermissionRequest()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = Color.Gray

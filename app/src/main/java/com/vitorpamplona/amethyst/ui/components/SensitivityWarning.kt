@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
@@ -34,18 +33,46 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.EventInterface
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 
 @Composable
 fun SensitivityWarning(
-    hasSensitiveContent: Boolean,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit
+) {
+    note.event?.let {
+        SensitivityWarning(it, accountViewModel, content)
+    }
+}
+
+@Composable
+fun SensitivityWarning(
+    event: EventInterface,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit
+) {
+    val hasSensitiveContent = remember(event) { event.isSensitive() ?: false }
+
+    if (hasSensitiveContent) {
+        SensitivityWarning(accountViewModel, content)
+    } else {
+        content()
+    }
+}
+
+@Composable
+fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
 
     var showContentWarningNote by remember(accountState) {
-        mutableStateOf(accountState?.account?.showSensitiveContent != true && hasSensitiveContent)
+        mutableStateOf(accountState?.account?.showSensitiveContent != true)
     }
 
     if (showContentWarningNote) {
@@ -108,7 +135,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                     Button(
                         modifier = Modifier.padding(top = 10.dp),
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = ButtonBorder,
                         colors = ButtonDefaults
                             .buttonColors(
                                 backgroundColor = MaterialTheme.colors.primary

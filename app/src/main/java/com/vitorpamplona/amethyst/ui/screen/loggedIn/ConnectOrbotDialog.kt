@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -35,7 +34,9 @@ import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.components.richTextDefaults
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.RichTextDefaults
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
 @Composable
@@ -85,8 +86,8 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                 Column(
                     modifier = Modifier.padding(30.dp)
                 ) {
-                    val myMarkDownStyle = richTextDefaults.copy(
-                        stringStyle = richTextDefaults.stringStyle?.copy(
+                    val myMarkDownStyle = RichTextDefaults.copy(
+                        stringStyle = RichTextDefaults.stringStyle?.copy(
                             linkStyle = SpanStyle(
                                 textDecoration = TextDecoration.Underline,
                                 color = MaterialTheme.colors.primary
@@ -121,7 +122,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                             placeholder = {
                                 Text(
                                     text = "9050",
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                    color = MaterialTheme.colors.placeholderText
                                 )
                             }
                         )
@@ -141,7 +142,7 @@ fun UseOrbotButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifie
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray

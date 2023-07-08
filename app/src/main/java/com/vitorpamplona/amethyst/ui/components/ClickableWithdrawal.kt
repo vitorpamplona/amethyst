@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -13,36 +14,47 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun MayBeWithdrawal(lnurlWord: String) {
     var lnWithdrawal by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = lnurlWord) {
-        withContext(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord)
         }
     }
 
-    lnWithdrawal?.let {
-        ClickableWithdrawal(withdrawalString = it)
+    Crossfade(targetState = lnWithdrawal) {
+        if (it != null) {
+            ClickableWithdrawal(withdrawalString = it)
+        } else {
+            Text(
+                text = lnurlWord,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
     }
-        ?: Text(
-            text = "$lnurlWord ",
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-        )
 }
 
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
     val context = LocalContext.current
 
+    val uri = remember(withdrawalString) {
+        Uri.parse("lightning:$withdrawalString")
+    }
+
+    val withdraw = remember(withdrawalString) {
+        AnnotatedString("$withdrawalString ")
+    }
+
     ClickableText(
-        text = AnnotatedString("$withdrawalString "),
+        text = withdraw,
         onClick = {
             runCatching {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$withdrawalString"))
+                val intent = Intent(Intent.ACTION_VIEW, uri)
                 ContextCompat.startActivity(context, intent, null)
             }
         },

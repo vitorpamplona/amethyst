@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -26,6 +25,9 @@ import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -56,13 +58,13 @@ class ZapOptionstViewModel : ViewModel() {
 }
 
 @Composable
-fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: AccountViewModel, baseNote: Note) {
+fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, baseNote: Note) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
 
-    LaunchedEffect(account) {
-        postViewModel.load(account)
+    LaunchedEffect(accountViewModel) {
+        postViewModel.load(accountViewModel.account)
     }
 
     var zappingProgress by remember { mutableStateOf(0f) }
@@ -74,9 +76,9 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = zapTypes.map { it.second }
-    val zapOptionExplainers = zapTypes.map { it.third }
-    var selectedZapType by remember { mutableStateOf(account.defaultZapType) }
+    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
+    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
+    var selectedZapType by remember(accountViewModel) { mutableStateOf(accountViewModel.account.defaultZapType) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -147,7 +149,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                         placeholder = {
                             Text(
                                 text = "100, 1000, 5000",
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true,
@@ -158,7 +160,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
 
                     TextSpinner(
                         label = stringResource(id = R.string.zap_type),
-                        placeholder = zapTypes.filter { it.first == account.defaultZapType }.first().second,
+                        placeholder = zapTypes.filter { it.first == accountViewModel.account.defaultZapType }.first().second,
                         options = zapOptions,
                         explainers = zapOptionExplainers,
                         onSelect = {
@@ -198,7 +200,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
                         placeholder = {
                             Text(
                                 text = stringResource(id = R.string.custom_zaps_add_a_message_example),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         singleLine = true,
@@ -216,7 +218,7 @@ fun ZapCustomDialog(onClose: () -> Unit, account: Account, accountViewModel: Acc
 fun ZapButton(isActive: Boolean, onPost: () -> Unit) {
     Button(
         onClick = { onPost() },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray

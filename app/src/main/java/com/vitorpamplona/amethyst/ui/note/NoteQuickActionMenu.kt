@@ -36,16 +36,14 @@ import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -69,6 +67,8 @@ import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private fun lightenColor(color: Color, amount: Float): Color {
@@ -110,21 +110,80 @@ private fun VerticalDivider(color: Color) =
     )
 
 @Composable
+fun LongPressToQuickAction(baseNote: Note, accountViewModel: AccountViewModel, content: @Composable (() -> Unit) -> Unit) {
+    val popupExpanded = remember { mutableStateOf(false) }
+    val showPopup = remember { { popupExpanded.value = true } }
+
+    content(showPopup)
+
+    NoteQuickActionMenu(baseNote, popupExpanded.value, { popupExpanded.value = false }, accountViewModel)
+}
+
+@Composable
 fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
+    val showSelectTextDialog = remember { mutableStateOf(false) }
+    val showDeleteAlertDialog = remember { mutableStateOf(false) }
+    val showBlockAlertDialog = remember { mutableStateOf(false) }
+    val showReportDialog = remember { mutableStateOf(false) }
+
+    if (popupExpanded) {
+        RenderMainPopup(
+            accountViewModel,
+            note,
+            onDismiss,
+            showBlockAlertDialog,
+            showDeleteAlertDialog,
+            showReportDialog
+        )
+    }
+
+    if (showSelectTextDialog.value) {
+        accountViewModel.decrypt(note)?.let {
+            SelectTextDialog(it) { showSelectTextDialog.value = false }
+        }
+    }
+
+    if (showDeleteAlertDialog.value) {
+        DeleteAlertDialog(note, accountViewModel) {
+            showDeleteAlertDialog.value = false
+            onDismiss()
+        }
+    }
+
+    if (showBlockAlertDialog.value) {
+        BlockAlertDialog(note, accountViewModel) {
+            showBlockAlertDialog.value = false
+            onDismiss()
+        }
+    }
+
+    if (showReportDialog.value) {
+        ReportNoteDialog(note, accountViewModel) {
+            showReportDialog.value = false
+            onDismiss()
+        }
+    }
+}
+
+@Composable
+private fun RenderMainPopup(
+    accountViewModel: AccountViewModel,
+    note: Note,
+    onDismiss: () -> Unit,
+    showBlockAlertDialog: MutableState<Boolean>,
+    showDeleteAlertDialog: MutableState<Boolean>,
+    showReportDialog: MutableState<Boolean>
+) {
     val context = LocalContext.current
     val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
     val cardShape = RoundedCornerShape(5.dp)
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
-    var showSelectTextDialog by remember(note) { mutableStateOf(false) }
-    var showDeleteAlertDialog by remember(note) { mutableStateOf(false) }
-    var showBlockAlertDialog by remember(note) { mutableStateOf(false) }
-    var showReportDialog by remember(note) { mutableStateOf(false) }
 
     val backgroundColor = if (MaterialTheme.colors.isLight) {
         MaterialTheme.colors.primary
     } else {
-        MaterialTheme.colors.primary.copy(alpha = 0.32f).compositeOver(MaterialTheme.colors.background)
+        MaterialTheme.colors.secondaryButtonBackground
     }
 
     val showToast = { stringResource: Int ->
@@ -137,22 +196,22 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
         }
     }
 
-    if (popupExpanded) {
-        val isOwnNote = accountViewModel.isLoggedUser(note.author)
-        val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
+    val isOwnNote = accountViewModel.isLoggedUser(note.author)
+    val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-        Popup(onDismissRequest = onDismiss) {
-            Card(
-                modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
-                shape = cardShape,
-                backgroundColor = backgroundColor
-            ) {
-                Column(modifier = Modifier.width(IntrinsicSize.Min)) {
-                    Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                        NoteQuickActionItem(
-                            icon = Icons.Default.ContentCopy,
-                            label = stringResource(R.string.quick_action_copy_text)
-                        ) {
+    Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
+        Card(
+            modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
+            shape = cardShape,
+            backgroundColor = backgroundColor
+        ) {
+            Column(modifier = Modifier.width(IntrinsicSize.Min)) {
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                    NoteQuickActionItem(
+                        icon = Icons.Default.ContentCopy,
+                        label = stringResource(R.string.quick_action_copy_text)
+                    ) {
+                        scope.launch(Dispatchers.IO) {
                             clipboardManager.setText(
                                 AnnotatedString(
                                     accountViewModel.decrypt(note) ?: ""
@@ -161,123 +220,140 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
                             showToast(R.string.copied_note_text_to_clipboard)
                             onDismiss()
                         }
-                        VerticalDivider(primaryLight)
-                        NoteQuickActionItem(Icons.Default.AlternateEmail, stringResource(R.string.quick_action_copy_user_id)) {
+                    }
+                    VerticalDivider(primaryLight)
+                    NoteQuickActionItem(
+                        Icons.Default.AlternateEmail,
+                        stringResource(R.string.quick_action_copy_user_id)
+                    ) {
+                        scope.launch(Dispatchers.IO) {
                             clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
                             showToast(R.string.copied_user_id_to_clipboard)
                             onDismiss()
                         }
-                        VerticalDivider(primaryLight)
-                        NoteQuickActionItem(Icons.Default.FormatQuote, stringResource(R.string.quick_action_copy_note_id)) {
+                    }
+                    VerticalDivider(primaryLight)
+                    NoteQuickActionItem(
+                        Icons.Default.FormatQuote,
+                        stringResource(R.string.quick_action_copy_note_id)
+                    ) {
+                        scope.launch(Dispatchers.IO) {
                             clipboardManager.setText(AnnotatedString("nostr:${note.toNEvent()}"))
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
                         }
+                    }
 
-                        if (!isOwnNote) {
-                            VerticalDivider(primaryLight)
+                    if (!isOwnNote) {
+                        VerticalDivider(primaryLight)
 
-                            NoteQuickActionItem(Icons.Default.Block, stringResource(R.string.quick_action_block)) {
-                                if (accountViewModel.hideBlockAlertDialog) {
+                        NoteQuickActionItem(
+                            Icons.Default.Block,
+                            stringResource(R.string.quick_action_block)
+                        ) {
+                            if (accountViewModel.hideBlockAlertDialog) {
+                                scope.launch(Dispatchers.IO) {
                                     note.author?.let { accountViewModel.hide(it) }
                                     onDismiss()
-                                } else {
-                                    showBlockAlertDialog = true
                                 }
-                            }
-                        }
-                    }
-                    Divider(
-                        color = primaryLight,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .width(1.dp)
-                    )
-                    Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                        if (isOwnNote) {
-                            NoteQuickActionItem(Icons.Default.Delete, stringResource(R.string.quick_action_delete)) {
-                                if (accountViewModel.hideDeleteRequestDialog) {
-                                    accountViewModel.delete(note)
-                                    onDismiss()
-                                } else {
-                                    showDeleteAlertDialog = true
-                                }
-                            }
-                        } else if (isFollowingUser) {
-                            NoteQuickActionItem(Icons.Default.PersonRemove, stringResource(R.string.quick_action_unfollow)) {
-                                accountViewModel.unfollow(note.author!!)
-                                onDismiss()
-                            }
-                        } else {
-                            NoteQuickActionItem(Icons.Default.PersonAdd, stringResource(R.string.quick_action_follow)) {
-                                accountViewModel.follow(note.author!!)
-                                onDismiss()
-                            }
-                        }
-
-                        VerticalDivider(primaryLight)
-                        NoteQuickActionItem(
-                            icon = ImageVector.vectorResource(id = R.drawable.relays),
-                            label = stringResource(R.string.broadcast)
-                        ) {
-                            accountViewModel.broadcast(note)
-                            // showSelectTextDialog = true
-                            onDismiss()
-                        }
-                        VerticalDivider(primaryLight)
-                        NoteQuickActionItem(icon = Icons.Default.Share, label = stringResource(R.string.quick_action_share)) {
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                type = "text/plain"
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    externalLinkForNote(note)
-                                )
-                                putExtra(Intent.EXTRA_TITLE, context.getString(R.string.quick_action_share_browser_link))
-                            }
-
-                            val shareIntent = Intent.createChooser(sendIntent, context.getString(R.string.quick_action_share))
-                            ContextCompat.startActivity(context, shareIntent, null)
-                            onDismiss()
-                        }
-
-                        if (!isOwnNote) {
-                            VerticalDivider(primaryLight)
-
-                            NoteQuickActionItem(Icons.Default.Report, stringResource(R.string.quick_action_report)) {
-                                showReportDialog = true
+                            } else {
+                                showBlockAlertDialog.value = true
                             }
                         }
                     }
                 }
+                Divider(
+                    color = primaryLight,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .width(1.dp)
+                )
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                    if (isOwnNote) {
+                        NoteQuickActionItem(
+                            Icons.Default.Delete,
+                            stringResource(R.string.quick_action_delete)
+                        ) {
+                            if (accountViewModel.hideDeleteRequestDialog) {
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.delete(note)
+                                    onDismiss()
+                                }
+                            } else {
+                                showDeleteAlertDialog.value = true
+                            }
+                        }
+                    } else if (isFollowingUser) {
+                        NoteQuickActionItem(
+                            Icons.Default.PersonRemove,
+                            stringResource(R.string.quick_action_unfollow)
+                        ) {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.unfollow(note.author!!)
+                                onDismiss()
+                            }
+                        }
+                    } else {
+                        NoteQuickActionItem(
+                            Icons.Default.PersonAdd,
+                            stringResource(R.string.quick_action_follow)
+                        ) {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.follow(note.author!!)
+                                onDismiss()
+                            }
+                        }
+                    }
+
+                    VerticalDivider(primaryLight)
+                    NoteQuickActionItem(
+                        icon = ImageVector.vectorResource(id = R.drawable.relays),
+                        label = stringResource(R.string.broadcast)
+                    ) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.broadcast(note)
+                            // showSelectTextDialog = true
+                            onDismiss()
+                        }
+                    }
+                    VerticalDivider(primaryLight)
+                    NoteQuickActionItem(
+                        icon = Icons.Default.Share,
+                        label = stringResource(R.string.quick_action_share)
+                    ) {
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                externalLinkForNote(note)
+                            )
+                            putExtra(
+                                Intent.EXTRA_TITLE,
+                                context.getString(R.string.quick_action_share_browser_link)
+                            )
+                        }
+
+                        val shareIntent = Intent.createChooser(
+                            sendIntent,
+                            context.getString(R.string.quick_action_share)
+                        )
+                        ContextCompat.startActivity(context, shareIntent, null)
+                        onDismiss()
+                    }
+
+                    if (!isOwnNote) {
+                        VerticalDivider(primaryLight)
+
+                        NoteQuickActionItem(
+                            Icons.Default.Report,
+                            stringResource(R.string.quick_action_report)
+                        ) {
+                            showReportDialog.value = true
+                        }
+                    }
+                }
             }
-        }
-    }
-
-    if (showSelectTextDialog) {
-        accountViewModel.decrypt(note)?.let {
-            SelectTextDialog(it) { showSelectTextDialog = false }
-        }
-    }
-
-    if (showDeleteAlertDialog) {
-        DeleteAlertDialog(note, accountViewModel) {
-            showDeleteAlertDialog = false
-            onDismiss()
-        }
-    }
-
-    if (showBlockAlertDialog) {
-        BlockAlertDialog(note, accountViewModel) {
-            showBlockAlertDialog = false
-            onDismiss()
-        }
-    }
-
-    if (showReportDialog) {
-        ReportNoteDialog(note, accountViewModel) {
-            showReportDialog = false
-            onDismiss()
         }
     }
 }
@@ -304,23 +380,30 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) =
+fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+
     QuickActionAlertDialog(
         title = stringResource(R.string.quick_action_request_deletion_alert_title),
         textContent = stringResource(R.string.quick_action_request_deletion_alert_body),
         buttonIcon = Icons.Default.Delete,
         buttonText = stringResource(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            accountViewModel.delete(note)
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.delete(note)
+            }
             onDismiss()
         },
         onClickDontShowAgain = {
-            accountViewModel.delete(note)
-            accountViewModel.dontShowDeleteRequestDialog()
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.delete(note)
+                accountViewModel.dontShowDeleteRequestDialog()
+            }
             onDismiss()
         },
         onDismiss = onDismiss
     )
+}
 
 @Composable
 private fun BlockAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) =
@@ -366,7 +449,9 @@ private fun QuickActionAlertDialog(
         },
         buttons = {
             Row(
-                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(onClick = onClickDontShowAgain) {

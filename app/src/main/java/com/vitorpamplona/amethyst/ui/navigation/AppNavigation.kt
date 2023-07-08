@@ -12,7 +12,9 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrGlobalFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -22,6 +24,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
@@ -40,8 +44,10 @@ fun AppNavigation(
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    searchFeedViewModel: NostrGlobalFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
+    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
+    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
+    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
 
@@ -60,62 +66,9 @@ fun AppNavigation(
     }
 
     NavHost(navController, startDestination = Route.Home.route) {
-        Route.Video.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            videoFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
-                }
-
-                VideoScreen(
-                    videoFeedView = videoFeedViewModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
-        Route.Search.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            searchFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
-                }
-
-                SearchScreen(
-                    searchFeedViewModel = searchFeedViewModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
         Route.Home.let { route ->
             composable(route.route, route.arguments, content = { it ->
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
                 val nip47 = it.arguments?.getString("nip47")
-
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            homeFeedViewModel.sendToTop()
-                            repliesFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
-                }
 
                 HomeScreen(
                     homeFeedViewModel = homeFeedViewModel,
@@ -136,29 +89,6 @@ fun AppNavigation(
             })
         }
 
-        Route.Notification.let { route ->
-            composable(route.route, route.arguments, content = {
-                val scrollToTop = it.arguments?.getBoolean("scrollToTop") ?: false
-
-                LaunchedEffect(key1 = it) {
-                    if (scrollToTop) {
-                        launch {
-                            notifFeedViewModel.clear()
-                            notifFeedViewModel.sendToTop()
-                            it.arguments?.remove("scrollToTop")
-                        }
-                    }
-                }
-
-                NotificationScreen(
-                    notifFeedViewModel = notifFeedViewModel,
-                    userReactionsStatsModel = userReactionsStatsModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            })
-        }
-
         composable(
             Route.Message.route,
             content = {
@@ -170,6 +100,48 @@ fun AppNavigation(
                 )
             }
         )
+
+        Route.Video.let { route ->
+            composable(route.route, route.arguments, content = {
+                VideoScreen(
+                    videoFeedView = videoFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Discover.let { route ->
+            composable(route.route, route.arguments, content = {
+                DiscoverScreen(
+                    discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                    discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                    discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Search.let { route ->
+            composable(route.route, route.arguments, content = {
+                SearchScreen(
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.Notification.let { route ->
+            composable(route.route, route.arguments, content = {
+                NotificationScreen(
+                    notifFeedViewModel = notifFeedViewModel,
+                    userReactionsStatsModel = userReactionsStatsModel,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
@@ -204,6 +176,16 @@ fun AppNavigation(
             })
         }
 
+        Route.Community.let { route ->
+            composable(route.route, route.arguments, content = {
+                CommunityScreen(
+                    aTagHex = it.arguments?.getString("id"),
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
         Route.Room.let { route ->
             composable(route.route, route.arguments, content = {
                 ChatroomScreen(
@@ -228,7 +210,6 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 LoadRedirectScreen(
                     eventId = it.arguments?.getString("id"),
-                    accountViewModel = accountViewModel,
                     navController = navController
                 )
             })

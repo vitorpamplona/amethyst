@@ -22,15 +22,16 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -66,20 +67,31 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.*
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    val account = remember(accountViewModel) { accountViewModel.account }
 
     val postViewModel: NewPostViewModel = viewModel()
 
@@ -97,8 +109,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
         delay(100)
         focusRequester.requestFocus()
 
-        postViewModel.imageUploadingError.collect { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+        launch(Dispatchers.IO) {
+            postViewModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -144,8 +160,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                         PostButton(
                             onPost = {
-                                postViewModel.sendPost()
-                                onClose()
+                                scope.launch(Dispatchers.IO) {
+                                    postViewModel.sendPost()
+                                    onClose()
+                                }
                             },
                             isActive = postViewModel.canPost()
                         )
@@ -161,7 +179,19 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 .fillMaxWidth()
                                 .verticalScroll(scrollState)
                         ) {
-                            Notifying(postViewModel.mentions) {
+                            postViewModel.originalNote?.let {
+                                NoteCompose(
+                                    baseNote = it,
+                                    makeItShort = true,
+                                    unPackReply = false,
+                                    isQuotedNote = true,
+                                    modifier = MaterialTheme.colors.replyModifier,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav
+                                )
+                            }
+
+                            Notifying(postViewModel.mentions?.toImmutableList()) {
                                 postViewModel.removeFromReplyList(it)
                             }
 
@@ -189,7 +219,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.what_s_on_your_mind),
-                                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        color = MaterialTheme.colors.placeholderText
                                     )
                                 },
                                 colors = TextFieldDefaults
@@ -208,9 +238,9 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                                 Button(
                                     onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
-                                    border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.32f)),
+                                    border = BorderStroke(1.dp, MaterialTheme.colors.placeholderText),
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                        contentColor = MaterialTheme.colors.placeholderText
                                     )
                                 ) {
                                     Image(
@@ -265,6 +295,15 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 }
                             }
 
+                            if (lud16 != null && postViewModel.wantsZapraiser) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                                    ZapRaiserRequest(
+                                        stringResource(id = R.string.zapraiser),
+                                        postViewModel
+                                    )
+                                }
+                            }
+
                             val myUrlPreview = postViewModel.urlPreview
                             if (myUrlPreview != null) {
                                 Row(modifier = Modifier.padding(top = 5.dp)) {
@@ -279,11 +318,11 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                 modifier = Modifier
                                                     .padding(top = 4.dp)
                                                     .fillMaxWidth()
-                                                    .clip(shape = RoundedCornerShape(15.dp))
+                                                    .clip(shape = QuoteBorder)
                                                     .border(
                                                         1.dp,
-                                                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                                                        RoundedCornerShape(15.dp)
+                                                        MaterialTheme.colors.subtleBorder,
+                                                        QuoteBorder
                                                     )
                                             )
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
@@ -291,11 +330,16 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview)
                                         }
-                                    } else if (isBechLink(myUrlPreview)) {
+                                    } else if (startsWithNIP19Scheme(myUrlPreview)) {
+                                        val bgColor = MaterialTheme.colors.background
+                                        val backgroundColor = remember {
+                                            mutableStateOf(bgColor)
+                                        }
+
                                         BechLink(
                                             myUrlPreview,
                                             true,
-                                            MaterialTheme.colors.background,
+                                            backgroundColor,
                                             accountViewModel,
                                             nav
                                         )
@@ -319,7 +363,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 userSuggestions,
                                 key = { _, item -> item.pubkeyHex }
                             ) { _, item ->
-                                UserLine(item, account) {
+                                UserLine(item, accountViewModel) {
                                     postViewModel.autocompleteWithUser(item)
                                 }
                             }
@@ -355,6 +399,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             }
                         }
 
+                        if (postViewModel.canAddZapRaiser) {
+                            AddZapraiserButton(postViewModel.wantsZapraiser) {
+                                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
+                            }
+                        }
+
                         MarkAsSensitive(postViewModel) {
                             postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
                         }
@@ -371,7 +421,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
+fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
     val mentions = baseMentions?.toSet()
 
     FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
@@ -379,28 +429,30 @@ fun Notifying(baseMentions: List<User>?, onClick: (User) -> Unit) {
             Text(
                 stringResource(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                color = MaterialTheme.colors.placeholderText
             )
 
             mentions.forEachIndexed { idx, user ->
                 val innerUserState by user.live().metadata.observeAsState()
-                val innerUser = innerUserState?.user
-
-                innerUser?.let { myUser ->
+                innerUserState?.user?.let { myUser ->
                     Spacer(modifier = Modifier.width(5.dp))
 
+                    val tags = remember(innerUserState) {
+                        myUser.info?.latestMetadata?.tags?.toImmutableListOfLists()
+                    }
+
                     Button(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = ButtonBorder,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                            backgroundColor = MaterialTheme.colors.mediumImportanceLink
                         ),
                         onClick = {
                             onClick(myUser)
                         }
                     ) {
                         CreateTextWithEmoji(
-                            text = "✖ ${myUser.toBestDisplayName()}",
-                            tags = myUser.info?.latestMetadata?.tags,
+                            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
+                            tags = tags,
                             color = Color.White,
                             textAlign = TextAlign.Center
                         )
@@ -435,6 +487,60 @@ private fun AddPollButton(
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colors.onBackground
             )
+        }
+    }
+}
+
+@Composable
+private fun AddZapraiserButton(
+    isLnInvoiceActive: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        Box(
+            Modifier
+                .height(20.dp)
+                .width(25.dp)
+        ) {
+            if (!isLnInvoiceActive) {
+                Icon(
+                    imageVector = Icons.Default.ShowChart,
+                    null,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.TopStart),
+                    tint = MaterialTheme.colors.onBackground
+                )
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.BottomEnd),
+                    tint = MaterialTheme.colors.onBackground
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ShowChart,
+                    null,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.TopStart),
+                    tint = BitcoinOrange
+                )
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = stringResource(R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.BottomEnd),
+                    tint = BitcoinOrange
+                )
+            }
         }
     }
 }
@@ -533,8 +639,8 @@ private fun ForwardZapTo(
             placeholder = {
                 Text(
                     text = stringResource(R.string.zap_forward_lnAddress),
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                    fontSize = 14.sp
+                    color = MaterialTheme.colors.placeholderText,
+                    fontSize = Font14SP
                 )
             },
             colors = TextFieldDefaults
@@ -608,7 +714,7 @@ fun CloseButton(onCancel: () -> Unit) {
         onClick = {
             onCancel()
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = Color.Gray
@@ -632,11 +738,12 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
+            ),
+        contentPadding = PaddingValues(0.dp)
     ) {
         Text(text = stringResource(R.string.post), color = Color.White)
     }
@@ -651,7 +758,7 @@ fun SaveButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -670,7 +777,7 @@ fun CreateButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -689,7 +796,7 @@ fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
                 onPost()
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
@@ -709,11 +816,13 @@ enum class ServersAvailable {
     NOSTR_BUILD,
     NOSTRIMG,
     NOSTRFILES_DEV,
+    NOSTRCHECK_ME,
 
     // IMGUR_NIP_94,
     NOSTRIMG_NIP_94,
     NOSTR_BUILD_NIP_94,
     NOSTRFILES_DEV_NIP_94,
+    NOSTRCHECK_ME_NIP_94,
     NIP95
 }
 
@@ -736,15 +845,17 @@ fun ImageVideoDescription(
         Triple(ServersAvailable.NOSTRIMG, stringResource(id = R.string.upload_server_nostrimg), stringResource(id = R.string.upload_server_nostrimg_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD, stringResource(id = R.string.upload_server_nostrbuild), stringResource(id = R.string.upload_server_nostrbuild_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV, stringResource(id = R.string.upload_server_nostrfilesdev), stringResource(id = R.string.upload_server_nostrfilesdev_explainer)),
+        Triple(ServersAvailable.NOSTRCHECK_ME, stringResource(id = R.string.upload_server_nostrcheckme), stringResource(id = R.string.upload_server_nostrcheckme_explainer)),
         // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),
+        Triple(ServersAvailable.NOSTRCHECK_ME_NIP_94, stringResource(id = R.string.upload_server_nostrcheckme_nip94), stringResource(id = R.string.upload_server_nostrcheckme_nip94_explainer)),
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = fileServers.map { it.second }
-    val fileServerExplainers = fileServers.map { it.third }
+    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
+    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
 
     var selectedServer by remember { mutableStateOf(defaultServer) }
     var message by remember { mutableStateOf("") }
@@ -753,11 +864,11 @@ fun ImageVideoDescription(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
-            .clip(shape = RoundedCornerShape(10.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                RoundedCornerShape(15.dp)
+                MaterialTheme.colors.subtleBorder,
+                QuoteBorder
             )
     ) {
         Column(
@@ -801,7 +912,7 @@ fun ImageVideoDescription(
                         modifier = Modifier
                             .padding(end = 5.dp)
                             .size(30.dp),
-                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                        tint = MaterialTheme.colors.placeholderText
                     )
                 }
             }
@@ -850,7 +961,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri)
+                    VideoView(uri.toString())
                 }
             }
 
@@ -891,7 +1002,7 @@ fun ImageVideoDescription(
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.content_description_example),
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -908,7 +1019,7 @@ fun ImageVideoDescription(
                 onClick = {
                     onAdd(message, selectedServer)
                 },
-                shape = RoundedCornerShape(15.dp),
+                shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = MaterialTheme.colors.primary
                 )
@@ -917,4 +1028,11 @@ fun ImageVideoDescription(
             }
         }
     }
+}
+
+@Stable
+data class ImmutableListOfLists<T>(val lists: List<List<T>> = emptyList())
+
+fun List<List<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
+    return ImmutableListOfLists(this)
 }

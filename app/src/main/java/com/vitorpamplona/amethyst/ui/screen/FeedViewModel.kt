@@ -1,13 +1,18 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -17,12 +22,16 @@ import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.CommunityFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.GlobalFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileAppRecommendationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
@@ -38,15 +47,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrChannelFeedViewModel : FeedViewModel(ChannelFeedFilter)
-class NostrChatRoomFeedViewModel : FeedViewModel(ChatroomFeedFilter)
-class NostrGlobalFeedViewModel(val account: Account) : FeedViewModel(GlobalFeedFilter(account)) {
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrGlobalFeedViewModel : ViewModel> create(modelClass: Class<NostrGlobalFeedViewModel>): NostrGlobalFeedViewModel {
-            return NostrGlobalFeedViewModel(account) as NostrGlobalFeedViewModel
+class NostrChannelFeedViewModel(val channel: Channel, val account: Account) : FeedViewModel(ChannelFeedFilter(channel, account)) {
+    class Factory(val channel: Channel, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrChannelFeedViewModel : ViewModel> create(modelClass: Class<NostrChannelFeedViewModel>): NostrChannelFeedViewModel {
+            return NostrChannelFeedViewModel(channel, account) as NostrChannelFeedViewModel
         }
     }
 }
+class NostrChatroomFeedViewModel(val user: User, val account: Account) : FeedViewModel(ChatroomFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrChatRoomFeedViewModel : ViewModel> create(modelClass: Class<NostrChatRoomFeedViewModel>): NostrChatRoomFeedViewModel {
+            return NostrChatroomFeedViewModel(user, account) as NostrChatRoomFeedViewModel
+        }
+    }
+}
+
 class NostrVideoFeedViewModel(val account: Account) : FeedViewModel(VideoFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrVideoFeedViewModel : ViewModel> create(modelClass: Class<NostrVideoFeedViewModel>): NostrVideoFeedViewModel {
@@ -54,6 +69,31 @@ class NostrVideoFeedViewModel(val account: Account) : FeedViewModel(VideoFeedFil
         }
     }
 }
+
+class NostrDiscoverLiveFeedViewModel(val account: Account) : FeedViewModel(DiscoverLiveFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrDiscoverLiveFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverLiveFeedViewModel>): NostrDiscoverLiveFeedViewModel {
+            return NostrDiscoverLiveFeedViewModel(account) as NostrDiscoverLiveFeedViewModel
+        }
+    }
+}
+
+class NostrDiscoverCommunityFeedViewModel(val account: Account) : FeedViewModel(DiscoverCommunityFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrDiscoverCommunityFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverCommunityFeedViewModel>): NostrDiscoverCommunityFeedViewModel {
+            return NostrDiscoverCommunityFeedViewModel(account) as NostrDiscoverCommunityFeedViewModel
+        }
+    }
+}
+
+class NostrDiscoverChatFeedViewModel(val account: Account) : FeedViewModel(DiscoverChatFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrDiscoverChatFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverChatFeedViewModel>): NostrDiscoverChatFeedViewModel {
+            return NostrDiscoverChatFeedViewModel(account) as NostrDiscoverChatFeedViewModel
+        }
+    }
+}
+
 class NostrThreadFeedViewModel(val noteId: String) : FeedViewModel(ThreadFeedFilter(noteId)) {
     class Factory(val noteId: String) : ViewModelProvider.Factory {
         override fun <NostrThreadFeedViewModel : ViewModel> create(modelClass: Class<NostrThreadFeedViewModel>): NostrThreadFeedViewModel {
@@ -62,11 +102,52 @@ class NostrThreadFeedViewModel(val noteId: String) : FeedViewModel(ThreadFeedFil
     }
 }
 
-class NostrHashtagFeedViewModel : FeedViewModel(HashtagFeedFilter)
-class NostrUserProfileNewThreadsFeedViewModel : FeedViewModel(UserProfileNewThreadFeedFilter)
-class NostrUserProfileConversationsFeedViewModel : FeedViewModel(UserProfileConversationsFeedFilter)
-class NostrUserProfileReportFeedViewModel : FeedViewModel(UserProfileReportsFeedFilter)
-class NostrUserProfileBookmarksFeedViewModel : FeedViewModel(UserProfileBookmarksFeedFilter)
+class NostrUserProfileNewThreadsFeedViewModel(val user: User, val account: Account) : FeedViewModel(UserProfileNewThreadFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileNewThreadsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileNewThreadsFeedViewModel>): NostrUserProfileNewThreadsFeedViewModel {
+            return NostrUserProfileNewThreadsFeedViewModel(user, account) as NostrUserProfileNewThreadsFeedViewModel
+        }
+    }
+}
+class NostrUserProfileConversationsFeedViewModel(val user: User, val account: Account) : FeedViewModel(UserProfileConversationsFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileConversationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileConversationsFeedViewModel>): NostrUserProfileConversationsFeedViewModel {
+            return NostrUserProfileConversationsFeedViewModel(user, account) as NostrUserProfileConversationsFeedViewModel
+        }
+    }
+}
+
+class NostrHashtagFeedViewModel(val hashtag: String, val account: Account) : FeedViewModel(HashtagFeedFilter(hashtag, account)) {
+    class Factory(val hashtag: String, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrHashtagFeedViewModel : ViewModel> create(modelClass: Class<NostrHashtagFeedViewModel>): NostrHashtagFeedViewModel {
+            return NostrHashtagFeedViewModel(hashtag, account) as NostrHashtagFeedViewModel
+        }
+    }
+}
+
+class NostrCommunityFeedViewModel(val note: AddressableNote, val account: Account) : FeedViewModel(CommunityFeedFilter(note, account)) {
+    class Factory(val note: AddressableNote, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrCommunityFeedViewModel : ViewModel> create(modelClass: Class<NostrCommunityFeedViewModel>): NostrCommunityFeedViewModel {
+            return NostrCommunityFeedViewModel(note, account) as NostrCommunityFeedViewModel
+        }
+    }
+}
+
+class NostrUserProfileReportFeedViewModel(val user: User) : FeedViewModel(UserProfileReportsFeedFilter(user)) {
+    class Factory(val user: User) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileReportFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileReportFeedViewModel>): NostrUserProfileReportFeedViewModel {
+            return NostrUserProfileReportFeedViewModel(user) as NostrUserProfileReportFeedViewModel
+        }
+    }
+}
+class NostrUserProfileBookmarksFeedViewModel(val user: User, val account: Account) : FeedViewModel(UserProfileBookmarksFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileBookmarksFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileBookmarksFeedViewModel>): NostrUserProfileBookmarksFeedViewModel {
+            return NostrUserProfileBookmarksFeedViewModel(user, account) as NostrUserProfileBookmarksFeedViewModel
+        }
+    }
+}
+
 class NostrChatroomListKnownFeedViewModel(val account: Account) : FeedViewModel(ChatroomListKnownFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrChatroomListKnownFeedViewModel : ViewModel> create(modelClass: Class<NostrChatroomListKnownFeedViewModel>): NostrChatroomListKnownFeedViewModel {
@@ -103,8 +184,16 @@ class NostrHomeRepliesFeedViewModel(val account: Account) : FeedViewModel(HomeCo
 class NostrBookmarkPublicFeedViewModel : FeedViewModel(BookmarkPublicFeedFilter)
 class NostrBookmarkPrivateFeedViewModel : FeedViewModel(BookmarkPrivateFeedFilter)
 
+class NostrUserAppRecommendationsFeedViewModel(val user: User) : FeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
+    class Factory(val user: User) : ViewModelProvider.Factory {
+        override fun <NostrUserAppRecommendationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserAppRecommendationsFeedViewModel>): NostrUserAppRecommendationsFeedViewModel {
+            return NostrUserAppRecommendationsFeedViewModel(user) as NostrUserAppRecommendationsFeedViewModel
+        }
+    }
+}
+
 @Stable
-abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
+abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -113,19 +202,19 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    suspend fun sendToTop() {
+    private var lastFeedKey: String? = null
+
+    fun sendToTop() {
         if (scrolltoTopPending) return
 
         scrolltoTopPending = true
-        _scrollToTop.emit(_scrollToTop.value + 1)
+        viewModelScope.launch(Dispatchers.IO) {
+            _scrollToTop.emit(_scrollToTop.value + 1)
+        }
     }
 
     suspend fun sentToTop() {
         scrolltoTopPending = false
-    }
-
-    fun newListFromDataSource(): ImmutableList<Note> {
-        return localFilter.loadTop().toImmutableList()
     }
 
     private fun refresh() {
@@ -136,7 +225,10 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     fun refreshSuspended() {
-        val notes = newListFromDataSource()
+        checkNotInMainThread()
+
+        lastFeedKey = localFilter.feedKey()
+        val notes = localFilter.loadTop().toImmutableList()
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
@@ -165,7 +257,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
-        if (localFilter is AdditiveFeedFilter) {
+        if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
                 val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).toImmutableList()
                 if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
@@ -189,7 +281,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val bundler = BundledUpdate(250, Dispatchers.IO)
     private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
-    fun invalidateData(ignoreIfDoing: Boolean = false) {
+    override fun invalidateData(ignoreIfDoing: Boolean) {
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
@@ -197,12 +289,14 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean = false) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-            sendToTop()
+    fun checkKeysInvalidateDataAndSendToTop() {
+        if (lastFeedKey != localFilter.feedKey()) {
+            bundler.invalidate(false) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+                sendToTop()
+            }
         }
     }
 
@@ -215,8 +309,11 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName}")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 if (localFilter is AdditiveFeedFilter &&
                     (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
                 ) {

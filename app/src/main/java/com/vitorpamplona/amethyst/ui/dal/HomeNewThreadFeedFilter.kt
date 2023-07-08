@@ -1,16 +1,23 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import java.util.Date
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
+    }
+
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
         val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
@@ -23,17 +30,31 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
+
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
+
+        val oneMinuteInTheFuture = Date().time / 1000 + (1 * 60) // one minute in the future.
+        val oneHr = 60 * 60
 
         return collection
             .asSequence()
             .filter { it ->
-                (it.event is TextNoteEvent || it.event is RepostEvent || it.event is LongTextNoteEvent || it.event is PollNoteEvent || it.event is HighlightEvent || it.event is AudioTrackEvent) &&
-                    (it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false)) &&
+                val noteEvent = it.event
+                (noteEvent is TextNoteEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
+                    (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
-                    it.isNewThread()
+                    ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&
+                    it.isNewThread() &&
+                    (
+                        (noteEvent !is RepostEvent && noteEvent !is GenericRepostEvent) || // not a repost
+                            (
+                                it.replyTo?.lastOrNull()?.author?.pubkeyHex !in followingKeySet ||
+                                    (noteEvent.createdAt() > (it.replyTo?.lastOrNull()?.createdAt() ?: 0) + oneHr)
+                                ) // or a repost of by a non-follower's post (likely not seen yet)
+                        )
             }
             .toSet()
     }

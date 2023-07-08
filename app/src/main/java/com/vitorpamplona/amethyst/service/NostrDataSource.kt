@@ -39,7 +39,7 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
-                LocalCache.consume(event, relay)
+                LocalCache.verifyAndConsume(event, relay)
             }
         }
 
@@ -70,6 +70,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName} Subscribe")
         Client.subscribe(clientListener)
     }
 
@@ -123,6 +124,8 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     fun resetFiltersSuspend() {
+        checkNotInMainThread()
+
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
         // saves the current content to only update if it changes

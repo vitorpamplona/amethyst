@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,85 +13,104 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
+    if (tag == null) return
 
+    PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
+}
+
+@Composable
+fun PrepareViewModelsHashtagScreen(tag: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val followsFeedViewModel: NostrHashtagFeedViewModel = viewModel(
+        key = tag + "HashtagFeedViewModel",
+        factory = NostrHashtagFeedViewModel.Factory(
+            tag,
+            accountViewModel.account
+        )
+    )
+
+    HashtagScreen(tag, followsFeedViewModel, accountViewModel, nav)
+}
+
+@Composable
+fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    if (tag != null) {
-        HashtagFeedFilter.loadHashtag(account, tag)
-        val feedViewModel: NostrHashtagFeedViewModel = viewModel()
+    NostrHashtagDataSource.loadHashtag(tag)
 
-        LaunchedEffect(tag) {
-            HashtagFeedFilter.loadHashtag(account, tag)
-            NostrHashtagDataSource.loadHashtag(tag)
-            feedViewModel.invalidateData()
-        }
+    LaunchedEffect(tag) {
+        NostrHashtagDataSource.start()
+        feedViewModel.invalidateData()
+    }
 
-        DisposableEffect(accountViewModel) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Hashtag Start")
-                    HashtagFeedFilter.loadHashtag(account, tag)
-                    NostrHashtagDataSource.loadHashtag(tag)
-                    NostrHashtagDataSource.start()
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Hashtag Stop")
-                    HashtagFeedFilter.loadHashtag(account, null)
-                    NostrHashtagDataSource.loadHashtag(null)
-                    NostrHashtagDataSource.stop()
-                }
+    DisposableEffect(accountViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                println("Hashtag Start")
+                NostrHashtagDataSource.loadHashtag(tag)
+                NostrHashtagDataSource.start()
+                feedViewModel.invalidateData()
             }
-
-            lifeCycleOwner.lifecycle.addObserver(observer)
-            onDispose {
-                lifeCycleOwner.lifecycle.removeObserver(observer)
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                println("Hashtag Stop")
+                NostrHashtagDataSource.loadHashtag(null)
+                NostrHashtagDataSource.stop()
             }
         }
 
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
-            ) {
-                HashtagHeader(tag, account)
-                RefresheableView(feedViewModel, accountViewModel, nav, null)
-            }
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+            NostrHashtagDataSource.loadHashtag(null)
+            NostrHashtagDataSource.stop()
+        }
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp)
+        ) {
+            HashtagHeader(tag, accountViewModel)
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 }
 
 @Composable
-fun HashtagHeader(tag: String, account: Account) {
-    val userState by account.userProfile().live().follows.observeAsState()
-    val userFollows = userState?.user ?: return
-
-    val coroutineScope = rememberCoroutineScope()
-
-    Column() {
-        Column(modifier = Modifier.padding(12.dp)) {
+fun HashtagHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
+    Column(
+        Modifier.clickable { onClick() }
+    ) {
+        Column(modifier = HalfPadding) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(
                     modifier = Modifier
@@ -107,11 +128,7 @@ fun HashtagHeader(tag: String, account: Account) {
                             modifier = Modifier.weight(1f)
                         )
 
-                        if (userFollows.isFollowingHashtagCached(tag)) {
-                            UnfollowButton { coroutineScope.launch(Dispatchers.IO) { account.unfollow(tag) } }
-                        } else {
-                            FollowButton({ coroutineScope.launch(Dispatchers.IO) { account.follow(tag) } })
-                        }
+                        HashtagActionOptions(tag, account)
                     }
                 }
             }
@@ -121,5 +138,59 @@ fun HashtagHeader(tag: String, account: Account) {
             modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
+    }
+}
+
+@Composable
+private fun HashtagActionOptions(
+    tag: String,
+    accountViewModel: AccountViewModel
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val userState by accountViewModel.userProfile().live().follows.observeAsState()
+    val isFollowingTag by remember(userState) {
+        derivedStateOf {
+            userState?.user?.isFollowingHashtagCached(tag) ?: false
+        }
+    }
+
+    if (isFollowingTag) {
+        UnfollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.account.unfollow(tag)
+                }
+            }
+        }
+    } else {
+        FollowButton {
+            if (!accountViewModel.isWriteable()) {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                }
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.account.follow(tag)
+                }
+            }
+        }
     }
 }

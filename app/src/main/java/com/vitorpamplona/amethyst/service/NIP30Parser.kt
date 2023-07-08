@@ -1,7 +1,9 @@
 package com.vitorpamplona.amethyst.service
 
+import androidx.compose.runtime.Immutable
 import java.util.regex.Pattern
 
+@Immutable
 class NIP30Parser {
     val customEmojiPattern: Pattern = Pattern.compile("\\:([A-Za-z0-9_\\-]+)\\:", Pattern.CASE_INSENSITIVE)
 
@@ -18,7 +20,7 @@ class NIP30Parser {
 
         val regularChars = input.split(customEmojiPattern.toRegex())
 
-        var finalList = mutableListOf<String>()
+        val finalList = mutableListOf<String>()
         var index = 0
         for (e in regularChars) {
             finalList.add(e)

@@ -27,10 +27,16 @@ interface EventInterface {
     fun hasValidSignature(): Boolean
 
     fun isTaggedUser(idHex: String): Boolean
+    fun isTaggedAddressableNote(idHex: String): Boolean
 
     fun isTaggedHash(hashtag: String): Boolean
     fun isTaggedHashes(hashtags: Set<String>): Boolean
     fun firstIsTaggedHashes(hashtags: Set<String>): String?
+    fun firstIsTaggedAddressableNote(addressableNotes: Set<String>): String?
+
+    fun isTaggedAddressableKind(kind: Int): Boolean
+    fun getTagOfAddressableKind(kind: Int): ATag?
+
     fun hashtags(): List<String>
 
     fun getReward(): BigDecimal?
@@ -38,4 +44,5 @@ interface EventInterface {
 
     fun zapAddress(): String?
     fun isSensitive(): Boolean
+    fun zapraiserAmount(): Long?
 }

@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.note
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -21,15 +20,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -39,12 +44,12 @@ import kotlin.math.roundToInt
 fun PollNote(
     baseNote: Note,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val pollViewModel: PollNoteViewModel = viewModel(
-        key = baseNote.idHex
+        key = baseNote.idHex + "PollNoteViewModel"
     )
 
     pollViewModel.load(accountViewModel.account, baseNote)
@@ -64,7 +69,7 @@ fun PollNote(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -91,10 +96,9 @@ private fun WatchZapsAndUpdateTallies(
     pollViewModel: PollNoteViewModel
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = zapsState) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             pollViewModel.refreshTallies()
         }
     }
@@ -107,10 +111,12 @@ private fun OptionNote(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     nav: (String) -> Unit
 ) {
-    val tags = remember { baseNote.event?.tags() }
+    val tags = remember(baseNote) {
+        baseNote.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -120,7 +126,7 @@ private fun OptionNote(
             val color = if (poolOption.consensusThreadhold) {
                 Color.Green.copy(alpha = 0.32f)
             } else {
-                MaterialTheme.colors.primary.copy(alpha = 0.32f)
+                MaterialTheme.colors.mediumImportanceLink
             }
 
             ZapVote(
@@ -164,8 +170,8 @@ private fun RenderOptionAfterVote(
     totalRatio: Float,
     color: Color,
     canPreview: Boolean,
-    tags: List<List<String>>?,
-    backgroundColor: Color,
+    tags: ImmutableListOfLists<String>,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -176,11 +182,11 @@ private fun RenderOptionAfterVote(
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 2.dp,
                 color,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         LinearProgressIndicator(
@@ -231,19 +237,19 @@ private fun RenderOptionAfterVote(
 private fun RenderOptionBeforeVote(
     description: String,
     canPreview: Boolean,
-    tags: List<List<String>>?,
-    backgroundColor: Color,
+    tags: ImmutableListOfLists<String>,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = RoundedCornerShape(15.dp))
+            .clip(shape = QuoteBorder)
             .border(
                 2.dp,
                 MaterialTheme.colors.primary,
-                RoundedCornerShape(15.dp)
+                QuoteBorder
             )
     ) {
         TranslatableRichTextViewer(
@@ -269,18 +275,17 @@ fun ZapVote(
     nonClickablePrepend: @Composable () -> Unit,
     clickablePrepend: @Composable () -> Unit
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val zappedNote = zapsState?.note ?: return
+    val isLoggedUser by remember {
+        derivedStateOf {
+            accountViewModel.isLoggedUser(baseNote.author)
+        }
+    }
 
     var wantsToZap by remember { mutableStateOf(false) }
+    var zappingProgress by remember { mutableStateOf(0f) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    var zappingProgress by remember { mutableStateOf(0f) }
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
 
     nonClickablePrepend()
 
@@ -311,7 +316,7 @@ fun ZapVote(
                             )
                             .show()
                     }
-                } else if (accountViewModel.isLoggedUser(zappedNote.author)) {
+                } else if (isLoggedUser) {
                     scope.launch {
                         Toast
                             .makeText(
@@ -333,11 +338,13 @@ fun ZapVote(
                             .show()
                     }
                     return@combinedClickable
-                } else if (account.zapAmountChoices.size == 1 && pollViewModel.isValidInputVoteAmount(account.zapAmountChoices.first())) {
+                } else if (accountViewModel.account.zapAmountChoices.size == 1 &&
+                    pollViewModel.isValidInputVoteAmount(accountViewModel.account.zapAmountChoices.first())
+                ) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.zap(
                             baseNote,
-                            account.zapAmountChoices.first() * 1000,
+                            accountViewModel.account.zapAmountChoices.first() * 1000,
                             poolOption.option,
                             "",
                             context,
@@ -354,7 +361,7 @@ fun ZapVote(
                                     zappingProgress = it
                                 }
                             },
-                            zapType = account.defaultZapType
+                            zapType = accountViewModel.account.defaultZapType
                         )
                     }
                 } else {
@@ -406,7 +413,7 @@ fun ZapVote(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    tint = MaterialTheme.colors.placeholderText
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
@@ -421,10 +428,13 @@ fun ZapVote(
 
     // only show tallies after a user has zapped note
     if (!pollViewModel.canZap()) {
+        val amountStr = remember(poolOption.zappedValue) {
+            showAmount(poolOption.zappedValue)
+        }
         Text(
-            showAmount(poolOption.zappedValue),
-            fontSize = 14.sp,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+            text = amountStr,
+            fontSize = Font14SP,
+            color = MaterialTheme.colors.placeholderText,
             modifier = modifier
         )
     }
@@ -486,7 +496,7 @@ fun FilteredZapAmountChoicePopup(
                             onDismiss()
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
                             backgroundColor = MaterialTheme.colors.primary

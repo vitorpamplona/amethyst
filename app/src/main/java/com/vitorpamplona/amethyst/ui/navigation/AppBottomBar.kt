@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -37,11 +38,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.vitorpamplona.amethyst.NotificationCache
+import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -49,7 +49,7 @@ val bottomNavigationItems = listOf(
     Route.Home,
     Route.Message,
     Route.Video,
-    Route.Search,
+    Route.Discover,
     Route.Notification
 )
 
@@ -67,10 +67,15 @@ fun keyboardAsState(): State<Keyboard> {
             view.getWindowVisibleDisplayFrame(rect)
             val screenHeight = view.rootView.height
             val keypadHeight = screenHeight - rect.bottom
-            keyboardState.value = if (keypadHeight > screenHeight * 0.15) {
+
+            val newKeyboardValue = if (keypadHeight > screenHeight * 0.15) {
                 Keyboard.Opened
             } else {
                 Keyboard.Closed
+            }
+
+            if (newKeyboardValue != keyboardState.value) {
+                keyboardState.value = newKeyboardValue
             }
         }
         view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
@@ -84,21 +89,30 @@ fun keyboardAsState(): State<Keyboard> {
 }
 
 @Composable
-fun AppBottomBar(navController: NavHostController, accountViewModel: AccountViewModel) {
+fun AppBottomBar(accountViewModel: AccountViewModel, navEntryState: State<NavBackStackEntry?>, nav: (Route, Boolean) -> Unit) {
     val isKeyboardOpen by keyboardAsState()
     if (isKeyboardOpen == Keyboard.Closed) {
-        Column() {
-            Divider(
-                thickness = 0.25.dp
-            )
-            BottomNavigation(
-                modifier = Modifier,
-                elevation = 0.dp,
-                backgroundColor = MaterialTheme.colors.background
-            ) {
-                bottomNavigationItems.forEach { item ->
-                    HasNewItemsIcon(item, accountViewModel, navController)
-                }
+        RenderBottomMenu(accountViewModel, navEntryState, nav)
+    }
+}
+
+@Composable
+private fun RenderBottomMenu(
+    accountViewModel: AccountViewModel,
+    navEntryState: State<NavBackStackEntry?>,
+    nav: (Route, Boolean) -> Unit
+) {
+    Column(modifier = BottomTopHeight) {
+        Divider(
+            thickness = 0.25.dp
+        )
+        BottomNavigation(
+            modifier = Modifier,
+            elevation = 0.dp,
+            backgroundColor = MaterialTheme.colors.background
+        ) {
+            bottomNavigationItems.forEach { item ->
+                HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
             }
         }
     }
@@ -108,59 +122,62 @@ fun AppBottomBar(navController: NavHostController, accountViewModel: AccountView
 private fun RowScope.HasNewItemsIcon(
     route: Route,
     accountViewModel: AccountViewModel,
-    navController: NavHostController
+    navEntryState: State<NavBackStackEntry?>,
+    nav: (Route, Boolean) -> Unit
+) {
+    var hasNewItems by remember { mutableStateOf(false) }
+
+    WatchPossibleNotificationChanges(route, accountViewModel) {
+        if (it != hasNewItems) {
+            hasNewItems = it
+        }
+    }
+
+    val scope = rememberCoroutineScope()
+
+    val size = remember {
+        if ("Home" == route.base) 25.dp else 23.dp
+    }
+    val iconSize = remember {
+        if ("Home" == route.base) 24.dp else 20.dp
+    }
+
+    BottomIcon(
+        icon = route.icon,
+        size = size,
+        iconSize = iconSize,
+        base = route.base,
+        hasNewItems = hasNewItems,
+        navEntryState = navEntryState
+    ) { selected ->
+        scope.launch {
+            nav(route, selected)
+        }
+    }
+}
+
+@Composable
+fun WatchPossibleNotificationChanges(
+    route: Route,
+    accountViewModel: AccountViewModel,
+    onChange: (Boolean) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
 
-    val notifState by NotificationCache.live.observeAsState()
-    val notif = remember(notifState) { notifState?.cache } ?: return
-
-    var hasNewItems by remember { mutableStateOf<Boolean>(false) }
+    val notifState by accountViewModel.accountLastReadLiveData.observeAsState()
 
     LaunchedEffect(key1 = notifState, key2 = accountState) {
         launch(Dispatchers.IO) {
-            val newHasNewItems = route.hasNewItems(account, notif, emptySet())
-            if (newHasNewItems != hasNewItems) {
-                hasNewItems = newHasNewItems
-            }
+            onChange(route.hasNewItems(account, emptySet()))
         }
     }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
-                val newHasNewItems = route.hasNewItems(account, notif, it)
-                if (newHasNewItems != hasNewItems) {
-                    hasNewItems = newHasNewItems
-                }
-            }
-        }
-    }
-
-    val scope = rememberCoroutineScope()
-
-    BottomIcon(
-        icon = route.icon,
-        size = if ("Home" == route.base) 25.dp else 23.dp,
-        iconSize = if ("Home" == route.base) 24.dp else 20.dp,
-        base = route.base,
-        hasNewItems = hasNewItems,
-        navController
-    ) { selected ->
-        scope.launch {
-            if (!selected) {
-                navController.navigate(route.base) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            } else {
-                val newRoute = route.route.replace("{scrollToTop}", "true")
-                navController.navigate(newRoute) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                    restoreState = true
+                launch(Dispatchers.IO) {
+                    onChange(route.hasNewItems(account, it))
                 }
             }
         }
@@ -174,30 +191,40 @@ private fun RowScope.BottomIcon(
     iconSize: Dp,
     base: String,
     hasNewItems: Boolean,
-    navController: NavHostController,
+    navEntryState: State<NavBackStackEntry?>,
     onClick: (Boolean) -> Unit
 ) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-
-    navBackStackEntry?.let {
-        val selected = remember(it) {
-            it.destination.route?.substringBefore("?") == base
+    val selected by remember(navEntryState.value) {
+        derivedStateOf {
+            navEntryState.value?.destination?.route?.substringBefore("?") == base
         }
-
-        BottomNavigationItem(
-            icon = {
-                NotifiableIcon(
-                    icon,
-                    size,
-                    iconSize,
-                    selected,
-                    hasNewItems
-                )
-            },
-            selected = selected,
-            onClick = { onClick(selected) }
-        )
     }
+
+    NavigationIcon(icon, size, iconSize, selected, hasNewItems, onClick)
+}
+
+@Composable
+private fun RowScope.NavigationIcon(
+    icon: Int,
+    size: Dp,
+    iconSize: Dp,
+    selected: Boolean,
+    hasNewItems: Boolean,
+    onClick: (Boolean) -> Unit
+) {
+    BottomNavigationItem(
+        icon = {
+            NotifiableIcon(
+                icon,
+                size,
+                iconSize,
+                selected,
+                hasNewItems
+            )
+        },
+        selected = selected,
+        onClick = { onClick(selected) }
+    )
 }
 
 @Composable

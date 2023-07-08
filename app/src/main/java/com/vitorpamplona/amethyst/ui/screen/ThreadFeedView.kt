@@ -22,6 +22,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,7 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -42,33 +44,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
+import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PinListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
+import com.vitorpamplona.amethyst.service.model.RelaySetEvent
+import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.DisplayReward
-import com.vitorpamplona.amethyst.ui.note.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -78,8 +87,15 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.selectedNote
+import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -109,17 +125,21 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                     is FeedState.Loaded -> {
                         refreshing = false
                         LaunchedEffect(noteId) {
-                            // waits to load the thread to scroll to item.
-                            delay(100)
-                            val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
-                            var position = state.feed.value.indexOf(noteForPosition)
+                            launch(Dispatchers.IO) {
+                                // waits to load the thread to scroll to item.
+                                delay(100)
+                                val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
+                                var position = state.feed.value.indexOf(noteForPosition)
 
-                            if (position >= 0) {
-                                if (position >= 1 && position < state.feed.value.size - 1) {
-                                    position-- // show the replying note
+                                if (position >= 0) {
+                                    if (position >= 1 && position < state.feed.value.size - 1) {
+                                        position-- // show the replying note
+                                    }
+
+                                    withContext(Dispatchers.Main) {
+                                        listState.animateScrollToItem(position)
+                                    }
                                 }
-
-                                listState.animateScrollToItem(position)
                             }
                         }
 
@@ -132,27 +152,34 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
                                 if (index == 0) {
-                                    NoteMaster(
-                                        item,
-                                        modifier = Modifier.drawReplyLevel(
-                                            item.replyLevel(),
-                                            MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                            if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-                                        ),
-                                        accountViewModel = accountViewModel,
-                                        nav = nav
-                                    )
+                                    ProvideTextStyle(TextStyle(fontSize = 16.sp, lineHeight = 1.20.em)) {
+                                        NoteMaster(
+                                            item,
+                                            modifier = Modifier.drawReplyLevel(
+                                                item.replyLevel(),
+                                                MaterialTheme.colors.placeholderText,
+                                                if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
+                                            ),
+                                            accountViewModel = accountViewModel,
+                                            nav = nav
+                                        )
+                                    }
                                 } else {
                                     Column() {
                                         Row() {
+                                            val selectedNoteColor = MaterialTheme.colors.selectedNote
+                                            val background = remember {
+                                                if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
+                                            }
+
                                             NoteCompose(
                                                 item,
                                                 modifier = Modifier.drawReplyLevel(
                                                     item.replyLevel(),
-                                                    MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
-                                                    if (item.idHex == noteId) MaterialTheme.colors.primary.copy(alpha = 0.52f) else MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                                    MaterialTheme.colors.placeholderText,
+                                                    if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
                                                 ),
-                                                parentBackgroundColor = if (item.idHex == noteId) MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background) else null,
+                                                parentBackgroundColor = background,
                                                 isBoostedNote = false,
                                                 unPackReply = false,
                                                 accountViewModel = accountViewModel,
@@ -226,12 +253,19 @@ fun NoteMaster(
 
     var popupExpanded by remember { mutableStateOf(false) }
 
+    val defaultBackgroundColor = MaterialTheme.colors.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+
     if (noteEvent == null) {
         BlankNote()
     } else if (!account.isAcceptable(noteForReports) && !showHiddenNote) {
+        val reports = remember {
+            account.getRelevantReports(noteForReports).toImmutableSet()
+        }
+
         HiddenNote(
-            account.getRelevantReports(noteForReports),
-            account.userProfile(),
+            reports,
+            accountViewModel,
             Modifier,
             false,
             nav,
@@ -255,7 +289,7 @@ fun NoteMaster(
                 NoteAuthorPicture(
                     baseNote = baseNote,
                     nav = nav,
-                    userAccount = account.userProfile(),
+                    accountViewModel = accountViewModel,
                     size = 55.dp
                 )
 
@@ -263,11 +297,21 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
-                        DisplayFollowingHashtagsInPost(noteEvent, account, nav)
+                        val isCommunityPost by remember(baseNote) {
+                            derivedStateOf {
+                                baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.kind) == true
+                            }
+                        }
+
+                        if (isCommunityPost) {
+                            DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
+                        } else {
+                            DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+                        }
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             maxLines = 1
                         )
 
@@ -279,7 +323,7 @@ fun NoteMaster(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                tint = MaterialTheme.colors.placeholderText
                             )
 
                             NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
@@ -287,14 +331,14 @@ fun NoteMaster(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseNote, Modifier.weight(1f))
+                        ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) })
 
-                        val baseReward = noteEvent.getReward()
+                        val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
                         if (baseReward != null) {
-                            DisplayReward(baseReward, baseNote, account, nav)
+                            DisplayReward(baseReward, baseNote, accountViewModel, nav)
                         }
 
-                        val pow = noteEvent.getPoWRank()
+                        val pow = remember { noteEvent.getPoWRank() }
                         if (pow > 20) {
                             DisplayPoW(pow)
                         }
@@ -307,7 +351,7 @@ fun NoteMaster(
             if (noteEvent is BadgeDefinitionEvent) {
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp)) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
                     Column {
                         noteEvent.image()?.let {
                             AsyncImage(
@@ -319,25 +363,23 @@ fun NoteMaster(
                                 contentScale = ContentScale.FillWidth,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
 
                         noteEvent.title()?.let {
                             Text(
                                 text = it,
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp)
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Light,
+                                modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
 
                         noteEvent.summary()?.let {
                             Text(
                                 text = it,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 color = Color.Gray
                             )
                         }
@@ -354,12 +396,32 @@ fun NoteMaster(
                     )
             ) {
                 Column() {
-                    if (noteEvent is PeopleListEvent) {
-                        DisplayPeopleList(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
+                    if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
+                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
+                    } else if (noteEvent is FileHeaderEvent) {
+                        FileHeaderDisplay(baseNote)
+                    } else if (noteEvent is FileStorageHeaderEvent) {
+                        FileStorageHeaderDisplay(baseNote)
+                    } else if (noteEvent is PeopleListEvent) {
+                        DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
-                        AudioTrackHeader(noteEvent, note, account.userProfile(), nav)
+                        AudioTrackHeader(noteEvent, accountViewModel, nav)
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(baseNote, MaterialTheme.colors.background, accountViewModel, nav)
+                        PinListHeader(
+                            baseNote,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
+                    } else if (noteEvent is RelaySetEvent) {
+                        DisplayRelaySet(
+                            baseNote,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
+                    } else if (noteEvent is AppDefinitionEvent) {
+                        RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),
@@ -371,53 +433,43 @@ fun NoteMaster(
                             accountViewModel,
                             nav
                         )
-                    } else {
-                        val eventContent = note.event?.content()
-
+                    } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                        RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+                    } else if (noteEvent is PollNoteEvent) {
                         val canPreview = note.author == account.userProfile() ||
                             (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
                             !noteForReports.hasAnyReports()
 
-                        if (eventContent != null) {
-                            val hasSensitiveContent = remember(note.event) { note.event?.isSensitive() ?: false }
+                        RenderPoll(
+                            baseNote,
+                            false,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
+                    } else {
+                        val canPreview = note.author == account.userProfile() ||
+                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
+                            !noteForReports.hasAnyReports()
 
-                            SensitivityWarning(
-                                hasSensitiveContent = hasSensitiveContent,
-                                accountViewModel = accountViewModel
-                            ) {
-                                TranslatableRichTextViewer(
-                                    eventContent,
-                                    canPreview,
-                                    Modifier.fillMaxWidth(),
-                                    note.event?.tags(),
-                                    MaterialTheme.colors.background,
-                                    accountViewModel,
-                                    nav
-                                )
-                            }
-
-                            DisplayUncitedHashtags(noteEvent.hashtags(), eventContent, nav)
-
-                            if (noteEvent is PollNoteEvent) {
-                                PollNote(
-                                    note,
-                                    canPreview,
-                                    backgroundColor,
-                                    accountViewModel,
-                                    nav
-                                )
-                            }
-                        }
+                        RenderTextEvent(
+                            baseNote,
+                            false,
+                            canPreview,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
                     }
-
-                    ReactionsRow(note, accountViewModel, nav)
-
-                    Divider(
-                        modifier = Modifier.padding(top = 10.dp),
-                        thickness = 0.25.dp
-                    )
                 }
             }
+
+            ReactionsRow(note, true, accountViewModel, nav)
+
+            Divider(
+                thickness = 0.25.dp
+            )
         }
 
         NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

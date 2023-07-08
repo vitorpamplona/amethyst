@@ -1,5 +1,8 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -14,44 +17,63 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, mentions: List<String>, account: Account, nav: (String) -> Unit) {
-    var dupMentions by remember { mutableStateOf<List<User>?>(null) }
+fun ReplyInformation(
+    replyTo: ImmutableList<Note>?,
+    mentions: ImmutableList<String>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var sortedMentions by remember { mutableStateOf<ImmutableList<User>?>(null) }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            dupMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+            sortedMentions = mentions.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+                .toSet()
+                .sortedBy { !accountViewModel.account.userProfile().isFollowingCached(it) }
+                .toImmutableList()
         }
     }
 
-    if (dupMentions != null) {
-        ReplyInformation(replyTo, dupMentions, account) {
+    if (sortedMentions != null) {
+        ReplyInformation(replyTo, sortedMentions) {
             nav("User/${it.pubkeyHex}")
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Account, prefix: String = "", onUserTagClick: (User) -> Unit) {
-    val mentions = dupMentions?.toSet()?.sortedBy { !account.userProfile().isFollowingCached(it) }
-    var expanded by remember { mutableStateOf((mentions?.size ?: 0) <= 2) }
+private fun ReplyInformation(
+    replyTo: ImmutableList<Note>?,
+    sortedMentions: ImmutableList<User>?,
+    prefix: String = "",
+    onUserTagClick: (User) -> Unit
+) {
+    var expanded by remember { mutableStateOf((sortedMentions?.size ?: 0) <= 2) }
 
     FlowRow() {
-        if (mentions != null && mentions.isNotEmpty()) {
+        if (sortedMentions != null && sortedMentions.isNotEmpty()) {
             if (replyTo != null && replyTo.isNotEmpty()) {
-                val repliesToDisplay = if (expanded) mentions else mentions.take(2)
+                val repliesToDisplay = if (expanded) sortedMentions else sortedMentions.take(2)
 
                 Text(
                     stringResource(R.string.replying_to),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
 
                 repliesToDisplay.forEachIndexed { idx, user ->
@@ -62,13 +84,13 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                             Text(
                                 ", ",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         } else if (idx < repliesToDisplay.size - 1) {
                             Text(
-                                "${stringResource(R.string.and)}",
+                                stringResource(R.string.and),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     } else {
@@ -76,25 +98,25 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
                             Text(
                                 ", ",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         } else if (idx < repliesToDisplay.size) {
                             Text(
-                                "${stringResource(R.string.and)}",
+                                stringResource(R.string.and),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
 
                             ClickableText(
-                                AnnotatedString("${mentions.size - 2}"),
-                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
+                                AnnotatedString("${sortedMentions.size - 2}"),
+                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.lessImportantLink, fontSize = 13.sp),
                                 onClick = { expanded = true }
                             )
 
                             Text(
                                 " ${stringResource(R.string.others)}",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                color = MaterialTheme.colors.placeholderText
                             )
                         }
                     }
@@ -105,15 +127,26 @@ fun ReplyInformation(replyTo: List<Note>?, dupMentions: List<User>?, account: Ac
 }
 
 @Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channel: Channel, account: Account, nav: (String) -> Unit) {
-    var sortedMentions by remember { mutableStateOf<List<User>?>(null) }
+fun ReplyInformationChannel(
+    replyTo: ImmutableList<Note>?,
+    mentions: ImmutableList<String>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var sortedMentions by remember { mutableStateOf<ImmutableList<User>?>(null) }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            sortedMentions = mentions
+            val newSortedMentions = mentions
                 .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 .toSet()
-                .sortedBy { account.isFollowing(it) }
+                .sortedBy { accountViewModel.account.isFollowing(it) }
+                .toImmutableList()
+                .ifEmpty { null }
+
+            if (newSortedMentions != sortedMentions) {
+                sortedMentions = newSortedMentions
+            }
         }
     }
 
@@ -121,63 +154,29 @@ fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<String>, channe
         ReplyInformationChannel(
             replyTo,
             sortedMentions,
-            channel,
             onUserTagClick = {
                 nav("User/${it.pubkeyHex}")
-            },
-            onChannelTagClick = {
-                nav("Channel/${it.idHex}")
             }
         )
+        Spacer(modifier = StdVertSpacer)
     }
 }
 
-@Composable
-fun ReplyInformationChannel(replyTo: List<Note>?, mentions: List<User>?, channel: Channel, nav: (String) -> Unit) {
-    ReplyInformationChannel(
-        replyTo,
-        mentions,
-        channel,
-        onUserTagClick = {
-            nav("User/${it.pubkeyHex}")
-        },
-        onChannelTagClick = {
-            nav("Channel/${it.idHex}")
-        }
-    )
-}
-
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReplyInformationChannel(
-    replyTo: List<Note>?,
-    mentions: List<User>?,
-    baseChannel: Channel,
+    replyTo: ImmutableList<Note>?,
+    mentions: ImmutableList<User>?,
     prefix: String = "",
-    onUserTagClick: (User) -> Unit,
-    onChannelTagClick: (Channel) -> Unit
+    onUserTagClick: (User) -> Unit
 ) {
-    val channelState by baseChannel.live.observeAsState()
-    val channel = channelState?.channel ?: return
-
     FlowRow() {
-        Text(
-            stringResource(R.string.in_channel),
-            fontSize = 13.sp,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
-        )
-
-        ClickableText(
-            AnnotatedString("${channel.info.name} "),
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(alpha = 0.52f), fontSize = 13.sp),
-            onClick = { onChannelTagClick(channel) }
-        )
-
         if (mentions != null && mentions.isNotEmpty()) {
             if (replyTo != null && replyTo.isNotEmpty()) {
                 Text(
                     stringResource(id = R.string.replying_to),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                    color = MaterialTheme.colors.placeholderText
                 )
 
                 mentions.forEachIndexed { idx, user ->
@@ -187,13 +186,13 @@ fun ReplyInformationChannel(
                         Text(
                             ", ",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     } else if (idx < mentions.size - 1) {
                         Text(
-                            " ${stringResource(id = R.string.add)} ",
+                            " ${stringResource(id = R.string.and)} ",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     }
                 }
@@ -209,17 +208,14 @@ private fun ReplyInfoMention(
     onUserTagClick: (User) -> Unit
 ) {
     val innerUserState by user.live().metadata.observeAsState()
-    val innerUser = remember(innerUserState) {
-        innerUserState?.user
-    } ?: return
 
     CreateClickableTextWithEmoji(
-        clickablePart = "$prefix${innerUser.toBestDisplayName()}",
-        tags = innerUser.info?.latestMetadata?.tags,
+        clickablePart = remember(innerUserState) { "$prefix${innerUserState?.user?.toBestDisplayName()}" },
+        tags = remember(innerUserState) { innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() },
         style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colors.primary.copy(alpha = 0.52f),
+            color = MaterialTheme.colors.lessImportantLink,
             fontSize = 13.sp
         ),
-        onClick = { onUserTagClick(innerUser) }
+        onClick = { onUserTagClick(user) }
     )
 }

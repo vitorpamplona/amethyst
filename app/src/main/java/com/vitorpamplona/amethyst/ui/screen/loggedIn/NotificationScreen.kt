@@ -9,6 +9,7 @@ import androidx.compose.material.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -101,15 +102,10 @@ fun WatchAccountForNotifications(
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
-    LaunchedEffect(accountViewModel, account.defaultNotificationFollowList) {
+    LaunchedEffect(accountViewModel, accountState?.account?.defaultNotificationFollowList) {
         NostrAccountDataSource.invalidateFilters()
-        if (notifFeedViewModel.scrollToTop.value > 0) {
-            notifFeedViewModel.clear()
-        }
-
-        notifFeedViewModel.invalidateDataAndSendToTop(true)
+        notifFeedViewModel.checkKeysInvalidateDataAndSendToTop()
     }
 }
 
@@ -123,52 +119,52 @@ fun SummaryBar(model: UserReactionsViewModel) {
         showChart = !showChart
     }
 
-    val lineChartCount =
-        lineChart(
-            lines = listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
-                LineChart.LineSpec(
-                    lineColor = lineChartColor.toArgb(),
-                    lineBackgroundShader = DynamicShaders.fromBrush(
-                        Brush.verticalGradient(
-                            listOf(
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
-                            )
-                        )
-                    )
-                )
-            },
-            targetVerticalAxisPosition = AxisPosition.Vertical.Start
-        )
-
-    val lineChartZaps =
-        lineChart(
-            lines = listOf(BitcoinOrange).map { lineChartColor ->
-                LineChart.LineSpec(
-                    lineColor = lineChartColor.toArgb(),
-                    lineBackgroundShader = DynamicShaders.fromBrush(
-                        Brush.verticalGradient(
-                            listOf(
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-                                lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
-                            )
-                        )
-                    )
-                )
-            },
-            targetVerticalAxisPosition = AxisPosition.Vertical.End
-        )
-
     if (showChart) {
-        val axisModel by model.axisLabels.collectAsState()
-        val chartModel by model.chartModel.collectAsState()
-        chartModel?.let {
-            Row(
-                modifier = Modifier
-                    .padding(vertical = 10.dp, horizontal = 20.dp)
-                    .clickable(onClick = { showChart = !showChart })
-            ) {
-                ProvideChartStyle() {
+        val lineChartCount =
+            lineChart(
+                lines = listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
+                    LineChart.LineSpec(
+                        lineColor = lineChartColor.toArgb(),
+                        lineBackgroundShader = DynamicShaders.fromBrush(
+                            Brush.verticalGradient(
+                                listOf(
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
+                                )
+                            )
+                        )
+                    )
+                },
+                targetVerticalAxisPosition = AxisPosition.Vertical.Start
+            )
+
+        val lineChartZaps =
+            lineChart(
+                lines = listOf(BitcoinOrange).map { lineChartColor ->
+                    LineChart.LineSpec(
+                        lineColor = lineChartColor.toArgb(),
+                        lineBackgroundShader = DynamicShaders.fromBrush(
+                            Brush.verticalGradient(
+                                listOf(
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
+                                    lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END)
+                                )
+                            )
+                        )
+                    )
+                },
+                targetVerticalAxisPosition = AxisPosition.Vertical.End
+            )
+
+        Row(
+            modifier = Modifier
+                .padding(vertical = 10.dp, horizontal = 20.dp)
+                .clickable(onClick = { showChart = !showChart })
+        ) {
+            ProvideChartStyle() {
+                val axisModel by model.axisLabels.collectAsState()
+                val chartModel by model.chartModel.collectAsState()
+                chartModel?.let {
                     Chart(
                         chart = remember(lineChartCount, lineChartZaps) {
                             lineChartCount.plus(lineChartZaps)
@@ -194,6 +190,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
     )
 }
 
+@Stable
 class LabelValueFormatter(val axisLabels: List<String>) : AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
     override fun formatValue(
         value: Float,
@@ -203,6 +200,7 @@ class LabelValueFormatter(val axisLabels: List<String>) : AxisValueFormatter<Axi
     }
 }
 
+@Stable
 class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start> {
     override fun formatValue(
         value: Float,
@@ -212,6 +210,7 @@ class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start
     }
 }
 
+@Stable
 class AmountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.End> {
     override fun formatValue(
         value: Float,

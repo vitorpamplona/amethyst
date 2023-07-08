@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.os.Bundle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavDestination
@@ -9,58 +10,71 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveNowFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
+@Immutable
 sealed class Route(
     val route: String,
     val icon: Int,
-    val hasNewItems: (Account, NotificationCache, Set<com.vitorpamplona.amethyst.model.Note>) -> Boolean = { _, _, _ -> false },
-    val arguments: List<NamedNavArgument> = emptyList()
+    val hasNewItems: (Account, Set<com.vitorpamplona.amethyst.model.Note>) -> Boolean = { _, _ -> false },
+    val arguments: ImmutableList<NamedNavArgument> = persistentListOf()
 ) {
     val base: String
         get() = route.substringBefore("?")
 
     object Home : Route(
-        route = "Home?scrollToTop={scrollToTop}&nip47={nip47}",
+        route = "Home?nip47={nip47}",
         icon = R.drawable.ic_home,
         arguments = listOf(
-            navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false },
             navArgument("nip47") { type = NavType.StringType; nullable = true; defaultValue = null }
-        ),
-        hasNewItems = { accountViewModel, cache, newNotes -> HomeLatestItem.hasNewItems(accountViewModel, cache, newNotes) }
+        ).toImmutableList(),
+        hasNewItems = { accountViewModel, newNotes -> HomeLatestItem.hasNewItems(accountViewModel, newNotes) }
+    )
+
+    object Global : Route(
+        route = "Global",
+        icon = R.drawable.ic_globe
     )
 
     object Search : Route(
-        route = "Search?scrollToTop={scrollToTop}",
-        icon = R.drawable.ic_globe,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
+        route = "Search",
+        icon = R.drawable.ic_search
     )
 
     object Video : Route(
-        route = "Video?scrollToTop={scrollToTop}",
-        icon = R.drawable.ic_video,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false })
+        route = "Video",
+        icon = R.drawable.ic_video
+    )
+
+    object Discover : Route(
+        route = "Discover",
+        icon = R.drawable.ic_sensors,
+        hasNewItems = { accountViewModel, newNotes -> DiscoverLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 
     object Notification : Route(
-        route = "Notification?scrollToTop={scrollToTop}",
+        route = "Notification",
         icon = R.drawable.ic_notifications,
-        arguments = listOf(navArgument("scrollToTop") { type = NavType.BoolType; defaultValue = false }),
-        hasNewItems = { accountViewModel, cache, newNotes -> NotificationLatestItem.hasNewItems(accountViewModel, cache, newNotes) }
+        hasNewItems = { accountViewModel, newNotes -> NotificationLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 
     object Message : Route(
         route = "Message",
         icon = R.drawable.ic_dm,
-        hasNewItems = { accountViewModel, cache, newNotes -> MessagesLatestItem.hasNewItems(accountViewModel, cache, newNotes) }
+        hasNewItems = { accountViewModel, newNotes -> MessagesLatestItem.hasNewItems(accountViewModel, newNotes) }
     )
 
     object BlockedUsers : Route(
@@ -76,37 +90,43 @@ sealed class Route(
     object Profile : Route(
         route = "User/{id}",
         icon = R.drawable.ic_profile,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Note : Route(
         route = "Note/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Hashtag : Route(
         route = "Hashtag/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
+    )
+
+    object Community : Route(
+        route = "Community/{id}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Room : Route(
         route = "Room/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Channel : Route(
         route = "Channel/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 
     object Event : Route(
         route = "Event/{id}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType })
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
 }
 
@@ -122,29 +142,40 @@ fun currentRoute(navController: NavHostController): String? {
 open class LatestItem {
     var newestItemPerAccount: Map<String, Note?> = mapOf()
 
+    fun getNewestItem(account: Account): Note? {
+        return newestItemPerAccount[account.userProfile().pubkeyHex]
+    }
+
+    fun clearNewestItem(account: Account) {
+        val userHex = account.userProfile().pubkeyHex
+        if (newestItemPerAccount.contains(userHex)) {
+            newestItemPerAccount = newestItemPerAccount - userHex
+        }
+    }
+
     fun updateNewestItem(newNotes: Set<Note>, account: Account, filter: AdditiveFeedFilter<Note>): Note? {
         val newestItem = newestItemPerAccount[account.userProfile().pubkeyHex]
 
         if (newestItem == null) {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
-                filterMore(filter.feed()).firstOrNull { it.createdAt() != null }
+                filterMore(filter.feed(), account).firstOrNull { it.createdAt() != null }
             )
         } else {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
-                filter.sort(filterMore(filter.applyFilter(newNotes)) + newestItem).first()
+                filter.sort(filterMore(filter.applyFilter(newNotes), account) + newestItem).first()
             )
         }
 
         return newestItemPerAccount[account.userProfile().pubkeyHex]
     }
 
-    open fun filterMore(newItems: Set<Note>): Set<Note> {
+    open fun filterMore(newItems: Set<Note>, account: Account): Set<Note> {
         return newItems
     }
 
-    open fun filterMore(newItems: List<Note>): List<Note> {
+    open fun filterMore(newItems: List<Note>, account: Account): List<Note> {
         return newItems
     }
 }
@@ -152,10 +183,11 @@ open class LatestItem {
 object HomeLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
-        cache: NotificationCache,
         newNotes: Set<Note>
     ): Boolean {
-        val lastTime = cache.load("HomeFollows")
+        checkNotInMainThread()
+
+        val lastTime = account.loadLastRead("HomeFollows")
 
         val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter(account))
 
@@ -163,13 +195,37 @@ object HomeLatestItem : LatestItem() {
     }
 }
 
+object DiscoverLatestItem : LatestItem() {
+    fun hasNewItems(
+        account: Account,
+        newNotes: Set<Note>
+    ): Boolean {
+        checkNotInMainThread()
+
+        val lastTime = account.loadLastRead(Route.Discover.base + "Live")
+
+        val newestItem = updateNewestItem(newNotes, account, DiscoverLiveNowFeedFilter(account))
+
+        val noteEvent = newestItem?.event
+
+        val dateToUse = if (noteEvent is LiveActivitiesEvent) {
+            noteEvent.starts() ?: newestItem.createdAt()
+        } else {
+            newestItem?.createdAt()
+        }
+
+        return (dateToUse ?: 0) > lastTime
+    }
+}
+
 object NotificationLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
-        cache: NotificationCache,
         newNotes: Set<Note>
     ): Boolean {
-        val lastTime = cache.load("Notification")
+        checkNotInMainThread()
+
+        val lastTime = account.loadLastRead("Notification")
 
         val newestItem = updateNewestItem(newNotes, account, NotificationFeedFilter(account))
 
@@ -180,24 +236,47 @@ object NotificationLatestItem : LatestItem() {
 object MessagesLatestItem : LatestItem() {
     fun hasNewItems(
         account: Account,
-        cache: NotificationCache,
         newNotes: Set<Note>
     ): Boolean {
+        checkNotInMainThread()
+
+        // Checks if the current newest item is still unread.
+        // If so, there is no need to check anything else
+        if (isNew(getNewestItem(account), account)) {
+            return true
+        }
+
+        clearNewestItem(account)
+
+        // gets the newest of the unread items
         val newestItem = updateNewestItem(newNotes, account, ChatroomListKnownFeedFilter(account))
 
-        val roomUserHex = (newestItem?.event as? PrivateDmEvent)?.talkingWith(account.userProfile().pubkeyHex)
-
-        val lastTime = cache.load("Room/$roomUserHex")
-
-        return (newestItem?.createdAt() ?: 0) > lastTime
+        return isNew(newestItem, account)
     }
 
-    override fun filterMore(newItems: Set<Note>): Set<Note> {
-        return newItems.filter { it.event is PrivateDmEvent }.toSet()
+    fun isNew(it: Note?, account: Account): Boolean {
+        if (it == null) return false
+
+        val currentUser = account.userProfile().pubkeyHex
+        val room = (it.event as? PrivateDmEvent)?.talkingWith(currentUser)
+        return if (room != null) {
+            val lastRead = account.loadLastRead("Room/$room")
+            (it.createdAt() ?: 0) > lastRead
+        } else {
+            false
+        }
     }
 
-    override fun filterMore(newItems: List<Note>): List<Note> {
-        return newItems.filter { it.event is PrivateDmEvent }
+    override fun filterMore(newItems: Set<Note>, account: Account): Set<Note> {
+        return newItems.filter {
+            isNew(it, account)
+        }.toSet()
+    }
+
+    override fun filterMore(newItems: List<Note>, account: Account): List<Note> {
+        return newItems.filter {
+            isNew(it, account)
+        }
     }
 }
 

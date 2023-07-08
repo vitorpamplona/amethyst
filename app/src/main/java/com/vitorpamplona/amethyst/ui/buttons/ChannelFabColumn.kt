@@ -16,12 +16,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.JoinUserOrChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChannelFabColumn(account: Account, nav: (String) -> Unit) {
+fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var isOpen by remember {
         mutableStateOf(false)
     }
@@ -35,11 +35,11 @@ fun ChannelFabColumn(account: Account, nav: (String) -> Unit) {
     }
 
     if (wantsToCreateChannel) {
-        NewChannelView({ wantsToCreateChannel = false }, account = account)
+        NewChannelView({ wantsToCreateChannel = false }, accountViewModel = accountViewModel)
     }
 
     if (wantsToJoinChannelOrUser) {
-        JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, account = account, nav = nav)
+        JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, accountViewModel = accountViewModel, nav = nav)
     }
 
     Column() {

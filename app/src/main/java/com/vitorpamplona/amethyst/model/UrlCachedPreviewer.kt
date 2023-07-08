@@ -1,23 +1,23 @@
 package com.vitorpamplona.amethyst.model
 
+import android.util.LruCache
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.previews.BahaUrlPreview
 import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 
+@Stable
 object UrlCachedPreviewer {
-    var cache = mapOf<String, UrlInfoItem>()
-        private set
-    var failures = mapOf<String, Throwable>()
+    var cache = LruCache<String, UrlPreviewState>(100)
         private set
 
-    fun previewInfo(url: String, callback: IUrlPreviewCallback? = null) {
+    fun previewInfo(url: String, onReady: (UrlPreviewState) -> Unit) {
+        checkNotInMainThread()
+
         cache[url]?.let {
-            callback?.onComplete(it)
-            return
-        }
-
-        failures[url]?.let {
-            callback?.onFailed(it)
+            onReady(it)
             return
         }
 
@@ -25,13 +25,32 @@ object UrlCachedPreviewer {
             url,
             object : IUrlPreviewCallback {
                 override fun onComplete(urlInfo: UrlInfoItem) {
-                    cache = cache + Pair(url, urlInfo)
-                    callback?.onComplete(urlInfo)
+                    cache[url]?.let {
+                        if (it is UrlPreviewState.Loaded || it is UrlPreviewState.Empty) {
+                            onReady(it)
+                            return
+                        }
+                    }
+
+                    val state = if (urlInfo.allFetchComplete() && urlInfo.url == url) {
+                        UrlPreviewState.Loaded(urlInfo)
+                    } else {
+                        UrlPreviewState.Empty
+                    }
+
+                    cache.put(url, state)
+                    onReady(state)
                 }
 
                 override fun onFailed(throwable: Throwable) {
-                    failures = failures + Pair(url, throwable)
-                    callback?.onFailed(throwable)
+                    cache[url]?.let {
+                        onReady(it)
+                        return
+                    }
+
+                    val state = UrlPreviewState.Error(throwable.message ?: "Error Loading url preview")
+                    cache.put(url, state)
+                    onReady(state)
                 }
             }
         ).fetchUrlPreview()

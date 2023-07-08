@@ -3,21 +3,29 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
 
-object UserProfileFollowsFeedFilter : FeedFilter<User>() {
-    lateinit var account: Account
-    var user: User? = null
+class UserProfileFollowsFeedFilter(val user: User, val account: Account) : FeedFilter<User>() {
 
-    fun loadUserProfile(accountLoggedIn: Account, user: User?) {
-        account = accountLoggedIn
-        this.user = user
+    override fun feedKey(): String {
+        return account.userProfile()?.pubkeyHex + "-" + user.pubkeyHex
     }
 
+    val cache: MutableMap<ContactListEvent, List<User>> = mutableMapOf()
+
     override fun feed(): List<User> {
-        return user?.latestContactList?.unverifiedFollowKeySet()?.mapNotNull {
-            LocalCache.checkGetOrCreateUser(it)
-        }?.toSet()
-            ?.filter { account.isAcceptable(it) }
+        val contactList = user.latestContactList ?: return emptyList()
+
+        val previousList = cache[contactList]
+        if (previousList != null) return previousList
+
+        cache[contactList] = user.latestContactList
+            ?.unverifiedFollowKeySet()?.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it)
+            }?.toSet()
+            ?.filter { !account.isHidden(it) }
             ?.reversed() ?: emptyList()
+
+        return cache[contactList] ?: emptyList()
     }
 }

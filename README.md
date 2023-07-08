@@ -4,6 +4,11 @@
 
 Amethyst brings the best social network to your Android phone. Just insert your Nostr private key and start posting. 
 
+[<img src="./docs/design/obtainium.png"
+alt="Get it on Obtaininum"
+height="80">](https://github.com/ImranR98/Obtainium)
+[<img src="https://github.com/machiav3lli/oandbackupx/raw/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub"
+height="80">](https://github.com/vitorpamplona/amethyst/releases)
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
      height="80">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
@@ -11,15 +16,15 @@ Amethyst brings the best social network to your Android phone. Just insert your 
      alt="Get it on Google Play"
      height="80">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
-Or get the latest APK from the [Releases Section](https://github.com/vitorpamplona/amethyst/releases/latest).
-
 # Current Features
 
 - [x] Event Builders / WebSocket Subscriptions (NIP-01)
 - [x] Home Feed
 - [x] Notifications Feed
 - [x] Global Feed
-- [x] Reactions (likes NIP-25, boost, reply)
+- [x] Replies and mentions (NIP-10)
+- [x] Reactions (NIP-25)
+- [x] Reposts (NIP-18)
 - [x] Image/Video/Url/LnInvoice Previews
 - [x] View Threads
 - [x] Private Messages (NIP-04)
@@ -56,19 +61,26 @@ Or get the latest APK from the [Releases Section](https://github.com/vitorpamplo
 - [x] Relay Authentication (NIP-42)
 - [x] Content stored in relays themselves (NIP-95)
 - [x] Custom Emoji (NIP-30)
+- [x] Zap Forwarding (NIP-57)
 - [x] Text Note References (NIP-27)
 - [x] Audio Tracks (zapstr.live) (NIP-TBD)
 - [x] Push Notifications (Zaps and Messages)
 - [x] Generic Tags (NIP-12)
 - [x] Sensitive Content (NIP-36)
+- [x] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
+- [x] Recommended Application Handlers (NIP-89)
+- [x] Events with a Subject (NIP-14)
+- [x] Generic Reposts (kind:16)
+- [x] Live Activities & Live Chats (NIP-53)
+- [x] Relay Pages (NIP-11)
+- [x] HTTP Auth (NIP-98)
+- [x] Zapraiser (NIP-TBD)
+- [x] Moderated Communities (NIP-172)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
-- [ ] Local Database 
-- [ ] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
+- [ ] Local Database
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
-- [ ] Relay Pages (NIP-11)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
-- [ ] Events with a Subject (NIP-14)
 - [ ] Workspaces
 - [ ] Expiration Support (NIP-40)
 - [ ] Infinity Scroll
@@ -182,6 +194,12 @@ Information that you share is publicly visible to anyone reading from relays tha
 
 ## Information Permanence ##
 Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee deleting or editing any content once posted. 
+
+# Screenshots
+
+| Home Feed                                 | Messages                                     | Live Streams                                    | Notifications                                          |
+|-------------------------------------------|----------------------------------------------|-------------------------------------------------|--------------------------------------------------------|
+| ![Home Feed](./docs/screenshots/home.png) | ![Messages](./docs/screenshots/messages.png) | ![Live Streams](./docs/screenshots/replies.png) | ![Notifications](./docs/screenshots/notifications.png) |
 
 # Contributing
 

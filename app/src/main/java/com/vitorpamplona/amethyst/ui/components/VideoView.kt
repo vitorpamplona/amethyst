@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Context
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -27,7 +25,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +44,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.imageLoader
@@ -55,31 +52,20 @@ import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.exoplayer2.upstream.DataSource
 import com.vitorpamplona.amethyst.VideoCache
+import com.vitorpamplona.amethyst.service.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 public var DefaultMutedSetting = mutableStateOf(true)
-
-@Composable
-fun VideoView(localFile: File?, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    if (localFile != null) {
-        val video = remember(localFile) { localFile.toUri() }
-
-        VideoView(video, description, null, onDialog)
-    }
-}
-
-@Composable
-fun VideoView(videoUri: String, description: String? = null, onDialog: ((Boolean) -> Unit)? = null) {
-    val video = remember(videoUri) { Uri.parse(videoUri) }
-
-    VideoView(video, description, null, onDialog)
-}
 
 @Composable
 fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thumbUri: String, onDialog: ((Boolean) -> Unit)? = null) {
@@ -106,81 +92,148 @@ fun LoadThumbAndThenVideoView(videoUri: String, description: String? = null, thu
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            val video = remember(videoUri) { Uri.parse(videoUri) }
-
-            VideoView(video, description, loadingFinished.second, onDialog)
+            VideoView(videoUri, description, VideoThumb(loadingFinished.second), onDialog)
         } else {
-            VideoView(videoUri, description, onDialog)
+            VideoView(videoUri, description, null, onDialog)
         }
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
-fun VideoView(videoUri: Uri, description: String? = null, thumb: Drawable? = null, onDialog: ((Boolean) -> Unit)? = null) {
+fun VideoView(
+    videoUri: String,
+    description: String? = null,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    val (value, elapsed) = measureTimedValue {
+        VideoView1(videoUri, description, thumb, onDialog)
+    }
+    Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
+}
+
+@Composable
+fun VideoView1(
+    videoUri: String,
+    description: String? = null,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
+    val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
     val context = LocalContext.current
-    val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
-
-    val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
-
-    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
 
     LaunchedEffect(key1 = videoUri) {
-        if (exoPlayer == null) {
+        if (exoPlayerData == null) {
             launch(Dispatchers.Default) {
-                exoPlayer = ExoPlayer.Builder(context).build()
+                exoPlayerData = VideoPlayer(ExoPlayer.Builder(context).build())
             }
         }
     }
 
-    exoPlayer?.let {
-        val media = remember { MediaItem.Builder().setUri(videoUri).build() }
+    exoPlayerData?.let {
+        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog)
+    }
 
-        it.apply {
-            repeatMode = Player.REPEAT_MODE_ALL
-            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-            volume = if (mutedInstance.value) 0f else 1f
-            if (videoUri.scheme?.startsWith("file") == true) {
-                setMediaItem(media)
-            } else {
-                setMediaSource(
-                    ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
-                        media
-                    )
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayerData?.exoPlayer?.release()
+        }
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+@Composable
+fun VideoView(
+    videoUri: String,
+    description: String? = null,
+    exoPlayerData: VideoPlayer,
+    defaultToStart: Boolean = false,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    val (value, elapsed) = measureTimedValue {
+        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog)
+    }
+    Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
+}
+
+@Composable
+fun VideoView1(
+    videoUri: String,
+    description: String? = null,
+    exoPlayerData: VideoPlayer,
+    defaultToStart: Boolean = false,
+    thumb: VideoThumb? = null,
+    onDialog: ((Boolean) -> Unit)? = null
+) {
+    val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
+
+    val media = remember { MediaItem.Builder().setUri(videoUri).build() }
+
+    exoPlayerData.exoPlayer.apply {
+        repeatMode = Player.REPEAT_MODE_ALL
+        videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+        volume = if (defaultToStart) 0f else 1f
+        if (videoUri.startsWith("file")) {
+            setMediaItem(media)
+        } else if (videoUri.endsWith("m3u8")) {
+            // Should not use cache.
+            val dataSourceFactory: DataSource.Factory = OkHttpDataSource.Factory(HttpClient.getHttpClient())
+            setMediaSource(
+                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(
+                    media
                 )
-            }
-            prepare()
+            )
+        } else {
+            setMediaSource(
+                ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
+                    media
+                )
+            )
         }
-
-        RenderVideoPlayer(it, context, thumb, onDialog, mutedInstance)
+        prepare()
     }
+
+    RenderVideoPlayer(exoPlayerData, thumb, onDialog)
 
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    exoPlayer?.pause()
+                    exoPlayerData.exoPlayer.pause()
                 }
                 else -> {}
             }
         }
         val lifecycle = lifecycleOwner.value.lifecycle
-        lifecycle.addObserver(observer)
 
+        lifecycle.addObserver(observer)
         onDispose {
-            exoPlayer?.release()
             lifecycle.removeObserver(observer)
         }
     }
 }
 
+@Stable
+data class VideoPlayer(
+    val exoPlayer: ExoPlayer
+)
+
+@Stable
+data class VideoThumb(
+    val thumb: Drawable?
+)
+
 @Composable
 private fun RenderVideoPlayer(
-    exoPlayer: ExoPlayer,
-    context: Context,
-    thumb: Drawable?,
-    onDialog: ((Boolean) -> Unit)?,
-    mutedInstance: MutableState<Boolean>
+    playerData: VideoPlayer,
+    thumbData: VideoThumb?,
+    onDialog: ((Boolean) -> Unit)?
 ) {
+    val context = LocalContext.current
+
     BoxWithConstraints() {
         AndroidView(
             modifier = Modifier
@@ -188,27 +241,27 @@ private fun RenderVideoPlayer(
                 .defaultMinSize(minHeight = 70.dp)
                 .align(Alignment.Center)
                 .onVisibilityChanges { visible ->
-                    if (visible && !exoPlayer.isPlaying) {
-                        exoPlayer.play()
-                    } else if (!visible && exoPlayer.isPlaying) {
-                        exoPlayer.pause()
+                    if (visible && !playerData.exoPlayer.isPlaying) {
+                        playerData.exoPlayer.play()
+                    } else if (!visible && playerData.exoPlayer.isPlaying) {
+                        playerData.exoPlayer.pause()
                     }
                 },
             factory = {
                 StyledPlayerView(context).apply {
-                    player = exoPlayer
+                    player = playerData.exoPlayer
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     )
                     controllerAutoShow = false
-                    thumb?.let { defaultArtwork = thumb }
+                    thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
                         if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                     onDialog?.let { innerOnDialog ->
                         setFullscreenButtonClickListener {
-                            exoPlayer.pause()
+                            playerData.exoPlayer.pause()
                             innerOnDialog(it)
                         }
                     }
@@ -216,11 +269,10 @@ private fun RenderVideoPlayer(
             }
         )
 
-        MuteButton(mutedInstance) {
-            mutedInstance.value = !mutedInstance.value
-            DefaultMutedSetting.value = mutedInstance.value
+        MuteButton() { mute: Boolean ->
+            DefaultMutedSetting.value = mute
 
-            exoPlayer.volume = if (mutedInstance.value) 0f else 1f
+            playerData.exoPlayer.volume = if (mute) 0f else 1f
         }
     }
 }
@@ -255,7 +307,7 @@ fun LayoutCoordinates.isCompletelyVisible(view: View): Boolean {
 }
 
 @Composable
-private fun MuteButton(muted: MutableState<Boolean>, toggle: () -> Unit) {
+private fun MuteButton(toggle: (Boolean) -> Unit) {
     Box(
         remember {
             Modifier
@@ -272,11 +324,16 @@ private fun MuteButton(muted: MutableState<Boolean>, toggle: () -> Unit) {
                 .background(MaterialTheme.colors.background)
         )
 
+        val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
+
         IconButton(
-            onClick = toggle,
+            onClick = {
+                mutedInstance.value = !mutedInstance.value
+                toggle(mutedInstance.value)
+            },
             modifier = Modifier.size(50.dp)
         ) {
-            if (muted.value) {
+            if (mutedInstance.value) {
                 Icon(
                     imageVector = Icons.Default.VolumeOff,
                     "Hash Verified",

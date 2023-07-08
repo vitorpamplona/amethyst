@@ -28,6 +28,8 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.GetMediaActivityResultContract
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -99,21 +101,23 @@ private fun UploadBoxButton(
     }
 }
 
+val DefaultAnimationColors = listOf(
+    Color(0xFF5851D8),
+    Color(0xFF833AB4),
+    Color(0xFFC13584),
+    Color(0xFFE1306C),
+    Color(0xFFFD1D1D),
+    Color(0xFFF56040),
+    Color(0xFFF77737),
+    Color(0xFFFCAF45),
+    Color(0xFFFFDC80),
+    Color(0xFF5851D8)
+).toImmutableList()
+
 @Composable
 fun LoadingAnimation(
     indicatorSize: Dp = 20.dp,
-    circleColors: List<Color> = listOf(
-        Color(0xFF5851D8),
-        Color(0xFF833AB4),
-        Color(0xFFC13584),
-        Color(0xFFE1306C),
-        Color(0xFFFD1D1D),
-        Color(0xFFF56040),
-        Color(0xFFF77737),
-        Color(0xFFFCAF45),
-        Color(0xFFFFDC80),
-        Color(0xFF5851D8)
-    ),
+    circleColors: ImmutableList<Color> = DefaultAnimationColors,
     animationDuration: Int = 1000
 ) {
     val infiniteTransition = rememberInfiniteTransition()

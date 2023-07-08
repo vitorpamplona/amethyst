@@ -27,16 +27,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.NotificationCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -54,25 +55,31 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
-        var isNew by remember { mutableStateOf<Boolean>(false) }
+        val defaultBackgroundColor = MaterialTheme.colors.background
+        val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+        val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
         LaunchedEffect(key1 = likeSetCard) {
             scope.launch(Dispatchers.IO) {
-                isNew = likeSetCard.createdAt() > NotificationCache.load(routeForLastRead)
+                val isNew = likeSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
 
-                NotificationCache.markAsRead(routeForLastRead, likeSetCard.createdAt())
+                accountViewModel.account.markAsRead(routeForLastRead, likeSetCard.createdAt())
+
+                val newBackgroundColor = if (isNew) {
+                    newItemColor.compositeOver(defaultBackgroundColor)
+                } else {
+                    defaultBackgroundColor
+                }
+
+                if (backgroundColor.value != newBackgroundColor) {
+                    backgroundColor.value = newBackgroundColor
+                }
             }
-        }
-
-        val backgroundColor = if (isNew) {
-            MaterialTheme.colors.newItemBackgroundColor.compositeOver(MaterialTheme.colors.background)
-        } else {
-            MaterialTheme.colors.background
         }
 
         Column(
             modifier = Modifier
-                .background(backgroundColor)
+                .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
                         scope.launch {
@@ -123,7 +130,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f),
+                            color = MaterialTheme.colors.placeholderText,
                             maxLines = 1
                         )
 
@@ -135,7 +142,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                                tint = MaterialTheme.colors.placeholderText
                             )
 
                             NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

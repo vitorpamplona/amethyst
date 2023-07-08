@@ -14,8 +14,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 192
-        versionName "0.54.0"
+        versionCode 241
+        versionName "0.66.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -117,7 +117,7 @@ dependencies {
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
     // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.0'
+    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.1'
 
     // Nostr Base Protocol
     implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
@@ -130,7 +130,7 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
     // Json Serialization TODO: We might need to converge between gson and Jackson (we are usin both)
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.1'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
     // link preview
@@ -155,8 +155,6 @@ dependencies {
     // create blurhash
     implementation group: 'io.trbl', name: 'blurhash', version: '1.0.0'
 
-    // Rendering clickable text
-    implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
     // Permission to upload pictures:
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
 
@@ -168,9 +166,14 @@ dependencies {
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Markdown
-    implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
-    implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
-    implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
+    //implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
+    //implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
+    //implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
+
+    // Markdown (With fix for full-image bleeds)
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:main-SNAPSHOT')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material:main-SNAPSHOT')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:main-SNAPSHOT')
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'
@@ -179,7 +182,7 @@ dependencies {
     playImplementation 'com.google.mlkit:translate:17.0.1'
 
     // PushNotifications
-    playImplementation platform('com.google.firebase:firebase-bom:32.0.0')
+    playImplementation platform('com.google.firebase:firebase-bom:32.1.1')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Charts
@@ -191,8 +194,13 @@ dependencies {
     // immutable collections to avoid recomposition
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
 
+    // Video compression lib
+    implementation 'com.github.AbedElazizShe:LightCompressor:1.2.3'
+    // Image compression lib
+    implementation 'id.zelory:compressor:3.0.1'
+
     // Automatic memory leak detection
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
 
     // Local Database
     implementation "androidx.room:room-runtime:$room_version"

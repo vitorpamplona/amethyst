@@ -1,8 +1,11 @@
 package com.vitorpamplona.amethyst.service
 
+import android.os.Looper
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.SpyK
+import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -19,7 +22,12 @@ class Nip05VerifierTest {
     var nip05Verifier = Nip05Verifier()
 
     @Before
-    fun setUp() = MockKAnnotations.init(this)
+    fun setUp() {
+        mockkStatic(Looper::class)
+        every { Looper.myLooper() } returns mockk<Looper>()
+        every { Looper.getMainLooper() } returns mockk<Looper>()
+        MockKAnnotations.init(this)
+    }
 
     @Test
     fun `test with matching case on user name`() {

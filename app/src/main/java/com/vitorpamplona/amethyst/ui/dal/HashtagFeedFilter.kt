@@ -8,13 +8,10 @@ import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 
-object HashtagFeedFilter : AdditiveFeedFilter<Note>() {
-    lateinit var account: Account
-    var tag: String? = null
+class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFilter<Note>() {
 
-    fun loadHashtag(account: Account, tag: String?) {
-        this.account = account
-        this.tag = tag
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + tag
     }
 
     override fun feed(): List<Note> {

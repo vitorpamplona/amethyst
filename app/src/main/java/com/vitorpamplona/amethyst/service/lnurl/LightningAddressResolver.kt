@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.lnurl
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,6 +46,8 @@ class LightningAddressResolver() {
     }
 
     private suspend fun fetchLightningAddressJsonSuspend(lnaddress: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        checkNotInMainThread()
+
         val url = assembleUrl(lnaddress)
 
         if (url == null) {
@@ -52,28 +55,32 @@ class LightningAddressResolver() {
             return
         }
 
-        withContext(Dispatchers.IO) {
-            val request: Request = Request.Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                .url(url)
-                .build()
+        try {
+            withContext(Dispatchers.IO) {
+                val request: Request = Request.Builder()
+                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                    .url(url)
+                    .build()
 
-            client.newCall(request).enqueue(object : Callback {
-                override fun onResponse(call: Call, response: Response) {
-                    response.use {
-                        if (it.isSuccessful) {
-                            onSuccess(it.body.string())
-                        } else {
-                            onError("Could not resolve $lnaddress. Error: ${it.code}. Check if the server up and if the lightning address $lnaddress is correct")
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onResponse(call: Call, response: Response) {
+                        response.use {
+                            if (it.isSuccessful) {
+                                onSuccess(it.body.string())
+                            } else {
+                                onError("Could not resolve $lnaddress. Error: ${it.code}. Check if the server up and if the lightning address $lnaddress is correct")
+                            }
                         }
                     }
-                }
 
-                override fun onFailure(call: Call, e: java.io.IOException) {
-                    onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
-                    e.printStackTrace()
-                }
-            })
+                    override fun onFailure(call: Call, e: java.io.IOException) {
+                        onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
+                        e.printStackTrace()
+                    }
+                })
+            }
+        } catch (e: Exception) {
+            onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
         }
     }
 

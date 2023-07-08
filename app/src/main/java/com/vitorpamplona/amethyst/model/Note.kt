@@ -4,11 +4,13 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -28,7 +30,14 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
     override fun toNEvent() = address.toNAddr()
     override fun idDisplayNote() = idNote().toShortenHex()
     override fun address() = address
-    override fun createdAt() = (event as? LongTextNoteEvent)?.publishedAt() ?: event?.createdAt()
+    override fun createdAt(): Long? {
+        if (event == null) return null
+
+        val publishedAt = (event as? LongTextNoteEvent)?.publishedAt() ?: Long.MAX_VALUE
+        val lastCreatedAt = event?.createdAt() ?: Long.MAX_VALUE
+
+        return minOf(publishedAt, lastCreatedAt)
+    }
 }
 
 @Stable
@@ -42,7 +51,7 @@ open class Note(val idHex: String) {
     // These fields are updated every time an event related to this note is received.
     var replies = setOf<Note>()
         private set
-    var reactions = setOf<Note>()
+    var reactions = mapOf<String, Set<Note>>()
         private set
     var boosts = setOf<Note>()
         private set
@@ -68,13 +77,20 @@ open class Note(val idHex: String) {
     open fun idDisplayNote() = idNote().toShortenHex()
 
     fun channelHex(): HexKey? {
-        return (event as? ChannelMessageEvent)?.channel()
-            ?: (event as? ChannelMetadataEvent)?.channel()
-            ?: (event as? ChannelCreateEvent)?.id
-    }
-
-    fun channel(): Channel? {
-        return channelHex()?.let { LocalCache.checkGetOrCreateChannel(it) }
+        return if (event is ChannelMessageEvent ||
+            event is ChannelMetadataEvent ||
+            event is ChannelCreateEvent ||
+            event is LiveActivitiesChatMessageEvent ||
+            event is LiveActivitiesEvent
+        ) {
+            (event as? ChannelMessageEvent)?.channel()
+                ?: (event as? ChannelMetadataEvent)?.channel()
+                ?: (event as? ChannelCreateEvent)?.id
+                ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
+                ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
+        } else {
+            null
+        }
     }
 
     open fun address(): ATag? = null
@@ -99,7 +115,7 @@ open class Note(val idHex: String) {
      */
     fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
         val replyTo = replyTo
-        if (replyTo == null || replyTo.isEmpty()) {
+        if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
@@ -112,7 +128,7 @@ open class Note(val idHex: String) {
 
     fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {
         val replyTo = replyTo
-        if (replyTo == null || replyTo.isEmpty()) {
+        if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return 0
         }
 
@@ -137,8 +153,20 @@ open class Note(val idHex: String) {
         liveSet?.boosts?.invalidateData()
     }
     fun removeReaction(note: Note) {
-        reactions = reactions - note
-        liveSet?.reactions?.invalidateData()
+        val reaction = note.event?.content() ?: "+"
+
+        if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
+            reactions[reaction]?.let {
+                val newList = it.minus(note)
+                if (newList.isEmpty()) {
+                    reactions = reactions.minus(reaction)
+                } else {
+                    reactions = reactions + Pair(reaction, newList)
+                }
+
+                liveSet?.reactions?.invalidateData()
+            }
+        }
     }
 
     fun removeReport(deleteNote: Note) {
@@ -183,6 +211,7 @@ open class Note(val idHex: String) {
 
     @Synchronized
     fun addZap(zapRequest: Note, zap: Note?) {
+        checkNotInMainThread()
         if (zapRequest !in zaps.keys) {
             zaps = zaps + Pair(zapRequest, zap)
             liveSet?.zaps?.invalidateData()
@@ -194,6 +223,7 @@ open class Note(val idHex: String) {
 
     @Synchronized
     fun addZapPayment(zapPaymentRequest: Note, zapPayment: Note?) {
+        checkNotInMainThread()
         if (zapPaymentRequest !in zapPayments.keys) {
             zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
             liveSet?.zaps?.invalidateData()
@@ -204,8 +234,13 @@ open class Note(val idHex: String) {
     }
 
     fun addReaction(note: Note) {
-        if (note !in reactions) {
-            reactions = reactions + note
+        val reaction = note.event?.content() ?: "+"
+
+        if (reaction !in reactions.keys) {
+            reactions = reactions + Pair(reaction, setOf(note))
+            liveSet?.reactions?.invalidateData()
+        } else if (reactions[reaction]?.contains(note) == false) {
+            reactions = reactions + Pair(reaction, (reactions[reaction] ?: emptySet()) + note)
             liveSet?.reactions?.invalidateData()
         }
     }
@@ -244,8 +279,63 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isReactedBy(user: User): Boolean {
-        return reactions.any { it.author?.pubkeyHex == user.pubkeyHex }
+    fun publicZapAuthors(): Set<User> {
+        // Zaps who the requester was the user
+        return zaps.mapNotNull {
+            it.key.author
+        }.toSet()
+    }
+
+    fun publicZapAuthorHexes(): Set<HexKey> {
+        // Zaps who the requester was the user
+        return zaps.mapNotNull {
+            it.key.author?.pubkeyHex
+        }.toSet()
+    }
+
+    fun reactionAuthors(): Set<User> {
+        // Zaps who the requester was the user
+        return reactions.values.map {
+            it.mapNotNull { it.author }
+        }.flatten().toSet()
+    }
+
+    fun reactionAuthorHexes(): Set<HexKey> {
+        // Zaps who the requester was the user
+        return reactions.values.map {
+            it.mapNotNull { it.author?.pubkeyHex }
+        }.flatten().toSet()
+    }
+
+    fun replyAuthorHexes(): Set<HexKey> {
+        // Zaps who the requester was the user
+        return replies.mapNotNull {
+            it.author?.pubkeyHex
+        }.toSet()
+    }
+
+    fun replyAuthors(): Set<User> {
+        // Zaps who the requester was the user
+        return replies.mapNotNull {
+            it.author
+        }.toSet()
+    }
+
+    fun boostAuthors(): Set<User> {
+        // Zaps who the requester was the user
+        return boosts.mapNotNull {
+            it.author
+        }.toSet()
+    }
+
+    fun getReactionBy(user: User): String? {
+        return reactions.firstNotNullOfOrNull {
+            if (it.value.any { it.author?.pubkeyHex == user.pubkeyHex }) {
+                it.key
+            } else {
+                null
+            }
+        }
     }
 
     fun isBoostedBy(user: User): Boolean {
@@ -268,6 +358,10 @@ open class Note(val idHex: String) {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()
+    }
+
+    fun countReactions(): Int {
+        return reactions.values.sumOf { it.size }
     }
 
     fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
@@ -350,7 +444,14 @@ open class Note(val idHex: String) {
     }
 
     fun isNewThread(): Boolean {
-        return event is RepostEvent || replyTo == null || replyTo?.size == 0
+        return (
+            event is RepostEvent ||
+                event is GenericRepostEvent ||
+                replyTo == null ||
+                replyTo?.size == 0
+            ) &&
+            event !is ChannelMessageEvent &&
+            event !is LiveActivitiesChatMessageEvent
     }
 
     fun hasZapped(loggedIn: User): Boolean {
@@ -362,7 +463,11 @@ open class Note(val idHex: String) {
     }
 
     fun reactedBy(loggedIn: User, content: String): List<Note> {
-        return reactions.filter { it.author == loggedIn && it.event?.content() == content }
+        return reactions[content]?.filter { it.author == loggedIn && it.event?.content() == content } ?: emptyList()
+    }
+
+    fun reactedBy(loggedIn: User): List<String> {
+        return reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
     }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
@@ -372,6 +477,42 @@ open class Note(val idHex: String) {
 
     fun boostedBy(loggedIn: User): List<Note> {
         return boosts.filter { it.author == loggedIn }
+    }
+
+    fun moveAllReferencesTo(note: AddressableNote) {
+        // migrates these comments to a new version
+        replies.forEach {
+            note.addReply(it)
+            it.replyTo = it.replyTo?.updated(this, note)
+        }
+        reactions.forEach {
+            it.value.forEach {
+                note.addReaction(it)
+                it.replyTo = it.replyTo?.updated(this, note)
+            }
+        }
+        boosts.forEach {
+            note.addBoost(it)
+            it.replyTo = it.replyTo?.updated(this, note)
+        }
+        reports.forEach {
+            it.value.forEach {
+                note.addReport(it)
+                it.replyTo = it.replyTo?.updated(this, note)
+            }
+        }
+        zaps.forEach {
+            note.addZap(it.key, it.value)
+            it.key.replyTo = it.key.replyTo?.updated(this, note)
+            it.value?.replyTo = it.value?.replyTo?.updated(this, note)
+        }
+
+        replyTo = null
+        replies = emptySet()
+        reactions = emptyMap()
+        boosts = emptySet()
+        reports = emptyMap()
+        zaps = emptyMap()
     }
 
     var liveSet: NoteLiveSet? = null
@@ -414,13 +555,13 @@ class NoteLiveSet(u: Note) {
 
 class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     fun invalidateData() {
         bundler.invalidate() {
-            // if (hasObservers()) {
-            postValue(NoteState(note))
-            // }
+            if (hasActiveObservers()) {
+                postValue(NoteState(note))
+            }
         }
     }
 

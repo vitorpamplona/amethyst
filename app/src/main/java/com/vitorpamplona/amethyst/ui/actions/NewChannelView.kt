@@ -14,6 +14,7 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -24,13 +25,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
-fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = null) {
+fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: PublicChatChannel? = null) {
     val postViewModel: NewChannelViewModel = viewModel()
-    postViewModel.load(account, channel)
+    postViewModel.load(accountViewModel.account, channel)
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -53,10 +57,14 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                         onClose()
                     })
 
+                    val scope = rememberCoroutineScope()
+
                     PostButton(
                         onPost = {
-                            postViewModel.create()
-                            onClose()
+                            scope.launch(Dispatchers.IO) {
+                                postViewModel.create()
+                                onClose()
+                            }
                         },
                         postViewModel.channelName.value.text.isNotBlank()
                     )
@@ -72,7 +80,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                     placeholder = {
                         Text(
                             text = stringResource(R.string.my_awesome_group),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
@@ -91,7 +99,7 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
                     placeholder = {
                         Text(
                             text = "http://mygroup.com/logo.jpg",
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     }
                 )
@@ -100,13 +108,15 @@ fun NewChannelView(onClose: () -> Unit, account: Account, channel: Channel? = nu
 
                 OutlinedTextField(
                     label = { Text(text = stringResource(R.string.description)) },
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
                     value = postViewModel.channelDescription.value,
                     onValueChange = { postViewModel.channelDescription.value = it },
                     placeholder = {
                         Text(
                             text = stringResource(R.string.about_us),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.32f)
+                            color = MaterialTheme.colors.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(

@@ -34,6 +34,8 @@
     <string name="login_with_a_private_key_to_like_posts">Login with a Private key to like Posts</string>
     <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Login with a Private key to be able to send Zaps</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Login with a Private key to be able to Follow</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Login with a Private key to be able to Unfollow</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">View count</string>
     <string name="boost">Boost</string>
@@ -126,10 +128,10 @@
     <string name="unblock">Unblock</string>
     <string name="copy_user_id">Copy User ID</string>
     <string name="unblock_user">Unblock User</string>
-    <string name="npub_hex_username">"npub, hex, username "</string>
+    <string name="npub_hex_username">"npub, username, text"</string>
     <string name="clear">Clear</string>
     <string name="app_logo">App Logo</string>
-    <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
+    <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
     <string name="show_password">Show Password</string>
     <string name="hide_password">Hide Password</string>
     <string name="invalid_key">Invalid key</string>
@@ -338,6 +340,9 @@
     <string name="upload_server_nostrfilesdev">nostrfiles.dev - trusted</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev can modify the file</string>
 
+    <string name="upload_server_nostrcheckme">nostrcheck.me - trusted</string>
+    <string name="upload_server_nostrcheckme_explainer">nostrcheck.me can modify the file</string>
+
 
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
@@ -350,6 +355,11 @@
 
     <string name="upload_server_nostrfilesdev_nip94">Verifiable Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">Checks if Nostrfiles.dev modified the file. New NIP: other clients might not see it</string>
+
+    <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Checks if Nostrcheck.me modified the file. New NIP: other clients might not see it</string>
+
+
 
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
@@ -410,4 +420,64 @@
     <string name="content_warning_hide_all_sensitive_content">Always hide sensitive content</string>
     <string name="content_warning_show_all_sensitive_content">Always show sensitive content</string>
     <string name="content_warning_see_warnings">Always show content warnings</string>
+
+    <string name="recommended_apps">Recommends: </string>
+    <string name="filter_spam_from_strangers">Filter spam from strangers</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">Warn when posts have reports from your follows</string>
+
+    <string name="new_reaction_symbol">New Reaction Symbol</string>
+    <string name="no_reaction_type_setup_long_press_to_change">No reaction types selected. Long Press to change</string>
+
+    <string name="zapraiser">Zapraiser</string>
+    <string name="zapraiser_explainer">Adds a target amount of sats to raise for this post. Supporting clients may show this as a progress bar to incentivize donations</string>
+    <string name="zapraiser_target_amount_in_sats">Target Amount in Sats</string>
+
+    <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats to goal</string>
+    <string name="read_from_relay">Read from Relay</string>
+    <string name="write_to_relay">Write to Relay</string>
+    <string name="an_error_ocurred_trying_to_get_relay_information">An error ocurred trying to get relay information from %1$s</string>
+    <string name="owner">Owner</string>
+    <string name="version">Version</string>
+    <string name="software">Software</string>
+    <string name="contact">Contact</string>
+    <string name="supports">Supported NIPs</string>
+    <string name="admission_fees">Admission Fees</string>
+    <string name="payments_url">Payments url</string>
+    <string name="limitations">Limitations</string>
+    <string name="countries">Countries</string>
+    <string name="languages">Languages</string>
+    <string name="tags">Tags</string>
+    <string name="posting_policy">Posting policy</string>
+    <string name="message_length">Message length</string>
+    <string name="subscriptions">Subscriptions</string>
+    <string name="filters">Filters</string>
+    <string name="subscription_id_length">Subscription id length</string>
+    <string name="minimum_prefix">Minimum prefix</string>
+    <string name="maximum_event_tags">Maximum event tags</string>
+    <string name="content_length">Content length</string>
+    <string name="minimum_pow">Minimum PoW</string>
+    <string name="auth">Auth</string>
+    <string name="payment">Payment</string>
+    <string name="cashu">Cashu Token</string>
+    <string name="cashu_redeem">Redeem</string>
+
+    <string name="live_stream_live_tag">LIVE</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
+    <string name="live_stream_ended_tag">ENDED</string>
+    <string name="live_stream_planned_tag">SCHEDULED</string>
+
+    <string name="live_stream_is_offline">Livestream is Offline</string>
+    <string name="live_stream_has_ended">Livestream Ended</string>
+    <string name="are_you_sure_you_want_to_log_out">Logging out deletes all your local information. Make sure to have your private keys backed up to avoid losing your account. Do you want to continue?</string>
+    <string name="followed_tags">Followed Tags</string>
+
+    <string name="relay_setup">Relays</string>
+
+    <string name="discover_live">Live</string>
+    <string name="discover_community">Community</string>
+    <string name="discover_chat">Chats</string>
+    <string name="community_approved_posts">Approved Posts</string>
+
+    <string name="groups_no_descriptor">This group does not have a description or rules. Talk to the owner to add one</string>
+    <string name="community_no_descriptor">This community does not have a description. Talk to the owner to add one</string>
 </resources>

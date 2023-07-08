@@ -2,56 +2,71 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import android.util.Patterns
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Icon
+import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.google.accompanist.flowlayout.FlowRow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.em
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
-import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material.MaterialRichText
-import com.halilibo.richtext.ui.resolveDefaults
-import com.linkedin.urls.detection.UrlDetector
-import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
-import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
+import com.vitorpamplona.amethyst.service.BechSegment
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.CashuSegment
+import com.vitorpamplona.amethyst.service.EmailSegment
+import com.vitorpamplona.amethyst.service.EmojiSegment
+import com.vitorpamplona.amethyst.service.HashIndexEventSegment
+import com.vitorpamplona.amethyst.service.HashIndexUserSegment
+import com.vitorpamplona.amethyst.service.HashTagSegment
+import com.vitorpamplona.amethyst.service.ImageSegment
+import com.vitorpamplona.amethyst.service.InvoiceSegment
+import com.vitorpamplona.amethyst.service.LinkSegment
+import com.vitorpamplona.amethyst.service.PhoneSegment
+import com.vitorpamplona.amethyst.service.RegularTextSegment
+import com.vitorpamplona.amethyst.service.RichTextViewerState
+import com.vitorpamplona.amethyst.service.SchemelessUrlSegment
+import com.vitorpamplona.amethyst.service.Segment
+import com.vitorpamplona.amethyst.service.WithdrawSegment
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Font17SP
+import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
+import com.vitorpamplona.amethyst.ui.theme.markdownStyle
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.uriToRoute
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.net.MalformedURLException
@@ -60,16 +75,10 @@ import java.net.URL
 import java.util.regex.Pattern
 
 val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
-val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3")
-
-// Group 1 = url, group 4 additional chars
-val noProtocolUrlValidator = Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
+val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
 
 val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
-
-val mentionsPattern: Pattern = Pattern.compile("@([A-Za-z0-9_\\-]+)")
 val hashTagsPattern: Pattern = Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
-val urlPattern: Pattern = Patterns.WEB_URL
 
 fun isValidURL(url: String?): Boolean {
     return try {
@@ -81,8 +90,6 @@ fun isValidURL(url: String?): Boolean {
         false
     }
 }
-
-val richTextDefaults = RichTextStyle().resolveDefaults()
 
 fun isMarkdown(content: String): Boolean {
     return content.startsWith("> ") ||
@@ -97,335 +104,252 @@ fun isMarkdown(content: String): Boolean {
 fun RichTextViewer(
     content: String,
     canPreview: Boolean,
-    modifier: Modifier = Modifier,
-    tags: List<List<String>>?,
-    backgroundColor: Color,
+    modifier: Modifier,
+    tags: ImmutableListOfLists<String>,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isMarkdown = remember(content) { isMarkdown(content) }
-
     Column(modifier = modifier) {
-        if (isMarkdown) {
-            RenderContentAsMarkdown(content, backgroundColor, tags, nav)
+        if (remember(content) { isMarkdown(content) }) {
+            RenderContentAsMarkdown(content, tags, nav)
         } else {
             RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
         }
     }
 }
 
-@Stable
-class RichTextViewerState(
-    val content: String,
-    val urlSet: ImmutableSet<String>,
-    val imagesForPager: ImmutableMap<String, ZoomableUrlContent>,
-    val imageList: ImmutableList<ZoomableUrlContent>,
-    val customEmoji: ImmutableMap<String, String>
-)
-
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RenderRegular(
     content: String,
-    tags: List<List<String>>?,
+    tags: ImmutableListOfLists<String>,
     canPreview: Boolean,
-    backgroundColor: Color,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var state by remember(content) {
-        mutableStateOf(
-            RichTextViewerState(
-                content,
-                persistentSetOf(),
-                persistentMapOf(),
-                persistentListOf(),
-                persistentMapOf()
-            )
-        )
+    val state by remember(content) {
+        mutableStateOf(CachedRichTextParser.parseText(content, tags))
     }
 
-    LaunchedEffect(key1 = content) {
-        launch(Dispatchers.IO) {
-            val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
-            val urlSet = urls.mapTo(LinkedHashSet(urls.size)) { it.originalUrl }
-            val imagesForPager = urlSet.mapNotNull { fullUrl ->
-                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableUrlImage(fullUrl)
-                } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    ZoomableUrlVideo(fullUrl)
-                } else {
-                    null
-                }
-            }.associateBy { it.url }
-            val imageList = imagesForPager.values.toList()
+    val currentTextStyle = LocalTextStyle.current
 
-            val emojiMap = tags?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
-
-            if (urlSet.isNotEmpty() || emojiMap.isNotEmpty()) {
-                state = RichTextViewerState(
-                    content,
-                    urlSet.toImmutableSet(),
-                    imagesForPager.toImmutableMap(),
-                    imageList.toImmutableList(),
-                    emojiMap.toImmutableMap()
-                )
-            }
+    val textStyle = currentTextStyle.copy(
+        textDirection = TextDirection.Content,
+        lineHeight = 1.4.em,
+        color = currentTextStyle.color.takeOrElse {
+            LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
         }
-    }
+    )
 
-    // FlowRow doesn't work well with paragraphs. So we need to split them
-    content.split('\n').forEach { paragraph ->
-        FlowRow() {
-            val s = remember(paragraph) {
-                if (isArabic(paragraph)) {
-                    paragraph.trim().split(' ').reversed()
-                } else {
-                    paragraph.trim().split(' ')
+    MeasureSpaceWidth() { spaceWidth ->
+        Column {
+            if (canPreview) {
+                // FlowRow doesn't work well with paragraphs. So we need to split them
+                state.paragraphs.forEach { paragraph ->
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(spaceWidth)) {
+                        paragraph.forEach { word ->
+                            RenderWordWithPreview(
+                                word,
+                                state,
+                                backgroundColor,
+                                textStyle,
+                                accountViewModel,
+                                nav
+                            )
+                        }
+                    }
                 }
-            }
-            s.forEach { word: String ->
-                RenderWord(word, state, canPreview, backgroundColor, accountViewModel, nav, tags)
+            } else {
+                // FlowRow doesn't work well with paragraphs. So we need to split them
+                state.paragraphs.forEach { paragraph ->
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(spaceWidth)) {
+                        paragraph.forEach { word ->
+                            RenderWordWithoutPreview(
+                                word,
+                                state,
+                                backgroundColor,
+                                textStyle,
+                                accountViewModel,
+                                nav
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RenderWord(
-    word: String,
-    state: RichTextViewerState,
-    canPreview: Boolean,
-    backgroundColor: Color,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    tags: List<List<String>>?
+fun MeasureSpaceWidth(
+    content: @Composable (measuredWidth: Dp) -> Unit
 ) {
-    val wordSpace = remember {
-        "$word "
-    }
+    SubcomposeLayout { constraints ->
+        val measuredWidth = subcompose("viewToMeasure", { Text(" ") })[0].measure(Constraints()).width.toDp()
 
-    if (canPreview) {
-        // Explicit URL
-        val img = state.imagesForPager[word]
-        if (img != null) {
-            ZoomableContentView(img, state.imageList)
-        } else if (state.urlSet.contains(word)) {
-            UrlPreview(word, wordSpace)
-        } else if (state.customEmoji.any { word.contains(it.key) }) {
-            RenderCustomEmoji(word, state.customEmoji)
-        } else if (word.startsWith("lnbc", true)) {
-            MayBeInvoicePreview(word)
-        } else if (word.startsWith("lnurl", true)) {
-            MayBeWithdrawal(word)
-        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-            ClickableEmail(word)
-        } else if (word.length > 6 && Patterns.PHONE.matcher(word).matches()) {
-            ClickablePhone(word)
-        } else if (isBechLink(word)) {
-            BechLink(
-                word,
-                canPreview,
-                backgroundColor,
-                accountViewModel,
-                nav
-            )
-        } else if (word.startsWith("#")) {
-            if (tagIndex.matcher(word).matches() && tags != null) {
-                TagLink(
-                    word,
-                    tags,
-                    canPreview,
-                    backgroundColor,
-                    accountViewModel,
-                    nav
-                )
-            } else if (hashTagsPattern.matcher(word).matches()) {
-                HashTag(word, nav)
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else if (noProtocolUrlValidator.matcher(word).matches()) {
-            val matcher = noProtocolUrlValidator.matcher(word)
-            matcher.find()
-            val url = matcher.group(1) // url
-            val additionalChars = matcher.group(4) ?: "" // additional chars
-
-            if (url != null) {
-                ClickableUrl(url, "https://$url")
-                Text("$additionalChars ")
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else {
-            Text(
-                text = wordSpace,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
-        }
-    } else {
-        if (state.urlSet.contains(word)) {
-            ClickableUrl(wordSpace, word)
-        } else if (word.startsWith("lnurl", true)) {
-            val lnWithdrawal = LnWithdrawalUtil.findWithdrawal(word)
-            if (lnWithdrawal != null) {
-                ClickableWithdrawal(withdrawalString = lnWithdrawal)
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else if (state.customEmoji.any { word.contains(it.key) }) {
-            RenderCustomEmoji(word, state.customEmoji)
-        } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-            ClickableEmail(word)
-        } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-            ClickablePhone(word)
-        } else if (isBechLink(word)) {
-            BechLink(
-                word,
-                canPreview,
-                backgroundColor,
-                accountViewModel,
-                nav
-            )
-        } else if (word.startsWith("#")) {
-            if (tagIndex.matcher(word).matches() && tags != null) {
-                TagLink(
-                    word,
-                    tags,
-                    canPreview,
-                    backgroundColor,
-                    accountViewModel,
-                    nav
-                )
-            } else if (hashTagsPattern.matcher(word).matches()) {
-                HashTag(word, nav)
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else if (noProtocolUrlValidator.matcher(word).matches()) {
-            val matcher = noProtocolUrlValidator.matcher(word)
-            matcher.find()
-            val url = matcher.group(1) // url
-            val additionalChars = matcher.group(4) ?: "" // additional chars
-
-            if (url != null) {
-                ClickableUrl(url, "https://$url")
-                Text("$additionalChars ")
-            } else {
-                Text(
-                    text = wordSpace,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        } else {
-            Text(
-                text = wordSpace,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
+        val contentPlaceable = subcompose("content") {
+            content(measuredWidth)
+        }[0].measure(constraints)
+        layout(contentPlaceable.width, contentPlaceable.height) {
+            contentPlaceable.place(0, 0)
         }
     }
 }
 
 @Composable
-fun RenderCustomEmoji(word: String, customEmoji: Map<String, String>) {
+private fun RenderWordWithoutPreview(
+    word: Segment,
+    state: RichTextViewerState,
+    backgroundColor: MutableState<Color>,
+    style: TextStyle,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    when (word) {
+        // Don't preview Images
+        is ImageSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+        // Don't offer to pay invoices
+        is InvoiceSegment -> NormalWord(word.segmentText, style)
+        // Don't offer to withdraw
+        is WithdrawSegment -> NormalWord(word.segmentText, style)
+        is CashuSegment -> NormalWord(word.segmentText, style)
+        is EmailSegment -> ClickableEmail(word.segmentText)
+        is PhoneSegment -> ClickablePhone(word.segmentText)
+        is BechSegment -> BechLink(word.segmentText, false, backgroundColor, accountViewModel, nav)
+        is HashTagSegment -> HashTag(word, nav)
+        is HashIndexUserSegment -> TagLink(word, nav)
+        is HashIndexEventSegment -> TagLink(word, false, backgroundColor, accountViewModel, nav)
+        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+        is RegularTextSegment -> NormalWord(word.segmentText, style)
+    }
+}
+
+@Composable
+private fun RenderWordWithPreview(
+    word: Segment,
+    state: RichTextViewerState,
+    backgroundColor: MutableState<Color>,
+    style: TextStyle,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    when (word) {
+        is ImageSegment -> ZoomableContentView(word.segmentText, state)
+        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText)
+        is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+        is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+        is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+        is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+        is EmailSegment -> ClickableEmail(word.segmentText)
+        is PhoneSegment -> ClickablePhone(word.segmentText)
+        is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+        is HashTagSegment -> HashTag(word, nav)
+        is HashIndexUserSegment -> TagLink(word, nav)
+        is HashIndexEventSegment -> TagLink(word, true, backgroundColor, accountViewModel, nav)
+        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+        is RegularTextSegment -> NormalWord(word.segmentText, style)
+    }
+}
+
+@Composable
+private fun ZoomableContentView(word: String, state: RichTextViewerState) {
+    state.imagesForPager[word]?.let {
+        ZoomableContentView(it, state.imageList)
+    }
+}
+
+@Composable
+private fun NormalWord(word: String, style: TextStyle) {
+    BasicText(
+        text = word,
+        style = style
+    )
+}
+
+@Composable
+private fun NoProtocolUrlRenderer(word: SchemelessUrlSegment) {
+    RenderUrl(word)
+}
+
+@Composable
+private fun RenderUrl(segment: SchemelessUrlSegment) {
+    Row() {
+        ClickableUrl(segment.url, "https://${segment.url}")
+        segment.extras?.let { it1 -> Text(it1) }
+    }
+}
+
+@Composable
+fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
     CreateTextWithEmoji(
-        text = "$word ",
-        emojis = customEmoji
+        text = word,
+        emojis = state.customEmoji
     )
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, backgroundColor: Color, tags: List<List<String>>?, nav: (String) -> Unit) {
-    val myMarkDownStyle = richTextDefaults.copy(
-        codeBlockStyle = richTextDefaults.codeBlockStyle?.copy(
-            textStyle = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp
-            ),
-            modifier = Modifier
-                .padding(0.dp)
-                .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(15.dp))
-                .border(
-                    1.dp,
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                    RoundedCornerShape(15.dp)
-                )
-                .background(
-                    MaterialTheme.colors.onSurface
-                        .copy(alpha = 0.05f)
-                        .compositeOver(backgroundColor)
-                )
-        ),
-        stringStyle = richTextDefaults.stringStyle?.copy(
-            linkStyle = SpanStyle(
-                color = MaterialTheme.colors.primary
-            ),
-            codeStyle = SpanStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                background = MaterialTheme.colors.onSurface.copy(alpha = 0.22f)
-                    .compositeOver(backgroundColor)
-            )
-        )
-    )
+private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
+    val uri = LocalUriHandler.current
+    val onClick = remember {
+        { link: String ->
+            val route = uriToRoute(link)
+            if (route != null) {
+                nav(route)
+            } else {
+                runCatching { uri.openUri(link) }
+            }
+            Unit
+        }
+    }
 
-    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(null) }
+    ProvideTextStyle(MarkdownTextStyle) {
+        MaterialRichText(
+            style = MaterialTheme.colors.markdownStyle
+        ) {
+            RefreshableContent(content, tags) {
+                Markdown(
+                    content = it,
+                    markdownParseOptions = MarkdownParseOptions.Default,
+                    onLinkClicked = onClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RefreshableContent(content: String, tags: ImmutableListOfLists<String>?, onCompose: @Composable (String) -> Unit) {
+    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(content) }
+
+    ObserverAllNIP19References(content, tags) {
+        val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
+        if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
+            markdownWithSpecialContent = newMarkdownWithSpecialContent
+        }
+    }
+
+    markdownWithSpecialContent?.let {
+        onCompose(it)
+    }
+}
+
+@Composable
+fun ObserverAllNIP19References(content: String, tags: ImmutableListOfLists<String>?, onRefresh: () -> Unit) {
     var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
-    var refresh by remember(content) { mutableStateOf(0) }
 
     LaunchedEffect(key1 = content) {
         launch(Dispatchers.IO) {
             nip19References = returnNIP19References(content, tags)
-            markdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
-        }
-    }
-
-    LaunchedEffect(key1 = refresh) {
-        launch(Dispatchers.IO) {
-            val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
-            if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
-                markdownWithSpecialContent = newMarkdownWithSpecialContent
-            }
+            onRefresh()
         }
     }
 
     nip19References.forEach {
-        ObserveNIP19(it) {
-            refresh++
-        }
-    }
-
-    val uri = LocalUriHandler.current
-
-    markdownWithSpecialContent?.let {
-        MaterialRichText(
-            style = myMarkDownStyle
-        ) {
-            Markdown(
-                content = it,
-                markdownParseOptions = MarkdownParseOptions.Default
-            ) { link ->
-                val route = uriToRoute(link)
-                if (route != null) {
-                    nav(route)
-                } else {
-                    runCatching { uri.openUri(link) }
-                }
-            }
-        }
+        ObserveNIP19(it, onRefresh)
     }
 }
 
@@ -446,26 +370,35 @@ private fun ObserveNIP19Event(
     it: Nip19.Return,
     onRefresh: () -> Unit
 ) {
-    var baseNote by remember(it) { mutableStateOf<Note?>(null) }
+    var baseNote by remember(it) { mutableStateOf<Note?>(LocalCache.getNoteIfExists(it.hex)) }
 
-    LaunchedEffect(key1 = it.hex) {
-        launch(Dispatchers.IO) {
-            if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                    baseNote = note
+    if (baseNote == null) {
+        LaunchedEffect(key1 = it.hex) {
+            launch(Dispatchers.IO) {
+                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                        launch(Dispatchers.Main) { baseNote = note }
+                    }
                 }
             }
         }
     }
 
     baseNote?.let { note ->
-        val noteState by note.live().metadata.observeAsState()
+        ObserveNote(note, onRefresh)
+    }
+}
 
-        LaunchedEffect(key1 = noteState) {
-            if (noteState?.note?.event != null) {
-                launch(Dispatchers.IO) {
-                    onRefresh()
-                }
+@Composable
+fun ObserveNote(note: Note, onRefresh: () -> Unit) {
+    val loadedNoteId by note.live().metadata.map {
+        it.note.event?.id()
+    }.distinctUntilChanged().observeAsState(note.event?.id())
+
+    LaunchedEffect(key1 = loadedNoteId) {
+        if (loadedNoteId != null) {
+            launch(Dispatchers.IO) {
+                onRefresh()
             }
         }
     }
@@ -476,32 +409,41 @@ private fun ObserveNIP19User(
     it: Nip19.Return,
     onRefresh: () -> Unit
 ) {
-    var baseUser by remember(it) { mutableStateOf<User?>(null) }
+    var baseUser by remember(it) { mutableStateOf<User?>(LocalCache.getUserIfExists(it.hex)) }
 
-    LaunchedEffect(key1 = it.hex) {
-        launch(Dispatchers.IO) {
-            if (it.type == Nip19.Type.USER) {
-                LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
-                    baseUser = user
+    if (baseUser == null) {
+        LaunchedEffect(key1 = it.hex) {
+            launch(Dispatchers.IO) {
+                if (it.type == Nip19.Type.USER) {
+                    LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
+                        launch(Dispatchers.Main) { baseUser = user }
+                    }
                 }
             }
         }
     }
 
     baseUser?.let { user ->
-        val userState by user.live().metadata.observeAsState()
+        ObserveUser(user, onRefresh)
+    }
+}
 
-        LaunchedEffect(key1 = userState) {
-            if (userState?.user?.info != null) {
-                launch(Dispatchers.IO) {
-                    onRefresh()
-                }
+@Composable
+private fun ObserveUser(user: User, onRefresh: () -> Unit) {
+    val loadedUserMetaId by user.live().metadata.map {
+        it.user.info?.latestMetadata?.id
+    }.distinctUntilChanged().observeAsState(user.info?.latestMetadata?.id)
+
+    LaunchedEffect(key1 = loadedUserMetaId) {
+        if (loadedUserMetaId != null) {
+            launch(Dispatchers.IO) {
+                onRefresh()
             }
         }
     }
 }
 
-private fun getDisplayNameAndNIP19FromTag(tag: String, tags: List<List<String>>): Pair<String, String>? {
+private fun getDisplayNameAndNIP19FromTag(tag: String, tags: ImmutableListOfLists<String>): Pair<String, String>? {
     val matcher = tagIndex.matcher(tag)
     val (index, suffix) = try {
         matcher.find()
@@ -511,8 +453,8 @@ private fun getDisplayNameAndNIP19FromTag(tag: String, tags: List<List<String>>)
         Pair(null, null)
     }
 
-    if (index != null && index >= 0 && index < tags.size) {
-        val tag = tags[index]
+    if (index != null && index >= 0 && index < tags.lists.size) {
+        val tag = tags.lists[index]
 
         if (tag.size > 1) {
             if (tag[0] == "p") {
@@ -552,11 +494,11 @@ private fun getDisplayNameFromNip19(nip19: Nip19.Return): Pair<String, String>? 
     return null
 }
 
-private fun returnNIP19References(content: String, tags: List<List<String>>?): List<Nip19.Return> {
+private fun returnNIP19References(content: String, tags: ImmutableListOfLists<String>?): List<Nip19.Return> {
     val listOfReferences = mutableListOf<Nip19.Return>()
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
-            if (isBechLink(word)) {
+            if (startsWithNIP19Scheme(word)) {
                 val parsedNip19 = Nip19.uriToRoute(word)
                 parsedNip19?.let {
                     listOfReferences.add(it)
@@ -565,7 +507,7 @@ private fun returnNIP19References(content: String, tags: List<List<String>>?): L
         }
     }
 
-    tags?.forEach {
+    tags?.lists?.forEach {
         if (it[0] == "p" && it.size > 1) {
             listOfReferences.add(Nip19.Return(Nip19.Type.USER, it[1], null, null, null, ""))
         } else if (it[0] == "e" && it.size > 1) {
@@ -578,17 +520,22 @@ private fun returnNIP19References(content: String, tags: List<List<String>>?): L
     return listOfReferences
 }
 
-private fun returnMarkdownWithSpecialContent(content: String, tags: List<List<String>>?): String {
+private fun returnMarkdownWithSpecialContent(content: String, tags: ImmutableListOfLists<String>?): String {
     var returnContent = ""
     content.split('\n').forEach { paragraph ->
         paragraph.split(' ').forEach { word: String ->
             if (isValidURL(word)) {
-                returnContent += "[$word]($word) "
+                val removedParamsFromUrl = word.split("?")[0].lowercase()
+                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                    returnContent += "![]($word) "
+                } else {
+                    returnContent += "[$word]($word) "
+                }
             } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
                 returnContent += "[$word](mailto:$word) "
             } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                 returnContent += "[$word](tel:$word) "
-            } else if (isBechLink(word)) {
+            } else if (startsWithNIP19Scheme(word)) {
                 val parsedNip19 = Nip19.uriToRoute(word)
                 returnContent += if (parsedNip19 !== null) {
                     val pair = getDisplayNameFromNip19(parsedNip19)
@@ -637,228 +584,263 @@ private fun returnMarkdownWithSpecialContent(content: String, tags: List<List<St
     return returnContent
 }
 
-private fun isArabic(text: String): Boolean {
-    return text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
-}
-
-fun isBechLink(word: String): Boolean {
+fun startsWithNIP19Scheme(word: String): Boolean {
     val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
 
     return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
 }
 
-@Composable
-fun BechLink(word: String, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var nip19Route by remember { mutableStateOf<Nip19.Return?>(null) }
-    var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
+@Immutable
+data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
 
-    LaunchedEffect(key1 = word) {
-        launch(Dispatchers.IO) {
-            Nip19.uriToRoute(word)?.let {
-                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                        baseNotePair = Pair(note, it.additionalChars)
+@Composable
+fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
+
+    if (loadedLink == null) {
+        LaunchedEffect(key1 = word) {
+            launch(Dispatchers.IO) {
+                Nip19.uriToRoute(word)?.let {
+                    var returningNote: Note? = null
+                    if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                        LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                            returningNote = note
+                        }
+                    }
+
+                    val newLink = LoadedBechLink(returningNote, it)
+
+                    launch(Dispatchers.Main) {
+                        loadedLink = newLink
                     }
                 }
-
-                nip19Route = it
             }
         }
     }
 
-    if (canPreview) {
-        baseNotePair?.let {
-            NoteCompose(
-                baseNote = it.first,
-                accountViewModel = accountViewModel,
-                modifier = Modifier
-                    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                    .fillMaxWidth()
-                    .clip(shape = RoundedCornerShape(15.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                        RoundedCornerShape(15.dp)
-                    ),
-                parentBackgroundColor = backgroundColor,
-                isQuotedNote = true,
-                nav = nav
+    if (canPreview && loadedLink?.baseNote != null) {
+        Row() {
+            DisplayFullNote(
+                loadedLink?.baseNote!!,
+                accountViewModel,
+                backgroundColor,
+                nav,
+                loadedLink!!
             )
-            if (!it.second.isNullOrEmpty()) {
-                Text(
-                    "${it.second} "
-                )
-            }
-        } ?: nip19Route?.let {
-            ClickableRoute(it, nav)
-        } ?: Text(text = "$word ")
+        }
+    } else if (loadedLink?.nip19 != null) {
+        Row() {
+            ClickableRoute(loadedLink?.nip19!!, nav)
+        }
     } else {
-        nip19Route?.let {
-            ClickableRoute(it, nav)
-        } ?: Text(text = "$word ")
+        val text = remember {
+            if (word.length > 16) {
+                word.replaceRange(8, word.length - 8, ":")
+            } else {
+                word
+            }
+        }
+
+        Text(text = text, maxLines = 1)
     }
 }
 
 @Composable
-fun HashTag(word: String, nav: (String) -> Unit) {
-    var tagSuffixPair by remember { mutableStateOf<Pair<String, String?>?>(null) }
+private fun DisplayFullNote(
+    it: Note,
+    accountViewModel: AccountViewModel,
+    backgroundColor: MutableState<Color>,
+    nav: (String) -> Unit,
+    loadedLink: LoadedBechLink
+) {
+    NoteCompose(
+        baseNote = it,
+        accountViewModel = accountViewModel,
+        modifier = MaterialTheme.colors.replyModifier,
+        parentBackgroundColor = backgroundColor,
+        isQuotedNote = true,
+        nav = nav
+    )
 
-    LaunchedEffect(key1 = word) {
-        launch(Dispatchers.IO) {
-            val hashtagMatcher = hashTagsPattern.matcher(word)
-
-            val (myTag, mySuffix) = try {
-                hashtagMatcher.find()
-                Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
-            } catch (e: Exception) {
-                Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
-                Pair(null, null)
-            }
-
-            if (myTag != null) {
-                tagSuffixPair = Pair(myTag, mySuffix)
-            }
-        }
+    val extraChars = remember(loadedLink) {
+        loadedLink.nip19.additionalChars.ifBlank { null }
     }
 
-    tagSuffixPair?.let { tagPair ->
-        val hashtagIcon = remember(tagPair.first) { checkForHashtagWithIcon(tagPair.first) }
-        ClickableText(
-            text = buildAnnotatedString {
-                withStyle(
-                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
-                ) {
-                    append("#${tagPair.first}")
-                }
-            },
-            onClick = { nav("Hashtag/${tagPair.first}") }
+    extraChars?.let {
+        Text(
+            it
         )
-
-        if (hashtagIcon != null) {
-            val myId = "inlineContent"
-            val emptytext = buildAnnotatedString {
-                withStyle(
-                    LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
-                ) {
-                    append("")
-                    appendInlineContent(myId, "[icon]")
-                }
-            }
-            val inlineContent = mapOf(
-                Pair(
-                    myId,
-                    InlineTextContent(
-                        Placeholder(
-                            width = 17.sp,
-                            height = 17.sp,
-                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                        )
-                    ) {
-                        Icon(
-                            painter = painterResource(hashtagIcon.icon),
-                            contentDescription = hashtagIcon.description,
-                            tint = hashtagIcon.color,
-                            modifier = hashtagIcon.modifier
-                        )
-                    }
-                )
-            )
-
-            // Empty Text for Size of Icon
-            Text(
-                text = emptytext,
-                inlineContent = inlineContent
-            )
-        }
-        tagPair.second?.ifBlank { "" }?.let {
-            Text(text = "$it ")
-        }
-    } ?: Text(text = "$word ")
+    }
 }
 
 @Composable
-fun TagLink(word: String, tags: List<List<String>>, canPreview: Boolean, backgroundColor: Color, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var baseUserPair by remember { mutableStateOf<Pair<User, String?>?>(null) }
-    var baseNotePair by remember { mutableStateOf<Pair<Note, String?>?>(null) }
+fun HashTag(word: HashTagSegment, nav: (String) -> Unit) {
+    Row() {
+        RenderHashtag(word, nav)
+    }
+}
 
-    LaunchedEffect(key1 = word) {
-        launch(Dispatchers.IO) {
-            val matcher = tagIndex.matcher(word)
-            val (index, suffix) = try {
-                matcher.find()
-                Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
-            } catch (e: Exception) {
-                Log.w("Tag Parser", "Couldn't link tag $word", e)
-                Pair(null, null)
+@Composable
+private fun RenderHashtag(
+    segment: HashTagSegment,
+    nav: (String) -> Unit
+) {
+    val primary = MaterialTheme.colors.primary
+    val hashtagIcon = remember(segment.hashtag) { checkForHashtagWithIcon(segment.hashtag, primary) }
+    ClickableText(
+        text = buildAnnotatedString {
+            withStyle(
+                LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+            ) {
+                append("#${segment.hashtag}")
             }
+        },
+        onClick = { nav("Hashtag/${segment.hashtag}") }
+    )
 
-            if (index != null && index >= 0 && index < tags.size) {
-                val tag = tags[index]
+    if (hashtagIcon != null) {
+        val myId = "inlineContent"
+        val emptytext = buildAnnotatedString {
+            withStyle(
+                LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+            ) {
+                append("")
+                appendInlineContent(myId, "[icon]")
+            }
+        }
+        // Empty Text for Size of Icon
+        Text(
+            text = emptytext,
+            inlineContent = mapOf(
+                myId to InlineIcon(hashtagIcon)
+            )
+        )
+    }
+    segment.extras?.ifBlank { "" }?.let {
+        Text(text = it)
+    }
+}
 
-                if (tag.size > 1) {
-                    if (tag[0] == "p") {
-                        LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                            baseUserPair = Pair(it, suffix)
-                        }
-                    } else if (tag[0] == "e" || tag[0] == "a") {
-                        LocalCache.checkGetOrCreateNote(tag[1])?.let {
-                            baseNotePair = Pair(it, suffix)
-                        }
-                    }
-                }
+@Composable
+private fun InlineIcon(hashtagIcon: HashtagIcon) =
+    InlineTextContent(
+        Placeholder(
+            width = Font17SP,
+            height = Font17SP,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+        )
+    ) {
+        Icon(
+            painter = painterResource(hashtagIcon.icon),
+            contentDescription = hashtagIcon.description,
+            tint = hashtagIcon.color,
+            modifier = hashtagIcon.modifier
+        )
+    }
+
+@Composable
+fun TagLink(word: HashIndexUserSegment, nav: (String) -> Unit) {
+    LoadUser(baseUserHex = word.hex) {
+        if (it == null) {
+            Text(text = word.segmentText)
+        } else {
+            Row() {
+                DisplayUserFromTag(it, word.extras, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadNote(baseNoteHex: String, content: @Composable (Note?) -> Unit) {
+    var note by remember(baseNoteHex) {
+        mutableStateOf<Note?>(LocalCache.getNoteIfExists(baseNoteHex))
+    }
+
+    if (note == null) {
+        LaunchedEffect(key1 = baseNoteHex) {
+            launch(Dispatchers.IO) {
+                note = LocalCache.checkGetOrCreateNote(baseNoteHex)
             }
         }
     }
 
-    baseUserPair?.let {
-        val innerUserState by it.first.live().metadata.observeAsState()
-        val displayName = remember(innerUserState) {
-            innerUserState?.user?.toBestDisplayName() ?: ""
-        }
-        val route = remember(innerUserState) {
-            "User/${it.first.pubkeyHex}"
-        }
-        val userTags = remember(innerUserState) {
-            innerUserState?.user?.info?.latestMetadata?.tags
-        }
+    content(note)
+}
 
-        CreateClickableTextWithEmoji(
-            clickablePart = displayName,
-            suffix = "${it.second} ",
-            tags = userTags,
-            route = route,
+@Composable
+fun TagLink(word: HashIndexEventSegment, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    LoadNote(baseNoteHex = word.hex) {
+        if (it == null) {
+            Text(text = remember { word.segmentText.toShortenHex() })
+        } else {
+            Row() {
+                DisplayNoteFromTag(
+                    it,
+                    word.extras,
+                    canPreview,
+                    accountViewModel,
+                    backgroundColor,
+                    nav
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DisplayNoteFromTag(
+    baseNote: Note,
+    addedChars: String?,
+    canPreview: Boolean,
+    accountViewModel: AccountViewModel,
+    backgroundColor: MutableState<Color>,
+    nav: (String) -> Unit
+) {
+    if (canPreview) {
+        NoteCompose(
+            baseNote = baseNote,
+            accountViewModel = accountViewModel,
+            modifier = MaterialTheme.colors.innerPostModifier,
+            parentBackgroundColor = backgroundColor,
+            isQuotedNote = true,
             nav = nav
         )
+    } else {
+        ClickableNoteTag(baseNote, nav)
     }
 
-    baseNotePair?.let {
-        if (canPreview) {
-            NoteCompose(
-                baseNote = it.first,
-                accountViewModel = accountViewModel,
-                modifier = Modifier
-                    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-                    .fillMaxWidth()
-                    .clip(shape = RoundedCornerShape(15.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.12f),
-                        RoundedCornerShape(15.dp)
-                    ),
-                parentBackgroundColor = backgroundColor,
-                isQuotedNote = true,
-                nav = nav
-            )
-            it.second?.ifBlank { null }?.let {
-                Text(text = "$it ")
+    addedChars?.ifBlank { null }?.let {
+        Text(text = it)
+    }
+}
+
+@Composable
+private fun DisplayUserFromTag(
+    baseUser: User,
+    addedChars: String?,
+    nav: (String) -> Unit
+) {
+    val route = remember { "User/${baseUser.pubkeyHex}" }
+    val hex = remember { baseUser.pubkeyDisplayHex() }
+
+    val meta by baseUser.live().metadata.map {
+        it.user.info
+    }.distinctUntilChanged().observeAsState(baseUser.info)
+
+    Crossfade(targetState = meta) {
+        Row() {
+            val displayName = remember(it) {
+                it?.bestDisplayName() ?: it?.bestUsername() ?: hex
             }
-        } else {
-            ClickableNoteTag(it.first, nav)
-            Text(text = "${it.second} ")
+            CreateClickableTextWithEmoji(
+                clickablePart = displayName,
+                suffix = addedChars,
+                maxLines = 1,
+                route = route,
+                nav = nav,
+                tags = it?.tags
+            )
         }
-    }
-
-    if (baseNotePair == null && baseUserPair == null) {
-        Text(text = "$word ")
     }
 }

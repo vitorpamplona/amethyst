@@ -19,17 +19,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun NewChannelButton(account: Account) {
+fun NewChannelButton(accountViewModel: AccountViewModel) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
 
     if (wantsToPost) {
-        NewChannelView({ wantsToPost = false }, account = account)
+        NewChannelView({ wantsToPost = false }, accountViewModel = accountViewModel)
     }
 
     OutlinedButton(

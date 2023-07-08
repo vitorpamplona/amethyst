@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * This class is designed to have a waiting time between two calls of invalidate
  */
+@Stable
 class BundledUpdate(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default
@@ -50,6 +53,7 @@ class BundledUpdate(
 /**
  * This class is designed to have a waiting time between two calls of invalidate
  */
+@Stable
 class BundledInsert<T>(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default
@@ -58,6 +62,8 @@ class BundledInsert<T>(
     private var queue = LinkedBlockingQueue<T>()
 
     fun invalidateList(newObject: T, onUpdate: suspend (Set<T>) -> Unit) {
+        checkNotInMainThread()
+
         queue.put(newObject)
         if (onlyOneInBlock.getAndSet(true)) {
             return

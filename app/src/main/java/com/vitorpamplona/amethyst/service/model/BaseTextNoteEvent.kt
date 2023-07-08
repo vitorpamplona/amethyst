@@ -18,7 +18,7 @@ open class BaseTextNoteEvent(
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun mentions() = taggedUsers()
-    open fun replyTos() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+    open fun replyTos() = taggedEvents()
 
     private var citedUsersCache: Set<HexKey>? = null
     private var citedNotesCache: Set<HexKey>? = null
@@ -113,7 +113,7 @@ open class BaseTextNoteEvent(
 
     fun tagsWithoutCitations(): List<String> {
         val repliesTo = replyTos()
-        val tagAddresses = taggedAddresses().map { it.toTag() }
+        val tagAddresses = taggedAddresses().filter { it.kind != CommunityDefinitionEvent.kind }.map { it.toTag() }
         if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()

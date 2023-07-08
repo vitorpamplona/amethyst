@@ -54,6 +54,10 @@ open class Event(
             (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
     }
 
+    override fun zapraiserAmount() = tags.firstOrNull() {
+        (it.size > 1 && it[0] == "zapraiser")
+    }?.get(1)?.toLongOrNull()
+
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
 
     fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
@@ -67,9 +71,28 @@ open class Event(
 
     override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
 
+    override fun isTaggedAddressableNote(idHex: String) = tags.any { it.size > 1 && it[0] == "a" && it[1] == idHex }
+
     override fun isTaggedHash(hashtag: String) = tags.any { it.size > 1 && it[0] == "t" && it[1].equals(hashtag, true) }
     override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }
     override fun firstIsTaggedHashes(hashtags: Set<String>) = tags.firstOrNull { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }?.getOrNull(1)
+
+    override fun firstIsTaggedAddressableNote(addressableNotes: Set<String>) = tags.firstOrNull { it.size > 1 && it[0] == "a" && it[1] in addressableNotes }?.getOrNull(1)
+
+    override fun isTaggedAddressableKind(kind: Int): Boolean {
+        val kindStr = kind.toString()
+        return tags.any { it.size > 1 && it[0] == "a" && it[1].startsWith(kindStr) }
+    }
+
+    override fun getTagOfAddressableKind(kind: Int): ATag? {
+        val kindStr = kind.toString()
+        val aTag = tags
+            .firstOrNull { it.size > 1 && it[0] == "a" && it[1].startsWith(kindStr) }
+            ?.getOrNull(1)
+            ?: return null
+
+        return ATag.parse(aTag, null)
+    }
 
     override fun getPoWRank(): Int {
         var rank = 0
@@ -138,7 +161,7 @@ open class Event(
             .replace("\\u2028", "\u2028")
             .replace("\\u2029", "\u2029")
 
-        return sha256.digest(rawEventJson.toByteArray()).toHexKey()
+        return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray()).toHexKey()
     }
 
     private class EventDeserializer : JsonDeserializer<Event> {
@@ -212,7 +235,6 @@ open class Event(
     companion object {
         private val secp256k1 = Secp256k1.get()
 
-        val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
         val gson: Gson = GsonBuilder()
             .disableHtmlEscaping()
             .registerTypeAdapter(Event::class.java, EventSerializer())
@@ -228,6 +250,8 @@ open class Event(
         fun fromJson(json: JsonElement, lenient: Boolean = false): Event = gson.fromJson(json, Event::class.java).getRefinedEvent(lenient)
 
         fun Event.getRefinedEvent(lenient: Boolean = false): Event = when (kind) {
+            AppDefinitionEvent.kind -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+            AppRecommendationEvent.kind -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
             AudioTrackEvent.kind -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeAwardEvent.kind -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -238,13 +262,18 @@ open class Event(
             ChannelMessageEvent.kind -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.kind -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.kind -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+            CommunityDefinitionEvent.kind -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+            CommunityPostApprovalEvent.kind -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.kind -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
 
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            GenericRepostEvent.kind -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesEvent.kind -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesChatMessageEvent.kind -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
@@ -257,6 +286,7 @@ open class Event(
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.kind -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig, lenient)
+            RelaySetEvent.kind -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.kind -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.kind -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.kind -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -281,7 +311,7 @@ open class Event(
                 .replace("\\u2028", "\u2028")
                 .replace("\\u2029", "\u2029")
 
-            return sha256.digest(rawEventJson.toByteArray())
+            return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray())
         }
 
         fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = Date().time / 1000): Event {

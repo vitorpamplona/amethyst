@@ -4,19 +4,15 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
-object UserProfileConversationsFeedFilter : FeedFilter<Note>() {
-    var account: Account? = null
-    var user: User? = null
-
-    fun loadUserProfile(accountLoggedIn: Account, user: User?) {
-        account = accountLoggedIn
-        this.user = user
+class UserProfileConversationsFeedFilter(val user: User, val account: Account) : FeedFilter<Note>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + user.pubkeyHex
     }
 
     override fun feed(): List<Note> {
-        return user?.notes
-            ?.filter { account?.isAcceptable(it) == true && !it.isNewThread() }
-            ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-            ?.reversed() ?: emptyList()
+        return user.notes
+            .filter { account.isAcceptable(it) == true && !it.isNewThread() }
+            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+            .reversed() ?: emptyList()
     }
 }

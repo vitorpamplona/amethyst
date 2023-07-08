@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -10,9 +11,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.ReactionEvent
@@ -24,7 +27,6 @@ import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,11 +56,15 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    suspend fun sendToTop() {
+    private var lastFeedKey: String? = null
+
+    fun sendToTop() {
         if (scrolltoTopPending) return
 
         scrolltoTopPending = true
-        _scrollToTop.emit(_scrollToTop.value + 1)
+        viewModelScope.launch(Dispatchers.IO) {
+            _scrollToTop.emit(_scrollToTop.value + 1)
+        }
     }
 
     suspend fun sentToTop() {
@@ -77,7 +83,10 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     @Synchronized
     private fun refreshSuspended() {
+        checkNotInMainThread()
+
         val notes = localFilter.feed()
+        lastFeedKey = localFilter.feedKey()
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
@@ -90,10 +99,9 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards = (oldNotesState.feed.value + newCards)
-                    .distinctBy { it.id() }
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
-                    .take(1000)
+                    .take(localFilter.limit())
                     .toImmutableList()
 
                 if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
@@ -107,7 +115,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             val cards = convertToCard(notes)
                 .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                 .reversed()
-                .take(1000)
+                .take(localFilter.limit())
                 .toImmutableList()
 
             updateFeed(cards)
@@ -115,6 +123,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     private fun convertToCard(notes: Collection<Note>): List<Card> {
+        checkNotInMainThread()
+
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is ReactionEvent }
@@ -126,41 +136,37 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             }
 
         // val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
-        val zapsPerUser = mutableMapOf<User, MutableMap<Note, Note>>()
-        val zapsPerEvent = mutableMapOf<Note, MutableMap<Note, Note>>()
+        val zapsPerUser = mutableMapOf<User, MutableList<CombinedZap>>()
+        val zapsPerEvent = mutableMapOf<Note, MutableList<CombinedZap>>()
         notes
             .filter { it.event is LnZapEvent }
             .forEach { zapEvent ->
-                val zappedPost = zapEvent.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
+                val zappedPost = zapEvent.replyTo?.lastOrNull()
                 if (zappedPost != null) {
                     val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                     if (zapRequest != null) {
                         // var newZapRequestEvent = LocalCache.checkPrivateZap(zapRequest.event as Event)
                         // zapRequest.event = newZapRequestEvent
-                        zapsPerEvent.getOrPut(zappedPost, { mutableMapOf() }).put(zapRequest, zapEvent)
+                        zapsPerEvent.getOrPut(zappedPost, { mutableListOf() }).add(CombinedZap(zapRequest, zapEvent))
                     }
                 } else {
                     val event = (zapEvent.event as LnZapEvent)
-                    val author = event.zappedAuthor().mapNotNull {
-                        LocalCache.checkGetOrCreateUser(
-                            it
-                        )
-                    }.firstOrNull()
+                    val author = event.zappedAuthor().firstNotNullOfOrNull {
+                        LocalCache.users[it] // don't create user if it doesn't exist
+                    }
                     if (author != null) {
                         val zapRequest = author.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
                         if (zapRequest != null) {
-                            zapsPerUser.getOrPut(author, { mutableMapOf() })
-                                .put(zapRequest, zapEvent)
+                            zapsPerUser.getOrPut(author, { mutableListOf() })
+                                .add(CombinedZap(zapRequest, zapEvent))
                         }
                     }
                 }
             }
 
-        // val zapCards = zapsPerEvent.map { ZapSetCard(it.key, it.value) }
-
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
-            .filter { it.event is RepostEvent }
+            .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
             .forEach {
                 val boostedPost = it.replyTo?.lastOrNull() { it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent }
                 if (boostedPost != null) {
@@ -172,18 +178,18 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val multiCards = allBaseNotes.map { baseNote ->
             val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
             val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
-            val zapsInCard = zapsPerEvent[baseNote] ?: emptyMap()
+            val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
 
-            val singleList = (boostsInCard + zapsInCard.values + reactionsInCard)
+            val singleList = (boostsInCard + zapsInCard.map { it.response } + reactionsInCard)
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .reversed()
 
-            singleList.chunked(50).map { chunk ->
+            singleList.chunked(30).map { chunk ->
                 MultiSetCard(
                     baseNote,
                     boostsInCard.filter { it in chunk }.toImmutableList(),
                     reactionsInCard.filter { it in chunk }.toImmutableList(),
-                    zapsInCard.filter { it.value in chunk }.toImmutableMap()
+                    zapsInCard.filter { it.response in chunk }.toImmutableList()
                 )
             }
         }.flatten()
@@ -191,11 +197,11 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val userZaps = zapsPerUser.map {
             ZapUserSetCard(
                 it.key,
-                it.value.toImmutableMap()
+                it.value.toImmutableList()
             )
         }
 
-        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is LnZapEvent }.map {
+        val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is GenericRepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent) {
                 MessageSetCard(it)
             } else if (it.event is BadgeAwardEvent) {
@@ -229,7 +235,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
 
-        if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded) {
+        if (lastNotesCopy != null && localFilter is AdditiveFeedFilter && oldNotesState is CardFeedState.Loaded && lastFeedKey == localFilter.feedKey()) {
             val filteredNewList = localFilter.applyFilter(newItems)
 
             if (filteredNewList.isEmpty()) return
@@ -245,10 +251,9 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards = (oldNotesState.feed.value + newCards)
-                    .distinctBy { it.id() }
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
-                    .take(1000)
+                    .take(localFilter.limit())
                     .toImmutableList()
 
                 if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
@@ -277,8 +282,9 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     }
 
     @OptIn(ExperimentalTime::class)
-    fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean = false) {
-        bundler.invalidate(ignoreIfDoing) {
+    fun invalidateDataAndSendToTop() {
+        clear()
+        bundler.invalidate(false) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
             val (value, elapsed) = measureTimedValue {
@@ -286,6 +292,22 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 sendToTop()
             }
             Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun checkKeysInvalidateDataAndSendToTop() {
+        if (lastFeedKey != localFilter.feedKey()) {
+            clear()
+            bundler.invalidate(false) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                val (value, elapsed) = measureTimedValue {
+                    refreshSuspended()
+                    sendToTop()
+                }
+                Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+            }
         }
     }
 
@@ -305,8 +327,11 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     var collectorJob: Job? = null
 
     init {
+        Log.d("Init", "${this.javaClass.simpleName}")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
                     invalidateInsertData(newNotes)
                 } else {
@@ -338,4 +363,10 @@ fun <T> equalImmutableLists(list1: ImmutableList<T>, list2: ImmutableList<T>): B
         }
     }
     return true
+}
+
+@Immutable
+data class CombinedZap(val request: Note, val response: Note) {
+    fun createdAt() = response.createdAt()
+    fun idHex() = response.idHex
 }
