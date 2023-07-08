@@ -54,10 +54,13 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val counter = ParticipantListBuilder()
+        val participantCounts = collection.associate {
+            it to counter.countFollowsThatParticipateOn(it, followingKeySet)
+        }
 
         return collection.sortedWith(
             compareBy(
-                { counter.countFollowsThatParticipateOn(it, followingKeySet) },
+                { participantCounts[it] },
                 { it.createdAt() },
                 { it.idHex }
             )

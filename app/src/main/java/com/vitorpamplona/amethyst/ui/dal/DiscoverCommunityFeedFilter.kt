@@ -44,11 +44,15 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
 
     override fun sort(collection: Set<Note>): List<Note> {
         val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
+
         val counter = ParticipantListBuilder()
+        val participantCounts = collection.associate {
+            it to counter.countFollowsThatParticipateOn(it, followingKeySet)
+        }
 
         return collection.sortedWith(
             compareBy(
-                { counter.countFollowsThatParticipateOn(it, followingKeySet) },
+                { participantCounts[it] },
                 { it.createdAt() },
                 { it.idHex }
             )
