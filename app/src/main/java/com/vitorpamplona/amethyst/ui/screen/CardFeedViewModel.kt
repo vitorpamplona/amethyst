@@ -99,6 +99,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards = (oldNotesState.feed.value + newCards)
+                    .distinctBy { it.id() }
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
                     .take(localFilter.limit())
@@ -251,6 +252,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards = (oldNotesState.feed.value + newCards)
+                    .distinctBy { it.id() }
                     .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                     .reversed()
                     .take(localFilter.limit())
