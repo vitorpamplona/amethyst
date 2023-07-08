@@ -22,6 +22,12 @@ android {
             useSupportLibrary true
         }
         resConfigs("ar", "cs", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW" )
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
     }
 
     buildTypes {
