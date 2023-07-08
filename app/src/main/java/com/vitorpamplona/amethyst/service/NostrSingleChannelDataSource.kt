@@ -71,7 +71,7 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
                     filter = JsonFilter(
                         kinds = listOf(aTag.kind),
                         tags = mapOf("d" to listOf(aTag.dTag)),
-                        authors = listOf(aTag.pubKeyHex.substring(0, 8))
+                        authors = listOf(aTag.pubKeyHex)
                     )
                 )
             }
