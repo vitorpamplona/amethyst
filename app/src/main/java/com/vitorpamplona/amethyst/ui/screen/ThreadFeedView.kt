@@ -399,9 +399,9 @@ fun NoteMaster(
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
                         ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
                     } else if (noteEvent is FileHeaderEvent) {
-                        FileHeaderDisplay(baseNote)
+                        FileHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
-                        FileStorageHeaderDisplay(baseNote)
+                        FileStorageHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {

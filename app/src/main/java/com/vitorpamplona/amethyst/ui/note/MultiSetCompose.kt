@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifierWithPadding
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
@@ -445,7 +446,7 @@ fun CrossfadeToDisplayAmount(authorComment: MutableState<ZapAmountCommentNotific
                     Text(
                         text = it,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colors.secondaryVariant,
+                        color = MaterialTheme.colors.bitcoinColor,
                         fontSize = commentTextSize,
                         modifier = bottomPadding1dp
                     )

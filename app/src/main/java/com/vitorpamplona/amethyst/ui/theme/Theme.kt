@@ -32,15 +32,18 @@ private val DarkColorPalette = darkColors(
     primary = Purple200,
     primaryVariant = Purple700,
     secondary = Teal200,
-    secondaryVariant = Color(0xFFF7931A)
+    secondaryVariant = Purple200
 )
 
 private val LightColorPalette = lightColors(
     primary = Purple500,
     primaryVariant = Purple700,
     secondary = Teal200,
-    secondaryVariant = Color(0xFFB66605)
+    secondaryVariant = Purple500
 )
+
+private val BitcoinDark = Color(0xFFF7931A)
+private val BitcoinLight = Color(0xFFB66605)
 
 private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
 private val LightNewItemBackground = LightColorPalette.primary.copy(0.12f)
@@ -278,6 +281,9 @@ val Colors.hashVerified: Color
 
 val Colors.overPictureBackground: Color
     get() = if (isLight) LightOverPictureBackground else DarkOverPictureBackground
+
+val Colors.bitcoinColor: Color
+    get() = if (isLight) BitcoinLight else BitcoinDark
 
 val Colors.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark

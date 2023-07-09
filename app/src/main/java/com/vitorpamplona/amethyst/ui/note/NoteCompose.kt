@@ -447,8 +447,8 @@ fun NormalNote(
             nav = nav
         )
         is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote)
+        is FileHeaderEvent -> FileHeaderDisplay(baseNote, accountViewModel)
+        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, accountViewModel)
         else ->
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                 CheckNewAndRenderNote(
@@ -2870,7 +2870,7 @@ private fun RenderBadge(
 }
 
 @Composable
-fun FileHeaderDisplay(note: Note) {
+fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
 
@@ -2901,13 +2901,15 @@ fun FileHeaderDisplay(note: Note) {
 
     Crossfade(targetState = content) {
         if (it != null) {
-            ZoomableContentView(content = it)
+            SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+                ZoomableContentView(content = it)
+            }
         }
     }
 }
 
 @Composable
-fun FileStorageHeaderDisplay(baseNote: Note) {
+fun FileStorageHeaderDisplay(baseNote: Note, accountViewModel: AccountViewModel) {
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
 
     var fileNote by remember { mutableStateOf<Note?>(null) }
@@ -2925,20 +2927,21 @@ fun FileStorageHeaderDisplay(baseNote: Note) {
 
     Crossfade(targetState = fileNote) {
         if (it != null) {
-            RenderNIP95(it, eventHeader, baseNote)
+            RenderNIP95(it, eventHeader, baseNote, accountViewModel)
         }
     }
 }
 
 @Composable
 private fun RenderNIP95(
-    it: Note,
+    content: Note,
     eventHeader: FileStorageHeaderEvent,
-    baseNote: Note
+    header: Note,
+    accountViewModel: AccountViewModel
 ) {
     val appContext = LocalContext.current.applicationContext
 
-    val noteState by it.live().metadata.observeAsState()
+    val noteState by content.live().metadata.observeAsState()
     val note = remember(noteState) { noteState?.note }
 
     var content by remember { mutableStateOf<ZoomableContent?>(null) }
@@ -2946,7 +2949,7 @@ private fun RenderNIP95(
     if (content == null) {
         LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
             launch(Dispatchers.IO) {
-                val uri = "nostr:" + baseNote.toNEvent()
+                val uri = "nostr:" + header.toNEvent()
                 val localDir =
                     note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
                 val blurHash = eventHeader.blurhash()
@@ -2984,7 +2987,9 @@ private fun RenderNIP95(
 
     Crossfade(targetState = content) {
         if (it != null) {
-            ZoomableContentView(content = it)
+            SensitivityWarning(note = header, accountViewModel = accountViewModel) {
+                ZoomableContentView(content = it)
+            }
         }
     }
 }

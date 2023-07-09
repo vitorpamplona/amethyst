@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -52,11 +54,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -257,8 +261,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                     ImageVideoDescription(
                                         url,
                                         account.defaultFileServer,
-                                        onAdd = { description, server ->
-                                            postViewModel.upload(url, description, server, context)
+                                        onAdd = { description, server, sensitiveContent ->
+                                            postViewModel.upload(url, description, sensitiveContent, server, context)
                                             account.changeDefaultFileServer(server)
                                         },
                                         onCancel = {
@@ -830,7 +834,7 @@ enum class ServersAvailable {
 fun ImageVideoDescription(
     uri: Uri,
     defaultServer: ServersAvailable,
-    onAdd: (String, ServersAvailable) -> Unit,
+    onAdd: (String, ServersAvailable, Boolean) -> Unit,
     onCancel: () -> Unit,
     onError: (String) -> Unit
 ) {
@@ -859,6 +863,7 @@ fun ImageVideoDescription(
 
     var selectedServer by remember { mutableStateOf(defaultServer) }
     var message by remember { mutableStateOf("") }
+    var sensitiveContent by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -983,6 +988,18 @@ fun ImageVideoDescription(
                 )
             }
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SettingSwitchItem(
+                    checked = sensitiveContent,
+                    onCheckedChange = { sensitiveContent = it },
+                    title = R.string.add_sensitive_content_label,
+                    description = R.string.add_sensitive_content_description
+                )
+            }
+
             if (isNIP94Server(selectedServer) ||
                 selectedServer == ServersAvailable.NIP95
             ) {
@@ -1017,7 +1034,7 @@ fun ImageVideoDescription(
                     .fillMaxWidth()
                     .padding(vertical = 10.dp),
                 onClick = {
-                    onAdd(message, selectedServer)
+                    onAdd(message, selectedServer, sensitiveContent)
                 },
                 shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
@@ -1035,4 +1052,55 @@ data class ImmutableListOfLists<T>(val lists: List<List<T>> = emptyList())
 
 fun List<List<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
     return ImmutableListOfLists(this)
+}
+
+@Composable
+fun SettingSwitchItem(
+    modifier: Modifier = Modifier,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    title: Int,
+    description: Int,
+    enabled: Boolean = true
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1.0f),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            val contentAlpha = if (enabled) ContentAlpha.high else ContentAlpha.disabled
+
+            Text(
+                text = stringResource(id = title),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.alpha(contentAlpha)
+            )
+            Text(
+                text = stringResource(id = description),
+                style = MaterialTheme.typography.caption,
+                color = Color.Gray,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.alpha(contentAlpha)
+            )
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            enabled = enabled
+        )
+    }
 }

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,12 +76,14 @@ fun SensitivityWarning(
         mutableStateOf(accountState?.account?.showSensitiveContent != true)
     }
 
-    if (showContentWarningNote) {
-        ContentWarningNote() {
-            showContentWarningNote = false
+    Crossfade(targetState = showContentWarningNote) {
+        if (it) {
+            ContentWarningNote() {
+                showContentWarningNote = false
+            }
+        } else {
+            content()
         }
-    } else {
-        content()
     }
 }
 

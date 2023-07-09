@@ -203,6 +203,18 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
         )
     }
 
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SettingSwitchItem(
+            checked = postViewModel.sensitiveContent,
+            onCheckedChange = { postViewModel.sensitiveContent = it },
+            title = R.string.add_sensitive_content_label,
+            description = R.string.add_sensitive_content_description
+        )
+    }
+
     if (isNIP94Server(postViewModel.selectedServer) ||
         postViewModel.selectedServer == ServersAvailable.NIP95
     ) {

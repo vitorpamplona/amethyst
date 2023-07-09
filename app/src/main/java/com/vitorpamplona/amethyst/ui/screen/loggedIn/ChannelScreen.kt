@@ -421,7 +421,7 @@ fun EditFieldRow(
                         accountViewModel.account.defaultFileServer
                     }
 
-                    channelScreenModel.upload(it, "", fileServer, context)
+                    channelScreenModel.upload(it, "", false, fileServer, context)
                 }
             },
             colors = TextFieldDefaults.textFieldColors(

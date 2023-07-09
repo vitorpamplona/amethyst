@@ -179,7 +179,7 @@ open class NewPostViewModel() : ViewModel() {
         cancel()
     }
 
-    fun upload(galleryUri: Uri, description: String, server: ServersAvailable, context: Context) {
+    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context) {
         isUploadingImage = true
         contentToAddUrl = null
 
@@ -194,7 +194,7 @@ open class NewPostViewModel() : ViewModel() {
                 onReady = { fileUri, contentType, size ->
                     if (server == ServersAvailable.NIP95) {
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description)
+                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent)
                         }
                     } else {
                         ImageUploader.uploadImage(
@@ -205,7 +205,7 @@ open class NewPostViewModel() : ViewModel() {
                             contentResolver = contentResolver,
                             onSuccess = { imageUrl, mimeType ->
                                 if (isNIP94Server(server)) {
-                                    createNIP94Record(imageUrl, mimeType, description)
+                                    createNIP94Record(imageUrl, mimeType, description, sensitiveContent)
                                 } else {
                                     isUploadingImage = false
                                     message = TextFieldValue(message.text + "\n\n" + imageUrl)
@@ -370,13 +370,14 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
             FileHeader.prepare(
                 imageUrl,
                 mimeType,
                 description,
+                sensitiveContent,
                 onReady = {
                     val note = account?.sendHeader(it)
 
@@ -400,13 +401,14 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
                 "",
                 mimeType,
                 description,
+                sensitiveContent,
                 onReady = {
                     val nip95 = account?.createNip95(bytes, headerInfo = it)
                     val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second) }
