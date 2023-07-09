@@ -988,21 +988,21 @@ fun ImageVideoDescription(
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                SettingSwitchItem(
-                    checked = sensitiveContent,
-                    onCheckedChange = { sensitiveContent = it },
-                    title = R.string.add_sensitive_content_label,
-                    description = R.string.add_sensitive_content_description
-                )
-            }
-
             if (isNIP94Server(selectedServer) ||
                 selectedServer == ServersAvailable.NIP95
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SettingSwitchItem(
+                        checked = sensitiveContent,
+                        onCheckedChange = { sensitiveContent = it },
+                        title = R.string.add_sensitive_content_label,
+                        description = R.string.add_sensitive_content_description
+                    )
+                }
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
