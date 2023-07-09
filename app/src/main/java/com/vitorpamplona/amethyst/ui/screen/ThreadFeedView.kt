@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -406,6 +407,15 @@ fun NoteMaster(
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, accountViewModel, nav)
+                    } else if (noteEvent is CommunityPostApprovalEvent) {
+                        RenderPostApproval(
+                            baseNote,
+                            false,
+                            true,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
                     } else if (noteEvent is PinListEvent) {
                         PinListHeader(
                             baseNote,
