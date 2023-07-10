@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
@@ -3225,17 +3226,27 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             )
     ) {
         Column {
-            image?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = stringResource(
-                        R.string.preview_card_image_for,
-                        it
-                    ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } ?: CreateImageHeader(note, accountViewModel)
+            val settings = accountViewModel.account.settings
+            val isMobile = ConnectivityStatus.isOnMobileData.value
+
+            val automaticallyShowUrlPreview = when (settings.automaticallyShowUrlPreview) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+            if (automaticallyShowUrlPreview) {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: CreateImageHeader(note, accountViewModel)
+            }
 
             title?.let {
                 Text(
