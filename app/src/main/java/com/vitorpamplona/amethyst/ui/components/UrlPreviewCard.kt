@@ -20,7 +20,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 
@@ -28,62 +30,72 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 fun UrlPreviewCard(
     url: String,
     previewInfo: UrlInfoItem,
-    automaticallyShowUrlPreview: MutableState<Boolean>
+    accountViewModel: AccountViewModel
 ) {
-    if (!automaticallyShowUrlPreview.value) {
-        return ClickableUrl(url, url)
+    val settings = accountViewModel.account.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val automaticallyShowUrlPreview = when (settings.automaticallyShowUrlPreview) {
+        true -> !isMobile
+        false -> false
+        else -> true
     }
-    val uri = LocalUriHandler.current
 
-    Row(
-        modifier = Modifier
-            .clickable { runCatching { uri.openUri(url) } }
-            .clip(shape = QuoteBorder)
-            .border(
-                1.dp,
-                MaterialTheme.colors.subtleBorder,
-                QuoteBorder
-            )
-    ) {
-        Column {
-            AsyncImage(
-                model = previewInfo.imageUrlFullPath,
-                contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth()
-            )
+    if (!automaticallyShowUrlPreview) {
+        ClickableUrl(url, url)
+    } else {
+        val uri = LocalUriHandler.current
 
-            Text(
-                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
-                style = MaterialTheme.typography.caption,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp, top = 10.dp),
-                color = Color.Gray,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+        Row(
+            modifier = Modifier
+                .clickable { runCatching { uri.openUri(url) } }
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    MaterialTheme.colors.subtleBorder,
+                    QuoteBorder
+                )
+        ) {
+            Column {
+                AsyncImage(
+                    model = previewInfo.imageUrlFullPath,
+                    contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Text(
-                text = previewInfo.title,
-                style = MaterialTheme.typography.body2,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-            Text(
-                text = previewInfo.description,
-                style = MaterialTheme.typography.caption,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                color = Color.Gray,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = previewInfo.title,
+                    style = MaterialTheme.typography.body2,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = previewInfo.description,
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

@@ -108,15 +108,13 @@ fun RichTextViewer(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>,
-    automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, automaticallyStartPlayback, automaticallyShowUrlPreview, nav)
+            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
         }
     }
 }
@@ -129,8 +127,6 @@ private fun RenderRegular(
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>,
-    automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val state by remember(content) {
@@ -160,8 +156,6 @@ private fun RenderRegular(
                                 backgroundColor,
                                 textStyle,
                                 accountViewModel,
-                                automaticallyStartPlayback,
-                                automaticallyShowUrlPreview,
                                 nav
                             )
                         }
@@ -241,13 +235,11 @@ private fun RenderWordWithPreview(
     backgroundColor: MutableState<Color>,
     style: TextStyle,
     accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>,
-    automaticallyShowUrlPreview: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel, automaticallyStartPlayback)
-        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, automaticallyShowUrlPreview)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
@@ -267,11 +259,10 @@ private fun RenderWordWithPreview(
 private fun ZoomableContentView(
     word: String,
     state: RichTextViewerState,
-    accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>
+    accountViewModel: AccountViewModel
 ) {
     state.imagesForPager[word]?.let {
-        ZoomableContentView(it, state.imageList, accountViewModel, automaticallyStartPlayback)
+        ZoomableContentView(it, state.imageList, accountViewModel)
     }
 }
 

@@ -211,30 +211,6 @@ fun NoteCompose(
         it.note.event == null
     }.distinctUntilChanged().observeAsState(baseNote.event == null)
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val settings = accountState?.account?.settings
-    val isMobile = ConnectivityStatus.isOnMobileData.value
-
-    val showImage = remember {
-        mutableStateOf(
-            when (settings?.automaticallyShowImages) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
-    val automaticallyStartPlayback = remember {
-        mutableStateOf(
-            when (settings?.automaticallyStartPlayback) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
     Crossfade(targetState = isBlank) {
         if (it) {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
@@ -260,8 +236,6 @@ fun NoteCompose(
                 addMarginTop,
                 parentBackgroundColor,
                 accountViewModel,
-                showImage,
-                automaticallyStartPlayback,
                 nav
             )
         }
@@ -280,8 +254,6 @@ fun CheckHiddenNoteCompose(
     addMarginTop: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val isHidden by accountViewModel.accountLiveData.map {
@@ -301,8 +273,6 @@ fun CheckHiddenNoteCompose(
                 addMarginTop,
                 parentBackgroundColor,
                 accountViewModel,
-                showImage,
-                automaticallyStartPlayback,
                 nav
             )
         }
@@ -328,8 +298,6 @@ fun LoadedNoteCompose(
     addMarginTop: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var state by remember {
@@ -366,8 +334,6 @@ fun LoadedNoteCompose(
             addMarginTop,
             parentBackgroundColor,
             accountViewModel,
-            showImage,
-            automaticallyStartPlayback,
             nav
         )
     }
@@ -386,8 +352,6 @@ fun RenderReportState(
     addMarginTop: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
@@ -417,8 +381,6 @@ fun RenderReportState(
                 canPreview,
                 parentBackgroundColor,
                 accountViewModel,
-                showImage,
-                automaticallyStartPlayback,
                 nav
             )
         }
@@ -454,8 +416,6 @@ fun NormalNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     when (baseNote.event) {
@@ -464,7 +424,6 @@ fun NormalNote(
             showVideo = !makeItShort,
             showBottomDiviser = true,
             accountViewModel = accountViewModel,
-            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
         is CommunityDefinitionEvent -> CommunityHeader(
@@ -490,8 +449,6 @@ fun NormalNote(
                     canPreview,
                     parentBackgroundColor,
                     accountViewModel,
-                    showImage,
-                    automaticallyStartPlayback,
                     showPopup,
                     nav
                 )
@@ -789,8 +746,6 @@ private fun CheckNewAndRenderNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
@@ -855,8 +810,6 @@ private fun CheckNewAndRenderNote(
             makeItShort = makeItShort,
             canPreview = canPreview,
             accountViewModel = accountViewModel,
-            showImage = showImage,
-            automaticallyStartPlayback = automaticallyStartPlayback,
             nav = nav
         )
     }
@@ -907,8 +860,6 @@ fun InnerNoteWithReactions(
     makeItShort: Boolean,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
-    showImage: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
@@ -947,7 +898,6 @@ fun InnerNoteWithReactions(
                     showSecondRow = showSecondRow,
                     backgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
                     nav = nav
                 )
             }
@@ -993,7 +943,6 @@ private fun NoteBody(
     showSecondRow: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     FirstUserInfoRow(
@@ -1019,7 +968,6 @@ private fun NoteBody(
             unPackReply,
             backgroundColor,
             accountViewModel,
-            automaticallyStartPlayback,
             nav
         )
     }
@@ -1327,7 +1275,7 @@ fun RenderAppDefinition(
                 )
 
                 if (zoomImageDialogOpen) {
-                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
                 }
             } else {
                 Image(
@@ -1378,7 +1326,7 @@ fun RenderAppDefinition(
                     }
 
                     if (zoomImageDialogOpen) {
-                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -2118,7 +2066,6 @@ private fun ReplyRow(
     unPackReply: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>,
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event
@@ -2154,7 +2101,6 @@ private fun ReplyRow(
                     showBottomDiviser = false,
                     modifier = remember { Modifier.padding(vertical = 5.dp) },
                     accountViewModel = accountViewModel,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
                     nav = nav
                 )
 
@@ -2942,7 +2888,7 @@ fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it)
+                ZoomableContentView(content = it, accountViewModel = accountViewModel)
             }
         }
     }
@@ -3028,7 +2974,7 @@ private fun RenderNIP95(
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it)
+                ZoomableContentView(content = it, accountViewModel = accountViewModel)
             }
         }
     }
@@ -3099,13 +3045,13 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                             videoUri = media,
                             description = noteEvent.subject(),
                             thumbUri = cover,
-                            showVideo = remember { mutableStateOf(true) }
+                            accountViewModel = accountViewModel
                         )
                     }
                         ?: VideoView(
                             videoUri = media,
                             description = noteEvent.subject(),
-                            automaticallyStartPlayback = remember { mutableStateOf(true) }
+                            accountViewModel = accountViewModel
                         )
                 }
             }
@@ -3230,7 +3176,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                     VideoView(
                         videoUri = media,
                         description = subject,
-                        automaticallyStartPlayback = remember { mutableStateOf(true) }
+                        accountViewModel = accountViewModel
                     )
                 }
             } else {

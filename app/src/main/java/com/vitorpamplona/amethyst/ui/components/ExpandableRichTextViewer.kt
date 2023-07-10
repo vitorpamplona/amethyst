@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -44,30 +42,6 @@ fun ExpandableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val settings = accountState?.account?.settings
-    val isMobile = ConnectivityStatus.isOnMobileData.value
-
-    val automaticallyStartPlayback = remember {
-        mutableStateOf(
-            when (settings?.automaticallyStartPlayback) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
-    val automaticallyShowUrlPreview = remember {
-        mutableStateOf(
-            when (settings?.automaticallyShowUrlPreview) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
-
     var showFullText by remember { mutableStateOf(false) }
 
     val whereToCut = remember(content) {
@@ -96,8 +70,6 @@ fun ExpandableRichTextViewer(
             tags,
             backgroundColor,
             accountViewModel,
-            automaticallyStartPlayback,
-            automaticallyShowUrlPreview,
             nav
         )
 

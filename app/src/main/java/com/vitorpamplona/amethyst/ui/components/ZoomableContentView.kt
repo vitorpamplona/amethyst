@@ -172,8 +172,7 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 fun ZoomableContentView(
     content: ZoomableContent,
     images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
-    accountViewModel: AccountViewModel,
-    automaticallyStartPlayback: MutableState<Boolean>
+    accountViewModel: AccountViewModel
 ) {
     val clipboardManager = LocalClipboardManager.current
 
@@ -202,16 +201,16 @@ fun ZoomableContentView(
 
     when (content) {
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel)
-        is ZoomableUrlVideo -> VideoView(content.url, content.description, automaticallyStartPlayback = automaticallyStartPlayback) { dialogOpen = true }
+        is ZoomableUrlVideo -> VideoView(content.url, content.description, accountViewModel = accountViewModel) { dialogOpen = true }
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel)
         is ZoomableLocalVideo ->
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description, automaticallyStartPlayback = automaticallyStartPlayback) { dialogOpen = true }
+                VideoView(it.toUri().toString(), content.description, accountViewModel = accountViewModel) { dialogOpen = true }
             }
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false })
+        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
     }
 }
 
@@ -541,7 +540,7 @@ private fun DisplayBlurHash(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit) {
+fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
     val view = LocalView.current
 
     DisposableEffect(key1 = Unit) {
@@ -583,11 +582,11 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index], null, remember { mutableStateOf(true) })
+                            RenderImageOrVideo(allImages[index], accountViewModel)
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl, null, remember { mutableStateOf(true) })
+                    RenderImageOrVideo(imageUrl, accountViewModel)
                 }
 
                 Row(
@@ -612,7 +611,7 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
 }
 
 @Composable
-fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel?, automaticallyStartPlayback: MutableState<Boolean>) {
+fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
@@ -621,14 +620,14 @@ fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewMo
         UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url, content.description, automaticallyStartPlayback = automaticallyStartPlayback)
+            VideoView(content.url, content.description, accountViewModel = accountViewModel)
         }
     } else if (content is ZoomableLocalImage) {
         LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description, automaticallyStartPlayback = automaticallyStartPlayback)
+                VideoView(it.toUri().toString(), content.description, accountViewModel = accountViewModel)
             }
         }
     }

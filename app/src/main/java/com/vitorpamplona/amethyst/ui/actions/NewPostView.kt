@@ -272,7 +272,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                             scope.launch {
                                                 postViewModel.imageUploadingError.emit(it)
                                             }
-                                        }
+                                        },
+                                        accountViewModel = accountViewModel
                                     )
                                 }
                             }
@@ -330,9 +331,9 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                                     )
                                             )
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                            VideoView(myUrlPreview, automaticallyStartPlayback = remember { mutableStateOf(true) })
+                                            VideoView(myUrlPreview, accountViewModel = accountViewModel)
                                         } else {
-                                            UrlPreview(myUrlPreview, myUrlPreview, remember { mutableStateOf(true) })
+                                            UrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
                                         }
                                     } else if (startsWithNIP19Scheme(myUrlPreview)) {
                                         val bgColor = MaterialTheme.colors.background
@@ -348,7 +349,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                             nav
                                         )
                                     } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
-                                        UrlPreview("https://$myUrlPreview", myUrlPreview, remember { mutableStateOf(true) })
+                                        UrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
                                     }
                                 }
                             }
@@ -836,7 +837,8 @@ fun ImageVideoDescription(
     defaultServer: ServersAvailable,
     onAdd: (String, ServersAvailable, Boolean) -> Unit,
     onCancel: () -> Unit,
-    onError: (String) -> Unit
+    onError: (String) -> Unit,
+    accountViewModel: AccountViewModel
 ) {
     val resolver = LocalContext.current.contentResolver
     val mediaType = resolver.getType(uri) ?: ""
@@ -966,7 +968,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri.toString(), automaticallyStartPlayback = remember { mutableStateOf(true) })
+                    VideoView(uri.toString(), accountViewModel = accountViewModel)
                 }
             }
 

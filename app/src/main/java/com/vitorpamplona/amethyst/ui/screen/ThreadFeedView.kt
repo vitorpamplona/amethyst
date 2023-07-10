@@ -23,7 +23,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -55,7 +54,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
@@ -75,19 +73,6 @@ import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
-import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
-import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
-import com.vitorpamplona.amethyst.ui.note.DisplayPoW
-import com.vitorpamplona.amethyst.ui.note.DisplayReward
-import com.vitorpamplona.amethyst.ui.note.HiddenNote
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
-import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
@@ -244,19 +229,6 @@ fun NoteMaster(
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-
-    val settings = accountState?.account?.settings
-    val isMobile = ConnectivityStatus.isOnMobileData.value
-
-    val automaticallyStartPlayback = remember {
-        mutableStateOf(
-            when (settings?.automaticallyStartPlayback) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
-        )
-    }
 
     var showHiddenNote by remember { mutableStateOf(false) }
 
@@ -417,7 +389,6 @@ fun NoteMaster(
                             showVideo = true,
                             showBottomDiviser = false,
                             accountViewModel = accountViewModel,
-                            automaticallyStartPlayback = automaticallyStartPlayback,
                             nav = nav
                         )
                     } else if (noteEvent is FileHeaderEvent) {

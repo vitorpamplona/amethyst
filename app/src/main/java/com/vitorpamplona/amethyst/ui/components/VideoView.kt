@@ -61,6 +61,8 @@ import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.android.exoplayer2.upstream.DataSource
 import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -73,7 +75,7 @@ fun LoadThumbAndThenVideoView(
     videoUri: String,
     description: String? = null,
     thumbUri: String,
-    showVideo: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
@@ -99,9 +101,9 @@ fun LoadThumbAndThenVideoView(
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            VideoView(videoUri, description, VideoThumb(loadingFinished.second), showVideo, onDialog)
+            VideoView(videoUri, description, VideoThumb(loadingFinished.second), accountViewModel, onDialog)
         } else {
-            VideoView(videoUri, description, null, showVideo, onDialog)
+            VideoView(videoUri, description, null, accountViewModel, onDialog)
         }
     }
 }
@@ -112,11 +114,11 @@ fun VideoView(
     videoUri: String,
     description: String? = null,
     thumb: VideoThumb? = null,
-    automaticallyStartPlayback: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, thumb, onDialog, automaticallyStartPlayback)
+        VideoView1(videoUri, description, thumb, onDialog, accountViewModel)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -127,7 +129,7 @@ fun VideoView1(
     description: String? = null,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    automaticallyStartPlayback: MutableState<Boolean>
+    accountViewModel: AccountViewModel
 ) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
     val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
@@ -142,7 +144,7 @@ fun VideoView1(
     }
 
     exoPlayerData?.let {
-        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, automaticallyStartPlayback = automaticallyStartPlayback)
+        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, accountViewModel)
     }
 
     DisposableEffect(Unit) {
@@ -161,10 +163,10 @@ fun VideoView(
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    automaticallyStartPlayback: MutableState<Boolean>
+    accountViewModel: AccountViewModel
 ) {
-    val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, automaticallyStartPlayback)
+    val (_, elapsed) = measureTimedValue {
+        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, accountViewModel)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -177,11 +179,24 @@ fun VideoView1(
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    automaticallyStartPlayback: MutableState<Boolean>
+    accountViewModel: AccountViewModel
 ) {
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
     val media = remember { MediaItem.Builder().setUri(videoUri).build() }
+
+    val settings = accountViewModel.account.settings
+    val isMobile = ConnectivityStatus.isOnMobileData.value
+
+    val automaticallyStartPlayback = remember {
+        mutableStateOf(
+            when (settings.automaticallyStartPlayback) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+        )
+    }
 
     exoPlayerData.exoPlayer.apply {
         repeatMode = Player.REPEAT_MODE_ALL
