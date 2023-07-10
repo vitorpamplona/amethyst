@@ -33,14 +33,18 @@ fun LoadRedirectScreen(eventId: String?, navController: NavController) {
     if (eventId == null) return
 
     var noteBase by remember { mutableStateOf<Note?>(null) }
+    val scope = rememberCoroutineScope()
 
     val nav = remember(navController) {
         { route: String ->
-            navController.navigate(route) {
-                popUpTo(Route.Event.route) {
-                    inclusive = true
+            scope.launch {
+                navController.navigate(route) {
+                    popUpTo(Route.Event.route) {
+                        inclusive = true
+                    }
                 }
             }
+            Unit
         }
     }
 
