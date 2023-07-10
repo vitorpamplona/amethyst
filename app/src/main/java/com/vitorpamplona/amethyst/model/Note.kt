@@ -19,7 +19,6 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
@@ -434,7 +433,7 @@ open class Note(val idHex: String) {
     }
 
     fun hasAnyReports(): Boolean {
-        val dayAgo = Date().time / 1000 - 24 * 60 * 60
+        val dayAgo = TimeUtils.oneDayAgo()
         return reports.isNotEmpty() ||
             (
                 author?.reports?.values?.any {
@@ -471,8 +470,7 @@ open class Note(val idHex: String) {
     }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
-        val currentTime = Date().time / 1000
-        return boosts.firstOrNull { it.author == loggedIn && (it.createdAt() ?: 0) > currentTime - (60 * 5) } != null // 5 minute protection
+        return boosts.firstOrNull { it.author == loggedIn && (it.createdAt() ?: 0) > TimeUtils.fiveMinutesAgo() } != null // 5 minute protection
     }
 
     fun boostedBy(loggedIn: User): List<Note> {

@@ -64,7 +64,7 @@ class LnZapRequestEvent(
             pollOption: Int?,
             message: String,
             zapType: LnZapEvent.ZapType,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): LnZapRequestEvent {
             var content = message
             var privkey = privateKey
@@ -104,7 +104,7 @@ class LnZapRequestEvent(
             privateKey: ByteArray,
             message: String,
             zapType: LnZapEvent.ZapType,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): LnZapRequestEvent {
             var content = message
             var privkey = privateKey

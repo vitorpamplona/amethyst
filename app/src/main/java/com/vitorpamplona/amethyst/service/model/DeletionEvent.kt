@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class DeletionEvent(
@@ -20,7 +20,7 @@ class DeletionEvent(
     companion object {
         const val kind = 5
 
-        fun create(deleteEvents: List<String>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): DeletionEvent {
+        fun create(deleteEvents: List<String>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): DeletionEvent {
             val content = ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = deleteEvents.map { listOf("e", it) }

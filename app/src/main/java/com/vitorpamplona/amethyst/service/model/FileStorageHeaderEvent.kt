@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class FileStorageHeaderEvent(
@@ -52,7 +52,7 @@ class FileStorageHeaderEvent(
             encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): FileStorageHeaderEvent {
             val tags = listOfNotNull(
                 listOf("e", storageEvent.id),

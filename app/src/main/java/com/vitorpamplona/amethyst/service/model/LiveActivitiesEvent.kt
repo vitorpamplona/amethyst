@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class LiveActivitiesEvent(
@@ -32,7 +32,7 @@ class LiveActivitiesEvent(
     fun participants() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(3)) }
 
     fun checkStatus(eventStatus: String?): String? {
-        return if (eventStatus == STATUS_LIVE && createdAt < Date().time / 1000 - (60 * 60 * 8)) { // 2 hours {
+        return if (eventStatus == STATUS_LIVE && createdAt < TimeUtils.eightHoursAgo()) {
             STATUS_ENDED
         } else {
             eventStatus
@@ -48,7 +48,7 @@ class LiveActivitiesEvent(
 
         fun create(
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): LiveActivitiesEvent {
             val tags = mutableListOf<List<String>>()
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()

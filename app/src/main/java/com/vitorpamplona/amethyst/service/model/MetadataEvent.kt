@@ -7,11 +7,11 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.Gson
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.io.ByteArrayInputStream
-import java.util.Date
 
 @Stable
 abstract class IdentityClaim(
@@ -171,7 +171,7 @@ class MetadataEvent(
                 .readerFor(UserMetadata::class.java)
         }
 
-        fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = Date().time / 1000): MetadataEvent {
+        fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): MetadataEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
 

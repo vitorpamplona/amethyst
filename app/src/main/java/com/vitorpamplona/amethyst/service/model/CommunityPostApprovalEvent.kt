@@ -3,10 +3,10 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.relays.Client
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class CommunityPostApprovalEvent(
@@ -45,7 +45,7 @@ class CommunityPostApprovalEvent(
     companion object {
         const val kind = 4550
 
-        fun create(approvedPost: Event, community: CommunityDefinitionEvent, privateKey: ByteArray, createdAt: Long = Date().time / 1000): GenericRepostEvent {
+        fun create(approvedPost: Event, community: CommunityDefinitionEvent, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): GenericRepostEvent {
             val content = approvedPost.toJson()
 
             val communities = listOf("a", community.address().toTag())

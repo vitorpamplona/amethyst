@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.content.Intent
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.animation.Crossfade
@@ -10,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,8 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
@@ -38,12 +34,10 @@ import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,7 +52,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
-import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -71,15 +64,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
 import androidx.lifecycle.distinctUntilChanged
@@ -133,7 +123,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
@@ -154,7 +143,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -165,9 +153,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
-import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconButtonModifier
-import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -3314,532 +3299,6 @@ fun CreateImageHeader(
             }
         ) {
             NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = Size55dp)
-        }
-    }
-}
-
-@Composable
-private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var showShowMore by remember { mutableStateOf(false) }
-
-    var lazyRelayList by remember {
-        val baseNumber = baseNote.relays.map {
-            it.removePrefix("wss://").removePrefix("ws://")
-        }.toImmutableList()
-
-        mutableStateOf(baseNumber)
-    }
-    var shortRelayList by remember {
-        mutableStateOf(lazyRelayList.take(3).toImmutableList())
-    }
-
-    val scope = rememberCoroutineScope()
-
-    WatchRelayLists(baseNote) { relayList ->
-        if (!equalImmutableLists(relayList, lazyRelayList)) {
-            scope.launch(Dispatchers.Main) {
-                lazyRelayList = relayList
-                shortRelayList = relayList.take(3).toImmutableList()
-            }
-        }
-
-        val nextShowMore = relayList.size > 3
-        if (nextShowMore != showShowMore) {
-            scope.launch(Dispatchers.Main) {
-                // only triggers recomposition when actually different
-                showShowMore = nextShowMore
-            }
-        }
-    }
-
-    Spacer(DoubleVertSpacer)
-
-    if (expanded) {
-        VerticalRelayPanelWithFlow(lazyRelayList, accountViewModel, nav)
-    } else {
-        VerticalRelayPanelWithFlow(shortRelayList, accountViewModel, nav)
-    }
-
-    if (showShowMore && !expanded) {
-        ShowMoreRelaysButton {
-            expanded = true
-        }
-    }
-}
-
-@Composable
-private fun WatchRelayLists(baseNote: Note, onListChanges: (ImmutableList<String>) -> Unit) {
-    val noteRelaysState by baseNote.live().relays.observeAsState()
-
-    LaunchedEffect(key1 = noteRelaysState) {
-        launch(Dispatchers.IO) {
-            val relayList = noteRelaysState?.note?.relays?.map {
-                it.removePrefix("wss://").removePrefix("ws://")
-            } ?: emptyList()
-
-            onListChanges(relayList.toImmutableList())
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-@Stable
-private fun VerticalRelayPanelWithFlow(
-    relays: ImmutableList<String>,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    // FlowRow Seems to be a lot faster than LazyVerticalGrid
-    FlowRow() {
-        relays.forEach { url ->
-            RenderRelay(url, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-private fun ShowMoreRelaysButton(onClick: () -> Unit) {
-    Row(
-        modifier = ShowMoreRelaysButtonBoxModifer,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.Top
-    ) {
-        IconButton(
-            modifier = ShowMoreRelaysButtonIconButtonModifier,
-            onClick = onClick
-        ) {
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
-                null,
-                modifier = ShowMoreRelaysButtonIconModifier,
-                tint = MaterialTheme.colors.placeholderText
-            )
-        }
-    }
-}
-
-@Composable
-fun NoteAuthorPicture(
-    baseNote: Note,
-    nav: (String) -> Unit,
-    accountViewModel: AccountViewModel,
-    size: Dp,
-    pictureModifier: Modifier = Modifier
-) {
-    NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
-        nav("User/${it.pubkeyHex}")
-    }
-}
-
-@Composable
-fun NoteAuthorPicture(
-    baseNote: Note,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier,
-    onClick: ((User) -> Unit)? = null
-) {
-    val author by baseNote.live().metadata.map {
-        it.note.author
-    }.distinctUntilChanged().observeAsState(baseNote.author)
-
-    Crossfade(targetState = author) {
-        if (it == null) {
-            DisplayBlankAuthor(size, modifier)
-        } else {
-            ClickableUserPicture(it, size, accountViewModel, modifier, onClick)
-        }
-    }
-}
-
-@Composable
-fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
-    val backgroundColor = MaterialTheme.colors.background
-
-    val nullModifier = remember {
-        modifier
-            .size(size)
-            .clip(shape = CircleShape)
-            .background(backgroundColor)
-    }
-
-    RobohashAsyncImage(
-        robot = "authornotfound",
-        contentDescription = stringResource(R.string.unknown_author),
-        modifier = nullModifier
-    )
-}
-
-@Composable
-fun UserPicture(
-    user: User,
-    size: Dp,
-    pictureModifier: Modifier = remember { Modifier },
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    val route by remember {
-        derivedStateOf {
-            "User/${user.pubkeyHex}"
-        }
-    }
-
-    val scope = rememberCoroutineScope()
-
-    ClickableUserPicture(
-        baseUser = user,
-        size = size,
-        accountViewModel = accountViewModel,
-        modifier = pictureModifier,
-        onClick = {
-            scope.launch {
-                nav(route)
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ClickableUserPicture(
-    baseUser: User,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier },
-    onClick: ((User) -> Unit)? = null,
-    onLongClick: ((User) -> Unit)? = null
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val ripple = rememberRipple(bounded = false, radius = size)
-
-    // BaseUser is the same reference as accountState.user
-    val myModifier = remember {
-        if (onClick != null && onLongClick != null) {
-            Modifier
-                .size(size)
-                .combinedClickable(
-                    onClick = { onClick(baseUser) },
-                    onLongClick = { onLongClick(baseUser) },
-                    role = Role.Button,
-                    interactionSource = interactionSource,
-                    indication = ripple
-                )
-        } else if (onClick != null) {
-            Modifier
-                .size(size)
-                .clickable(
-                    onClick = { onClick(baseUser) },
-                    role = Role.Button,
-                    interactionSource = interactionSource,
-                    indication = ripple
-                )
-        } else {
-            Modifier.size(size)
-        }
-    }
-
-    Box(modifier = myModifier, contentAlignment = TopEnd) {
-        BaseUserPicture(baseUser, size, accountViewModel, modifier)
-    }
-}
-
-@Composable
-fun NonClickableUserPicture(
-    baseUser: User,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier }
-) {
-    val myBoxModifier = remember {
-        Modifier.size(size)
-    }
-
-    Box(myBoxModifier, contentAlignment = TopEnd) {
-        BaseUserPicture(baseUser, size, accountViewModel, modifier)
-    }
-}
-
-@Composable
-fun BaseUserPicture(
-    baseUser: User,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier }
-) {
-    val userPubkey = remember {
-        baseUser.pubkeyHex
-    }
-
-    val userProfile by baseUser.live().metadata.map {
-        it.user.profilePicture()
-    }.distinctUntilChanged().observeAsState(baseUser.profilePicture())
-
-    val myBoxModifier = remember {
-        Modifier.size(size)
-    }
-
-    Box(myBoxModifier, contentAlignment = TopEnd) {
-        PictureAndFollowingMark(
-            userHex = userPubkey,
-            userPicture = userProfile,
-            size = size,
-            modifier = modifier,
-            accountViewModel = accountViewModel
-        )
-    }
-}
-
-@Composable
-fun PictureAndFollowingMark(
-    userHex: String,
-    userPicture: String?,
-    size: Dp,
-    modifier: Modifier,
-    accountViewModel: AccountViewModel
-) {
-    val backgroundColor = MaterialTheme.colors.background
-    val myImageModifier = remember {
-        modifier
-            .size(size)
-            .clip(shape = CircleShape)
-            .background(backgroundColor)
-    }
-
-    RobohashAsyncImageProxy(
-        robot = userHex,
-        model = userPicture,
-        contentDescription = stringResource(id = R.string.profile_image),
-        modifier = myImageModifier,
-        contentScale = ContentScale.Crop
-    )
-
-    val myIconSize by remember(size) {
-        derivedStateOf {
-            size.div(3.5f)
-        }
-    }
-    ObserveAndDisplayFollowingMark(userHex, myIconSize, accountViewModel)
-}
-
-@Composable
-fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
-    WatchFollows(userHex, accountViewModel) {
-        Crossfade(targetState = it) {
-            if (it) {
-                Box(contentAlignment = TopEnd) {
-                    FollowingIcon(iconSize)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun WatchFollows(userHex: String, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
-    val showFollowingMark by accountViewModel.userFollows.map {
-        it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    }.distinctUntilChanged().observeAsState(
-        accountViewModel.account.userProfile().isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    )
-
-    onFollowChanges(showFollowingMark)
-}
-
-@Composable
-fun FollowingIcon(iconSize: Dp) {
-    val modifier = remember {
-        Modifier.size(iconSize)
-    }
-
-    Icon(
-        painter = painterResource(R.drawable.verified_follow_shield),
-        contentDescription = stringResource(id = R.string.following),
-        modifier = modifier,
-        tint = Color.Unspecified
-    )
-}
-
-@Immutable
-data class DropDownParams(
-    val isFollowingAuthor: Boolean,
-    val isPrivateBookmarkNote: Boolean,
-    val isPublicBookmarkNote: Boolean,
-    val isLoggedUser: Boolean,
-    val isSensitive: Boolean,
-    val showSensitiveContent: Boolean?
-)
-
-@Composable
-fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
-    var reportDialogShowing by remember { mutableStateOf(false) }
-
-    var state by remember {
-        mutableStateOf<DropDownParams>(
-            DropDownParams(
-                isFollowingAuthor = false,
-                isPrivateBookmarkNote = false,
-                isPublicBookmarkNote = false,
-                isLoggedUser = false,
-                isSensitive = false,
-                showSensitiveContent = null
-            )
-        )
-    }
-
-    DropdownMenu(
-        expanded = popupExpanded,
-        onDismissRequest = onDismiss
-    ) {
-        val clipboardManager = LocalClipboardManager.current
-        val appContext = LocalContext.current.applicationContext
-        val actContext = LocalContext.current
-
-        WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
-            if (state != newState) {
-                state = newState
-            }
-        }
-
-        val scope = rememberCoroutineScope()
-
-        if (!state.isFollowingAuthor) {
-            DropdownMenuItem(onClick = {
-                accountViewModel.follow(
-                    note.author ?: return@DropdownMenuItem
-                ); onDismiss()
-            }) {
-                Text(stringResource(R.string.follow))
-            }
-            Divider()
-        }
-        DropdownMenuItem(
-            onClick = {
-                scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: ""))
-                    onDismiss()
-                }
-            }
-        ) {
-            Text(stringResource(R.string.copy_text))
-        }
-        DropdownMenuItem(
-            onClick = {
-                scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
-                    onDismiss()
-                }
-            }
-        ) {
-            Text(stringResource(R.string.copy_user_pubkey))
-        }
-        DropdownMenuItem(onClick = {
-            scope.launch(Dispatchers.IO) {
-                clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
-                onDismiss()
-            }
-        }) {
-            Text(stringResource(R.string.copy_note_id))
-        }
-        DropdownMenuItem(onClick = {
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                type = "text/plain"
-                putExtra(
-                    Intent.EXTRA_TEXT,
-                    externalLinkForNote(note)
-                )
-                putExtra(Intent.EXTRA_TITLE, actContext.getString(R.string.quick_action_share_browser_link))
-            }
-
-            val shareIntent = Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
-            ContextCompat.startActivity(actContext, shareIntent, null)
-            onDismiss()
-        }) {
-            Text(stringResource(R.string.quick_action_share))
-        }
-        Divider()
-        if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.remove_from_private_bookmarks))
-            }
-        } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPrivateBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.add_to_private_bookmarks))
-            }
-        }
-        if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePublicBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.remove_from_public_bookmarks))
-            }
-        } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.add_to_public_bookmarks))
-            }
-        }
-        Divider()
-        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
-            Text(stringResource(R.string.broadcast))
-        }
-        Divider()
-        if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
-                Text(stringResource(R.string.request_deletion))
-            }
-        } else {
-            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
-                Text("Block / Report")
-            }
-        }
-        Divider()
-        if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.hideSensitiveContent(); onDismiss() } }) {
-                Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
-            }
-        }
-        if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.disableContentWarnings(); onDismiss() } }) {
-                Text(stringResource(R.string.content_warning_show_all_sensitive_content))
-            }
-        }
-        if (state.showSensitiveContent != null) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.seeContentWarnings(); onDismiss() } }) {
-                Text(stringResource(R.string.content_warning_see_warnings))
-            }
-        }
-    }
-
-    if (reportDialogShowing) {
-        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
-            reportDialogShowing = false
-            onDismiss()
-        }
-    }
-}
-
-@Composable
-fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewModel, onNew: (DropDownParams) -> Unit) {
-    val followState by accountViewModel.userProfile().live().follows.observeAsState()
-    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-
-    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = accountState) {
-        launch(Dispatchers.IO) {
-            val newState = DropDownParams(
-                isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
-                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                isSensitive = note.event?.isSensitive() ?: false,
-                showSensitiveContent = accountState?.account?.showSensitiveContent
-            )
-
-            launch(Dispatchers.Main) {
-                onNew(
-                    newState
-                )
-            }
         }
     }
 }

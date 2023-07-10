@@ -5,10 +5,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.decodePublicKey
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 data class Contact(val pubKeyHex: String, val relayUri: String?)
@@ -73,7 +73,7 @@ class ContactListEvent(
     companion object {
         const val kind = 3
 
-        fun create(follows: List<Contact>, followTags: List<String>, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ContactListEvent {
+        fun create(follows: List<Contact>, followTags: List<String>, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
             val content = if (relayUse != null) {
                 gson.toJson(relayUse)
             } else {

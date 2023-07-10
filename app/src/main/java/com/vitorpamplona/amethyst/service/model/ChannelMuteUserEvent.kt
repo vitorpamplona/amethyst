@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class ChannelMuteUserEvent(
@@ -26,7 +26,7 @@ class ChannelMuteUserEvent(
     companion object {
         const val kind = 44
 
-        fun create(reason: String, usersToMute: List<String>?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelMuteUserEvent {
+        fun create(reason: String, usersToMute: List<String>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ChannelMuteUserEvent {
             val content = reason
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags =

@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.EventInterface
@@ -14,7 +15,6 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import java.net.Proxy
 import java.time.Duration
-import java.util.Date
 
 enum class FeedType {
     FOLLOWS, PUBLIC_CHATS, PRIVATE_DMS, GLOBAL, SEARCH, WALLET_CONNECT
@@ -179,7 +179,7 @@ class Relay(
                     socket = null
                     isReady = false
                     afterEOSE = false
-                    closingTime = Date().time / 1000
+                    closingTime = TimeUtils.now()
                     listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT, null) }
                 }
 
@@ -193,7 +193,7 @@ class Relay(
                     socket = null
                     isReady = false
                     afterEOSE = false
-                    closingTime = Date().time / 1000
+                    closingTime = TimeUtils.now()
 
                     Log.w("Relay", "Relay onFailure $url, ${response?.message} $response")
                     t.printStackTrace()
@@ -208,7 +208,7 @@ class Relay(
             errorCounter++
             isReady = false
             afterEOSE = false
-            closingTime = Date().time / 1000
+            closingTime = TimeUtils.now()
             Log.e("Relay", "Relay Invalid $url")
             e.printStackTrace()
         }
@@ -216,7 +216,7 @@ class Relay(
 
     fun disconnect() {
         // httpClient.dispatcher.executorService.shutdown()
-        closingTime = Date().time / 1000
+        closingTime = TimeUtils.now()
         socket?.close(1000, "Normal close")
         socket = null
         isReady = false
@@ -241,7 +241,7 @@ class Relay(
                 }
             } else {
                 // waits 60 seconds to reconnect after disconnected.
-                if (Date().time / 1000 > closingTime + 60) {
+                if (TimeUtils.now() > closingTime + 60) {
                     // sends all filters after connection is successful.
                     requestAndWatch()
                 }
@@ -254,7 +254,7 @@ class Relay(
 
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
-            if (Date().time / 1000 > closingTime + 60) {
+            if (TimeUtils.now() > closingTime + 60) {
                 // println("sendfilter Only if Disconnected ${url} ")
                 requestAndWatch()
             }

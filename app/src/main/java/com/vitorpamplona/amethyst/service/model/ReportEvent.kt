@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 data class ReportedKey(val key: String, val reportType: ReportEvent.ReportType)
@@ -58,7 +58,7 @@ class ReportEvent(
             type: ReportType,
             privateKey: ByteArray,
             content: String = "",
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): ReportEvent {
             val reportPostTag = listOf("e", reportedPost.id(), type.name.lowercase())
             val reportAuthorTag = listOf("p", reportedPost.pubKey(), type.name.lowercase())
@@ -75,7 +75,7 @@ class ReportEvent(
             return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
-        fun create(reportedUser: String, type: ReportType, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReportEvent {
+        fun create(reportedUser: String, type: ReportType, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReportEvent {
             val content = ""
 
             val reportAuthorTag = listOf("p", reportedUser, type.name.lowercase())

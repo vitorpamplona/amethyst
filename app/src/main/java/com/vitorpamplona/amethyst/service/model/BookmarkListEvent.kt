@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class BookmarkListEvent(
@@ -30,7 +30,7 @@ class BookmarkListEvent(
             privAddresses: List<ATag>? = null,
 
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): BookmarkListEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
             val content = createPrivateTags(privEvents, privUsers, privAddresses, privateKey, pubKey)

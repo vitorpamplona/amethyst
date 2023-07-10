@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.model.*
 
 open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
@@ -25,7 +26,7 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val now = System.currentTimeMillis() / 1000
+        val now = TimeUtils.now()
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()

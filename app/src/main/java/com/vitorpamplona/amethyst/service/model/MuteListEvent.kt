@@ -4,10 +4,10 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class MuteListEvent(
@@ -71,7 +71,7 @@ class MuteListEvent(
             privAddresses: List<ATag>? = null,
 
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): MuteListEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
 

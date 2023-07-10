@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
@@ -29,7 +30,7 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
 
-        val now = System.currentTimeMillis() / 1000
+        val now = TimeUtils.now()
 
         return collection
             .asSequence()

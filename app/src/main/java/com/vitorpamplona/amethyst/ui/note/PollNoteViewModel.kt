@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,7 +87,7 @@ class PollNoteViewModel : ViewModel() {
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     fun isPollClosed(): Boolean = closedAt?.let { // allow 2 minute leeway for zap to propagate
-        pollNote?.createdAt()?.plus(it * (86400 + 120))!! < Date().time / 1000
+        pollNote?.createdAt()?.plus(it * (86400 + 120))!! < TimeUtils.now()
     } == true
 
     fun voteAmountPlaceHolderText(sats: String): String = if (valueMinimum == null && valueMaximum == null) {

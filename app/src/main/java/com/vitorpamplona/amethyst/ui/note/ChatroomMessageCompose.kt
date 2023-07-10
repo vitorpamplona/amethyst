@@ -5,29 +5,19 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -36,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,26 +37,21 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
-import com.vitorpamplona.amethyst.ui.actions.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -76,13 +60,9 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
-import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
-import com.vitorpamplona.amethyst.ui.theme.Size13dp
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -567,7 +547,7 @@ private fun StatusRow(
     Column(modifier = ReactionRowHeightChat) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
             ChatTimeAgo(baseNote)
-            RelayBadges(baseNote, accountViewModel, nav = nav)
+            RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
         }
     }
@@ -805,132 +785,4 @@ private fun DisplayMessageUsername(
 
     Spacer(modifier = StdHorzSpacer)
     DrawPlayName(userDisplayName)
-}
-
-@Composable
-private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val expanded = remember { mutableStateOf(false) }
-
-    RenderRelayList(baseNote, expanded, accountViewModel, nav)
-
-    RenderExpandButton(baseNote, expanded) {
-        ChatRelayExpandButton { expanded.value = true }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun RenderRelayList(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteRelays by baseNote.live().relays.map {
-        it.note.relays
-    }.observeAsState(baseNote.relays)
-
-    FlowRow(StdStartPadding) {
-        val relaysToDisplay = remember(noteRelays, expanded.value) {
-            if (expanded.value) noteRelays else noteRelays.take(3)
-        }
-        relaysToDisplay.forEach {
-            RenderRelay(it, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-fun RenderExpandButton(
-    baseNote: Note,
-    expanded: MutableState<Boolean>,
-    content: @Composable () -> Unit
-) {
-    val showExpandButton by baseNote.live().relays.map {
-        it.note.relays.size > 3
-    }.observeAsState(baseNote.relays.size > 3)
-
-    if (showExpandButton && !expanded.value) {
-        content()
-    }
-}
-
-@Composable
-fun ChatRelayExpandButton(onClick: () -> Unit) {
-    IconButton(
-        modifier = Size15Modifier,
-        onClick = onClick
-    ) {
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            null,
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colors.placeholderText
-        )
-    }
-}
-
-@Composable
-fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val iconUrl by remember(dirtyUrl) {
-        derivedStateOf {
-            val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
-            "https://$cleanUrl/favicon.ico"
-        }
-    }
-
-    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
-
-    if (relayInfo != null) {
-        RelayInformationDialog(
-            onClose = {
-                relayInfo = null
-            },
-            relayInfo = relayInfo!!,
-            accountViewModel,
-            nav
-        )
-    }
-
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val interactionSource = remember { MutableInteractionSource() }
-    val ripple = rememberRipple(bounded = false, radius = Size15dp)
-
-    val clickableModifier = remember(dirtyUrl) {
-        Modifier
-            .padding(1.dp)
-            .size(Size15dp)
-            .clickable(
-                role = Role.Button,
-                interactionSource = interactionSource,
-                indication = ripple,
-                onClick = {
-                    loadRelayInfo(dirtyUrl, context, scope) {
-                        relayInfo = it
-                    }
-                }
-            )
-    }
-
-    Box(
-        modifier = clickableModifier
-    ) {
-        RenderRelayIcon(iconUrl)
-    }
-}
-
-@Composable
-private fun RenderRelayIcon(iconUrl: String) {
-    val backgroundColor = MaterialTheme.colors.background
-
-    val iconModifier = remember {
-        Modifier
-            .size(Size13dp)
-            .clip(shape = CircleShape)
-            .background(backgroundColor)
-    }
-
-    RobohashFallbackAsyncImage(
-        robot = iconUrl,
-        model = iconUrl,
-        contentDescription = stringResource(id = R.string.relay_icon),
-        colorFilter = RelayIconFilter,
-        modifier = iconModifier
-    )
 }
