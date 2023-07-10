@@ -58,10 +58,9 @@ class MainActivity : AppCompatActivity() {
             val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
             AppCompatDelegate.setApplicationLocales(appLocale)
         }
-        val themeViewModel = ThemeViewModel()
-        themeViewModel.onChange(LocalPreferences.getTheme())
-
         setContent {
+            val themeViewModel: ThemeViewModel = viewModel()
+            themeViewModel.onChange(LocalPreferences.getTheme())
             AmethystTheme(themeViewModel) {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
