@@ -51,11 +51,17 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: AccountStateViewModel, startingPage: String? = null) {
+fun MainScreen(
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
+    themeViewModel: ThemeViewModel,
+    startingPage: String? = null
+) {
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
@@ -211,6 +217,7 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
                     userReactionsStatsModel = userReactionsStatsModel,
                     navController = navController,
                     accountViewModel = accountViewModel,
+                    themeViewModel = themeViewModel,
                     nextPage = startingPage
                 )
             }

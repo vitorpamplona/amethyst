@@ -24,18 +24,18 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, themeViewModel: 
                 is AccountState.LoggedIn -> {
                     val accountViewModel: AccountViewModel = viewModel(
                         key = state.account.userProfile().pubkeyHex,
-                        factory = AccountViewModel.Factory(state.account, themeViewModel)
+                        factory = AccountViewModel.Factory(state.account)
                     )
 
-                    MainScreen(accountViewModel, accountStateViewModel, startingPage)
+                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, startingPage)
                 }
                 is AccountState.LoggedInViewOnly -> {
                     val accountViewModel: AccountViewModel = viewModel(
                         key = state.account.userProfile().pubkeyHex,
-                        factory = AccountViewModel.Factory(state.account, themeViewModel)
+                        factory = AccountViewModel.Factory(state.account)
                     )
 
-                    MainScreen(accountViewModel, accountStateViewModel, startingPage)
+                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, startingPage)
                 }
             }
         }

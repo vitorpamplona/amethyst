@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.collections.immutable.persistentListOf
@@ -88,7 +89,7 @@ fun getLanguageIndex(languageEntries: Map<String, String>): Int {
 @Composable
 fun SettingsScreen(
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    themeViewModel: ThemeViewModel
 ) {
     val scope = rememberCoroutineScope()
     val selectedItens = persistentListOf(
@@ -114,7 +115,7 @@ fun SettingsScreen(
         stringResource(R.string.light),
         stringResource(R.string.dark)
     )
-    val themeIndex = accountViewModel.currentTheme()
+    val themeIndex = themeViewModel.theme.value ?: 0
 
     val context = LocalContext.current
 
@@ -161,7 +162,7 @@ fun SettingsScreen(
                 placeholder = themeItens[themeIndex],
                 options = themeItens,
                 onSelect = {
-                    accountViewModel.changeTheme(it)
+                    themeViewModel.onChange(it)
                     scope.launch(Dispatchers.IO) {
                         LocalPreferences.updateTheme(it)
                     }

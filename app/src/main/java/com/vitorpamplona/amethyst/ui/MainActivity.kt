@@ -53,13 +53,13 @@ class MainActivity : AppCompatActivity() {
         val startingPage = uriToRoute(uri)
 
         LocalPreferences.migrateSingleUserPrefs()
-        val themeViewModel = ThemeViewModel()
-        themeViewModel.onChange(LocalPreferences.getTheme())
         val language = LocalPreferences.getPreferredLanguage()
         if (language.isNotBlank()) {
             val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
             AppCompatDelegate.setApplicationLocales(appLocale)
         }
+        val themeViewModel = ThemeViewModel()
+        themeViewModel.onChange(LocalPreferences.getTheme())
 
         setContent {
             AmethystTheme(themeViewModel) {
