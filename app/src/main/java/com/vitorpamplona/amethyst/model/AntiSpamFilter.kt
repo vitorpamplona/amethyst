@@ -76,7 +76,11 @@ class AntiSpamLiveData(val cache: AntiSpamFilter) : LiveData<AntiSpamState>(Anti
     private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateData() {
+        checkNotInMainThread()
+
         bundler.invalidate() {
+            checkNotInMainThread()
+
             if (hasActiveObservers()) {
                 postValue(AntiSpamState(cache))
             }

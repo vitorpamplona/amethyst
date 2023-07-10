@@ -556,7 +556,11 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     fun invalidateData() {
+        checkNotInMainThread()
+
         bundler.invalidate() {
+            checkNotInMainThread()
+
             if (hasActiveObservers()) {
                 postValue(NoteState(note))
             }
