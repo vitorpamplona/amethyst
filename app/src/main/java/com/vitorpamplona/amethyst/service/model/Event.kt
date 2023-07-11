@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import com.google.gson.*
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
@@ -314,7 +315,7 @@ open class Event(
             return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray())
         }
 
-        fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = Date().time / 1000): Event {
+        fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = TimeUtils.now()): Event {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val id = Companion.generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey).toHexKey()

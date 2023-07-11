@@ -4,10 +4,10 @@ import androidx.compose.runtime.Immutable
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class TextNoteEvent(
@@ -40,7 +40,7 @@ class TextNoteEvent(
             directMentions: Set<HexKey>,
 
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): TextNoteEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()

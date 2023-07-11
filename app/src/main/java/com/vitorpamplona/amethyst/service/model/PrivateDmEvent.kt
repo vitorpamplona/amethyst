@@ -3,12 +3,12 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HexValidator
 import fr.acinq.secp256k1.Hex
 import nostr.postr.Utils
 import nostr.postr.toHex
-import java.util.Date
 
 @Immutable
 class PrivateDmEvent(
@@ -83,7 +83,7 @@ class PrivateDmEvent(
             mentions: List<String>? = null,
             zapReceiver: String?,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000,
+            createdAt: Long = TimeUtils.now(),
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
             markAsSensitive: Boolean,

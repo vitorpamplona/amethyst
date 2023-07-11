@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class ReactionEvent(
@@ -22,15 +22,15 @@ class ReactionEvent(
     companion object {
         const val kind = 7
 
-        fun createWarning(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+        fun createWarning(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
             return create("\u26A0\uFE0F", originalNote, privateKey, createdAt)
         }
 
-        fun createLike(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+        fun createLike(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
             return create("+", originalNote, privateKey, createdAt)
         }
 
-        fun create(content: String, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ReactionEvent {
+        fun create(content: String, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
 
             var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))

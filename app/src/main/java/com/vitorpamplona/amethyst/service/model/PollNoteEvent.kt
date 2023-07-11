@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 const val POLL_OPTION = "poll_option"
 const val VALUE_MAXIMUM = "value_maximum"
@@ -45,7 +45,7 @@ class PollNoteEvent(
             mentions: List<String>?,
             addresses: List<ATag>?,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000,
+            createdAt: Long = TimeUtils.now(),
             pollOptions: Map<Int, String>,
             valueMaximum: Int?,
             valueMinimum: Int?,

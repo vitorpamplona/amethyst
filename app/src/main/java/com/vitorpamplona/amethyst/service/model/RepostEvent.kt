@@ -2,10 +2,10 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.relays.Client
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class RepostEvent(
@@ -29,7 +29,7 @@ class RepostEvent(
     companion object {
         const val kind = 6
 
-        fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RepostEvent {
+        fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RepostEvent {
             val content = boostedPost.toJson()
 
             val replyToPost = listOf("e", boostedPost.id())

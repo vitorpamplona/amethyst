@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class RelayAuthEvent(
@@ -21,7 +21,7 @@ class RelayAuthEvent(
     companion object {
         const val kind = 22242
 
-        fun create(relay: String, challenge: String, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RelayAuthEvent {
+        fun create(relay: String, challenge: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RelayAuthEvent {
             val content = ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf(

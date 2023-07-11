@@ -259,16 +259,16 @@ private fun RenderVideoOrPictureNote(
         Row(remember { Modifier.weight(1f) }, verticalAlignment = Alignment.CenterVertically) {
             val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {
-                FileHeaderDisplay(note)
+                FileHeaderDisplay(note, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
-                FileStorageHeaderDisplay(note)
+                FileStorageHeaderDisplay(note, accountViewModel)
             }
         }
     }
 
     Row(verticalAlignment = Alignment.Bottom, modifier = remember { Modifier.fillMaxSize(1f) }) {
         Column(remember { Modifier.weight(1f) }) {
-            RenderVideoOrPicture(note, nav, accountViewModel)
+            RenderAuthorInformation(note, nav, accountViewModel)
         }
 
         Column(
@@ -287,7 +287,7 @@ private fun RenderVideoOrPictureNote(
 }
 
 @Composable
-private fun RenderVideoOrPicture(
+private fun RenderAuthorInformation(
     note: Note,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel

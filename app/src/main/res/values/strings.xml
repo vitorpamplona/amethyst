@@ -480,4 +480,7 @@
 
     <string name="groups_no_descriptor">This group does not have a description or rules. Talk to the owner to add one</string>
     <string name="community_no_descriptor">This community does not have a description. Talk to the owner to add one</string>
+
+    <string name="add_sensitive_content_label">Sensitive Content</string>
+    <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
 </resources>

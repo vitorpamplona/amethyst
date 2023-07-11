@@ -69,9 +69,12 @@ fun MainScreen(accountViewModel: AccountViewModel, accountStateViewModel: Accoun
 
     val nav = remember(navController) {
         { route: String ->
-            if (getRouteWithArguments(navController) != route) {
-                navController.navigate(route)
+            scope.launch {
+                if (getRouteWithArguments(navController) != route) {
+                    navController.navigate(route)
+                }
             }
+            Unit
         }
     }
 

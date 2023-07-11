@@ -16,15 +16,16 @@ class FileHeader(
     val size: Int,
     val dim: String?,
     val blurHash: String?,
-    val description: String? = null
+    val description: String? = null,
+    val sensitiveContent: Boolean = false
 ) {
     companion object {
-        suspend fun prepare(fileUrl: String, mimeType: String?, description: String?, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
+        suspend fun prepare(fileUrl: String, mimeType: String?, description: String?, sensitiveContent: Boolean, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
             try {
                 val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl)
 
                 if (imageData != null) {
-                    prepare(imageData, fileUrl, mimeType, description, onReady, onError)
+                    prepare(imageData, fileUrl, mimeType, description, sensitiveContent, onReady, onError)
                 } else {
                     onError()
                 }
@@ -39,6 +40,7 @@ class FileHeader(
             fileUrl: String,
             mimeType: String?,
             description: String?,
+            sensitiveContent: Boolean,
             onReady: (FileHeader) -> Unit,
             onError: () -> Unit
         ) {
@@ -79,7 +81,7 @@ class FileHeader(
                     Pair(null, null)
                 }
 
-                onReady(FileHeader(fileUrl, mimeType, hash, size, dim, blurHash, description))
+                onReady(FileHeader(fileUrl, mimeType, hash, size, dim, blurHash, description, sensitiveContent))
             } catch (e: Exception) {
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
                 onError()

@@ -7,11 +7,11 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.lang.reflect.Type
-import java.util.Date
 
 @Immutable
 class LnZapPaymentRequestEvent(
@@ -57,7 +57,7 @@ class LnZapPaymentRequestEvent(
             lnInvoice: String,
             walletServicePubkey: String,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): LnZapPaymentRequestEvent {
             val pubKey = Utils.pubkeyCreate(privateKey)
             val serializedRequest = gson.toJson(PayInvoiceMethod.create(lnInvoice))

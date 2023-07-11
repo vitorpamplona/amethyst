@@ -2,10 +2,10 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.security.MessageDigest
-import java.util.Date
 
 @Immutable
 class HTTPAuthorizationEvent(
@@ -25,7 +25,7 @@ class HTTPAuthorizationEvent(
             method: String,
             body: String? = null,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): HTTPAuthorizationEvent {
             val sha256 = MessageDigest.getInstance("SHA-256")
 

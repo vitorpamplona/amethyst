@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -12,7 +13,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.util.Date
 import java.util.UUID
 import kotlin.Error
 
@@ -57,7 +57,7 @@ abstract class NostrDataSource(val debugName: String) {
 
             if (type == Relay.Type.EOSE && channel != null) {
                 // updates a per subscripton since date
-                subscriptions[channel]?.updateEOSE(Date().time / 1000, relay.url)
+                subscriptions[channel]?.updateEOSE(TimeUtils.now(), relay.url)
             }
         }
 

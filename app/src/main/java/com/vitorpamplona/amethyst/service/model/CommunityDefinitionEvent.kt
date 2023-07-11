@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class CommunityDefinitionEvent(
@@ -30,7 +30,7 @@ class CommunityDefinitionEvent(
 
         fun create(
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): CommunityDefinitionEvent {
             val tags = mutableListOf<List<String>>()
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()

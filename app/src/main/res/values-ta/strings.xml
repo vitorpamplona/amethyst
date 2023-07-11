@@ -441,5 +441,13 @@
 	<string name="followed_tags">பின்பற்றப்படும் டாகுகள்</string>
 
 	<string name="relay_setup">ரிலேகள்</string>
- 
+
+        <string name="discover_live">நேரலை</string>
+        <string name="discover_community">சமூகம்</string>
+        <string name="discover_chat">அரட்டை</string>
+        <string name="community_approved_posts">அங்கீகரிக்கப்பட்ட குறிப்பு</string>
+
+        <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும் </string>
+        <string name="community_no_descriptor">இந்த சமூகத்தின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
+	
 </resources>

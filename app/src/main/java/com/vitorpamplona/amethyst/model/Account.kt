@@ -474,6 +474,7 @@ class Account(
             dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
+            sensitiveContent = headerInfo.sensitiveContent,
             privateKey = loggedIn.privKey!!
         )
 
@@ -503,6 +504,7 @@ class Account(
             dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
+            sensitiveContent = headerInfo.sensitiveContent,
             privateKey = loggedIn.privKey!!
         )
 

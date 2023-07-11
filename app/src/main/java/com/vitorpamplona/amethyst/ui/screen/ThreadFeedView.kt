@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -399,13 +400,22 @@ fun NoteMaster(
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
                         ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
                     } else if (noteEvent is FileHeaderEvent) {
-                        FileHeaderDisplay(baseNote)
+                        FileHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
-                        FileStorageHeaderDisplay(baseNote)
+                        FileStorageHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, accountViewModel, nav)
+                    } else if (noteEvent is CommunityPostApprovalEvent) {
+                        RenderPostApproval(
+                            baseNote,
+                            false,
+                            true,
+                            backgroundColor,
+                            accountViewModel,
+                            nav
+                        )
                     } else if (noteEvent is PinListEvent) {
                         PinListHeader(
                             baseNote,

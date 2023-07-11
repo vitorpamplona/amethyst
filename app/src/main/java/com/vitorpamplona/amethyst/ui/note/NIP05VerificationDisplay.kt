@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.Nip05Verifier
@@ -39,14 +40,13 @@ import com.vitorpamplona.amethyst.ui.theme.Nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.Date
 
 @Composable
-fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): MutableState<Boolean?> {
-    val nip05Verified = remember(user.nip05) {
+fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String): MutableState<Boolean?> {
+    val nip05Verified = remember(userMetadata.nip05) {
         // starts with null if must verify or already filled in if verified in the last hour
-        val default = if ((user.nip05LastVerificationTime ?: 0) > (Date().time / 1000 - 60 * 60)) { // 1hour
-            user.nip05Verified
+        val default = if ((userMetadata.nip05LastVerificationTime ?: 0) > TimeUtils.oneHourAgo()) {
+            userMetadata.nip05Verified
         } else {
             null
         }
@@ -55,23 +55,23 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): MutableSta
     }
 
     if (nip05Verified.value == null) {
-        LaunchedEffect(key1 = user.nip05) {
+        LaunchedEffect(key1 = userMetadata.nip05) {
             launch(Dispatchers.IO) {
-                user.nip05?.ifBlank { null }?.let { nip05 ->
+                userMetadata.nip05?.ifBlank { null }?.let { nip05 ->
                     Nip05Verifier().verifyNip05(
                         nip05,
                         onSuccess = {
                             // Marks user as verified
                             if (it == pubkeyHex) {
-                                user.nip05Verified = true
-                                user.nip05LastVerificationTime = Date().time / 1000
+                                userMetadata.nip05Verified = true
+                                userMetadata.nip05LastVerificationTime = TimeUtils.now()
 
                                 if (nip05Verified.value != true) {
                                     nip05Verified.value = true
                                 }
                             } else {
-                                user.nip05Verified = false
-                                user.nip05LastVerificationTime = 0
+                                userMetadata.nip05Verified = false
+                                userMetadata.nip05LastVerificationTime = 0
 
                                 if (nip05Verified.value != false) {
                                     nip05Verified.value = false
@@ -79,8 +79,8 @@ fun nip05VerificationAsAState(user: UserMetadata, pubkeyHex: String): MutableSta
                             }
                         },
                         onError = {
-                            user.nip05LastVerificationTime = 0
-                            user.nip05Verified = false
+                            userMetadata.nip05LastVerificationTime = 0
+                            userMetadata.nip05Verified = false
 
                             if (nip05Verified.value != false) {
                                 nip05Verified.value = false

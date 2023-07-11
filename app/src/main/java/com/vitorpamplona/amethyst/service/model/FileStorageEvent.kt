@@ -3,10 +3,10 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.util.Base64
-import java.util.Date
 
 @Immutable
 class FileStorageEvent(
@@ -44,7 +44,7 @@ class FileStorageEvent(
             mimeType: String,
             data: ByteArray,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): FileStorageEvent {
             val tags = listOfNotNull(
                 listOf(TYPE, mimeType)

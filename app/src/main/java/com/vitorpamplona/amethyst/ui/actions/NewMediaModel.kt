@@ -26,6 +26,7 @@ open class NewMediaModel : ViewModel() {
 
     var selectedServer by mutableStateOf<ServersAvailable?>(null)
     var description by mutableStateOf("")
+    var sensitiveContent by mutableStateOf(false)
 
     // Images and Videos
     var galleryUri by mutableStateOf<Uri?>(null)
@@ -77,7 +78,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Loading"
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description)
+                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent)
                         }
                             ?: run {
                                 viewModelScope.launch {
@@ -97,7 +98,7 @@ open class NewMediaModel : ViewModel() {
                             server = serverToUse,
                             contentResolver = contentResolver,
                             onSuccess = { imageUrl, mimeType ->
-                                createNIP94Record(imageUrl, mimeType, description)
+                                createNIP94Record(imageUrl, mimeType, description, sensitiveContent)
                             },
                             onError = {
                                 isUploadingImage = false
@@ -137,7 +138,7 @@ open class NewMediaModel : ViewModel() {
         return !isUploadingImage && galleryUri != null && selectedServer != null
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean) {
         uploadingPercentage.value = 0.40f
         viewModelScope.launch(Dispatchers.IO) {
             uploadingDescription.value = "Server Processing"
@@ -157,6 +158,7 @@ open class NewMediaModel : ViewModel() {
                     imageUrl,
                     mimeType,
                     description,
+                    sensitiveContent,
                     onReady = {
                         uploadingPercentage.value = 0.90f
                         uploadingDescription.value = "Sending"
@@ -189,7 +191,7 @@ open class NewMediaModel : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean) {
         uploadingPercentage.value = 0.30f
         uploadingDescription.value = "Hashing"
 
@@ -199,6 +201,7 @@ open class NewMediaModel : ViewModel() {
                 "",
                 mimeType,
                 description,
+                sensitiveContent,
                 onReady = {
                     uploadingDescription.value = "Signing"
                     uploadingPercentage.value = 0.40f

@@ -3,9 +3,9 @@ package com.vitorpamplona.amethyst.service.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class ChannelCreateEvent(
@@ -26,7 +26,7 @@ class ChannelCreateEvent(
     companion object {
         const val kind = 40
 
-        fun create(channelInfo: ChannelData?, privateKey: ByteArray, createdAt: Long = Date().time / 1000): ChannelCreateEvent {
+        fun create(channelInfo: ChannelData?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ChannelCreateEvent {
             val content = try {
                 if (channelInfo != null) {
                     gson.toJson(channelInfo)

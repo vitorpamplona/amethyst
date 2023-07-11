@@ -14,8 +14,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 241
-        versionName "0.66.3"
+        versionCode 244
+        versionName "0.66.6"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -141,15 +141,14 @@ dependencies {
 
     // link preview
     implementation 'org.jsoup:jsoup:1.16.1'
-    //implementation 'tw.com.oneup.www:Baha-UrlPreview:1.0.1'
 
     // Encrypted Key Storage
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
 
     // view videos
-    implementation 'com.google.android.exoplayer:exoplayer:2.18.7'
+    implementation "com.google.android.exoplayer:exoplayer:${exoplayer_version}"
     // important for proxy / tor
-    implementation 'com.google.android.exoplayer:extension-okhttp:2.18.7'
+    implementation "com.google.android.exoplayer:extension-okhttp:${exoplayer_version}"
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:$coil_version"

@@ -2,10 +2,10 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 import java.net.URI
-import java.util.Date
 
 @Immutable
 class RecommendRelayEvent(
@@ -27,7 +27,7 @@ class RecommendRelayEvent(
     companion object {
         const val kind = 2
 
-        fun create(relay: URI, privateKey: ByteArray, createdAt: Long = Date().time / 1000): RecommendRelayEvent {
+        fun create(relay: URI, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RecommendRelayEvent {
             val content = relay.toString()
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf<List<String>>()

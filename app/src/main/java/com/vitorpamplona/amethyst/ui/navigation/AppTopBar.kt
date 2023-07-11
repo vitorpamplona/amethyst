@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -60,6 +61,8 @@ import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
+import com.vitorpamplona.amethyst.service.NostrCommunityDataSource
+import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -68,6 +71,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -462,36 +466,7 @@ fun AmethystIcon() {
 
     IconButton(
         onClick = {
-            Client.allSubscriptions().map {
-                "$it ${
-                Client.getSubscriptionFilters(it)
-                    .joinToString { it.filter.toJson() }
-                }"
-            }.forEach {
-                Log.d("STATE DUMP", it)
-            }
-
-            NostrAccountDataSource.printCounter()
-            NostrChannelDataSource.printCounter()
-            NostrChatroomDataSource.printCounter()
-            NostrChatroomListDataSource.printCounter()
-            NostrHashtagDataSource.printCounter()
-            NostrHomeDataSource.printCounter()
-            NostrSearchEventOrUserDataSource.printCounter()
-            NostrSingleChannelDataSource.printCounter()
-            NostrSingleEventDataSource.printCounter()
-            NostrSingleUserDataSource.printCounter()
-            NostrThreadDataSource.printCounter()
-            NostrUserProfileDataSource.printCounter()
-
-            Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
-
-            val imageLoader = Coil.imageLoader(context)
-            Log.d("STATE DUMP", "Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
-            Log.d("STATE DUMP", "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
-
-            Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
-            Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
+            debugState(context)
         }
     ) {
         Icon(
@@ -501,4 +476,42 @@ fun AmethystIcon() {
             tint = Color.Unspecified
         )
     }
+}
+
+fun debugState(context: Context) {
+    Client.allSubscriptions().map {
+        "$it ${
+        Client.getSubscriptionFilters(it)
+            .joinToString { it.filter.toJson() }
+        }"
+    }.forEach {
+        Log.d("STATE DUMP", it)
+    }
+
+    NostrAccountDataSource.printCounter()
+    NostrChannelDataSource.printCounter()
+    NostrChatroomDataSource.printCounter()
+    NostrChatroomListDataSource.printCounter()
+    NostrCommunityDataSource.printCounter()
+    NostrDiscoveryDataSource.printCounter()
+    NostrHashtagDataSource.printCounter()
+    NostrHomeDataSource.printCounter()
+    NostrSearchEventOrUserDataSource.printCounter()
+    NostrSingleChannelDataSource.printCounter()
+    NostrSingleEventDataSource.printCounter()
+    NostrSingleUserDataSource.printCounter()
+    NostrThreadDataSource.printCounter()
+    NostrUserProfileDataSource.printCounter()
+    NostrVideoDataSource.printCounter()
+
+    Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
+
+    val imageLoader = Coil.imageLoader(context)
+    Log.d("STATE DUMP", "Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+    Log.d("STATE DUMP", "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
+
+    Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
+    Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
+
+    Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
 }

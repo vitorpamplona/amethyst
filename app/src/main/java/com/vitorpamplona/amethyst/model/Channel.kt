@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
@@ -145,7 +146,10 @@ class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelStat
     private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateData() {
+        checkNotInMainThread()
+
         bundler.invalidate() {
+            checkNotInMainThread()
             if (hasActiveObservers()) {
                 postValue(ChannelState(channel))
             }

@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
-import java.util.Date
 
 @Immutable
 class FileStorageHeaderEvent(
@@ -50,8 +50,9 @@ class FileStorageHeaderEvent(
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
             encryptionKey: AESGCM? = null,
+            sensitiveContent: Boolean? = null,
             privateKey: ByteArray,
-            createdAt: Long = Date().time / 1000
+            createdAt: Long = TimeUtils.now()
         ): FileStorageHeaderEvent {
             val tags = listOfNotNull(
                 listOf("e", storageEvent.id),
@@ -62,7 +63,14 @@ class FileStorageHeaderEvent(
                 blurhash?.let { listOf(BLUR_HASH, it) },
                 magnetURI?.let { listOf(MAGNET_URI, it) },
                 torrentInfoHash?.let { listOf(TORRENT_INFOHASH, it) },
-                encryptionKey?.let { listOf(ENCRYPTION_KEY, it.key, it.nonce) }
+                encryptionKey?.let { listOf(ENCRYPTION_KEY, it.key, it.nonce) },
+                sensitiveContent?.let {
+                    if (it) {
+                        listOf("content-warning", "")
+                    } else {
+                        null
+                    }
+                }
             )
 
             val content = description ?: ""

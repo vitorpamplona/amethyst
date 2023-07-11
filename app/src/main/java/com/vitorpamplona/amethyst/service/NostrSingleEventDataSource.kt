@@ -33,7 +33,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             PeopleListEvent.kind, BookmarkListEvent.kind
                         ),
                         tags = mapOf("a" to listOf(aTag.toTag())),
-                        since = it.lastReactionsDownloadTime
+                        since = it.lastReactionsDownloadTime,
+                        limit = 1000 // Max amount of "replies" to download on a specific event.
                     )
                 )
             }
@@ -54,7 +55,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                     filter = JsonFilter(
                         kinds = listOf(aTag.kind),
                         tags = mapOf("d" to listOf(aTag.dTag)),
-                        authors = listOf(aTag.pubKeyHex.substring(0, 8))
+                        authors = listOf(aTag.pubKeyHex)
                     )
                 )
             }
@@ -87,7 +88,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         PinListEvent.kind
                     ),
                     tags = mapOf("e" to listOf(it.idHex)),
-                    since = it.lastReactionsDownloadTime
+                    since = it.lastReactionsDownloadTime,
+                    limit = 1000 // Max amount of "replies" to download on a specific event.
                 )
             )
         }
