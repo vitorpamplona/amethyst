@@ -103,7 +103,7 @@ object LnInvoiceUtil {
         try {
             decodeUnlimitedLength(invoice) // checksum must match
         } catch (e: AddressFormatException) {
-            throw IllegalArgumentException("Cannot decode invoice", e)
+            throw IllegalArgumentException("Cannot decode invoice: $invoice", e)
         }
 
         val matcher = invoicePattern.matcher(invoice)
