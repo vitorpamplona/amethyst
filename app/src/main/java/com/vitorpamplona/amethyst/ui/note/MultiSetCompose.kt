@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
@@ -206,6 +207,18 @@ fun RenderLikeGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
+    val tags = remember(likeEvents) {
+        if (reactionType.startsWith(":")) {
+            ImmutableListOfLists<String>(
+                likeEvents.mapNotNull {
+                    it.event?.tags()?.filter { it.size > 2 && it[0] == "emoji" }
+                }.flatten()
+            )
+        } else {
+            ImmutableListOfLists<String>()
+        }
+    }
+
     if (likeEvents.isNotEmpty()) {
         Row(Modifier.fillMaxWidth()) {
             Box(
@@ -223,7 +236,11 @@ fun RenderLikeGallery(
                         tint = Color.Unspecified
                     )
                     "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
-                    else -> Text(text = shortReaction, modifier = modifier)
+                    else -> CreateTextWithEmoji(
+                        text = shortReaction,
+                        modifier = modifier,
+                        tags = tags
+                    )
                 }
             }
 
