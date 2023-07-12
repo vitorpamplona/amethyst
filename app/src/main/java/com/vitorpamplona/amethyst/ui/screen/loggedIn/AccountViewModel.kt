@@ -165,6 +165,14 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.boost(note)
     }
 
+    fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
+        account.removeEmojiPack(usersEmojiList, emojiList)
+    }
+
+    fun addEmojiPack(usersEmojiList: Note, emojiList: Note) {
+        account.addEmojiPack(usersEmojiList, emojiList)
+    }
+
     fun addPrivateBookmark(note: Note) {
         account.addPrivateBookmark(note)
     }

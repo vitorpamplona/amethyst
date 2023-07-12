@@ -399,7 +399,7 @@ fun CreateTextWithEmoji(
             )
         ).toSpanStyle()
 
-        InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
+        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
     }
 }
 
@@ -458,7 +458,7 @@ fun CreateTextWithEmoji(
             ).toSpanStyle()
         }
 
-        InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
+        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
     }
 }
 
@@ -551,7 +551,7 @@ fun CreateClickableTextWithEmoji(
         InLineIconRenderer(
             emojiLists!!.part2,
             LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle(),
-            maxLines
+            maxLines = maxLines
         )
     }
 }
@@ -646,6 +646,7 @@ fun ClickableInLineIconRenderer(
 fun InLineIconRenderer(
     wordsInOrder: ImmutableList<Renderable>,
     style: SpanStyle,
+    fontSize: TextUnit = TextUnit.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier
@@ -692,6 +693,7 @@ fun InLineIconRenderer(
     Text(
         text = annotatedText,
         inlineContent = inlineContent,
+        fontSize = fontSize,
         maxLines = maxLines,
         overflow = overflow,
         modifier = modifier

@@ -51,9 +51,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BadgeProfilesEvent.kind),
+                kinds = listOf(BadgeProfilesEvent.kind, EmojiPackSelectionEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
-                limit = 1
+                limit = 10
             )
         )
     }

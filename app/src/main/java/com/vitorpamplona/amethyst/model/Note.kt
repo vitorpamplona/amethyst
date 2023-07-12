@@ -5,11 +5,13 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -152,7 +154,8 @@ open class Note(val idHex: String) {
         liveSet?.boosts?.invalidateData()
     }
     fun removeReaction(note: Note) {
-        val reaction = note.event?.content() ?: "+"
+        val tags = note.event?.tags() ?: emptyList()
+        val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
             reactions[reaction]?.let {
@@ -233,7 +236,8 @@ open class Note(val idHex: String) {
     }
 
     fun addReaction(note: Note) {
-        val reaction = note.event?.content() ?: "+"
+        val tags = note.event?.tags() ?: emptyList()
+        val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction !in reactions.keys) {
             reactions = reactions + Pair(reaction, setOf(note))
@@ -462,7 +466,7 @@ open class Note(val idHex: String) {
     }
 
     fun reactedBy(loggedIn: User, content: String): List<Note> {
-        return reactions[content]?.filter { it.author == loggedIn && it.event?.content() == content } ?: emptyList()
+        return reactions[content]?.filter { it.author == loggedIn } ?: emptyList()
     }
 
     fun reactedBy(loggedIn: User): List<String> {

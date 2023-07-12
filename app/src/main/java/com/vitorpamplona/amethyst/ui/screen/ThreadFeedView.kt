@@ -23,7 +23,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -417,11 +417,18 @@ fun NoteMaster(
                             nav
                         )
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(
+                        RenderPinListEvent(
                             baseNote,
                             backgroundColor,
                             accountViewModel,
                             nav
+                        )
+                    } else if (noteEvent is EmojiPackEvent) {
+                        RenderEmojiPack(
+                            baseNote,
+                            true,
+                            backgroundColor,
+                            accountViewModel
                         )
                     } else if (noteEvent is RelaySetEvent) {
                         DisplayRelaySet(

@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -81,8 +82,10 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.ImageUrlType
+import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.components.TextType
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -808,7 +811,8 @@ private fun WatchReactionTypeForNote(baseNote: Note, accountViewModel: AccountVi
 
     LaunchedEffect(key1 = reactionsState) {
         launch(Dispatchers.Default) {
-            onNewReactionType(reactionsState?.note?.getReactionBy(accountViewModel.userProfile())?.firstFullChar())
+            val reactionNote = reactionsState?.note?.getReactionBy(accountViewModel.userProfile())
+            onNewReactionType(reactionNote)
         }
     }
 }
@@ -840,18 +844,34 @@ private fun RenderReactionType(
         Modifier.size(iconSize)
     }
 
-    when (reactionType) {
-        "+" -> {
-            Icon(
-                painter = painterResource(R.drawable.ic_liked),
-                null,
-                modifier = iconModifier,
-                tint = Color.Unspecified
-            )
-        }
+    if (reactionType.startsWith(":")) {
+        val noStartColon = reactionType.removePrefix(":")
+        val url = noStartColon.substringAfter(":")
 
-        "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
-        else -> Text(text = reactionType, fontSize = iconFontSize)
+        val renderable = listOf(
+            ImageUrlType(url)
+        ).toImmutableList()
+
+        InLineIconRenderer(
+            renderable,
+            style = SpanStyle(color = Color.White),
+            fontSize = iconFontSize,
+            maxLines = 1
+        )
+    } else {
+        when (reactionType) {
+            "+" -> {
+                Icon(
+                    painter = painterResource(R.drawable.ic_liked),
+                    null,
+                    modifier = iconModifier,
+                    tint = Color.Unspecified
+                )
+            }
+
+            "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
+            else -> Text(text = reactionType, fontSize = iconFontSize)
+        }
     }
 }
 
@@ -1269,7 +1289,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReactionChoicePopup(
     baseNote: Note,
@@ -1279,7 +1299,6 @@ fun ReactionChoicePopup(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
-    val scope = rememberCoroutineScope()
 
     val toRemove = remember {
         baseNote.reactedBy(account.userProfile()).toSet()
@@ -1292,67 +1311,117 @@ fun ReactionChoicePopup(
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
             account.reactionChoices.forEach { reactionType ->
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.reactToOrDelete(
-                                baseNote,
-                                reactionType
-                            )
-                            onDismiss()
-                        }
-                    },
-                    shape = ButtonBorder,
-                    colors = ButtonDefaults
-                        .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
-                        )
-                ) {
-                    val thisModifier = remember(reactionType) {
-                        Modifier.combinedClickable(
-                            onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.reactToOrDelete(
-                                        baseNote,
-                                        reactionType
-                                    )
-                                    onDismiss()
-                                }
-                            },
-                            onLongClick = {
-                                onChangeAmount()
-                            }
-                        )
-                    }
+                ActionableReactionButton(
+                    baseNote,
+                    reactionType,
+                    accountViewModel,
+                    onDismiss,
+                    onChangeAmount,
+                    toRemove
+                )
+            }
+        }
+    }
+}
 
-                    val removeSymbol = remember(reactionType) {
-                        if (reactionType in toRemove) {
-                            " ✖"
-                        } else {
-                            ""
-                        }
-                    }
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun ActionableReactionButton(
+    baseNote: Note,
+    reactionType: String,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+    onChangeAmount: () -> Unit,
+    toRemove: Set<String>
+) {
+    val scope = rememberCoroutineScope()
 
-                    when (reactionType) {
-                        "+" -> {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_liked),
-                                null,
-                                modifier = remember { thisModifier.size(16.dp) },
-                                tint = Color.White
-                            )
-                            Text(text = removeSymbol, color = Color.White, textAlign = TextAlign.Center, modifier = thisModifier)
-                        }
-                        "-" -> Text(text = "\uD83D\uDC4E$removeSymbol", color = Color.White, textAlign = TextAlign.Center, modifier = thisModifier)
-                        else -> Text(
-                            "$reactionType$removeSymbol",
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            modifier = thisModifier
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = {
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.reactToOrDelete(
+                    baseNote,
+                    reactionType
+                )
+                onDismiss()
+            }
+        },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            )
+    ) {
+        val thisModifier = remember(reactionType) {
+            Modifier.combinedClickable(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.reactToOrDelete(
+                            baseNote,
+                            reactionType
                         )
+                        onDismiss()
                     }
+                },
+                onLongClick = {
+                    onChangeAmount()
                 }
+            )
+        }
+
+        val removeSymbol = remember(reactionType) {
+            if (reactionType in toRemove) {
+                " ✖"
+            } else {
+                ""
+            }
+        }
+
+        if (reactionType.startsWith(":")) {
+            val noStartColon = reactionType.removePrefix(":")
+            val url = noStartColon.substringAfter(":")
+
+            val renderable = listOf(
+                ImageUrlType(url),
+                TextType(removeSymbol)
+            ).toImmutableList()
+
+            InLineIconRenderer(
+                renderable,
+                style = SpanStyle(color = Color.White),
+                maxLines = 1
+            )
+        } else {
+            when (reactionType) {
+                "+" -> {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_liked),
+                        null,
+                        modifier = remember { thisModifier.size(16.dp) },
+                        tint = Color.White
+                    )
+                    Text(
+                        text = removeSymbol,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = thisModifier
+                    )
+                }
+
+                "-" -> Text(
+                    text = "\uD83D\uDC4E$removeSymbol",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = thisModifier
+                )
+
+                else -> Text(
+                    "$reactionType$removeSymbol",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = thisModifier
+                )
             }
         }
     }

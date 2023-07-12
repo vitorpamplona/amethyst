@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,11 +51,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.ImageUrlType
+import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -207,18 +209,6 @@ fun RenderLikeGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val tags = remember(likeEvents) {
-        if (reactionType.startsWith(":")) {
-            ImmutableListOfLists<String>(
-                likeEvents.mapNotNull {
-                    it.event?.tags()?.filter { it.size > 2 && it[0] == "emoji" }
-                }.flatten()
-            )
-        } else {
-            ImmutableListOfLists<String>()
-        }
-    }
-
     if (likeEvents.isNotEmpty()) {
         Row(Modifier.fillMaxWidth()) {
             Box(
@@ -228,19 +218,32 @@ fun RenderLikeGallery(
                     Modifier.align(Alignment.TopEnd)
                 }
 
-                when (val shortReaction = reactionType.firstFullChar()) {
-                    "+" -> Icon(
-                        painter = painterResource(R.drawable.ic_liked),
-                        null,
-                        modifier = modifier.size(Size18dp),
-                        tint = Color.Unspecified
+                if (reactionType.startsWith(":")) {
+                    val noStartColon = reactionType.removePrefix(":")
+                    val url = noStartColon.substringAfter(":")
+
+                    val renderable = listOf(
+                        ImageUrlType(url)
+                    ).toImmutableList()
+
+                    InLineIconRenderer(
+                        renderable,
+                        style = SpanStyle(color = Color.White),
+                        maxLines = 1,
+                        modifier = modifier
                     )
-                    "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
-                    else -> CreateTextWithEmoji(
-                        text = shortReaction,
-                        modifier = modifier,
-                        tags = tags
-                    )
+                } else {
+                    when (val shortReaction = reactionType) {
+                        "+" -> Icon(
+                            painter = painterResource(R.drawable.ic_liked),
+                            null,
+                            modifier = modifier.size(Size18dp),
+                            tint = Color.Unspecified
+                        )
+
+                        "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
+                        else -> Text(text = shortReaction, modifier = modifier)
+                    }
                 }
             }
 

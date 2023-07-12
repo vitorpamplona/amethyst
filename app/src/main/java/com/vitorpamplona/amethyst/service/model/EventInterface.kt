@@ -45,4 +45,7 @@ interface EventInterface {
     fun zapAddress(): String?
     fun isSensitive(): Boolean
     fun zapraiserAmount(): Long?
+
+    fun taggedEmojis(): List<EmojiUrl>
+    fun matchTag1With(text: String): Boolean
 }

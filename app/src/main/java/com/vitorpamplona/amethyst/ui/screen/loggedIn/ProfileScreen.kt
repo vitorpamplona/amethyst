@@ -1118,7 +1118,7 @@ private fun DisplayBadges(
     val userBadgeState by baseUser.live().badges.observeAsState()
     val badgeList by remember(userBadgeState) {
         derivedStateOf {
-            val list = (userBadgeState?.user?.acceptedBadges?.event as? BadgeProfilesEvent)?.badgeAwardEvents()
+            val list = (userBadgeState?.user?.latestAcceptedBadges?.event as? BadgeProfilesEvent)?.badgeAwardEvents()
             if (list.isNullOrEmpty()) {
                 null
             } else {

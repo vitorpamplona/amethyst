@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+
 fun String.isUTF16Char(pos: Int): Boolean {
     println("Test $pos ${Character.charCount(this.codePointAt(pos))}")
     return Character.charCount(this.codePointAt(pos)) == 2
@@ -76,4 +78,24 @@ fun String.firstFullChar(): String {
     }
 
     return substring(start, start + previousCharLength)
+}
+
+fun String.firstFullCharOrEmoji(tags: ImmutableListOfLists<String>): String {
+    if (length <= 2) {
+        return firstFullChar()
+    }
+
+    if (this[0] == ':') {
+        // makes sure an emoji exists
+        val emojiParts = this.split(":", limit = 3)
+        if (emojiParts.size >= 2) {
+            val emojiName = emojiParts[1]
+            val emojiUrl = tags.lists.firstOrNull() { it.size > 1 && it[1] == emojiName }?.getOrNull(2)
+            if (emojiUrl != null) {
+                return ":$emojiName:$emojiUrl"
+            }
+        }
+    }
+
+    return firstFullChar()
 }

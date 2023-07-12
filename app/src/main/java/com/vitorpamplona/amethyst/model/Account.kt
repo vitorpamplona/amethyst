@@ -176,6 +176,19 @@ class Account(
             return
         }
 
+        if (reaction.startsWith(":")) {
+            val emojiUrl = EmojiUrl.decode(reaction)
+            if (emojiUrl != null) {
+                note.event?.let {
+                    val event = ReactionEvent.create(emojiUrl, it, loggedIn.privKey!!)
+                    Client.send(event)
+                    LocalCache.consume(event)
+                }
+
+                return
+            }
+        }
+
         note.event?.let {
             val event = ReactionEvent.create(reaction, it, loggedIn.privKey!!)
             Client.send(event)
@@ -672,6 +685,51 @@ class Account(
         LocalCache.consume(event)
 
         joinChannel(event.id)
+    }
+
+    fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
+        if (!isWriteable()) return
+
+        val noteEvent = usersEmojiList.event
+        if (noteEvent !is EmojiPackSelectionEvent) return
+        val emojiListEvent = emojiList.event
+        if (emojiListEvent !is EmojiPackEvent) return
+
+        val event = EmojiPackSelectionEvent.create(
+            noteEvent.taggedAddresses().filter { it != emojiListEvent.address() },
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun addEmojiPack(usersEmojiList: Note, emojiList: Note) {
+        if (!isWriteable()) return
+        val emojiListEvent = emojiList.event
+        if (emojiListEvent !is EmojiPackEvent) return
+
+        val event = if (usersEmojiList.event == null) {
+            EmojiPackSelectionEvent.create(
+                listOf(emojiListEvent.address()),
+                loggedIn.privKey!!
+            )
+        } else {
+            val noteEvent = usersEmojiList.event
+            if (noteEvent !is EmojiPackSelectionEvent) return
+
+            if (noteEvent.taggedAddresses().any { it == emojiListEvent.address() }) {
+                return
+            }
+
+            EmojiPackSelectionEvent.create(
+                noteEvent.taggedAddresses().plus(emojiListEvent.address()),
+                loggedIn.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
     }
 
     fun addPrivateBookmark(note: Note) {

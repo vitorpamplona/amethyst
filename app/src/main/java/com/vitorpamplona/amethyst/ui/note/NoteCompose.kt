@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -96,6 +99,9 @@ import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackSelectionEvent
+import com.vitorpamplona.amethyst.service.model.EmojiUrl
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -145,6 +151,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -158,6 +165,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -1035,6 +1043,10 @@ private fun RenderNoteRow(
             RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is EmojiPackEvent -> {
+            RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
+        }
+
         is LiveActivitiesEvent -> {
             RenderLiveActivityEvent(baseNote, accountViewModel, nav)
         }
@@ -1884,18 +1896,188 @@ fun LoadAddressableNote(aTag: ATag, content: @Composable (AddressableNote?) -> U
 }
 
 @Composable
-private fun RenderPinListEvent(
+public fun RenderEmojiPack(
     baseNote: Note,
+    actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    onClick: ((EmojiUrl) -> Unit)? = null
 ) {
-    PinListHeader(baseNote, backgroundColor, accountViewModel, nav)
+    val noteEvent by baseNote.live().metadata.map {
+        it.note.event
+    }.distinctUntilChanged().observeAsState(baseNote.event)
+
+    if (noteEvent == null || noteEvent !is EmojiPackEvent) return
+
+    (noteEvent as? EmojiPackEvent)?.let {
+        RenderEmojiPack(
+            noteEvent = it,
+            baseNote = baseNote,
+            actionable = actionable,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            onClick = onClick
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PinListHeader(
+public fun RenderEmojiPack(
+    noteEvent: EmojiPackEvent,
+    baseNote: Note,
+    actionable: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    onClick: ((EmojiUrl) -> Unit)? = null
+) {
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val allEmojis = remember(noteEvent) {
+        noteEvent.taggedEmojis()
+    }
+
+    val emojisToShow = if (expanded) {
+        allEmojis
+    } else {
+        allEmojis.take(60)
+    }
+
+    Row(verticalAlignment = CenterVertically) {
+        Text(
+            text = remember(noteEvent) { "#${noteEvent.dTag()}" },
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1F)
+                .padding(5.dp),
+            textAlign = TextAlign.Center
+        )
+
+        if (actionable) {
+            EmojiListOptions(accountViewModel, baseNote)
+        }
+    }
+
+    Box {
+        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+            emojisToShow.forEach { emoji ->
+                if (onClick != null) {
+                    IconButton(onClick = { onClick(emoji) }, modifier = Size35Modifier) {
+                        AsyncImage(
+                            model = emoji.url,
+                            contentDescription = null,
+                            modifier = Size35Modifier
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Size35Modifier,
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = emoji.url,
+                            contentDescription = null,
+                            modifier = Size35Modifier
+                        )
+                    }
+                }
+            }
+        }
+
+        if (allEmojis.size > 60 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(getGradient(backgroundColor))
+            ) {
+                ShowMoreButton {
+                    expanded = !expanded
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiListOptions(
+    accountViewModel: AccountViewModel,
+    emojiPackNote: Note
+) {
+    LoadAddressableNote(
+        aTag = ATag(
+            EmojiPackSelectionEvent.kind,
+            accountViewModel.userProfile().pubkeyHex,
+            "",
+            null
+        )
+    ) {
+        it?.let { usersEmojiList ->
+            val hasAddedThis by usersEmojiList.live().metadata.map {
+                usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
+            }.distinctUntilChanged().observeAsState()
+
+            Crossfade(targetState = hasAddedThis) {
+                val scope = rememberCoroutineScope()
+                if (it != true) {
+                    AddButton() {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.addEmojiPack(usersEmojiList, emojiPackNote)
+                        }
+                    }
+                } else {
+                    RemoveButton {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.removeEmojiPack(usersEmojiList, emojiPackNote)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RemoveButton(onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = onClick,
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(R.string.remove), color = Color.White)
+    }
+}
+
+@Composable
+fun AddButton(text: Int = R.string.add, onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RenderPinListEvent(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
