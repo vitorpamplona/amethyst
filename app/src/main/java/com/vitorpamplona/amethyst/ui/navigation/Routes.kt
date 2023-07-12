@@ -131,7 +131,7 @@ sealed class Route(
 
     object Settings : Route(
         route = "Settings",
-        icon = com.google.android.exoplayer2.R.drawable.exo_ic_settings
+        icon = R.drawable.ic_settings
     )
 }
 
