@@ -206,7 +206,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+                    LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Likes: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -713,6 +713,7 @@ fun LikeReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
     iconSize: Dp = 20.dp,
     heartSize: Dp = 16.dp,
     iconFontSize: TextUnit = Font14SP
@@ -755,7 +756,11 @@ fun LikeReaction(
     LikeText(baseNote, grayTint)
 
     if (wantsToChangeReactionSymbol) {
-        UpdateReactionTypeDialog({ wantsToChangeReactionSymbol = false }, accountViewModel = accountViewModel)
+        UpdateReactionTypeDialog(
+            { wantsToChangeReactionSymbol = false },
+            accountViewModel = accountViewModel,
+            nav
+        )
     }
 
     if (wantsToReact) {

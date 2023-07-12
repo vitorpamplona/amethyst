@@ -553,7 +553,7 @@ private fun StatusRow(
 
     Column(modifier = ReactionRowHeightChat) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
-            LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+            LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             Spacer(modifier = DoubleHorzSpacer)

@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -32,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
 
 class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
     var nextChoice by mutableStateOf(TextFieldValue(""))
@@ -117,7 +120,11 @@ class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateReactionTypeDialog(onClose: () -> Unit, nip47uri: String? = null, accountViewModel: AccountViewModel) {
+fun UpdateReactionTypeDialog(
+    onClose: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val postViewModel: UpdateReactionTypeViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex,
         factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account)
@@ -227,7 +234,10 @@ fun UpdateReactionTypeDialog(onClose: () -> Unit, nip47uri: String? = null, acco
                     }
                 }
 
-                EmojiSelector(accountViewModel) {
+                EmojiSelector(
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                ) {
                     postViewModel.addChoice(it)
                 }
             }
@@ -297,7 +307,7 @@ private fun RenderReactionOption(
 }
 
 @Composable
-private fun EmojiSelector(accountViewModel: AccountViewModel, onClick: ((EmojiUrl) -> Unit)? = null) {
+private fun EmojiSelector(accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: ((EmojiUrl) -> Unit)? = null) {
     LoadAddressableNote(
         aTag = ATag(
             EmojiPackSelectionEvent.kind,
@@ -312,14 +322,14 @@ private fun EmojiSelector(accountViewModel: AccountViewModel, onClick: ((EmojiUr
             }.distinctUntilChanged().observeAsState((usersEmojiList.event as? EmojiPackSelectionEvent)?.taggedAddresses())
 
             collections?.let {
-                EmojiCollectionGallery(it, accountViewModel, onClick)
+                EmojiCollectionGallery(it, accountViewModel, nav, onClick)
             }
         }
     }
 }
 
 @Composable
-fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: AccountViewModel, onClick: ((EmojiUrl) -> Unit)? = null) {
+fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: ((EmojiUrl) -> Unit)? = null) {
     val color = MaterialTheme.colors.background
     val bgColor = remember { mutableStateOf(color) }
 
@@ -331,7 +341,7 @@ fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: Accou
         itemsIndexed(emojiCollections, key = { _, item -> item.toTag() }) { _, item ->
             LoadAddressableNote(aTag = item) {
                 it?.let {
-                    WatchAndRenderNote(it, bgColor, accountViewModel, onClick)
+                    WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick)
                 }
             }
         }
@@ -340,16 +350,31 @@ fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: Accou
 
 @Composable
 private fun WatchAndRenderNote(
-    it: AddressableNote,
+    emojiPack: AddressableNote,
     bgColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
     onClick: ((EmojiUrl) -> Unit)?
 ) {
-    RenderEmojiPack(
-        baseNote = it,
-        actionable = false,
-        backgroundColor = bgColor,
-        accountViewModel = accountViewModel,
-        onClick = onClick
-    )
+    val scope = rememberCoroutineScope()
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable {
+                scope.launch {
+                    routeFor(emojiPack, accountViewModel.userProfile())?.let {
+                        nav(it)
+                    }
+                }
+            }
+    ) {
+        RenderEmojiPack(
+            baseNote = emojiPack,
+            actionable = false,
+            backgroundColor = bgColor,
+            accountViewModel = accountViewModel,
+            onClick = onClick
+        )
+    }
 }

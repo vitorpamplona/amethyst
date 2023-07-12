@@ -884,7 +884,7 @@ private fun ShortChannelActionOptions(
             var popupExpanded by remember { mutableStateOf(false) }
 
             Spacer(modifier = StdHorzSpacer)
-            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
             Spacer(modifier = StdHorzSpacer)
@@ -947,7 +947,7 @@ private fun LiveChannelActionOptions(
             Spacer(modifier = StdHorzSpacer)
         }
 
-        LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
         Spacer(modifier = StdHorzSpacer)
         ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
     }

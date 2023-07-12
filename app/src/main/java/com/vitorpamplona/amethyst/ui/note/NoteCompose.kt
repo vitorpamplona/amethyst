@@ -712,7 +712,7 @@ private fun ShortCommunityActionOptions(
     }
 
     Spacer(modifier = StdHorzSpacer)
-    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
     Spacer(modifier = StdHorzSpacer)
     ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
 
@@ -1962,7 +1962,7 @@ public fun RenderEmojiPack(
         }
     }
 
-    Box {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
             emojisToShow.forEach { emoji ->
                 if (onClick != null) {
@@ -2046,14 +2046,14 @@ private fun EmojiListOptions(
 @Composable
 fun RemoveButton(onClick: () -> Unit) {
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
+        modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
             ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.remove), color = Color.White)
     }
@@ -2069,7 +2069,7 @@ fun AddButton(text: Int = R.string.add, onClick: () -> Unit) {
             .buttonColors(
                 backgroundColor = MaterialTheme.colors.primary
             ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
     }
