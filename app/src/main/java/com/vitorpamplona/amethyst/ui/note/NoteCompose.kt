@@ -840,7 +840,12 @@ fun ClickableNote(
             .combinedClickable(
                 onClick = {
                     scope.launch {
-                        routeFor(baseNote, accountViewModel.userProfile())?.let {
+                        val redirectToNote = if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                            baseNote.replyTo?.lastOrNull() ?: baseNote
+                        } else {
+                            baseNote
+                        }
+                        routeFor(redirectToNote, accountViewModel.userProfile())?.let {
                             nav(it)
                         }
                     }
