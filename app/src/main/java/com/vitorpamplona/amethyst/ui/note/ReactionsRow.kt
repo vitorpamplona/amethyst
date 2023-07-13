@@ -932,7 +932,7 @@ private fun likeClick(
             Toast
                 .makeText(
                     context,
-                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                    context.getString(R.string.login_with_a_private_key_to_like_posts),
                     Toast.LENGTH_SHORT
                 )
                 .show()
