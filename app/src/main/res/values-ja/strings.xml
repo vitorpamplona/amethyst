@@ -22,6 +22,7 @@
     <string name="copy_note_id">投稿IDをコピー</string>
     <string name="broadcast">ブロードキャスト</string>
     <string name="request_deletion">削除をリクエスト</string>
+    <string name="block_report">ブロック / 通報</string>
     <string name="block_hide_user">ユーザをブロックして非表示</string>
     <string name="report_spam_scam">スパム / 詐欺を通報</string>
     <string name="report_impersonation">なりすましを通報</string>

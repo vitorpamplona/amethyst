@@ -427,7 +427,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
             }
         } else {
             DropdownMenuItem(onClick = { reportDialogShowing = true }) {
-                Text("Block / Report")
+                Text(stringResource(R.string.block_report))
             }
         }
         Divider()
