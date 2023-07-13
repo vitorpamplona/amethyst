@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -152,7 +151,9 @@ private fun RenderRegular(
                 state.paragraphs.forEach { paragraph ->
                     val direction = if (paragraph.isRTL) {
                         LayoutDirection.Rtl
-                    } else LayoutDirection.Ltr
+                    } else {
+                        LayoutDirection.Ltr
+                    }
 
                     CompositionLocalProvider(LocalLayoutDirection provides direction) {
                         FlowRow(
@@ -177,12 +178,14 @@ private fun RenderRegular(
                 state.paragraphs.forEach { paragraph ->
                     val direction = if (paragraph.isRTL) {
                         LayoutDirection.Rtl
-                    } else LayoutDirection.Ltr
+                    } else {
+                        LayoutDirection.Ltr
+                    }
 
                     CompositionLocalProvider(LocalLayoutDirection provides direction) {
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start)
                         ) {
                             paragraph.words.forEach { word ->
                                 RenderWordWithoutPreview(
