@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
 import com.vitorpamplona.amethyst.service.model.EmojiPackEvent
@@ -169,6 +170,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
@@ -840,11 +842,12 @@ fun ClickableNote(
             .combinedClickable(
                 onClick = {
                     scope.launch {
-                        val redirectToNote = if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                            baseNote.replyTo?.lastOrNull() ?: baseNote
-                        } else {
-                            baseNote
-                        }
+                        val redirectToNote =
+                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                baseNote.replyTo?.lastOrNull() ?: baseNote
+                            } else {
+                                baseNote
+                            }
                         routeFor(redirectToNote, accountViewModel.userProfile())?.let {
                             nav(it)
                         }
@@ -1003,7 +1006,8 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    when (baseNote.event) {
+    val noteEvent = baseNote.event
+    when (noteEvent) {
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
@@ -1064,6 +1068,14 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav
+            )
+        }
+
+        is ClassifiedsEvent -> {
+            RenderClassifieds(
+                noteEvent,
+                baseNote,
+                accountViewModel
             )
         }
 
@@ -3443,6 +3455,106 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountViewModel: AccountViewModel) {
+    val image = remember(noteEvent) { noteEvent.image() }
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary = remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+    val price = remember(noteEvent) { noteEvent.price() }
+    val location = remember(noteEvent) { noteEvent.location() }
+
+    Row(
+        modifier = Modifier
+            .clip(shape = QuoteBorder)
+            .border(
+                1.dp,
+                MaterialTheme.colors.subtleBorder,
+                QuoteBorder
+            )
+    ) {
+        Column {
+            Row() {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: CreateImageHeader(note, accountViewModel)
+            }
+
+            Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.body1,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                price?.let {
+                    val priceTag = remember(noteEvent) {
+                        if (price.frequency != null && price.currency != null) {
+                            "${price.amount} ${price.currency}/${price.frequency}"
+                        } else if (price.currency != null) {
+                            "${price.amount} ${price.currency}"
+                        } else {
+                            price.amount
+                        }
+                    }
+
+                    Text(
+                        text = priceTag,
+                        maxLines = 1,
+                        color = MaterialTheme.colors.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = remember {
+                            Modifier
+                                .clip(SmallBorder)
+                                .background(Color.Black)
+                                .padding(start = 5.dp)
+                        }
+                    )
+                }
+            }
+
+            if (summary != null || location != null) {
+                Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    summary?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.caption,
+                            modifier = Modifier
+                                .weight(1f),
+                            color = Color.Gray,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    location?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.caption,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 5.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = DoubleVertSpacer)
         }
     }
 }

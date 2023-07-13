@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
+import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
@@ -42,7 +43,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             .asSequence()
             .filter { it ->
                 val noteEvent = it.event
-                (noteEvent is TextNoteEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
+                (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
                     (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&

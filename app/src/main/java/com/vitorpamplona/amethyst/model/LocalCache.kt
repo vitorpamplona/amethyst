@@ -402,6 +402,25 @@ object LocalCache {
         }
     }
 
+    private fun consume(event: ClassifiedsEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     private fun consume(event: PinListEvent) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -1306,6 +1325,7 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is ClassifiedsEvent -> consume(event)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
                     event.containedPost()?.let {
