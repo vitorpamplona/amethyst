@@ -101,9 +101,9 @@ fun LoadThumbAndThenVideoView(
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            VideoView(videoUri, description, VideoThumb(loadingFinished.second), accountViewModel, onDialog)
+            VideoView(videoUri, description, VideoThumb(loadingFinished.second), accountViewModel, onDialog = onDialog)
         } else {
-            VideoView(videoUri, description, null, accountViewModel, onDialog)
+            VideoView(videoUri, description, null, accountViewModel, onDialog = onDialog)
         }
     }
 }
@@ -115,10 +115,11 @@ fun VideoView(
     description: String? = null,
     thumb: VideoThumb? = null,
     accountViewModel: AccountViewModel,
+    alwaysShowVideo: Boolean = false,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, thumb, onDialog, accountViewModel)
+        VideoView1(videoUri, description, thumb, onDialog, accountViewModel, alwaysShowVideo)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -129,7 +130,8 @@ fun VideoView1(
     description: String? = null,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    alwaysShowVideo: Boolean = false,
 ) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
     val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
@@ -144,7 +146,7 @@ fun VideoView1(
     }
 
     exoPlayerData?.let {
-        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, accountViewModel)
+        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, accountViewModel, alwaysShowVideo)
     }
 
     DisposableEffect(Unit) {
@@ -163,10 +165,11 @@ fun VideoView(
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    alwaysShowVideo: Boolean = false,
 ) {
     val (_, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, accountViewModel)
+        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, accountViewModel, alwaysShowVideo)
     }
     Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
 }
@@ -179,7 +182,8 @@ fun VideoView1(
     defaultToStart: Boolean = false,
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    alwaysShowVideo: Boolean = false,
 ) {
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
@@ -190,11 +194,12 @@ fun VideoView1(
 
     val automaticallyStartPlayback = remember {
         mutableStateOf(
-            when (settings.automaticallyStartPlayback) {
-                true -> !isMobile
-                false -> false
-                else -> true
-            }
+            if (alwaysShowVideo) true else
+                when (settings.automaticallyStartPlayback) {
+                    true -> !isMobile
+                    false -> false
+                    else -> true
+                }
         )
     }
 
