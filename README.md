@@ -76,8 +76,9 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] HTTP Auth (NIP-98)
 - [x] Zapraiser (NIP-TBD)
 - [x] Moderated Communities (NIP-172)
-- [x] Support for Emoji Packs (Kind:30030)
-- [x] Support for Emoji Lists (Kind:10030)
+- [x] Emoji Packs (Kind:30030)
+- [x] Personal Emoji Lists (Kind:10030)
+- [x] Classifieds (Kind:30403)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
