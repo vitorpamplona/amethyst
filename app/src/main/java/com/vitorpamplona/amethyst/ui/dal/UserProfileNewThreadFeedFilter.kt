@@ -18,10 +18,11 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) : Fee
         val longFormNotes = LocalCache.addressables.values
             .filter {
                 it.author == user &&
-                        (it.event !is PeopleListEvent
-                        && it.event !is BookmarkListEvent
-                        && it.event !is AppRecommendationEvent
-                        && it.event !is EmojiPackSelectionEvent
+                    (
+                        it.event !is PeopleListEvent &&
+                            it.event !is BookmarkListEvent &&
+                            it.event !is AppRecommendationEvent &&
+                            it.event !is EmojiPackSelectionEvent
                         )
             }
 
