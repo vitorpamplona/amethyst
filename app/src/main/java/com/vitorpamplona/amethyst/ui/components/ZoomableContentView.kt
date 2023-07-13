@@ -201,11 +201,20 @@ fun ZoomableContentView(
 
     when (content) {
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel)
-        is ZoomableUrlVideo -> VideoView(content.url, content.description, accountViewModel = accountViewModel) { dialogOpen = true }
+        is ZoomableUrlVideo -> VideoView(
+            content.url,
+            content.description,
+            accountViewModel = accountViewModel
+        ) { dialogOpen = true }
+
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel)
         is ZoomableLocalVideo ->
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description, accountViewModel = accountViewModel) { dialogOpen = true }
+                VideoView(
+                    it.toUri().toString(),
+                    content.description,
+                    accountViewModel = accountViewModel
+                ) { dialogOpen = true }
             }
     }
 
@@ -218,7 +227,8 @@ fun ZoomableContentView(
 private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier,
-    accountViewModel: AccountViewModel?
+    accountViewModel: AccountViewModel?,
+    alwayShowImage: Boolean = false
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
@@ -227,10 +237,12 @@ private fun LocalImageView(
 
             val showImage = remember {
                 mutableStateOf(
-                    when (settings?.automaticallyShowImages) {
-                        true -> !isMobile
-                        false -> false
-                        else -> true
+                    if (alwayShowImage) { true } else {
+                        when (settings?.automaticallyShowImages) {
+                            true -> !isMobile
+                            false -> false
+                            else -> true
+                        }
                     }
                 )
             }
@@ -268,7 +280,14 @@ private fun LocalImageView(
                 )
             }
 
-            AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier, showImage)
+            AddedImageFeatures(
+                painterState,
+                content,
+                contentScale,
+                myModifier,
+                verifierModifier,
+                showImage
+            )
         }
     } else {
         BlankNote()
@@ -279,7 +298,8 @@ private fun LocalImageView(
 private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier,
-    accountViewModel: AccountViewModel?
+    accountViewModel: AccountViewModel?,
+    alwayShowImage: Boolean = false
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val settings = accountViewModel?.account?.settings
@@ -287,10 +307,12 @@ private fun UrlImageView(
 
         val showImage = remember {
             mutableStateOf(
-                when (settings?.automaticallyShowImages) {
-                    true -> !isMobile
-                    false -> false
-                    else -> true
+                if (alwayShowImage) { true } else {
+                    when (settings?.automaticallyShowImages) {
+                        true -> !isMobile
+                        false -> false
+                        else -> true
+                    }
                 }
             )
         }
@@ -328,7 +350,14 @@ private fun UrlImageView(
             )
         }
 
-        AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier, showImage)
+        AddedImageFeatures(
+            painterState,
+            content,
+            contentScale,
+            myModifier,
+            verifierModifier,
+            showImage
+        )
     }
 }
 
@@ -540,7 +569,12 @@ private fun DisplayBlurHash(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
+fun ZoomableImageDialog(
+    imageUrl: ZoomableContent,
+    allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(),
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel
+) {
     val view = LocalView.current
 
     DisposableEffect(key1 = Unit) {
@@ -602,7 +636,10 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                     if (myContent is ZoomableUrlContent) {
                         SaveToGallery(url = myContent.url)
                     } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
-                        SaveToGallery(localFile = myContent.localFile, mimeType = myContent.mimeType)
+                        SaveToGallery(
+                            localFile = myContent.localFile,
+                            mimeType = myContent.mimeType
+                        )
                     }
                 }
             }
@@ -611,23 +648,28 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
 }
 
 @Composable
-fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel) {
+private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
 
     if (content is ZoomableUrlImage) {
-        UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel)
+        UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url, content.description, accountViewModel = accountViewModel)
+            VideoView(content.url, content.description, accountViewModel = accountViewModel, alwaysShowVideo = true)
         }
     } else if (content is ZoomableLocalImage) {
-        LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel)
+        LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description, accountViewModel = accountViewModel)
+                VideoView(
+                    it.toUri().toString(),
+                    content.description,
+                    accountViewModel = accountViewModel,
+                    alwaysShowVideo = true
+                )
             }
         }
     }
