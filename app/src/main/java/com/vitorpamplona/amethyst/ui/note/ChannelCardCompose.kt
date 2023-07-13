@@ -355,7 +355,11 @@ private fun RenderNoteRow(
 }
 
 @Composable
-fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun RenderLiveActivityThumb(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
     val eventUpdates by baseNote.live().metadata.observeAsState()

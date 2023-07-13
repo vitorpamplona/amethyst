@@ -173,6 +173,9 @@ dependencies {
     implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material:a0954aba63')
     implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:a0954aba63')
 
+    // Language picker and Theme chooser
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'
 

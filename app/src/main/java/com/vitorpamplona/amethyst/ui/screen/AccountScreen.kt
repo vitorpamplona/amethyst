@@ -12,7 +12,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
 
 @Composable
-fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: String?) {
+fun AccountScreen(accountStateViewModel: AccountStateViewModel, themeViewModel: ThemeViewModel, startingPage: String?) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
 
     Column() {
@@ -27,7 +27,7 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: St
                         factory = AccountViewModel.Factory(state.account)
                     )
 
-                    MainScreen(accountViewModel, accountStateViewModel, startingPage)
+                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, startingPage)
                 }
                 is AccountState.LoggedInViewOnly -> {
                     val accountViewModel: AccountViewModel = viewModel(
@@ -35,7 +35,7 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, startingPage: St
                         factory = AccountViewModel.Factory(state.account)
                     )
 
-                    MainScreen(accountViewModel, accountStateViewModel, startingPage)
+                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, startingPage)
                 }
             }
         }

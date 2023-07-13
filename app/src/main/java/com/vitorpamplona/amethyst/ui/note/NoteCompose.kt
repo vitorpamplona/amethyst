@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
@@ -1303,7 +1304,7 @@ fun RenderAppDefinition(
                 )
 
                 if (zoomImageDialogOpen) {
-                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
                 }
             } else {
                 Image(
@@ -1354,7 +1355,7 @@ fun RenderAppDefinition(
                     }
 
                     if (zoomImageDialogOpen) {
-                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -3086,7 +3087,7 @@ fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it)
+                ZoomableContentView(content = it, accountViewModel = accountViewModel)
             }
         }
     }
@@ -3172,7 +3173,7 @@ private fun RenderNIP95(
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it)
+                ZoomableContentView(content = it, accountViewModel = accountViewModel)
             }
         }
     }
@@ -3242,12 +3243,14 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                         LoadThumbAndThenVideoView(
                             videoUri = media,
                             description = noteEvent.subject(),
-                            thumbUri = cover
+                            thumbUri = cover,
+                            accountViewModel = accountViewModel
                         )
                     }
                         ?: VideoView(
                             videoUri = media,
-                            noteEvent.subject()
+                            description = noteEvent.subject(),
+                            accountViewModel = accountViewModel
                         )
                 }
             }
@@ -3371,7 +3374,8 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 ) {
                     VideoView(
                         videoUri = media,
-                        description = subject
+                        description = subject,
+                        accountViewModel = accountViewModel
                     )
                 }
             } else {
@@ -3421,17 +3425,27 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             )
     ) {
         Column {
-            image?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = stringResource(
-                        R.string.preview_card_image_for,
-                        it
-                    ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } ?: CreateImageHeader(note, accountViewModel)
+            val settings = accountViewModel.account.settings
+            val isMobile = ConnectivityStatus.isOnMobileData.value
+
+            val automaticallyShowUrlPreview = when (settings.automaticallyShowUrlPreview) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+            if (automaticallyShowUrlPreview) {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: CreateImageHeader(note, accountViewModel)
+            }
 
             title?.let {
                 Text(

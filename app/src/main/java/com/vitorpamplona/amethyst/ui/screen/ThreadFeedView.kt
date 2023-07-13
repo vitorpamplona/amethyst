@@ -78,19 +78,6 @@ import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
-import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
-import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
-import com.vitorpamplona.amethyst.ui.note.DisplayPoW
-import com.vitorpamplona.amethyst.ui.note.DisplayReward
-import com.vitorpamplona.amethyst.ui.note.HiddenNote
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
-import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
@@ -372,7 +359,13 @@ fun NoteMaster(
             ) {
                 Column() {
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
-                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
+                        ChannelHeader(
+                            channelHex = note.channelHex()!!,
+                            showVideo = true,
+                            showBottomDiviser = false,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
                     } else if (noteEvent is FileHeaderEvent) {
                         FileHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {

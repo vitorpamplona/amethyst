@@ -238,8 +238,8 @@ private fun RenderWordWithPreview(
     nav: (String) -> Unit
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, state)
-        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
@@ -256,9 +256,13 @@ private fun RenderWordWithPreview(
 }
 
 @Composable
-private fun ZoomableContentView(word: String, state: RichTextViewerState) {
+private fun ZoomableContentView(
+    word: String,
+    state: RichTextViewerState,
+    accountViewModel: AccountViewModel
+) {
     state.imagesForPager[word]?.let {
-        ZoomableContentView(it, state.imageList)
+        ZoomableContentView(it, state.imageList, accountViewModel)
     }
 }
 

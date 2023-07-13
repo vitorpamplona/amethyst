@@ -599,7 +599,7 @@ private fun ProfileHeader(
     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     Box {
-        DrawBanner(baseUser)
+        DrawBanner(baseUser, accountViewModel)
 
         Box(
             modifier = Modifier
@@ -688,7 +688,7 @@ private fun ProfileHeader(
 
     val profilePic = baseUser.profilePicture()
     if (zoomImageDialogOpen && profilePic != null) {
-        ZoomableImageDialog(figureOutMimeType(profilePic), onDismiss = { zoomImageDialogOpen = false })
+        ZoomableImageDialog(figureOutMimeType(profilePic), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
     }
 }
 
@@ -1260,7 +1260,7 @@ private fun WatchAndRenderBadgeImage(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-public fun DrawBanner(baseUser: User) {
+fun DrawBanner(baseUser: User, accountViewModel: AccountViewModel) {
     val userState by baseUser.live().metadata.observeAsState()
     val banner = remember(userState) { userState?.user?.info?.banner }
 
@@ -1284,7 +1284,7 @@ public fun DrawBanner(baseUser: User) {
         )
 
         if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = figureOutMimeType(banner), onDismiss = { zoomImageDialogOpen = false })
+            ZoomableImageDialog(imageUrl = figureOutMimeType(banner), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
         }
     } else {
         Image(

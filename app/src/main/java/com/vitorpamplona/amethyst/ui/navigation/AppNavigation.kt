@@ -20,6 +20,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
 import kotlinx.coroutines.delay
@@ -54,6 +56,7 @@ fun AppNavigation(
 
     navController: NavHostController,
     accountViewModel: AccountViewModel,
+    themeViewModel: ThemeViewModel,
     nextPage: String? = null
 ) {
     var actionableNextPage by remember { mutableStateOf<String?>(nextPage) }
@@ -216,6 +219,15 @@ fun AppNavigation(
                 LoadRedirectScreen(
                     eventId = it.arguments?.getString("id"),
                     navController = navController
+                )
+            })
+        }
+
+        Route.Settings.let { route ->
+            composable(route.route, route.arguments, content = {
+                SettingsScreen(
+                    accountViewModel = accountViewModel,
+                    themeViewModel
                 )
             })
         }

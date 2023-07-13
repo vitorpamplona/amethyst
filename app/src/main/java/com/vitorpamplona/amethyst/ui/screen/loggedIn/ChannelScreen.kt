@@ -632,7 +632,8 @@ private fun ShowVideoStreaming(
                         }
 
                         ZoomableContentView(
-                            content = zoomableUrlVideo
+                            content = zoomableUrlVideo,
+                            accountViewModel = accountViewModel
                         )
                     }
                 }

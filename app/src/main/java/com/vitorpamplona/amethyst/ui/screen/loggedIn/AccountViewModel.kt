@@ -40,6 +40,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
+    fun updateAutomaticallyStartPlayback(
+        automaticallyStartPlayback: Boolean?
+    ) {
+        account.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
+    }
+
+    fun updateAutomaticallyShowUrlPreview(
+        automaticallyShowUrlPreview: Boolean?
+    ) {
+        account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
+    }
+
+    fun updateAutomaticallyShowImages(
+        automaticallyShowImages: Boolean?
+    ) {
+        account.updateAutomaticallyShowImages(automaticallyShowImages)
+    }
+
     fun isWriteable(): Boolean {
         return account.isWriteable()
     }
