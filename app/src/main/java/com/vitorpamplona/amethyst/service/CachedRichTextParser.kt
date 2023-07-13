@@ -30,8 +30,10 @@ data class RichTextViewerState(
     val imagesForPager: ImmutableMap<String, ZoomableUrlContent>,
     val imageList: ImmutableList<ZoomableUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
-    val paragraphs: ImmutableList<ImmutableList<Segment>>
+    val paragraphs: ImmutableList<ParagraphState>
 )
+
+data class ParagraphState(val words: ImmutableList<Segment>, val isRTL: Boolean)
 
 object CachedRichTextParser {
     val richTextCache = LruCache<String, RichTextViewerState>(200)
@@ -108,12 +110,14 @@ class RichTextParser() {
         )
     }
 
-    private fun findTextSegments(content: String, images: Set<String>, urls: Set<String>, emojis: Map<String, String>, tags: ImmutableListOfLists<String>): ImmutableList<ImmutableList<Segment>> {
-        var paragraphSegments = persistentListOf<ImmutableList<Segment>>()
+    private fun findTextSegments(content: String, images: Set<String>, urls: Set<String>, emojis: Map<String, String>, tags: ImmutableListOfLists<String>): ImmutableList<ParagraphState> {
+        var paragraphSegments = persistentListOf<ParagraphState>()
 
         content.split('\n').forEach { paragraph ->
             var segments = persistentListOf<Segment>()
             var isDirty = false
+
+            val isRTL = isArabic(paragraph)
 
             val wordList = paragraph.split(' ')
             wordList.forEach { word ->
@@ -125,13 +129,9 @@ class RichTextParser() {
             }
 
             val newSegments = if (isDirty) {
-                if (isArabic(paragraph)) {
-                    segments.asReversed().toImmutableList()
-                } else {
-                    segments
-                }
+                ParagraphState(segments, isRTL)
             } else {
-                persistentListOf<Segment>(RegularTextSegment(paragraph))
+                ParagraphState(persistentListOf<Segment>(RegularTextSegment(paragraph)), isRTL)
             }
 
             paragraphSegments = paragraphSegments.add(newSegments)
