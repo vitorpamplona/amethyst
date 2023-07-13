@@ -27,6 +27,7 @@ fun String.firstFullCharOld(): String {
 
 fun String.firstFullChar(): String {
     var isInJoin = false
+    var hasHadSecondChance = false
     var start = 0
     var previousCharLength = 0
     var next: Int
@@ -48,8 +49,14 @@ fun String.firstFullChar(): String {
                 isInJoin = true
             } else {
                 // stops when two chars are not joined together
-                if ((previousCharLength > 0) && (!isInJoin) && Character.charCount(codePoint) == 1) {
-                    break
+                if (previousCharLength > 0 && !isInJoin) {
+                    if (Character.charCount(codePoint) == 1 || hasHadSecondChance) {
+                        break
+                    } else {
+                        hasHadSecondChance = true
+                    }
+                } else {
+                    hasHadSecondChance = false
                 }
 
                 isInJoin = false

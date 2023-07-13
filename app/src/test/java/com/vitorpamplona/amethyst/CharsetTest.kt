@@ -21,6 +21,11 @@ class CharsetTest {
     }
 
     @Test
+    fun testUTF32JoinChar2() {
+        Assert.assertEquals("\uD83E\uDDD1\uD83C\uDFFE", "\uD83E\uDDD1\uD83C\uDFFEHi".firstFullChar())
+    }
+
+    @Test
     fun testAsciiWithUTF32Char() {
         Assert.assertEquals("H", "Hi\uD83E\uDDD1\uD83C\uDFFEHi".firstFullChar())
     }
@@ -53,5 +58,10 @@ class CharsetTest {
     @Test
     fun testVariation() {
         Assert.assertEquals("\uD83D\uDC68\u200D\u2764\uFE0F\u200D\uD83D\uDC8B\u200D\uD83D\uDC68", "\uD83D\uDC68\u200D\u2764\uFE0F\u200D\uD83D\uDC8B\u200D\uD83D\uDC68ddd".firstFullChar())
+    }
+
+    @Test
+    fun testMultipleEmoji() {
+        Assert.assertEquals("\uD83E\uDEC2\uD83E\uDEC2", "\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2".firstFullChar())
     }
 }
