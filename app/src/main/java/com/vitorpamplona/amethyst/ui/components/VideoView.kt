@@ -131,7 +131,7 @@ fun VideoView1(
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
-    alwaysShowVideo: Boolean = false,
+    alwaysShowVideo: Boolean = false
 ) {
     var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
     val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
@@ -166,7 +166,7 @@ fun VideoView(
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
-    alwaysShowVideo: Boolean = false,
+    alwaysShowVideo: Boolean = false
 ) {
     val (_, elapsed) = measureTimedValue {
         VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, accountViewModel, alwaysShowVideo)
@@ -183,7 +183,7 @@ fun VideoView1(
     thumb: VideoThumb? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
-    alwaysShowVideo: Boolean = false,
+    alwaysShowVideo: Boolean = false
 ) {
     val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
 
@@ -194,12 +194,13 @@ fun VideoView1(
 
     val automaticallyStartPlayback = remember {
         mutableStateOf(
-            if (alwaysShowVideo) true else
+            if (alwaysShowVideo) { true } else {
                 when (settings.automaticallyStartPlayback) {
                     true -> !isMobile
                     false -> false
                     else -> true
                 }
+            }
         )
     }
 
@@ -227,7 +228,11 @@ fun VideoView1(
         prepare()
     }
 
-    RenderVideoPlayer(exoPlayerData, thumb, automaticallyStartPlayback, onDialog)
+    if (!automaticallyStartPlayback.value) {
+        ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+    } else {
+        RenderVideoPlayer(exoPlayerData, thumb, automaticallyStartPlayback, onDialog)
+    }
 
     DisposableEffect(Unit) {
         val observer = LifecycleEventObserver { _, event ->
