@@ -1245,7 +1245,9 @@ object LocalCache {
                 }
             }
 
-            println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
+            if (toBeRemoved.size > 100 || it.value.notes.size > 100) {
+                println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
+            }
         }
     }
 
