@@ -1115,7 +1115,6 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun DisplayBadges(
     baseUser: User,
     nav: (String) -> Unit

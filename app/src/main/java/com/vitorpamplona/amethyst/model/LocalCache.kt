@@ -238,9 +238,6 @@ object LocalCache {
 
         // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
 
-        // Prepares user's profile view.
-        author.addNote(note)
-
         // Counts the replies
         replyTo.forEach {
             it.addReply(note)
@@ -279,8 +276,6 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
 
-            author.addNote(note)
-
             refreshObservers(note)
         }
     }
@@ -309,9 +304,6 @@ object LocalCache {
         note.loadEvent(event, author, replyTo)
 
         // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Prepares user's profile view.
-        author.addNote(note)
 
         // Counts the replies
         replyTo.forEach {
@@ -634,8 +626,6 @@ object LocalCache {
         event.deleteEvents().mapNotNull { notes[it] }.forEach { deleteNote ->
             // must be the same author
             if (deleteNote.author?.pubkeyHex == event.pubKey) {
-                deleteNote.author?.removeNote(deleteNote)
-
                 // reverts the add
                 val mentions = deleteNote.event?.tags()?.filter { it.firstOrNull() == "p" }
                     ?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
@@ -697,9 +687,6 @@ object LocalCache {
 
         note.loadEvent(event, author, repliesTo)
 
-        // Prepares user's profile view.
-        author.addNote(note)
-
         // Counts the replies
         repliesTo.forEach {
             it.addBoost(note)
@@ -721,9 +708,6 @@ object LocalCache {
             event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, repliesTo)
-
-        // Prepares user's profile view.
-        author.addNote(note)
 
         // Counts the replies
         repliesTo.forEach {
@@ -749,9 +733,6 @@ object LocalCache {
         val repliesTo = communities.map { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, eventsApproved)
-
-        // Prepares user's profile view.
-        author.addNote(note)
 
         // Counts the replies
         repliesTo.forEach {
@@ -1072,9 +1053,6 @@ object LocalCache {
 
         note.loadEvent(event, author, emptyList())
 
-        // Adds to user profile
-        author.addNote(note)
-
         refreshObservers(note)
     }
 
@@ -1254,17 +1232,17 @@ object LocalCache {
     fun pruneHiddenMessages(account: Account) {
         checkNotInMainThread()
 
-        val toBeRemoved = account.hiddenUsers.map {
-            (users[it]?.notes ?: emptySet())
+        val toBeRemoved = account.hiddenUsers.map { userHex ->
+            (
+                notes.values.filter {
+                    it.event?.pubKey() == userHex
+                } + addressables.values.filter {
+                    it.event?.pubKey() == userHex
+                }
+                ).toSet()
         }.flatten()
 
-        account.hiddenUsers.forEach {
-            users[it]?.clearNotes()
-        }
-
         toBeRemoved.forEach {
-            it.author?.removeNote(it)
-
             // Counts the replies
             it.replyTo?.forEach { masterNote ->
                 masterNote.removeReply(it)

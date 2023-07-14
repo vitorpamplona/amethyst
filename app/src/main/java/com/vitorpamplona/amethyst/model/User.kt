@@ -32,9 +32,6 @@ class User(val pubkeyHex: String) {
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
 
-    var notes = setOf<Note>()
-        private set
-
     var reports = mapOf<User, Set<Note>>()
         private set
 
@@ -103,21 +100,6 @@ class User(val pubkeyHex: String) {
         }
 
         liveSet?.relays?.invalidateData()
-    }
-
-    fun addNote(note: Note) {
-        if (note !in notes) {
-            notes = notes + note
-            // No need for Listener yet
-        }
-    }
-
-    fun removeNote(note: Note) {
-        notes = notes - note
-    }
-
-    fun clearNotes() {
-        notes = setOf<Note>()
     }
 
     fun addReport(note: Note) {
