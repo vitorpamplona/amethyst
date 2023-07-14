@@ -518,7 +518,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
 
-            author.updateAcceptedBadges(note)
+            refreshObservers(note)
         }
     }
 

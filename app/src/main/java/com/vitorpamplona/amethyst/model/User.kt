@@ -31,7 +31,6 @@ class User(val pubkeyHex: String) {
 
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
-    var latestAcceptedBadges: AddressableNote? = null
 
     var notes = setOf<Note>()
         private set
@@ -141,13 +140,6 @@ class User(val pubkeyHex: String) {
                 reports = reports + Pair(author, it.minus(deleteNote))
                 liveSet?.reports?.invalidateData()
             }
-        }
-    }
-
-    fun updateAcceptedBadges(note: AddressableNote) {
-        if (latestAcceptedBadges?.idHex != note.idHex) {
-            latestAcceptedBadges = note
-            liveSet?.badges?.invalidateData()
         }
     }
 
@@ -351,7 +343,6 @@ class UserLiveSet(u: User) {
     val relayInfo: UserLiveData = UserLiveData(u)
     val metadata: UserLiveData = UserLiveData(u)
     val zaps: UserLiveData = UserLiveData(u)
-    val badges: UserLiveData = UserLiveData(u)
     val bookmarks: UserLiveData = UserLiveData(u)
 
     fun isInUse(): Boolean {
@@ -363,7 +354,6 @@ class UserLiveSet(u: User) {
             relayInfo.hasObservers() ||
             metadata.hasObservers() ||
             zaps.hasObservers() ||
-            badges.hasObservers() ||
             bookmarks.hasObservers()
     }
 }

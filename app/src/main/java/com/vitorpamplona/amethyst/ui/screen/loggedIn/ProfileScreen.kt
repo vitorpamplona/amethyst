@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -57,6 +59,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -78,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
@@ -97,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -1115,26 +1120,38 @@ private fun DisplayBadges(
     baseUser: User,
     nav: (String) -> Unit
 ) {
-    val userBadgeState by baseUser.live().badges.observeAsState()
-    val badgeList by remember(userBadgeState) {
-        derivedStateOf {
-            val list = (userBadgeState?.user?.latestAcceptedBadges?.event as? BadgeProfilesEvent)?.badgeAwardEvents()
-            if (list.isNullOrEmpty()) {
-                null
-            } else {
-                list.toImmutableList()
+    LoadAddressableNote(
+        aTag = ATag(
+            BadgeProfilesEvent.kind,
+            baseUser.pubkeyHex,
+            BadgeProfilesEvent.standardDTAg,
+            null
+        )
+    ) {
+        if (it != null) {
+            val badgeList by it.live().metadata.map {
+                (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
+            }.distinctUntilChanged().observeAsState()
+
+            badgeList?.let { list ->
+                RenderBadgeList(list, nav)
             }
         }
     }
+}
 
-    badgeList?.let { list ->
-        FlowRow(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 5.dp)
-        ) {
-            list.forEach { badgeAwardEvent ->
-                LoadAndRenderBadge(badgeAwardEvent, nav)
-            }
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun RenderBadgeList(
+    list: ImmutableList<String>,
+    nav: (String) -> Unit
+) {
+    FlowRow(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 5.dp)
+    ) {
+        list.forEach { badgeAwardEvent ->
+            LoadAndRenderBadge(badgeAwardEvent, nav)
         }
     }
 }
