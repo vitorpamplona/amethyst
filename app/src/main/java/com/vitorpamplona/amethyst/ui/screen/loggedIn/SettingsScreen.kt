@@ -40,7 +40,9 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
@@ -80,12 +82,19 @@ fun Context.getLangPreferenceDropdownEntries(): Map<String, String> {
 }
 
 fun getLanguageIndex(languageEntries: Map<String, String>): Int {
-    var languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
+    val language = LocalPreferences.getPreferredLanguage()
+    var languageIndex = -1
+    if (language.isNotBlank()) {
+        languageIndex = languageEntries.values.toTypedArray().indexOf(language)
+    } else {
+        languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
+    }
     if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
     if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
     return languageIndex
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun SettingsScreen(
     accountViewModel: AccountViewModel,
@@ -139,10 +148,13 @@ fun SettingsScreen(
                 placeholder = languageList[languageIndex],
                 options = languageList,
                 onSelect = {
-                    scope.launch(Dispatchers.IO) {
-                        val locale = languageEntries[languageList[it]]
-                        accountViewModel.account.settings.preferredLanguage = locale
-                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                    GlobalScope.launch(Dispatchers.Main) {
+                        val job = scope.launch(Dispatchers.IO) {
+                            val locale = languageEntries[languageList[it]]
+                            accountViewModel.account.settings.preferredLanguage = locale
+                            LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                        }
+                        job.join()
                         val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it]])
                         AppCompatDelegate.setApplicationLocales(appLocale)
                     }
