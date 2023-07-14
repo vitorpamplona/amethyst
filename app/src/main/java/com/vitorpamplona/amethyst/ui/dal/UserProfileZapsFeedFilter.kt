@@ -13,4 +13,6 @@ class UserProfileZapsFeedFilter(val user: User) : FeedFilter<ZapReqResponse>() {
     override fun feed(): List<ZapReqResponse> {
         return UserZaps.forProfileFeed(user.zaps)
     }
+
+    override fun limit() = 400
 }

@@ -51,4 +51,6 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) : Add
     override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
+
+    override fun limit() = 200
 }

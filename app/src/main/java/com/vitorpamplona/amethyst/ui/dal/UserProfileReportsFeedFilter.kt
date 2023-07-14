@@ -24,4 +24,6 @@ class UserProfileReportsFeedFilter(val user: User) : AdditiveFeedFilter<Note>() 
     override fun sort(collection: Set<Note>): List<Note> {
         return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
+
+    override fun limit() = 400
 }
