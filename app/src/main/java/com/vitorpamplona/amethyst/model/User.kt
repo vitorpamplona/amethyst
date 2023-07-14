@@ -31,6 +31,7 @@ class User(val pubkeyHex: String) {
 
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
+    var latestAcceptedBadges: AddressableNote? = null
 
     var notes = setOf<Note>()
         private set
@@ -48,8 +49,6 @@ class User(val pubkeyHex: String) {
 
     var privateChatrooms = mapOf<User, Chatroom>()
         private set
-
-    var acceptedBadges: AddressableNote? = null
 
     fun pubkey() = Hex.decode(pubkeyHex)
     fun pubkeyNpub() = pubkey().toNpub()
@@ -146,8 +145,8 @@ class User(val pubkeyHex: String) {
     }
 
     fun updateAcceptedBadges(note: AddressableNote) {
-        if (acceptedBadges?.idHex != note.idHex) {
-            acceptedBadges = note
+        if (latestAcceptedBadges?.idHex != note.idHex) {
+            latestAcceptedBadges = note
             liveSet?.badges?.invalidateData()
         }
     }

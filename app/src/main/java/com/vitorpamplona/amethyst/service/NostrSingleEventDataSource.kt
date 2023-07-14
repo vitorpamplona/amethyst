@@ -50,14 +50,24 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
 
         return addressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter = JsonFilter(
-                        kinds = listOf(aTag.kind),
-                        tags = mapOf("d" to listOf(aTag.dTag)),
-                        authors = listOf(aTag.pubKeyHex)
+                if (aTag.kind < 25000 && aTag.dTag.isBlank()) {
+                    TypedFilter(
+                        types = COMMON_FEED_TYPES,
+                        filter = JsonFilter(
+                            kinds = listOf(aTag.kind),
+                            authors = listOf(aTag.pubKeyHex)
+                        )
                     )
-                )
+                } else {
+                    TypedFilter(
+                        types = COMMON_FEED_TYPES,
+                        filter = JsonFilter(
+                            kinds = listOf(aTag.kind),
+                            tags = mapOf("d" to listOf(aTag.dTag)),
+                            authors = listOf(aTag.pubKeyHex)
+                        )
+                    )
+                }
             }
         }
     }

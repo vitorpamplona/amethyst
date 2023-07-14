@@ -7,34 +7,37 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import nostr.postr.Utils
 
 @Immutable
-class HighlightEvent(
+class EmojiPackSelectionEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
 
-    fun inUrl() = taggedUrls().firstOrNull()
-    fun author() = taggedUsers().firstOrNull()
-    fun quote() = content
-
-    fun inPost() = taggedAddresses().firstOrNull()
+    override fun dTag() = ""
+    override fun address() = ATag(kind, pubKey, dTag(), null)
 
     companion object {
-        const val kind = 9802
+        const val kind = 10030
 
         fun create(
-            msg: String,
+            listOfEmojiPacks: List<ATag>?,
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
-        ): PollNoteEvent {
+        ): EmojiPackSelectionEvent {
+            val msg = ""
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
+
+            listOfEmojiPacks?.forEach {
+                tags.add(listOf("a", it.toTag()))
+            }
+
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = Utils.sign(id, privateKey)
-            return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+            return EmojiPackSelectionEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }
 }

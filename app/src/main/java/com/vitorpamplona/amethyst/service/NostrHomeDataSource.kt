@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
+import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
@@ -66,6 +67,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     TextNoteEvent.kind,
                     RepostEvent.kind,
                     GenericRepostEvent.kind,
+                    ClassifiedsEvent.kind,
                     LongTextNoteEvent.kind,
                     PollNoteEvent.kind,
                     HighlightEvent.kind,
@@ -89,7 +91,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 tags = mapOf(
                     "t" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())

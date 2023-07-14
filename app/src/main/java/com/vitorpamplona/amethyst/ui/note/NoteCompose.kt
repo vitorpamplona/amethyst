@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -85,6 +88,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
@@ -94,8 +98,12 @@ import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackSelectionEvent
+import com.vitorpamplona.amethyst.service.model.EmojiUrl
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -122,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
+import com.vitorpamplona.amethyst.ui.components.MeasureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -145,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -158,9 +168,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
@@ -422,12 +434,14 @@ fun NormalNote(
             channelNote = baseNote,
             showVideo = !makeItShort,
             showBottomDiviser = true,
+            sendToChannel = true,
             accountViewModel = accountViewModel,
             nav = nav
         )
         is CommunityDefinitionEvent -> CommunityHeader(
             baseNote = baseNote,
             showBottomDiviser = true,
+            sendToCommunity = true,
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -459,6 +473,7 @@ fun NormalNote(
 fun CommunityHeader(
     baseNote: Note,
     showBottomDiviser: Boolean,
+    sendToCommunity: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -467,7 +482,13 @@ fun CommunityHeader(
 
     Column(
         modifier = modifier.clickable {
-            expanded.value = !expanded.value
+            if (sendToCommunity) {
+                routeFor(baseNote, accountViewModel.userProfile())?.let {
+                    nav(it)
+                }
+            } else {
+                expanded.value = !expanded.value
+            }
         }
     ) {
         ShortCommunityHeader(baseNote, expanded, accountViewModel, nav)
@@ -704,7 +725,7 @@ private fun ShortCommunityActionOptions(
     }
 
     Spacer(modifier = StdHorzSpacer)
-    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
     Spacer(modifier = StdHorzSpacer)
     ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
 
@@ -832,7 +853,13 @@ fun ClickableNote(
             .combinedClickable(
                 onClick = {
                     scope.launch {
-                        routeFor(baseNote, accountViewModel.userProfile())?.let {
+                        val redirectToNote =
+                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                baseNote.replyTo?.lastOrNull() ?: baseNote
+                            } else {
+                                baseNote
+                            }
+                        routeFor(redirectToNote, accountViewModel.userProfile())?.let {
                             nav(it)
                         }
                     }
@@ -990,7 +1017,8 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    when (baseNote.event) {
+    val noteEvent = baseNote.event
+    when (noteEvent) {
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
@@ -1035,6 +1063,10 @@ private fun RenderNoteRow(
             RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is EmojiPackEvent -> {
+            RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
+        }
+
         is LiveActivitiesEvent -> {
             RenderLiveActivityEvent(baseNote, accountViewModel, nav)
         }
@@ -1047,6 +1079,14 @@ private fun RenderNoteRow(
                 backgroundColor,
                 accountViewModel,
                 nav
+            )
+        }
+
+        is ClassifiedsEvent -> {
+            RenderClassifieds(
+                noteEvent,
+                baseNote,
+                accountViewModel
             )
         }
 
@@ -1116,6 +1156,10 @@ fun routeFor(note: Note, loggedIn: User): String? {
     }
 
     return null
+}
+
+fun routeFor(note: Channel): String {
+    return "Channel/${note.idHex}"
 }
 
 fun routeFor(user: User): String {
@@ -1274,7 +1318,7 @@ fun RenderAppDefinition(
                 )
 
                 if (zoomImageDialogOpen) {
-                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
                 }
             } else {
                 Image(
@@ -1325,7 +1369,7 @@ fun RenderAppDefinition(
                     }
 
                     if (zoomImageDialogOpen) {
-                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false })
+                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -1411,11 +1455,15 @@ private fun RenderHighlight(
     val url = remember() {
         (note.event as? HighlightEvent)?.inUrl()
     }
+    val postHex = remember() {
+        (note.event as? HighlightEvent)?.taggedAddresses()?.firstOrNull()
+    }
 
     DisplayHighlight(
         quote,
         author,
         url,
+        postHex,
         makeItShort,
         canPreview,
         backgroundColor,
@@ -1884,18 +1932,188 @@ fun LoadAddressableNote(aTag: ATag, content: @Composable (AddressableNote?) -> U
 }
 
 @Composable
-private fun RenderPinListEvent(
+public fun RenderEmojiPack(
     baseNote: Note,
+    actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    onClick: ((EmojiUrl) -> Unit)? = null
 ) {
-    PinListHeader(baseNote, backgroundColor, accountViewModel, nav)
+    val noteEvent by baseNote.live().metadata.map {
+        it.note.event
+    }.distinctUntilChanged().observeAsState(baseNote.event)
+
+    if (noteEvent == null || noteEvent !is EmojiPackEvent) return
+
+    (noteEvent as? EmojiPackEvent)?.let {
+        RenderEmojiPack(
+            noteEvent = it,
+            baseNote = baseNote,
+            actionable = actionable,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            onClick = onClick
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PinListHeader(
+public fun RenderEmojiPack(
+    noteEvent: EmojiPackEvent,
+    baseNote: Note,
+    actionable: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    onClick: ((EmojiUrl) -> Unit)? = null
+) {
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    val allEmojis = remember(noteEvent) {
+        noteEvent.taggedEmojis()
+    }
+
+    val emojisToShow = if (expanded) {
+        allEmojis
+    } else {
+        allEmojis.take(60)
+    }
+
+    Row(verticalAlignment = CenterVertically) {
+        Text(
+            text = remember(noteEvent) { "#${noteEvent.dTag()}" },
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1F)
+                .padding(5.dp),
+            textAlign = TextAlign.Center
+        )
+
+        if (actionable) {
+            EmojiListOptions(accountViewModel, baseNote)
+        }
+    }
+
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
+            emojisToShow.forEach { emoji ->
+                if (onClick != null) {
+                    IconButton(onClick = { onClick(emoji) }, modifier = Size35Modifier) {
+                        AsyncImage(
+                            model = emoji.url,
+                            contentDescription = null,
+                            modifier = Size35Modifier
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Size35Modifier,
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = emoji.url,
+                            contentDescription = null,
+                            modifier = Size35Modifier
+                        )
+                    }
+                }
+            }
+        }
+
+        if (allEmojis.size > 60 && !expanded) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(getGradient(backgroundColor))
+            ) {
+                ShowMoreButton {
+                    expanded = !expanded
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiListOptions(
+    accountViewModel: AccountViewModel,
+    emojiPackNote: Note
+) {
+    LoadAddressableNote(
+        aTag = ATag(
+            EmojiPackSelectionEvent.kind,
+            accountViewModel.userProfile().pubkeyHex,
+            "",
+            null
+        )
+    ) {
+        it?.let { usersEmojiList ->
+            val hasAddedThis by usersEmojiList.live().metadata.map {
+                usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
+            }.distinctUntilChanged().observeAsState()
+
+            Crossfade(targetState = hasAddedThis) {
+                val scope = rememberCoroutineScope()
+                if (it != true) {
+                    AddButton() {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.addEmojiPack(usersEmojiList, emojiPackNote)
+                        }
+                    }
+                } else {
+                    RemoveButton {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.removeEmojiPack(usersEmojiList, emojiPackNote)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RemoveButton(onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(R.string.remove), color = Color.White)
+    }
+}
+
+@Composable
+fun AddButton(text: Int = R.string.add, onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            ),
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
+    ) {
+        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RenderPinListEvent(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -2098,6 +2316,7 @@ private fun ReplyRow(
                     channelHex = channelHex,
                     showVideo = false,
                     showBottomDiviser = false,
+                    sendToChannel = true,
                     modifier = remember { Modifier.padding(vertical = 5.dp) },
                     accountViewModel = accountViewModel,
                     nav = nav
@@ -2228,26 +2447,33 @@ fun MoreOptionsButton(
     baseNote: Note,
     accountViewModel: AccountViewModel
 ) {
-    var moreActionsExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
 
     IconButton(
         modifier = Size24Modifier,
-        onClick = { moreActionsExpanded = true }
+        onClick = enablePopup
     ) {
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            null,
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colors.placeholderText
-        )
+        VerticalDotsIcon()
 
         NoteDropDownMenu(
             baseNote,
-            moreActionsExpanded,
-            { moreActionsExpanded = false },
+            popupExpanded,
             accountViewModel
         )
     }
+}
+
+@Composable
+private fun VerticalDotsIcon() {
+    Icon(
+        imageVector = Icons.Default.MoreVert,
+        null,
+        modifier = Size15Modifier,
+        tint = MaterialTheme.colors.placeholderText
+    )
 }
 
 @Composable
@@ -2413,6 +2639,7 @@ fun DisplayHighlight(
     highlight: String,
     authorHex: String?,
     url: String?,
+    postAddress: ATag?,
     makeItShort: Boolean,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
@@ -2437,13 +2664,15 @@ fun DisplayHighlight(
         nav
     )
 
-    DisplayQuoteAuthor(authorHex ?: "", url, nav)
+    DisplayQuoteAuthor(authorHex ?: "", url, postAddress, accountViewModel, nav)
 }
 
 @Composable
 private fun DisplayQuoteAuthor(
     authorHex: String,
     url: String?,
+    postAddress: ATag?,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(authorHex)) }
@@ -2459,13 +2688,47 @@ private fun DisplayQuoteAuthor(
         }
     }
 
-    Row {
-        userBase?.let { userBase ->
-            LoadAndDisplayUser(userBase, nav)
-        }
+    MeasureSpaceWidth {
+        Row(horizontalArrangement = Arrangement.spacedBy(it), verticalAlignment = Alignment.CenterVertically) {
+            userBase?.let { userBase ->
+                LoadAndDisplayUser(userBase, nav)
+            }
 
-        url?.let { url ->
-            LoadAndDisplayUrl(url)
+            url?.let { url ->
+                LoadAndDisplayUrl(url)
+            }
+
+            postAddress?.let { address ->
+                LoadAndDisplayPost(address, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadAndDisplayPost(postAddress: ATag, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    LoadAddressableNote(aTag = postAddress) {
+        it?.let { note ->
+            val noteEvent by note.live().metadata.map {
+                it.note.event
+            }.distinctUntilChanged().observeAsState(note.event)
+
+            val title = remember(noteEvent) {
+                (noteEvent as? LongTextNoteEvent)?.title()
+            }
+
+            title?.let {
+                Text(remember { "-" }, maxLines = 1)
+                ClickableText(
+                    text = AnnotatedString(title),
+                    onClick = {
+                        routeFor(note, accountViewModel.userProfile())?.let {
+                            nav(it)
+                        }
+                    },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+                )
+            }
         }
     }
 }
@@ -2482,7 +2745,7 @@ private fun LoadAndDisplayUrl(url: String) {
     }
 
     validatedUrl?.host?.let { host ->
-        Text(remember { "on " }, maxLines = 1)
+        Text(remember { "-" }, maxLines = 1)
         ClickableUrl(urlText = host, url = url)
     }
 }
@@ -2887,7 +3150,7 @@ fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it)
+                ZoomableContentView(content = it, accountViewModel = accountViewModel)
             }
         }
     }
@@ -2973,7 +3236,7 @@ private fun RenderNIP95(
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it)
+                ZoomableContentView(content = it, accountViewModel = accountViewModel)
             }
         }
     }
@@ -3043,12 +3306,14 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                         LoadThumbAndThenVideoView(
                             videoUri = media,
                             description = noteEvent.subject(),
-                            thumbUri = cover
+                            thumbUri = cover,
+                            accountViewModel = accountViewModel
                         )
                     }
                         ?: VideoView(
                             videoUri = media,
-                            noteEvent.subject()
+                            description = noteEvent.subject(),
+                            accountViewModel = accountViewModel
                         )
                 }
             }
@@ -3172,7 +3437,8 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 ) {
                     VideoView(
                         videoUri = media,
-                        description = subject
+                        description = subject,
+                        accountViewModel = accountViewModel
                     )
                 }
             } else {
@@ -3222,17 +3488,27 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             )
     ) {
         Column {
-            image?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = stringResource(
-                        R.string.preview_card_image_for,
-                        it
-                    ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } ?: CreateImageHeader(note, accountViewModel)
+            val settings = accountViewModel.account.settings
+            val isMobile = ConnectivityStatus.isOnMobileData.value
+
+            val automaticallyShowUrlPreview = when (settings.automaticallyShowUrlPreview) {
+                true -> !isMobile
+                false -> false
+                else -> true
+            }
+            if (automaticallyShowUrlPreview) {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: CreateImageHeader(note, accountViewModel)
+            }
 
             title?.let {
                 Text(
@@ -3256,6 +3532,106 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountViewModel: AccountViewModel) {
+    val image = remember(noteEvent) { noteEvent.image() }
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary = remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+    val price = remember(noteEvent) { noteEvent.price() }
+    val location = remember(noteEvent) { noteEvent.location() }
+
+    Row(
+        modifier = Modifier
+            .clip(shape = QuoteBorder)
+            .border(
+                1.dp,
+                MaterialTheme.colors.subtleBorder,
+                QuoteBorder
+            )
+    ) {
+        Column {
+            Row() {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: CreateImageHeader(note, accountViewModel)
+            }
+
+            Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.body1,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                price?.let {
+                    val priceTag = remember(noteEvent) {
+                        if (price.frequency != null && price.currency != null) {
+                            "${price.amount} ${price.currency}/${price.frequency}"
+                        } else if (price.currency != null) {
+                            "${price.amount} ${price.currency}"
+                        } else {
+                            price.amount
+                        }
+                    }
+
+                    Text(
+                        text = priceTag,
+                        maxLines = 1,
+                        color = MaterialTheme.colors.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = remember {
+                            Modifier
+                                .clip(SmallBorder)
+                                .background(Color.Black)
+                                .padding(start = 5.dp)
+                        }
+                    )
+                }
+            }
+
+            if (summary != null || location != null) {
+                Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    summary?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.caption,
+                            modifier = Modifier
+                                .weight(1f),
+                            color = Color.Gray,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    location?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.caption,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 5.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = DoubleVertSpacer)
         }
     }
 }

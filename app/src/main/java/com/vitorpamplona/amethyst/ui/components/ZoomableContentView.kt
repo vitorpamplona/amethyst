@@ -5,7 +5,6 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +33,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,10 +70,12 @@ import coil.imageLoader
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
@@ -167,7 +169,11 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList()) {
+fun ZoomableContentView(
+    content: ZoomableContent,
+    images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
+    accountViewModel: AccountViewModel
+) {
     val clipboardManager = LocalClipboardManager.current
 
     // store the dialog open or close state
@@ -194,27 +200,53 @@ fun ZoomableContentView(content: ZoomableContent, images: ImmutableList<Zoomable
     }
 
     when (content) {
-        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier)
-        is ZoomableUrlVideo -> VideoView(content.url, content.description) { dialogOpen = true }
-        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier)
+        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel)
+        is ZoomableUrlVideo -> VideoView(
+            content.url,
+            content.description,
+            accountViewModel = accountViewModel
+        ) { dialogOpen = true }
+
+        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel)
         is ZoomableLocalVideo ->
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description) { dialogOpen = true }
+                VideoView(
+                    it.toUri().toString(),
+                    content.description,
+                    accountViewModel = accountViewModel
+                ) { dialogOpen = true }
             }
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false })
+        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
     }
 }
 
 @Composable
 private fun LocalImageView(
     content: ZoomableLocalImage,
-    mainImageModifier: Modifier
+    mainImageModifier: Modifier,
+    accountViewModel: AccountViewModel?,
+    alwayShowImage: Boolean = false
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
+            val settings = accountViewModel?.account?.settings
+            val isMobile = ConnectivityStatus.isOnMobileData.value
+
+            val showImage = remember {
+                mutableStateOf(
+                    if (alwayShowImage) { true } else {
+                        when (settings?.automaticallyShowImages) {
+                            true -> !isMobile
+                            false -> false
+                            else -> true
+                        }
+                    }
+                )
+            }
+
             val myModifier = remember {
                 mainImageModifier
                     .widthIn(max = maxWidth)
@@ -236,17 +268,26 @@ private fun LocalImageView(
                 mutableStateOf<AsyncImagePainter.State?>(null)
             }
 
-            AsyncImage(
-                model = content.localFile,
-                contentDescription = content.description,
-                contentScale = contentScale,
-                modifier = myModifier,
-                onState = {
-                    painterState.value = it
-                }
-            )
+            if (showImage.value) {
+                AsyncImage(
+                    model = content.localFile,
+                    contentDescription = content.description,
+                    contentScale = contentScale,
+                    modifier = myModifier,
+                    onState = {
+                        painterState.value = it
+                    }
+                )
+            }
 
-            AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier)
+            AddedImageFeatures(
+                painterState,
+                content,
+                contentScale,
+                myModifier,
+                verifierModifier,
+                showImage
+            )
         }
     } else {
         BlankNote()
@@ -256,9 +297,26 @@ private fun LocalImageView(
 @Composable
 private fun UrlImageView(
     content: ZoomableUrlImage,
-    mainImageModifier: Modifier
+    mainImageModifier: Modifier,
+    accountViewModel: AccountViewModel?,
+    alwayShowImage: Boolean = false
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val settings = accountViewModel?.account?.settings
+        val isMobile = ConnectivityStatus.isOnMobileData.value
+
+        val showImage = remember {
+            mutableStateOf(
+                if (alwayShowImage) { true } else {
+                    when (settings?.automaticallyShowImages) {
+                        true -> !isMobile
+                        false -> false
+                        else -> true
+                    }
+                }
+            )
+        }
+
         val myModifier = remember {
             mainImageModifier
                 .widthIn(max = maxWidth)
@@ -280,17 +338,45 @@ private fun UrlImageView(
             mutableStateOf<AsyncImagePainter.State?>(null)
         }
 
-        AsyncImage(
-            model = content.url,
-            contentDescription = content.description,
-            contentScale = contentScale,
-            modifier = myModifier,
-            onState = {
-                painterState.value = it
-            }
-        )
+        if (showImage.value) {
+            AsyncImage(
+                model = content.url,
+                contentDescription = content.description,
+                contentScale = contentScale,
+                modifier = myModifier,
+                onState = {
+                    painterState.value = it
+                }
+            )
+        }
 
-        AddedImageFeatures(painterState, content, contentScale, myModifier, verifierModifier)
+        AddedImageFeatures(
+            painterState,
+            content,
+            contentScale,
+            myModifier,
+            verifierModifier,
+            showImage
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ImageUrlWithDownloadButton(url: String, showImage: MutableState<Boolean>) {
+    FlowRow() {
+        ClickableUrl(urlText = url, url = url)
+        IconButton(
+            modifier = Modifier.size(20.dp),
+            onClick = { showImage.value = true }
+        ) {
+            Icon(
+                imageVector = Icons.Default.DownloadForOffline,
+                null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colors.primary
+            )
+        }
     }
 }
 
@@ -301,30 +387,35 @@ private fun AddedImageFeatures(
     content: ZoomableLocalImage,
     contentScale: ContentScale,
     myModifier: Modifier,
-    verifiedModifier: Modifier
+    verifiedModifier: Modifier,
+    showImage: MutableState<Boolean>
 ) {
-    when (painter.value) {
-        null, is AsyncImagePainter.State.Loading -> {
-            if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-            } else {
-                FlowRow() {
-                    DisplayUrlWithLoadingSymbol(content)
+    if (!showImage.value) {
+        ImageUrlWithDownloadButton(content.uri, showImage)
+    } else {
+        when (painter.value) {
+            null, is AsyncImagePainter.State.Loading -> {
+                if (content.blurhash != null) {
+                    DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                } else {
+                    FlowRow() {
+                        DisplayUrlWithLoadingSymbol(content)
+                    }
                 }
             }
-        }
 
-        is AsyncImagePainter.State.Error -> {
-            BlankNote()
-        }
-
-        is AsyncImagePainter.State.Success -> {
-            if (content.isVerified != null) {
-                HashVerificationSymbol(content.isVerified, verifiedModifier)
+            is AsyncImagePainter.State.Error -> {
+                BlankNote()
             }
-        }
 
-        else -> {
+            is AsyncImagePainter.State.Success -> {
+                if (content.isVerified != null) {
+                    HashVerificationSymbol(content.isVerified, verifiedModifier)
+                }
+            }
+
+            else -> {
+            }
         }
     }
 }
@@ -336,46 +427,51 @@ private fun AddedImageFeatures(
     content: ZoomableUrlImage,
     contentScale: ContentScale,
     myModifier: Modifier,
-    verifiedModifier: Modifier
+    verifiedModifier: Modifier,
+    showImage: MutableState<Boolean>
 ) {
-    var verifiedHash by remember {
-        mutableStateOf<Boolean?>(null)
-    }
-
-    when (painter.value) {
-        null, is AsyncImagePainter.State.Loading -> {
-            if (content.blurhash != null) {
-                DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-            } else {
-                FlowRow() {
-                    DisplayUrlWithLoadingSymbol(content)
-                }
-            }
+    if (!showImage.value) {
+        ImageUrlWithDownloadButton(content.url, showImage)
+    } else {
+        var verifiedHash by remember {
+            mutableStateOf<Boolean?>(null)
         }
 
-        is AsyncImagePainter.State.Error -> {
-            ClickableUrl(urlText = "${content.url} ", url = content.url)
-        }
-
-        is AsyncImagePainter.State.Success -> {
-            if (content.hash != null) {
-                val context = LocalContext.current
-                LaunchedEffect(key1 = content.url) {
-                    launch(Dispatchers.IO) {
-                        val newVerifiedHash = verifyHash(content, context)
-                        if (newVerifiedHash != verifiedHash) {
-                            verifiedHash = newVerifiedHash
-                        }
+        when (painter.value) {
+            null, is AsyncImagePainter.State.Loading -> {
+                if (content.blurhash != null) {
+                    DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                } else {
+                    FlowRow() {
+                        DisplayUrlWithLoadingSymbol(content)
                     }
                 }
             }
 
-            verifiedHash?.let {
-                HashVerificationSymbol(it, verifiedModifier)
+            is AsyncImagePainter.State.Error -> {
+                ClickableUrl(urlText = "${content.url} ", url = content.url)
             }
-        }
 
-        else -> {
+            is AsyncImagePainter.State.Success -> {
+                if (content.hash != null) {
+                    val context = LocalContext.current
+                    LaunchedEffect(key1 = content.url) {
+                        launch(Dispatchers.IO) {
+                            val newVerifiedHash = verifyHash(content, context)
+                            if (newVerifiedHash != verifiedHash) {
+                                verifiedHash = newVerifiedHash
+                            }
+                        }
+                    }
+                }
+
+                verifiedHash?.let {
+                    HashVerificationSymbol(it, verifiedModifier)
+                }
+            }
+
+            else -> {
+            }
         }
     }
 }
@@ -473,7 +569,12 @@ private fun DisplayBlurHash(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(), onDismiss: () -> Unit) {
+fun ZoomableImageDialog(
+    imageUrl: ZoomableContent,
+    allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(),
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel
+) {
     val view = LocalView.current
 
     DisposableEffect(key1 = Unit) {
@@ -515,11 +616,11 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index])
+                            RenderImageOrVideo(allImages[index], accountViewModel)
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl)
+                    RenderImageOrVideo(imageUrl, accountViewModel)
                 }
 
                 Row(
@@ -535,7 +636,10 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
                     if (myContent is ZoomableUrlContent) {
                         SaveToGallery(url = myContent.url)
                     } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
-                        SaveToGallery(localFile = myContent.localFile, mimeType = myContent.mimeType)
+                        SaveToGallery(
+                            localFile = myContent.localFile,
+                            mimeType = myContent.mimeType
+                        )
                     }
                 }
             }
@@ -544,23 +648,28 @@ fun ZoomableImageDialog(imageUrl: ZoomableContent, allImages: ImmutableList<Zoom
 }
 
 @Composable
-fun RenderImageOrVideo(content: ZoomableContent) {
+private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
 
     if (content is ZoomableUrlImage) {
-        UrlImageView(content = content, mainImageModifier = mainModifier)
+        UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url, content.description)
+            VideoView(content.url, content.description, accountViewModel = accountViewModel, alwaysShowVideo = true)
         }
     } else if (content is ZoomableLocalImage) {
-        LocalImageView(content = content, mainImageModifier = mainModifier)
+        LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
-                VideoView(it.toUri().toString(), content.description)
+                VideoView(
+                    it.toUri().toString(),
+                    content.description,
+                    accountViewModel = accountViewModel,
+                    alwaysShowVideo = true
+                )
             }
         }
     }

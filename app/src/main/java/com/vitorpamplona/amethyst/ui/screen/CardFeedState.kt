@@ -5,6 +5,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
+import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -61,7 +63,9 @@ class MultiSetCard(
         boostEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE
     )
 
-    val likeEventsByType = likeEvents.groupBy { it.event?.content() ?: "+" }.mapValues {
+    val likeEventsByType = likeEvents.groupBy {
+        it.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(it.event?.tags() ?: emptyList())) ?: "+"
+    }.mapValues {
         it.value.toImmutableList()
     }.toImmutableMap()
 

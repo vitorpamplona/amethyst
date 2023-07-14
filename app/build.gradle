@@ -14,14 +14,15 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 33
-        versionCode 244
-        versionName "0.66.6"
+        versionCode 251
+        versionName "0.68.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
-        resConfigs("ar", "cs", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW" )
+
+        resConfigs("ar", "cs", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW", "ja")
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -176,9 +177,12 @@ dependencies {
     //implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
 
     // Markdown (With fix for full-image bleeds)
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:main-SNAPSHOT')
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material:main-SNAPSHOT')
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:main-SNAPSHOT')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:a0954aba63')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material:a0954aba63')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:a0954aba63')
+
+    // Language picker and Theme chooser
+    implementation 'androidx.appcompat:appcompat:1.6.1'
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'

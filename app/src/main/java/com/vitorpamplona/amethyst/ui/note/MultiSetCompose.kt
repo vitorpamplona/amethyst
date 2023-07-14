@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,10 +51,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.components.ImageUrlType
+import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
@@ -76,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -86,7 +89,11 @@ import kotlin.time.measureTimedValue
 fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { multiSetCard.note }
 
-    var popupExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
+
     val scope = rememberCoroutineScope()
 
     val defaultBackgroundColor = MaterialTheme.colors.background
@@ -127,7 +134,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                         routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
                     }
                 },
-                onLongClick = { popupExpanded = true }
+                onLongClick = enablePopup
             )
             .fillMaxWidth()
     }
@@ -154,7 +161,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
             Log.d("Rendering Metrics", "Complete: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
 
-            NoteDropDownMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
+            NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
         }
     }
 }
@@ -215,15 +222,32 @@ fun RenderLikeGallery(
                     Modifier.align(Alignment.TopEnd)
                 }
 
-                when (val shortReaction = reactionType.firstFullChar()) {
-                    "+" -> Icon(
-                        painter = painterResource(R.drawable.ic_liked),
-                        null,
-                        modifier = modifier.size(Size18dp),
-                        tint = Color.Unspecified
+                if (reactionType.startsWith(":")) {
+                    val noStartColon = reactionType.removePrefix(":")
+                    val url = noStartColon.substringAfter(":")
+
+                    val renderable = listOf(
+                        ImageUrlType(url)
+                    ).toImmutableList()
+
+                    InLineIconRenderer(
+                        renderable,
+                        style = SpanStyle(color = Color.White),
+                        maxLines = 1,
+                        modifier = modifier
                     )
-                    "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
-                    else -> Text(text = shortReaction, modifier = modifier)
+                } else {
+                    when (val shortReaction = reactionType) {
+                        "+" -> Icon(
+                            painter = painterResource(R.drawable.ic_liked),
+                            null,
+                            modifier = modifier.size(Size18dp),
+                            tint = Color.Unspecified
+                        )
+
+                        "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
+                        else -> Text(text = shortReaction, modifier = modifier)
+                    }
                 }
             }
 

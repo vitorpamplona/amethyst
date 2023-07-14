@@ -364,6 +364,63 @@ object LocalCache {
         }
     }
 
+    fun consume(event: EmojiPackSelectionEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
+    private fun consume(event: EmojiPackEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
+    private fun consume(event: ClassifiedsEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     private fun consume(event: PinListEvent) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -1137,8 +1194,7 @@ object LocalCache {
                 it.idNote().startsWith(text, true)
         } + addressables.values.filter {
             (it.event as? LongTextNoteEvent)?.content?.contains(text, true) ?: false ||
-                (it.event as? LongTextNoteEvent)?.title()?.contains(text, true) ?: false ||
-                (it.event as? LongTextNoteEvent)?.summary()?.contains(text, true) ?: false ||
+                it.event?.matchTag1With(text) ?: false ||
                 it.idHex.startsWith(text, true)
         }
     }
@@ -1271,6 +1327,7 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is ClassifiedsEvent -> consume(event)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
                     event.containedPost()?.let {
@@ -1280,6 +1337,8 @@ object LocalCache {
                 }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
+                is EmojiPackEvent -> consume(event)
+                is EmojiPackSelectionEvent -> consume(event)
 
                 is FileHeaderEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)

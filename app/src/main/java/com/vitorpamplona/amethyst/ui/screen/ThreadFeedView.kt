@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -23,7 +24,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -60,8 +62,10 @@ import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackEvent
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
@@ -74,21 +78,9 @@ import com.vitorpamplona.amethyst.service.model.RelaySetEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
-import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
-import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
-import com.vitorpamplona.amethyst.ui.note.DisplayPoW
-import com.vitorpamplona.amethyst.ui.note.DisplayReward
-import com.vitorpamplona.amethyst.ui.note.HiddenNote
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
-import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
@@ -248,7 +240,10 @@ fun NoteMaster(
 
     val context = LocalContext.current
 
-    var moreActionsExpanded by remember { mutableStateOf(false) }
+    val moreActionsExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { moreActionsExpanded.value = true }
+    }
 
     val noteEvent = note?.event
 
@@ -318,7 +313,7 @@ fun NoteMaster(
 
                         IconButton(
                             modifier = Modifier.then(Modifier.size(24.dp)),
-                            onClick = { moreActionsExpanded = true }
+                            onClick = enablePopup
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
@@ -327,7 +322,7 @@ fun NoteMaster(
                                 tint = MaterialTheme.colors.placeholderText
                             )
 
-                            NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
+                            NoteDropDownMenu(baseNote, moreActionsExpanded, accountViewModel)
                         }
                     }
 
@@ -352,40 +347,9 @@ fun NoteMaster(
             if (noteEvent is BadgeDefinitionEvent) {
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
-                Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
-                    Column {
-                        noteEvent.image()?.let {
-                            AsyncImage(
-                                model = it,
-                                contentDescription = stringResource(
-                                    R.string.preview_card_image_for,
-                                    it
-                                ),
-                                contentScale = ContentScale.FillWidth,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                        }
-
-                        noteEvent.title()?.let {
-                            Text(
-                                text = it,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Light,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                        }
-
-                        noteEvent.summary()?.let {
-                            Text(
-                                text = it,
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color.Gray
-                            )
-                        }
-                    }
-                }
+                RenderLongFormHeaderForThread(noteEvent)
+            } else if (noteEvent is ClassifiedsEvent) {
+                RenderClassifiedsReaderForThread(noteEvent, note, accountViewModel)
             }
 
             Row(
@@ -398,7 +362,14 @@ fun NoteMaster(
             ) {
                 Column() {
                     if ((noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) && note.channelHex() != null) {
-                        ChannelHeader(channelHex = note.channelHex()!!, showVideo = true, showBottomDiviser = false, accountViewModel = accountViewModel, nav = nav)
+                        ChannelHeader(
+                            channelHex = note.channelHex()!!,
+                            showVideo = true,
+                            showBottomDiviser = false,
+                            sendToChannel = true,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
                     } else if (noteEvent is FileHeaderEvent) {
                         FileHeaderDisplay(baseNote, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
@@ -417,11 +388,18 @@ fun NoteMaster(
                             nav
                         )
                     } else if (noteEvent is PinListEvent) {
-                        PinListHeader(
+                        RenderPinListEvent(
                             baseNote,
                             backgroundColor,
                             accountViewModel,
                             nav
+                        )
+                    } else if (noteEvent is EmojiPackEvent) {
+                        RenderEmojiPack(
+                            baseNote,
+                            true,
+                            backgroundColor,
+                            accountViewModel
                         )
                     } else if (noteEvent is RelaySetEvent) {
                         DisplayRelaySet(
@@ -437,6 +415,7 @@ fun NoteMaster(
                             noteEvent.quote(),
                             noteEvent.author(),
                             noteEvent.inUrl(),
+                            noteEvent.inPost(),
                             false,
                             true,
                             backgroundColor,
@@ -483,5 +462,144 @@ fun NoteMaster(
         }
 
         NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+    }
+}
+
+@Composable
+private fun RenderClassifiedsReaderForThread(
+    noteEvent: ClassifiedsEvent,
+    note: Note,
+    accountViewModel: AccountViewModel
+) {
+    val image = remember(noteEvent) { noteEvent.image() }
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary =
+        remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+    val price = remember(noteEvent) { noteEvent.price() }
+    val location = remember(noteEvent) { noteEvent.location() }
+
+    Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        Column {
+            Row() {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = stringResource(
+                            R.string.preview_card_image_for,
+                            it
+                        ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } ?: CreateImageHeader(note, accountViewModel)
+            }
+
+            Row(
+                Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.body1,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                price?.let {
+                    val priceTag = remember(noteEvent) {
+                        if (price.frequency != null && price.currency != null) {
+                            "${price.amount} ${price.currency}/${price.frequency}"
+                        } else if (price.currency != null) {
+                            "${price.amount} ${price.currency}"
+                        } else {
+                            price.amount
+                        }
+                    }
+
+                    Text(
+                        text = priceTag,
+                        maxLines = 1,
+                        color = MaterialTheme.colors.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = remember {
+                            Modifier
+                                .clip(SmallBorder)
+                                .background(Color.Black)
+                                .padding(start = 5.dp)
+                        }
+                    )
+                }
+            }
+
+            summary?.let {
+                Row(
+                    Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.caption,
+                        modifier = Modifier.weight(1f),
+                        color = Color.Gray,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            location?.let {
+                Row(
+                    Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.caption,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
+    Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        Column {
+            noteEvent.image()?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription = stringResource(
+                        R.string.preview_card_image_for,
+                        it
+                    ),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            noteEvent.title()?.let {
+                Text(
+                    text = it,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            noteEvent.summary()?.let {
+                Text(
+                    text = it,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.Gray
+                )
+            }
+        }
     }
 }

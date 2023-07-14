@@ -6,11 +6,22 @@ import android.os.Build
 import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,8 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.components.*
+import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -107,7 +117,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                             .fillMaxWidth()
                             .verticalScroll(scroolState)
                     ) {
-                        ImageVideoPost(postViewModel, account)
+                        ImageVideoPost(postViewModel, accountViewModel)
                     }
                 }
             }
@@ -119,16 +129,18 @@ fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
     return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
         // selectedServer == ServersAvailable.IMGUR_NIP_94 ||
         selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
-        selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
+        selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94 ||
+        selectedServer == ServersAvailable.NOSTRCHECK_ME_NIP_94
 }
 
 @Composable
-fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
+fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewModel) {
     val fileServers = listOf(
         // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),
+        Triple(ServersAvailable.NOSTRCHECK_ME_NIP_94, stringResource(id = R.string.upload_server_nostrcheckme_nip94), stringResource(id = R.string.upload_server_nostrcheckme_nip94_explainer)),
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
@@ -180,7 +192,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
             }
         } else {
             postViewModel.galleryUri?.let {
-                VideoView(it.toString())
+                VideoView(it.toString(), accountViewModel = accountViewModel)
             }
         }
     }
@@ -191,7 +203,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, acc: Account) {
     ) {
         TextSpinner(
             label = stringResource(id = R.string.file_server),
-            placeholder = fileServers.firstOrNull { it.first == acc.defaultFileServer }?.second ?: fileServers[0].second,
+            placeholder = fileServers.firstOrNull { it.first == accountViewModel.account.defaultFileServer }?.second ?: fileServers[0].second,
             options = fileServerOptions,
             explainers = fileServerExplainers,
             onSelect = {

@@ -49,6 +49,8 @@ open class Event(
 
     fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
+    override fun taggedEmojis() = tags.filter { it.size > 2 && it[0] == "emoji" }.map { EmojiUrl(it[1], it[2]) }
+
     override fun isSensitive() = tags.any {
         (it.size > 0 && it[0].equals("content-warning", true)) ||
             (it.size > 1 && it[0] == "t" && it[1].equals("nsfw", true)) ||
@@ -69,6 +71,8 @@ open class Event(
     }
 
     override fun hashtags() = tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
+
+    override fun matchTag1With(text: String) = tags.any { it.size > 1 && it[1].contains(text, true) }
 
     override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
 
@@ -263,10 +267,13 @@ open class Event(
             ChannelMessageEvent.kind -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.kind -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.kind -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+            ClassifiedsEvent.kind -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.kind -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.kind -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.kind -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
+            EmojiPackEvent.kind -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
+            EmojiPackSelectionEvent.kind -> EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
 
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)

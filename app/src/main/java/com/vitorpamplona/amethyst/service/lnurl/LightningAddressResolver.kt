@@ -176,7 +176,7 @@ class LightningAddressResolver() {
                                 null
                             }
 
-                            lnInvoice?.get("pr")?.asText()?.let { pr ->
+                            lnInvoice?.get("pr")?.asText()?.ifBlank { null }?.let { pr ->
                                 // Forces LN Invoice amount to be the requested amount.
                                 val invoiceAmount = LnInvoiceUtil.getAmountInSats(pr)
                                 if (invoiceAmount.multiply(BigDecimal(1000)).toLong() == BigDecimal(milliSats).toLong()) {

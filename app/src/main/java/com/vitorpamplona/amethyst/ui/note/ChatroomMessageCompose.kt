@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -554,7 +553,7 @@ private fun StatusRow(
 
     Column(modifier = ReactionRowHeightChat) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
-            LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+            LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
             Spacer(modifier = DoubleHorzSpacer)

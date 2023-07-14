@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.AppRecommendationEvent
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
+import com.vitorpamplona.amethyst.service.model.EmojiPackSelectionEvent
 import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 
 class UserProfileNewThreadFeedFilter(val user: User, val account: Account) : FeedFilter<Note>() {
@@ -15,7 +16,15 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) : Fee
 
     override fun feed(): List<Note> {
         val longFormNotes = LocalCache.addressables.values
-            .filter { it.author == user && (it.event !is PeopleListEvent && it.event !is BookmarkListEvent && it.event !is AppRecommendationEvent) }
+            .filter {
+                it.author == user &&
+                    (
+                        it.event !is PeopleListEvent &&
+                            it.event !is BookmarkListEvent &&
+                            it.event !is AppRecommendationEvent &&
+                            it.event !is EmojiPackSelectionEvent
+                        )
+            }
 
         return user.notes
             .plus(longFormNotes)

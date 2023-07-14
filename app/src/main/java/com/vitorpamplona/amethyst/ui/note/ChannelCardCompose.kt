@@ -355,7 +355,11 @@ private fun RenderNoteRow(
 }
 
 @Composable
-fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun RenderLiveActivityThumb(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
     val eventUpdates by baseNote.live().metadata.observeAsState()
@@ -488,6 +492,7 @@ fun RenderLiveActivityThumb(baseNote: Note, accountViewModel: AccountViewModel, 
             showVideo = false,
             showBottomDiviser = false,
             showFlag = false,
+            sendToChannel = true,
             modifier = remember {
                 Modifier.padding(start = 0.dp, end = 0.dp, top = 5.dp, bottom = 5.dp)
             },
@@ -586,7 +591,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 )
 
                 Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
                 ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
             }
@@ -700,7 +705,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 )
 
                 Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
                 ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
             }

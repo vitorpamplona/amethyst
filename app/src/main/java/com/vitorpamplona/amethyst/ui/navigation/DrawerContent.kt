@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -299,19 +300,18 @@ fun ListContent(
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = remember(accountState) { accountState?.account } ?: return
-
     val coroutineScope = rememberCoroutineScope()
-    var backupDialogOpen by remember { mutableStateOf(false) }
-    var checked by remember { mutableStateOf(account.proxy != null) }
-    var disconnectTorDialog by remember { mutableStateOf(false) }
-    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
-    var proxyPort = remember { mutableStateOf(account.proxyPort.toString()) }
-
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
-
     var wantsToEditRelays by remember {
         mutableStateOf(false)
     }
+
+    var backupDialogOpen by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(accountViewModel.account.proxy != null) }
+    var disconnectTorDialog by remember { mutableStateOf(false) }
+    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
+    val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -368,7 +368,6 @@ fun ListContent(
         )
 
         val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
-
         IconRow(
             title = textTorProxy,
             icon = R.drawable.ic_tor,
@@ -391,6 +390,15 @@ fun ListContent(
             }
         )
 
+        NavigationRow(
+            title = stringResource(R.string.settings),
+            icon = Route.Settings.icon,
+            tint = MaterialTheme.colors.onBackground,
+            nav = nav,
+            scaffoldState = scaffoldState,
+            route = Route.Settings.route
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
@@ -401,12 +409,12 @@ fun ListContent(
         )
     }
 
-    if (backupDialogOpen) {
-        AccountBackupDialog(account, onClose = { backupDialogOpen = false })
+    if (wantsToEditRelays) {
+        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
     }
-
-    val context = LocalContext.current
-
+    if (backupDialogOpen) {
+        AccountBackupDialog(accountViewModel.account, onClose = { backupDialogOpen = false })
+    }
     if (conectOrbotDialogOpen) {
         ConnectOrbotDialog(
             onClose = { conectOrbotDialogOpen = false },
@@ -414,7 +422,7 @@ fun ListContent(
                 conectOrbotDialogOpen = false
                 disconnectTorDialog = false
                 checked = true
-                enableTor(account, true, proxyPort, context = context)
+                enableTor(accountViewModel.account, true, proxyPort, context, coroutineScope)
             },
             proxyPort
         )
@@ -436,7 +444,7 @@ fun ListContent(
                     onClick = {
                         disconnectTorDialog = false
                         checked = false
-                        enableTor(account, false, proxyPort, context)
+                        enableTor(accountViewModel.account, false, proxyPort, context, coroutineScope)
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -453,23 +461,22 @@ fun ListContent(
             }
         )
     }
-
-    if (wantsToEditRelays) {
-        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
-    }
 }
 
 private fun enableTor(
     account: Account,
     checked: Boolean,
     portNumber: MutableState<String>,
-    context: Context
+    context: Context,
+    scope: CoroutineScope
 ) {
     account.proxyPort = portNumber.value.toInt()
     account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
-    LocalPreferences.saveToEncryptedStorage(account)
-    ServiceManager.pause()
-    ServiceManager.start(context)
+    scope.launch(Dispatchers.IO) {
+        LocalPreferences.saveToEncryptedStorage(account)
+        ServiceManager.pause()
+        ServiceManager.start(context)
+    }
 }
 
 @Composable

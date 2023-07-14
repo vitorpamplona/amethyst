@@ -259,12 +259,12 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
-                val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).toImmutableList()
+                val newList = localFilter.updateListWith(oldNotesState.feed.value, newItems.toSet()).distinctBy { it.idHex }.toImmutableList()
                 if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
                     updateFeed(newList)
                 }
             } else if (oldNotesState is FeedState.Empty) {
-                val newList = localFilter.updateListWith(emptyList(), newItems.toSet()).toImmutableList()
+                val newList = localFilter.updateListWith(emptyList(), newItems.toSet()).distinctBy { it.idHex }.toImmutableList()
                 if (newList.isNotEmpty()) {
                     updateFeed(newList)
                 }

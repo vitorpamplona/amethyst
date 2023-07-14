@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
@@ -114,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.note.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.routeFor
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
@@ -143,18 +145,7 @@ fun ChannelScreen(
 ) {
     if (channelId == null) return
 
-    var channelBase by remember { mutableStateOf<Channel?>(LocalCache.getChannelIfExists(channelId)) }
-
-    LaunchedEffect(channelId) {
-        withContext(Dispatchers.IO) {
-            val newChannelBase = LocalCache.checkGetOrCreateChannel(channelId)
-            if (newChannelBase != channelBase) {
-                channelBase = newChannelBase
-            }
-        }
-    }
-
-    channelBase?.let {
+    LoadChannel(channelId) {
         PrepareChannelViewModels(
             baseChannel = it,
             accountViewModel = accountViewModel,
@@ -516,6 +507,7 @@ fun ChannelHeader(
     channelNote: Note,
     showVideo: Boolean,
     showBottomDiviser: Boolean,
+    sendToChannel: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -530,6 +522,7 @@ fun ChannelHeader(
             channelHex = it,
             showVideo = showVideo,
             showBottomDiviser = showBottomDiviser,
+            sendToChannel = sendToChannel,
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -542,26 +535,18 @@ fun ChannelHeader(
     showVideo: Boolean,
     showBottomDiviser: Boolean,
     showFlag: Boolean = true,
+    sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var baseChannel by remember { mutableStateOf(LocalCache.channels[channelHex]) }
-
-    if (baseChannel == null) {
-        LaunchedEffect(key1 = channelHex) {
-            launch(Dispatchers.IO) {
-                baseChannel = LocalCache.checkGetOrCreateChannel(channelHex)
-            }
-        }
-    }
-
-    baseChannel?.let {
+    LoadChannel(channelHex) {
         ChannelHeader(
             it,
             showVideo,
             showBottomDiviser,
             showFlag,
+            sendToChannel,
             modifier,
             accountViewModel,
             nav
@@ -575,6 +560,7 @@ fun ChannelHeader(
     showVideo: Boolean,
     showBottomDiviser: Boolean,
     showFlag: Boolean = true,
+    sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -588,7 +574,11 @@ fun ChannelHeader(
 
         Column(
             modifier = modifier.clickable {
-                expanded.value = !expanded.value
+                if (sendToChannel) {
+                    nav(routeFor(baseChannel))
+                } else {
+                    expanded.value = !expanded.value
+                }
             }
         ) {
             ShortChannelHeader(baseChannel, expanded, accountViewModel, nav, showFlag)
@@ -632,7 +622,8 @@ private fun ShowVideoStreaming(
                         }
 
                         ZoomableContentView(
-                            content = zoomableUrlVideo
+                            content = zoomableUrlVideo,
+                            accountViewModel = accountViewModel
                         )
                     }
                 }
@@ -884,7 +875,7 @@ private fun ShortChannelActionOptions(
             var popupExpanded by remember { mutableStateOf(false) }
 
             Spacer(modifier = StdHorzSpacer)
-            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
             Spacer(modifier = StdHorzSpacer)
@@ -947,7 +938,7 @@ private fun LiveChannelActionOptions(
             Spacer(modifier = StdHorzSpacer)
         }
 
-        LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
         Spacer(modifier = StdHorzSpacer)
         ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
     }

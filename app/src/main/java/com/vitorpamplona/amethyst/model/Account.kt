@@ -73,7 +73,8 @@ class Account(
     var showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
-    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>()
+    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
+    var settings: Settings = Settings()
 ) {
     var transientHiddenUsers: Set<String> = setOf()
 
@@ -84,6 +85,29 @@ class Account(
     val saveable: AccountLiveData = AccountLiveData(this)
 
     var userProfileCache: User? = null
+    fun updateAutomaticallyStartPlayback(
+        automaticallyStartPlayback: Boolean?
+    ) {
+        settings.automaticallyStartPlayback = automaticallyStartPlayback
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun updateAutomaticallyShowUrlPreview(
+        automaticallyShowUrlPreview: Boolean?
+    ) {
+        settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun updateAutomaticallyShowImages(
+        automaticallyShowImages: Boolean?
+    ) {
+        settings.automaticallyShowImages = automaticallyShowImages
+        live.invalidateData()
+        saveable.invalidateData()
+    }
 
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports
@@ -174,6 +198,19 @@ class Account(
         if (hasReacted(note, reaction)) {
             // has already liked this note
             return
+        }
+
+        if (reaction.startsWith(":")) {
+            val emojiUrl = EmojiUrl.decode(reaction)
+            if (emojiUrl != null) {
+                note.event?.let {
+                    val event = ReactionEvent.create(emojiUrl, it, loggedIn.privKey!!)
+                    Client.send(event)
+                    LocalCache.consume(event)
+                }
+
+                return
+            }
         }
 
         note.event?.let {
@@ -672,6 +709,51 @@ class Account(
         LocalCache.consume(event)
 
         joinChannel(event.id)
+    }
+
+    fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
+        if (!isWriteable()) return
+
+        val noteEvent = usersEmojiList.event
+        if (noteEvent !is EmojiPackSelectionEvent) return
+        val emojiListEvent = emojiList.event
+        if (emojiListEvent !is EmojiPackEvent) return
+
+        val event = EmojiPackSelectionEvent.create(
+            noteEvent.taggedAddresses().filter { it != emojiListEvent.address() },
+            loggedIn.privKey!!
+        )
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun addEmojiPack(usersEmojiList: Note, emojiList: Note) {
+        if (!isWriteable()) return
+        val emojiListEvent = emojiList.event
+        if (emojiListEvent !is EmojiPackEvent) return
+
+        val event = if (usersEmojiList.event == null) {
+            EmojiPackSelectionEvent.create(
+                listOf(emojiListEvent.address()),
+                loggedIn.privKey!!
+            )
+        } else {
+            val noteEvent = usersEmojiList.event
+            if (noteEvent !is EmojiPackSelectionEvent) return
+
+            if (noteEvent.taggedAddresses().any { it == emojiListEvent.address() }) {
+                return
+            }
+
+            EmojiPackSelectionEvent.create(
+                noteEvent.taggedAddresses().plus(emojiListEvent.address()),
+                loggedIn.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
     }
 
     fun addPrivateBookmark(note: Note) {

@@ -17,16 +17,18 @@ import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
@@ -136,7 +138,6 @@ private fun RenderRegular(
     val currentTextStyle = LocalTextStyle.current
 
     val textStyle = currentTextStyle.copy(
-        textDirection = TextDirection.Content,
         lineHeight = 1.4.em,
         color = currentTextStyle.color.takeOrElse {
             LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
@@ -144,36 +145,58 @@ private fun RenderRegular(
     )
 
     MeasureSpaceWidth() { spaceWidth ->
-        Column {
+        Column() {
             if (canPreview) {
                 // FlowRow doesn't work well with paragraphs. So we need to split them
                 state.paragraphs.forEach { paragraph ->
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(spaceWidth)) {
-                        paragraph.forEach { word ->
-                            RenderWordWithPreview(
-                                word,
-                                state,
-                                backgroundColor,
-                                textStyle,
-                                accountViewModel,
-                                nav
-                            )
+                    val direction = if (paragraph.isRTL) {
+                        LayoutDirection.Rtl
+                    } else {
+                        LayoutDirection.Ltr
+                    }
+
+                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                        FlowRow(
+                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                            horizontalArrangement = Arrangement.spacedBy(spaceWidth)
+                        ) {
+                            paragraph.words.forEach { word ->
+                                RenderWordWithPreview(
+                                    word,
+                                    state,
+                                    backgroundColor,
+                                    textStyle,
+                                    accountViewModel,
+                                    nav
+                                )
+                            }
                         }
                     }
                 }
             } else {
                 // FlowRow doesn't work well with paragraphs. So we need to split them
                 state.paragraphs.forEach { paragraph ->
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(spaceWidth)) {
-                        paragraph.forEach { word ->
-                            RenderWordWithoutPreview(
-                                word,
-                                state,
-                                backgroundColor,
-                                textStyle,
-                                accountViewModel,
-                                nav
-                            )
+                    val direction = if (paragraph.isRTL) {
+                        LayoutDirection.Rtl
+                    } else {
+                        LayoutDirection.Ltr
+                    }
+
+                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start)
+                        ) {
+                            paragraph.words.forEach { word ->
+                                RenderWordWithoutPreview(
+                                    word,
+                                    state,
+                                    backgroundColor,
+                                    textStyle,
+                                    accountViewModel,
+                                    nav
+                                )
+                            }
                         }
                     }
                 }
@@ -238,8 +261,8 @@ private fun RenderWordWithPreview(
     nav: (String) -> Unit
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, state)
-        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
@@ -256,9 +279,13 @@ private fun RenderWordWithPreview(
 }
 
 @Composable
-private fun ZoomableContentView(word: String, state: RichTextViewerState) {
+private fun ZoomableContentView(
+    word: String,
+    state: RichTextViewerState,
+    accountViewModel: AccountViewModel
+) {
     state.imagesForPager[word]?.let {
-        ZoomableContentView(it, state.imageList)
+        ZoomableContentView(it, state.imageList, accountViewModel)
     }
 }
 

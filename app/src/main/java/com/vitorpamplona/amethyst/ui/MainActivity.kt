@@ -10,15 +10,18 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
-import androidx.fragment.app.FragmentActivity
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
@@ -32,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.navigation.debugState
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +44,7 @@ import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-class MainActivity : FragmentActivity() {
-
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -50,16 +53,22 @@ class MainActivity : FragmentActivity() {
         val startingPage = uriToRoute(uri)
 
         LocalPreferences.migrateSingleUserPrefs()
-
+        val language = LocalPreferences.getPreferredLanguage()
+        if (language.isNotBlank()) {
+            val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
+            AppCompatDelegate.setApplicationLocales(appLocale)
+        }
         setContent {
-            AmethystTheme {
+            val themeViewModel: ThemeViewModel = viewModel()
+            themeViewModel.onChange(LocalPreferences.getTheme())
+            AmethystTheme(themeViewModel) {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
                         AccountStateViewModel(this@MainActivity)
                     }
 
-                    AccountScreen(accountStateViewModel, startingPage)
+                    AccountScreen(accountStateViewModel, themeViewModel, startingPage)
                 }
             }
         }
@@ -130,6 +139,14 @@ class MainActivity : FragmentActivity() {
             networkCapabilities: NetworkCapabilities
         ) {
             super.onCapabilitiesChanged(network, networkCapabilities)
+            val hasMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+            val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $hasMobileData")
+            Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasWifi $hasWifi")
+            ConnectivityStatus.updateConnectivityStatus(
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            )
         }
 
         // lost network connection

@@ -399,7 +399,7 @@ fun CreateTextWithEmoji(
             )
         ).toSpanStyle()
 
-        InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
+        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
     }
 }
 
@@ -458,7 +458,7 @@ fun CreateTextWithEmoji(
             ).toSpanStyle()
         }
 
-        InLineIconRenderer(emojiList, style, maxLines, overflow, modifier)
+        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
     }
 }
 
@@ -551,7 +551,7 @@ fun CreateClickableTextWithEmoji(
         InLineIconRenderer(
             emojiLists!!.part2,
             LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle(),
-            maxLines
+            maxLines = maxLines
         )
     }
 }
@@ -583,14 +583,22 @@ fun ClickableInLineIconRenderer(
     style: SpanStyle,
     onClick: (Int) -> Unit
 ) {
+    val placeholderSize = remember(style) {
+        if (style.fontSize == TextUnit.Unspecified) {
+            22.sp
+        } else {
+            style.fontSize.times(1.1f)
+        }
+    }
+
     val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
             Pair(
                 "inlineContent$idx",
                 InlineTextContent(
                     Placeholder(
-                        width = 17.sp,
-                        height = 17.sp,
+                        width = placeholderSize,
+                        height = placeholderSize,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
@@ -646,18 +654,27 @@ fun ClickableInLineIconRenderer(
 fun InLineIconRenderer(
     wordsInOrder: ImmutableList<Renderable>,
     style: SpanStyle,
+    fontSize: TextUnit = TextUnit.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier
 ) {
+    val placeholderSize = remember(fontSize) {
+        if (fontSize == TextUnit.Unspecified) {
+            22.sp
+        } else {
+            fontSize.times(1.1f)
+        }
+    }
+
     val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
             Pair(
                 "inlineContent$idx",
                 InlineTextContent(
                     Placeholder(
-                        width = 20.sp,
-                        height = 20.sp,
+                        width = placeholderSize,
+                        height = placeholderSize,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
@@ -692,6 +709,7 @@ fun InLineIconRenderer(
     Text(
         text = annotatedText,
         inlineContent = inlineContent,
+        fontSize = fontSize,
         maxLines = maxLines,
         overflow = overflow,
         modifier = modifier
