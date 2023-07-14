@@ -366,6 +366,7 @@ fun NoteMaster(
                             channelHex = note.channelHex()!!,
                             showVideo = true,
                             showBottomDiviser = false,
+                            sendToChannel = true,
                             accountViewModel = accountViewModel,
                             nav = nav
                         )

@@ -434,12 +434,14 @@ fun NormalNote(
             channelNote = baseNote,
             showVideo = !makeItShort,
             showBottomDiviser = true,
+            sendToChannel = true,
             accountViewModel = accountViewModel,
             nav = nav
         )
         is CommunityDefinitionEvent -> CommunityHeader(
             baseNote = baseNote,
             showBottomDiviser = true,
+            sendToCommunity = true,
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -471,6 +473,7 @@ fun NormalNote(
 fun CommunityHeader(
     baseNote: Note,
     showBottomDiviser: Boolean,
+    sendToCommunity: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -479,7 +482,13 @@ fun CommunityHeader(
 
     Column(
         modifier = modifier.clickable {
-            expanded.value = !expanded.value
+            if (sendToCommunity) {
+                routeFor(baseNote, accountViewModel.userProfile())?.let {
+                    nav(it)
+                }
+            } else {
+                expanded.value = !expanded.value
+            }
         }
     ) {
         ShortCommunityHeader(baseNote, expanded, accountViewModel, nav)
@@ -1147,6 +1156,10 @@ fun routeFor(note: Note, loggedIn: User): String? {
     }
 
     return null
+}
+
+fun routeFor(note: Channel): String {
+    return "Channel/${note.idHex}"
 }
 
 fun routeFor(user: User): String {
@@ -2303,6 +2316,7 @@ private fun ReplyRow(
                     channelHex = channelHex,
                     showVideo = false,
                     showBottomDiviser = false,
+                    sendToChannel = true,
                     modifier = remember { Modifier.padding(vertical = 5.dp) },
                     accountViewModel = accountViewModel,
                     nav = nav

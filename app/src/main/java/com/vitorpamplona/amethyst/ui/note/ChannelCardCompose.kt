@@ -492,6 +492,7 @@ fun RenderLiveActivityThumb(
             showVideo = false,
             showBottomDiviser = false,
             showFlag = false,
+            sendToChannel = true,
             modifier = remember {
                 Modifier.padding(start = 0.dp, end = 0.dp, top = 5.dp, bottom = 5.dp)
             },
