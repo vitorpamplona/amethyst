@@ -414,6 +414,7 @@ fun NoteMaster(
                             noteEvent.quote(),
                             noteEvent.author(),
                             noteEvent.inUrl(),
+                            noteEvent.inPost(),
                             false,
                             true,
                             backgroundColor,

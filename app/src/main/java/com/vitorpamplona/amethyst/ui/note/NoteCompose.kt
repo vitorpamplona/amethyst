@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
+import com.vitorpamplona.amethyst.ui.components.MeasureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -1441,11 +1442,15 @@ private fun RenderHighlight(
     val url = remember() {
         (note.event as? HighlightEvent)?.inUrl()
     }
+    val postHex = remember() {
+        (note.event as? HighlightEvent)?.taggedAddresses()?.firstOrNull()
+    }
 
     DisplayHighlight(
         quote,
         author,
         url,
+        postHex,
         makeItShort,
         canPreview,
         backgroundColor,
@@ -2444,7 +2449,7 @@ fun MoreOptionsButton(
             popupExpanded,
             accountViewModel
         )
-     }
+    }
 }
 
 @Composable
@@ -2620,6 +2625,7 @@ fun DisplayHighlight(
     highlight: String,
     authorHex: String?,
     url: String?,
+    postAddress: ATag?,
     makeItShort: Boolean,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
@@ -2644,13 +2650,15 @@ fun DisplayHighlight(
         nav
     )
 
-    DisplayQuoteAuthor(authorHex ?: "", url, nav)
+    DisplayQuoteAuthor(authorHex ?: "", url, postAddress, accountViewModel, nav)
 }
 
 @Composable
 private fun DisplayQuoteAuthor(
     authorHex: String,
     url: String?,
+    postAddress: ATag?,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(authorHex)) }
@@ -2666,13 +2674,47 @@ private fun DisplayQuoteAuthor(
         }
     }
 
-    Row {
-        userBase?.let { userBase ->
-            LoadAndDisplayUser(userBase, nav)
-        }
+    MeasureSpaceWidth {
+        Row(horizontalArrangement = Arrangement.spacedBy(it), verticalAlignment = Alignment.CenterVertically) {
+            userBase?.let { userBase ->
+                LoadAndDisplayUser(userBase, nav)
+            }
 
-        url?.let { url ->
-            LoadAndDisplayUrl(url)
+            url?.let { url ->
+                LoadAndDisplayUrl(url)
+            }
+
+            postAddress?.let { address ->
+                LoadAndDisplayPost(address, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadAndDisplayPost(postAddress: ATag, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    LoadAddressableNote(aTag = postAddress) {
+        it?.let { note ->
+            val noteEvent by note.live().metadata.map {
+                it.note.event
+            }.distinctUntilChanged().observeAsState(note.event)
+
+            val title = remember(noteEvent) {
+                (noteEvent as? LongTextNoteEvent)?.title()
+            }
+
+            title?.let {
+                Text(remember { "-" }, maxLines = 1)
+                ClickableText(
+                    text = AnnotatedString(title),
+                    onClick = {
+                        routeFor(note, accountViewModel.userProfile())?.let {
+                            nav(it)
+                        }
+                    },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+                )
+            }
         }
     }
 }
@@ -2689,7 +2731,7 @@ private fun LoadAndDisplayUrl(url: String) {
     }
 
     validatedUrl?.host?.let { host ->
-        Text(remember { "on " }, maxLines = 1)
+        Text(remember { "-" }, maxLines = 1)
         ClickableUrl(urlText = host, url = url)
     }
 }

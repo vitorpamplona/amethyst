@@ -20,6 +20,8 @@ class HighlightEvent(
     fun author() = taggedUsers().firstOrNull()
     fun quote() = content
 
+    fun inPost() = taggedAddresses().firstOrNull()
+
     companion object {
         const val kind = 9802
 
