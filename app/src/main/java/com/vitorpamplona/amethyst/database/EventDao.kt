@@ -25,15 +25,34 @@ interface EventDao {
     @Query("SELECT COUNT(*) FROM EventEntity WHERE pubkey = :pubkey")
     fun getRowCountByAuthor(pubkey: String): Int
 
-    @Query("SELECT * FROM EventEntity WHERE pubkey = :pubkey AND kind = :kind ORDER BY createdAt DESC")
+    @Query(
+        "SELECT * FROM EventEntity " +
+            "WHERE pubkey = :pubkey " +
+            "AND kind = :kind " +
+            "ORDER BY createdAt DESC"
+    )
     @Transaction
     fun getByAuthorAndKind(pubkey: String, kind: Int): List<EventWithTags>
 
-    @Query("SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig FROM EventEntity INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent WHERE TagEntity.col0 = :col0 AND TagEntity.col1 = :col1 ORDER BY createdAt DESC")
+    @Query(
+        "SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig " +
+            "FROM EventEntity " +
+            "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
+            "WHERE TagEntity.col0 = :col0 " +
+            "AND TagEntity.col1 = :col1 " +
+            "ORDER BY createdAt DESC"
+    )
     @Transaction
     fun getByTag(col0: String, col1: String): List<EventWithTags>
 
-    @Query("SELECT COUNT(DISTINCT(EventEntity.id)) FROM EventEntity INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent WHERE TagEntity.col0 = :col0 AND TagEntity.col1 = :col1 ORDER BY createdAt DESC")
+    @Query(
+        "SELECT COUNT(DISTINCT(EventEntity.id)) " +
+            "FROM EventEntity " +
+            "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
+            "WHERE TagEntity.col0 = :col0 " +
+            "AND TagEntity.col1 = :col1 " +
+            "ORDER BY createdAt DESC"
+    )
     fun getRowCountByTag(col0: String, col1: String): Int
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
