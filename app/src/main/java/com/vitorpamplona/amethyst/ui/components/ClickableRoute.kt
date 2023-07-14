@@ -583,14 +583,22 @@ fun ClickableInLineIconRenderer(
     style: SpanStyle,
     onClick: (Int) -> Unit
 ) {
+    val placeholderSize = remember(style) {
+        if (style.fontSize == TextUnit.Unspecified) {
+            22.sp
+        } else {
+            style.fontSize.times(1.1f)
+        }
+    }
+
     val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
             Pair(
                 "inlineContent$idx",
                 InlineTextContent(
                     Placeholder(
-                        width = 17.sp,
-                        height = 17.sp,
+                        width = placeholderSize,
+                        height = placeholderSize,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
@@ -651,14 +659,22 @@ fun InLineIconRenderer(
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier
 ) {
+    val placeholderSize = remember(fontSize) {
+        if (fontSize == TextUnit.Unspecified) {
+            22.sp
+        } else {
+            fontSize.times(1.1f)
+        }
+    }
+
     val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
             Pair(
                 "inlineContent$idx",
                 InlineTextContent(
                     Placeholder(
-                        width = 20.sp,
-                        height = 20.sp,
+                        width = placeholderSize,
+                        height = placeholderSize,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
