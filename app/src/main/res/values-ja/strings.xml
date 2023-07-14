@@ -164,7 +164,7 @@
     <string name="translations_show_in_lang_first">最初に%1$sで表示</string>
     <string name="translations_always_translate_to_lang">常に%1$sに翻訳</string>
     <string name="translations_never_translate_from_lang">%1$sを翻訳しない</string>
-    <string name="never">never</string>
+    <string name="never">なし</string>
     <string name="now">今</string>
     <string name="h">時間</string>
     <string name="m">分</string>
@@ -459,4 +459,17 @@
 
     <string name="add_sensitive_content_label">センシティブなコンテンツ</string>
     <string name="add_sensitive_content_description">コンテンツを表示する前に、センシティブなコンテンツであることを示す警告を表示します</string>
+    <string name="settings">設定</string>
+    <string name="always">常に</string>
+    <string name="wifi_only">Wifiのみ</string>
+    <string name="system">システム</string>
+    <string name="light">ライト</string>
+    <string name="dark">ダーク</string>
+    <string name="application_preferences">アプリ設定</string>
+    <string name="language">言語</string>
+    <string name="theme">テーマ</string>
+    <string name="automatically_load_images_gifs">自動的に画像/GIFを読み込み</string>
+    <string name="automatically_play_videos">自動的に動画を再生</string>
+    <string name="automatically_show_url_preview">自動的にURLプレビューを表示</string>
+    <string name="load_image">画像読み込み</string>
 </resources>
