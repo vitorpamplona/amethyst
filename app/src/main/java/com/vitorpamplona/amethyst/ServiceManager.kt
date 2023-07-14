@@ -79,6 +79,7 @@ object ServiceManager {
             NostrAccountDataSource.start()
             NostrChatroomListDataSource.start()
             NostrDiscoveryDataSource.start()
+            NostrVideoDataSource.start()
 
             // More Info Data Sources
             NostrSingleEventDataSource.start()

@@ -85,10 +85,6 @@ fun VideoScreen(
                 println("Video Start")
                 NostrVideoDataSource.start()
             }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Video Stop")
-                NostrVideoDataSource.stop()
-            }
         }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
