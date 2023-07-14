@@ -41,7 +41,10 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
-    var popupExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
 
     val scope = rememberCoroutineScope()
 
@@ -84,7 +87,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                         )?.let { nav(it) }
                     }
                 },
-                onLongClick = { popupExpanded = true }
+                onLongClick = enablePopup
             )
             .fillMaxWidth()
     }
@@ -104,7 +107,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     nav = nav
                 )
 
-                NoteDropDownMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
+                NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
             }
         }
     }

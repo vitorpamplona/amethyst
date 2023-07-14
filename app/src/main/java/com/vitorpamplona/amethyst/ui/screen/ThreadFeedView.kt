@@ -240,7 +240,10 @@ fun NoteMaster(
 
     val context = LocalContext.current
 
-    var moreActionsExpanded by remember { mutableStateOf(false) }
+    val moreActionsExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { moreActionsExpanded.value = true }
+    }
 
     val noteEvent = note?.event
 
@@ -310,7 +313,7 @@ fun NoteMaster(
 
                         IconButton(
                             modifier = Modifier.then(Modifier.size(24.dp)),
-                            onClick = { moreActionsExpanded = true }
+                            onClick = enablePopup
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
@@ -319,7 +322,7 @@ fun NoteMaster(
                                 tint = MaterialTheme.colors.placeholderText
                             )
 
-                            NoteDropDownMenu(baseNote, moreActionsExpanded, { moreActionsExpanded = false }, accountViewModel)
+                            NoteDropDownMenu(baseNote, moreActionsExpanded, accountViewModel)
                         }
                     }
 

@@ -49,7 +49,11 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
     val context = LocalContext.current.applicationContext
 
-    var popupExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
+
     val scope = rememberCoroutineScope()
 
     if (note == null) {
@@ -89,7 +93,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                             )?.let { nav(it) }
                         }
                     },
-                    onLongClick = { popupExpanded = true }
+                    onLongClick = enablePopup
                 )
         ) {
             Row(
@@ -136,7 +140,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
                         IconButton(
                             modifier = Modifier.then(Modifier.size(24.dp)),
-                            onClick = { popupExpanded = true }
+                            onClick = enablePopup
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
@@ -145,7 +149,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                                 tint = MaterialTheme.colors.placeholderText
                             )
 
-                            NoteDropDownMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+                            NoteDropDownMenu(note, popupExpanded, accountViewModel)
                         }
                     }
 

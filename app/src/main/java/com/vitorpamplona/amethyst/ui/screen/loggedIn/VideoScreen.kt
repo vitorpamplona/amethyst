@@ -304,11 +304,14 @@ private fun VideoUserOptionAction(
     note: Note,
     accountViewModel: AccountViewModel
 ) {
-    var moreActionsExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
 
     IconButton(
         modifier = remember { Modifier.size(22.dp) },
-        onClick = { moreActionsExpanded = true }
+        onClick = enablePopup
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
@@ -319,8 +322,7 @@ private fun VideoUserOptionAction(
 
         NoteDropDownMenu(
             note,
-            moreActionsExpanded,
-            { moreActionsExpanded = false },
+            popupExpanded,
             accountViewModel
         )
     }

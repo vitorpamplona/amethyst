@@ -20,6 +20,7 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -310,7 +311,7 @@ data class DropDownParams(
 )
 
 @Composable
-fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
+fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountViewModel: AccountViewModel) {
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     var state by remember {
@@ -326,8 +327,12 @@ fun NoteDropDownMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Unit, 
         )
     }
 
+    val onDismiss = remember(popupExpanded) {
+        { popupExpanded.value = false }
+    }
+
     DropdownMenu(
-        expanded = popupExpanded,
+        expanded = popupExpanded.value,
         onDismissRequest = onDismiss
     ) {
         val clipboardManager = LocalClipboardManager.current

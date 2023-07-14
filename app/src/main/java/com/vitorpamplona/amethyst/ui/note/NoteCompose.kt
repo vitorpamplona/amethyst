@@ -2428,26 +2428,33 @@ fun MoreOptionsButton(
     baseNote: Note,
     accountViewModel: AccountViewModel
 ) {
-    var moreActionsExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
 
     IconButton(
         modifier = Size24Modifier,
-        onClick = { moreActionsExpanded = true }
+        onClick = enablePopup
     ) {
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            null,
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colors.placeholderText
-        )
+        VerticalDotsIcon()
 
         NoteDropDownMenu(
             baseNote,
-            moreActionsExpanded,
-            { moreActionsExpanded = false },
+            popupExpanded,
             accountViewModel
         )
-    }
+     }
+}
+
+@Composable
+private fun VerticalDotsIcon() {
+    Icon(
+        imageVector = Icons.Default.MoreVert,
+        null,
+        modifier = Size15Modifier,
+        tint = MaterialTheme.colors.placeholderText
+    )
 }
 
 @Composable

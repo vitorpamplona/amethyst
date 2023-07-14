@@ -89,7 +89,11 @@ import kotlin.time.measureTimedValue
 fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { multiSetCard.note }
 
-    var popupExpanded by remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember {
+        { popupExpanded.value = true }
+    }
+
     val scope = rememberCoroutineScope()
 
     val defaultBackgroundColor = MaterialTheme.colors.background
@@ -130,7 +134,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                         routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
                     }
                 },
-                onLongClick = { popupExpanded = true }
+                onLongClick = enablePopup
             )
             .fillMaxWidth()
     }
@@ -157,7 +161,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
             }
             Log.d("Rendering Metrics", "Complete: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
 
-            NoteDropDownMenu(baseNote, popupExpanded, { popupExpanded = false }, accountViewModel)
+            NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
         }
     }
 }
