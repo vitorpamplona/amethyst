@@ -161,7 +161,7 @@
     <string name="translations_show_in_lang_first">Eerst laten zien in %1$s</string>
     <string name="translations_always_translate_to_lang">Altijd vertalen naar %1$s</string>
     <string name="translations_never_translate_from_lang">Nooit vertalen vanuit %1$s</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="nip_05">Nostr Address</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">nooit</string>
     <string name="now">nu</string>

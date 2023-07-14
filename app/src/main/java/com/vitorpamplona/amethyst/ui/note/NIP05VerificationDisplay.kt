@@ -183,7 +183,7 @@ private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>) {
     } else if (nip05Verified.value == true) {
         Icon(
             painter = painterResource(R.drawable.ic_verified_transparent),
-            "NIP-05 Verified",
+            "Nostr Address Verified",
             tint = Nip05.copy(0.52f),
             modifier = Modifier
                 .size(14.dp)
@@ -193,7 +193,7 @@ private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>) {
         Icon(
             tint = Color.Red,
             imageVector = Icons.Default.Report,
-            contentDescription = "Invalid Nip05",
+            contentDescription = "Invalid Nostr Address",
             modifier = Modifier
                 .size(14.dp)
                 .padding(top = 1.dp)

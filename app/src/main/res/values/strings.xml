@@ -167,7 +167,7 @@
     <string name="translations_show_in_lang_first">Show in %1$s first</string>
     <string name="translations_always_translate_to_lang">Always translate to %1$s</string>
     <string name="translations_never_translate_from_lang">Never translate from %1$s</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="nip_05">Nostr Address</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">never</string>
     <string name="now">now</string>
@@ -359,9 +359,6 @@
 
     <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
     <string name="upload_server_nostrcheckme_nip94_explainer">Checks if Nostrcheck.me modified the file. New NIP: other clients might not see it</string>
-
-
-
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>

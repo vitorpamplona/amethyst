@@ -158,7 +158,7 @@
     <string name="translations_to">al</string>
     <string name="translations_show_in_lang_first">Montri en %1$s unua</string>
     <string name="translations_always_translate_to_lang">Ĉiam traduki al</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="nip_05">Nostr Address</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">neniam</string>
     <string name="now">nun</string>
