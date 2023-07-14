@@ -11,7 +11,12 @@ object ConnectivityStatus {
     val isOnWifi: MutableState<Boolean> = onWifi
 
     fun updateConnectivityStatus(isOnMobileData: Boolean, isOnWifi: Boolean) {
-        onMobileData.value = isOnMobileData
-        onWifi.value = isOnWifi
+        if (onMobileData.value != isOnMobileData) {
+            onMobileData.value = isOnMobileData
+        }
+
+        if (onWifi.value != isOnWifi) {
+            onWifi.value = isOnWifi
+        }
     }
 }
