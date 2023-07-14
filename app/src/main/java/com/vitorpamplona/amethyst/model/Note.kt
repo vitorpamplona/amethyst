@@ -212,26 +212,58 @@ open class Note(val idHex: String) {
     }
 
     @Synchronized
+    private fun innerAddZap(zapRequest: Note, zap: Note?): Boolean {
+        if (zapRequest !in zaps.keys) {
+            zaps = zaps + Pair(zapRequest, zap)
+            return true
+        } else if (zaps[zapRequest] == null) {
+            zaps = zaps + Pair(zapRequest, zap)
+            return true
+        }
+
+        return false
+    }
+
     fun addZap(zapRequest: Note, zap: Note?) {
         checkNotInMainThread()
         if (zapRequest !in zaps.keys) {
-            zaps = zaps + Pair(zapRequest, zap)
-            liveSet?.zaps?.invalidateData()
-        } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
-            zaps = zaps + Pair(zapRequest, zap)
-            liveSet?.zaps?.invalidateData()
+            val inserted = innerAddZap(zapRequest, zap)
+            if (inserted) {
+                liveSet?.zaps?.invalidateData()
+            }
+        } else if (zaps[zapRequest] == null) {
+            val inserted = innerAddZap(zapRequest, zap)
+            if (inserted) {
+                liveSet?.zaps?.invalidateData()
+            }
         }
     }
 
     @Synchronized
+    private fun innerAddZapPayment(zapPaymentRequest: Note, zapPayment: Note?): Boolean {
+        if (zapPaymentRequest !in zapPayments.keys) {
+            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
+            return true
+        } else if (zapPayments[zapPaymentRequest] == null) {
+            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
+            return true
+        }
+
+        return false
+    }
+
     fun addZapPayment(zapPaymentRequest: Note, zapPayment: Note?) {
         checkNotInMainThread()
         if (zapPaymentRequest !in zapPayments.keys) {
-            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
-            liveSet?.zaps?.invalidateData()
-        } else if (zapPaymentRequest in zapPayments.keys && zapPayments[zapPaymentRequest] == null) {
-            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
-            liveSet?.zaps?.invalidateData()
+            val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
+            if (inserted) {
+                liveSet?.zaps?.invalidateData()
+            }
+        } else if (zapPayments[zapPaymentRequest] == null) {
+            val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
+            if (inserted) {
+                liveSet?.zaps?.invalidateData()
+            }
         }
     }
 
