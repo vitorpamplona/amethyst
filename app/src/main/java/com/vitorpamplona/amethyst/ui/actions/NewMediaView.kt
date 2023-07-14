@@ -129,7 +129,8 @@ fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
     return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
         // selectedServer == ServersAvailable.IMGUR_NIP_94 ||
         selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
-        selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94
+        selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94 ||
+        selectedServer == ServersAvailable.NOSTRCHECK_ME_NIP_94
 }
 
 @Composable
@@ -139,6 +140,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
         Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
         Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
         Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),
+        Triple(ServersAvailable.NOSTRCHECK_ME_NIP_94, stringResource(id = R.string.upload_server_nostrcheckme_nip94), stringResource(id = R.string.upload_server_nostrcheckme_nip94_explainer)),
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 

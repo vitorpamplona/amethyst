@@ -1,18 +1,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.Manifest
-import android.net.Uri
-import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,14 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
@@ -42,34 +32,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
-import com.vitorpamplona.amethyst.ui.actions.GallerySelect
-import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
-import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -91,10 +68,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun VideoScreen(
@@ -399,112 +372,5 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
         LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
         ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp)
         ViewCountReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colors.onBackgroundColorFilter)
-    }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    var wantsToPost by remember {
-        mutableStateOf(false)
-    }
-
-    var pickedURI by remember {
-        mutableStateOf<Uri?>(null)
-    }
-
-    val scope = rememberCoroutineScope()
-
-    val postViewModel: NewMediaModel = viewModel()
-    postViewModel.onceUploaded {
-        scope.launch(Dispatchers.Default) {
-            // awaits an refresh on the list
-            delay(250)
-            withContext(Dispatchers.Main) {
-                val route = Route.Video.route.replace("{scrollToTop}", "true")
-                nav(route)
-            }
-        }
-    }
-
-    if (wantsToPost) {
-        val cameraPermissionState =
-            rememberPermissionState(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.READ_MEDIA_IMAGES
-                } else {
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                }
-            )
-
-        if (cameraPermissionState.status.isGranted) {
-            var showGallerySelect by remember { mutableStateOf(false) }
-            if (showGallerySelect) {
-                GallerySelect(
-                    onImageUri = { uri ->
-                        wantsToPost = false
-                        showGallerySelect = false
-                        pickedURI = uri
-                    }
-                )
-            }
-
-            showGallerySelect = true
-        } else {
-            LaunchedEffect(key1 = accountViewModel) {
-                cameraPermissionState.launchPermissionRequest()
-            }
-        }
-    }
-
-    pickedURI?.let {
-        NewMediaView(
-            uri = it,
-            onClose = { pickedURI = null },
-            postViewModel = postViewModel,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-    }
-
-    if (postViewModel.isUploadingImage) {
-        ShowProgress(postViewModel)
-    } else {
-        OutlinedButton(
-            onClick = { wantsToPost = true },
-            modifier = Modifier.size(55.dp),
-            shape = CircleShape,
-            colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_compose),
-                null,
-                modifier = Modifier.size(26.dp),
-                tint = Color.White
-            )
-        }
-    }
-}
-
-@Composable
-private fun ShowProgress(postViewModel: NewMediaModel) {
-    Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            progress = postViewModel.uploadingPercentage.value,
-            modifier = Modifier
-                .size(55.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colors.background),
-            strokeWidth = 5.dp
-        )
-        postViewModel.uploadingDescription.value?.let {
-            Text(
-                it,
-                color = MaterialTheme.colors.onSurface,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center
-            )
-        }
     }
 }
