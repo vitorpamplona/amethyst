@@ -174,7 +174,9 @@ fun UserActionOptions(
 ) {
     val scope = rememberCoroutineScope()
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isHidden by remember(accountState) {
+    val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
+
+    val isHidden by remember(accountState, blockList) {
         derivedStateOf {
             accountState?.account?.isHidden(baseAuthor) ?: false
         }

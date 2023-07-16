@@ -13,6 +13,10 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList
     }
 
+    override fun showHiddenKey(): Boolean {
+        return account.defaultDiscoveryFollowList == PeopleListEvent.blockList
+    }
+
     override fun feed(): List<Note> {
         val allChannelNotes = LocalCache.channels.values.mapNotNull { LocalCache.getNoteIfExists(it.idHex) }
 
@@ -28,6 +32,7 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
+        val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
@@ -36,15 +41,15 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val anyOtherChannelEvent = collection
             .asSequence()
             .filter { it.event is IsInPublicChatChannel }
-            .mapNotNull { (it.event as? ChannelMessageEvent)?.channel() }
+            .mapNotNull { (it.event as? IsInPublicChatChannel)?.channel() }
             .mapNotNull { LocalCache.checkGetOrCreateNote(it) }
             .toSet()
 
         val activities = (createEvents + anyOtherChannelEvent)
             .asSequence()
-            .filter { it.event is ChannelCreateEvent }
+            // .filter { it.event is ChannelCreateEvent } // Event heads might not be loaded yet.
             .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) == true }
-            .filter { it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
+            .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
             .filter { (it.createdAt() ?: 0) <= now }
             .toSet()
 

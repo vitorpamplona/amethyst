@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.SpammerAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import kotlinx.collections.immutable.ImmutableList
@@ -49,6 +50,14 @@ class NostrHiddenAccountsFeedViewModel(val account: Account) : UserFeedViewModel
     }
 }
 
+class NostrSpammerAccountsFeedViewModel(val account: Account) : UserFeedViewModel(SpammerAccountsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrSpammerAccountsFeedViewModel>): NostrSpammerAccountsFeedViewModel {
+            return NostrSpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
+        }
+    }
+}
+
 @Stable
 open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
@@ -59,6 +68,10 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
         scope.launch {
             refreshSuspended()
         }
+    }
+
+    fun showHidden(): Boolean {
+        return dataSource.showHiddenKey()
     }
 
     private fun refreshSuspended() {

@@ -39,12 +39,18 @@ class ContactListEvent(
         unverifiedFollowTagSet().map { it.lowercase() }.toSet()
     }
 
+    val verifiedFollowCommunitySet: Set<String> by lazy {
+        unverifiedFollowAddressSet().toSet()
+    }
+
     val verifiedFollowKeySetAndMe: Set<HexKey> by lazy {
         verifiedFollowKeySet + pubKey
     }
 
     fun unverifiedFollowKeySet() = tags.filter { it[0] == "p" }.mapNotNull { it.getOrNull(1) }
     fun unverifiedFollowTagSet() = tags.filter { it[0] == "t" }.mapNotNull { it.getOrNull(1) }
+
+    fun unverifiedFollowAddressSet() = tags.filter { it[0] == "a" }.mapNotNull { it.getOrNull(1) }
 
     fun follows() = tags.filter { it[0] == "p" }.mapNotNull {
         try {
@@ -73,14 +79,22 @@ class ContactListEvent(
     companion object {
         const val kind = 3
 
-        fun create(follows: List<Contact>, followTags: List<String>, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+        fun createFromScratch(
+            followUsers: List<Contact>,
+            followTags: List<String>,
+            followCommunities: List<ATag>,
+            followEvents: List<String>,
+            relayUse: Map<String, ReadWrite>?,
+            privateKey: ByteArray,
+            createdAt: Long = TimeUtils.now()
+        ): ContactListEvent {
             val content = if (relayUse != null) {
                 gson.toJson(relayUse)
             } else {
                 ""
             }
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
-            val tags = follows.map {
+
+            val tags = followUsers.map {
                 if (it.relayUri != null) {
                     listOf("p", it.pubKeyHex, it.relayUri)
                 } else {
@@ -88,8 +102,129 @@ class ContactListEvent(
                 }
             } + followTags.map {
                 listOf("t", it)
+            } + followEvents.map {
+                listOf("e", it)
+            } + followCommunities.map {
+                if (it.relay != null) {
+                    listOf("a", it.toTag(), it.relay)
+                } else {
+                    listOf("a", it.toTag())
+                }
             }
 
+            return create(
+                content = content,
+                tags = tags,
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun followUser(earlierVersion: ContactListEvent, pubKeyHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("p", pubKeyHex)),
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun unfollowUser(earlierVersion: ContactListEvent, pubKeyHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun followHashtag(earlierVersion: ContactListEvent, hashtag: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedHash(hashtag)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("t", hashtag)),
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun unfollowHashtag(earlierVersion: ContactListEvent, hashtag: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedHash(hashtag)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag },
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun followEvent(earlierVersion: ContactListEvent, idHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedEvent(idHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("e", idHex)),
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun unfollowEvent(earlierVersion: ContactListEvent, idHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedEvent(idHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != idHex },
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun followAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedAddressableNote(aTag.toTag())) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOfNotNull("a", aTag.toTag(), aTag.relay)),
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun unfollowAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedAddressableNote(aTag.toTag())) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != aTag.toTag() },
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun updateRelayList(earlierVersion: ContactListEvent, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            val content = if (relayUse != null) {
+                gson.toJson(relayUse)
+            } else {
+                ""
+            }
+
+            return create(
+                content = content,
+                tags = earlierVersion.tags,
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun create(content: String, tags: List<List<String>>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
             return ContactListEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

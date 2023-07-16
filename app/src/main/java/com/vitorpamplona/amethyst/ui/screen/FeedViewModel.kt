@@ -217,6 +217,10 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         scrolltoTopPending = false
     }
 
+    fun showHidden(): Boolean {
+        return localFilter.showHiddenKey()
+    }
+
     private fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {

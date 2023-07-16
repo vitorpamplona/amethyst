@@ -71,6 +71,10 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         scrolltoTopPending = false
     }
 
+    fun showHidden(): Boolean {
+        return localFilter.showHiddenKey()
+    }
+
     private var lastAccount: Account? = null
     private var lastNotes: Set<Note>? = null
 

@@ -264,7 +264,7 @@ fun PictureAndFollowingMark(
 
 @Composable
 fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
-    WatchFollows(userHex, accountViewModel) { newFollowingState ->
+    WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
         Crossfade(targetState = newFollowingState) { following ->
             if (following) {
                 Box(contentAlignment = Alignment.TopEnd) {
@@ -276,7 +276,7 @@ fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewMod
 }
 
 @Composable
-fun WatchFollows(userHex: String, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
+fun WatchUserFollows(userHex: String, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
     val showFollowingMark by accountViewModel.userFollows.map {
         it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
     }.distinctUntilChanged().observeAsState(

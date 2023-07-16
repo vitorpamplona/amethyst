@@ -214,6 +214,7 @@ fun NoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
+    showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -245,6 +246,7 @@ fun NoteCompose(
                 unPackReply,
                 makeItShort,
                 addMarginTop,
+                showHidden,
                 parentBackgroundColor,
                 accountViewModel,
                 nav
@@ -263,29 +265,58 @@ fun CheckHiddenNoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
+    showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isHidden by accountViewModel.accountLiveData.map {
-        accountViewModel.isNoteHidden(note)
-    }.distinctUntilChanged().observeAsState(accountViewModel.isNoteHidden(note))
-
-    Crossfade(targetState = isHidden) {
-        if (!it) {
-            LoadedNoteCompose(
-                note,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
+    if (showHidden) {
+        // Ignores reports as well
+        var state by remember {
+            mutableStateOf(
+                NoteComposeReportState(
+                    isAcceptable = true,
+                    canPreview = true,
+                    relevantReports = persistentSetOf()
+                )
             )
+        }
+
+        RenderReportState(
+            state,
+            note,
+            routeForLastRead,
+            modifier,
+            isBoostedNote,
+            isQuotedNote,
+            unPackReply,
+            makeItShort,
+            addMarginTop,
+            parentBackgroundColor,
+            accountViewModel,
+            nav
+        )
+    } else {
+        val isHidden by accountViewModel.account.liveHiddenUsers.map {
+            note.isHiddenFor(it)
+        }.observeAsState(accountViewModel.isNoteHidden(note))
+
+        Crossfade(targetState = isHidden) {
+            if (!it) {
+                LoadedNoteCompose(
+                    note,
+                    routeForLastRead,
+                    modifier,
+                    isBoostedNote,
+                    isQuotedNote,
+                    unPackReply,
+                    makeItShort,
+                    addMarginTop,
+                    parentBackgroundColor,
+                    accountViewModel,
+                    nav
+                )
+            }
         }
     }
 }
@@ -438,13 +469,15 @@ fun NormalNote(
             accountViewModel = accountViewModel,
             nav = nav
         )
-        is CommunityDefinitionEvent -> CommunityHeader(
-            baseNote = baseNote,
-            showBottomDiviser = true,
-            sendToCommunity = true,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
+        is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
+            CommunityHeader(
+                baseNote = it,
+                showBottomDiviser = true,
+                sendToCommunity = true,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
         is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
         is FileHeaderEvent -> FileHeaderDisplay(baseNote, accountViewModel)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, accountViewModel)
@@ -471,14 +504,14 @@ fun NormalNote(
 
 @Composable
 fun CommunityHeader(
-    baseNote: Note,
+    baseNote: AddressableNote,
     showBottomDiviser: Boolean,
     sendToCommunity: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var expanded = remember { mutableStateOf(false) }
+    val expanded = remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.clickable {
@@ -506,7 +539,7 @@ fun CommunityHeader(
 }
 
 @Composable
-fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
@@ -648,7 +681,7 @@ fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav:
 }
 
 @Composable
-fun ShortCommunityHeader(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ShortCommunityHeader(baseNote: AddressableNote, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
@@ -713,43 +746,44 @@ fun ShortCommunityHeader(baseNote: Note, expanded: MutableState<Boolean>, accoun
 
 @Composable
 private fun ShortCommunityActionOptions(
-    note: Note,
+    note: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
-        derivedStateOf {
-            accountState?.account?.followingCommunities?.contains(note.idHex) ?: false
-        }
-    }
-
     Spacer(modifier = StdHorzSpacer)
     LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
     Spacer(modifier = StdHorzSpacer)
     ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
 
-    if (!isFollowing) {
-        Spacer(modifier = StdHorzSpacer)
-        JoinCommunityButton(accountViewModel, note, nav)
+    WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
+        if (!isFollowing) {
+            Spacer(modifier = StdHorzSpacer)
+            JoinCommunityButton(accountViewModel, note, nav)
+        }
     }
 }
 
 @Composable
+fun WatchAddressableNoteFollows(note: AddressableNote, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
+    val showFollowingMark by accountViewModel.userFollows.map {
+        it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
+    }.distinctUntilChanged().observeAsState(
+        accountViewModel.userProfile().latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
+    )
+
+    onFollowChanges(showFollowingMark)
+}
+
+@Composable
 private fun LongCommunityActionOptions(
-    note: Note,
+    note: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
-        derivedStateOf {
-            accountState?.account?.followingCommunities?.contains(note.idHex) ?: false
+    WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
+        if (isFollowing) {
+            LeaveCommunityButton(accountViewModel, note, nav)
         }
-    }
-
-    if (isFollowing) {
-        LeaveCommunityButton(accountViewModel, note, nav)
     }
 }
 

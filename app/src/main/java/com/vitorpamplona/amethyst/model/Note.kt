@@ -563,6 +563,15 @@ open class Note(val idHex: String) {
             liveSet = null
         }
     }
+
+    fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
+        if (event == null) return false
+
+        val isSensitive = event?.isSensitive() ?: false
+        return accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
+            accountChoices.spammers.contains(author?.pubkeyHex) ||
+            (isSensitive && accountChoices.showSensitiveContent == false)
+    }
 }
 
 class NoteLiveSet(u: Note) {

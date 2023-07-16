@@ -32,23 +32,30 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
+import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
 @Composable
 fun HiddenUsersScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: NostrHiddenAccountsFeedViewModel = viewModel(
+    val hiddenFeedViewModel: NostrHiddenAccountsFeedViewModel = viewModel(
         factory = NostrHiddenAccountsFeedViewModel.Factory(accountViewModel.account)
     )
 
-    HiddenUsersScreen(feedViewModel, accountViewModel, nav)
+    val spammerFeedViewModel: NostrSpammerAccountsFeedViewModel = viewModel(
+        factory = NostrSpammerAccountsFeedViewModel.Factory(accountViewModel.account)
+    )
+
+    HiddenUsersScreen(hiddenFeedViewModel, spammerFeedViewModel, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HiddenUsersScreen(
-    feedViewModel: NostrHiddenAccountsFeedViewModel,
+    hiddenFeedViewModel: NostrHiddenAccountsFeedViewModel,
+    spammerFeedViewModel: NostrSpammerAccountsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -58,10 +65,8 @@ fun HiddenUsersScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hidden Users Start")
-                feedViewModel.invalidateData()
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Hidden Users Stop")
+                hiddenFeedViewModel.invalidateData()
+                spammerFeedViewModel.invalidateData()
             }
         }
 
@@ -116,10 +121,18 @@ fun HiddenUsersScreen(
                         Text(text = stringResource(R.string.blocked_users))
                     }
                 )
+                Tab(
+                    selected = pagerState.currentPage == 1,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                    text = {
+                        Text(text = stringResource(R.string.spamming_users))
+                    }
+                )
             }
-            HorizontalPager(pageCount = 1, state = pagerState) { page ->
+            HorizontalPager(pageCount = 2, state = pagerState) { page ->
                 when (page) {
-                    0 -> RefreshingUserFeedView(feedViewModel, accountViewModel, nav)
+                    0 -> RefreshingUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
+                    1 -> RefreshingUserFeedView(spammerFeedViewModel, accountViewModel, nav)
                 }
             }
         }
@@ -128,22 +141,23 @@ fun HiddenUsersScreen(
 
 @Composable
 fun RefreshingUserFeedView(
-    feedViewModel: NostrHiddenAccountsFeedViewModel,
+    feedViewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    WatchAccount(feedViewModel, accountViewModel)
+    WatchAccountAndBlockList(feedViewModel, accountViewModel)
     RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav)
 }
 
 @Composable
-fun WatchAccount(
-    feedViewModel: NostrHiddenAccountsFeedViewModel,
+fun WatchAccountAndBlockList(
+    feedViewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
+    val blockListState by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
 
-    LaunchedEffect(accountViewModel, accountState) {
+    LaunchedEffect(accountViewModel, accountState, blockListState) {
         feedViewModel.invalidateData()
     }
 }

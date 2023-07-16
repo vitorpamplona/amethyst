@@ -4,6 +4,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableSet
 import nostr.postr.Utils
 
 @Immutable
@@ -15,42 +18,133 @@ class PeopleListEvent(
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
+
+    fun publicAndPrivateUsers(privateKey: ByteArray?): ImmutableSet<HexKey> {
+        publicAndPrivateUserCache?.let {
+            return it
+        }
+
+        val privateUserList = privateKey?.let {
+            privateTagsOrEmpty(privKey = it).filter { it.size > 1 && it[0] == "p" }.map { it[1] }.toSet()
+        } ?: emptySet()
+        val publicUserList = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }.toSet()
+
+        publicAndPrivateUserCache = (privateUserList + publicUserList).toImmutableSet()
+
+        return publicAndPrivateUserCache ?: persistentSetOf()
+    }
+
+    fun isTaggedUser(idHex: String, isPrivate: Boolean, privateKey: ByteArray): Boolean {
+        return if (isPrivate) {
+            privateTagsOrEmpty(privKey = privateKey).any { it.size > 1 && it[0] == "p" && it[1] == idHex }
+        } else {
+            isTaggedUser(idHex)
+        }
+    }
+
     companion object {
         const val kind = 30000
+        const val blockList = "mute"
 
-        fun create(
-            name: String = "",
-
-            events: List<String>? = null,
-            users: List<String>? = null,
-            addresses: List<ATag>? = null,
-
-            privEvents: List<String>? = null,
-            privUsers: List<String>? = null,
-            privAddresses: List<ATag>? = null,
-
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): PeopleListEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey)
-            val content = createPrivateTags(privEvents, privUsers, privAddresses, privateKey, pubKey)
-
-            val tags = mutableListOf<List<String>>()
-            tags.add(listOf("d", name))
-
-            events?.forEach {
-                tags.add(listOf("e", it))
+        fun createListWithUser(name: String, pubKeyHex: String, isPrivate: Boolean, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            return if (isPrivate) {
+                create(
+                    content = encryptTags(listOf(listOf("p", pubKeyHex)), privateKey),
+                    tags = listOf(listOf("d", name)),
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = "",
+                    tags = listOf(listOf("d", name), listOf("p", pubKeyHex)),
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
             }
-            users?.forEach {
-                tags.add(listOf("p", it))
-            }
-            addresses?.forEach {
-                tags.add(listOf("a", it.toTag()))
-            }
+        }
 
-            val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
+        fun addUsers(earlierVersion: PeopleListEvent, listPubKeyHex: List<String>, isPrivate: Boolean, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            return if (isPrivate) {
+                create(
+                    content = encryptTags(
+                        privateTags = earlierVersion.privateTagsOrEmpty(privKey = privateKey).plus(
+                            listPubKeyHex.map {
+                                listOf("p", it)
+                            }
+                        ),
+                        privateKey = privateKey
+                    ),
+                    tags = earlierVersion.tags,
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(
+                        listPubKeyHex.map {
+                            listOf("p", it)
+                        }
+                    ),
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            }
+        }
+
+        fun addUser(earlierVersion: PeopleListEvent, pubKeyHex: String, isPrivate: Boolean, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            if (earlierVersion.isTaggedUser(pubKeyHex, isPrivate, privateKey)) return earlierVersion
+
+            return if (isPrivate) {
+                create(
+                    content = encryptTags(
+                        privateTags = earlierVersion.privateTagsOrEmpty(privKey = privateKey).plus(element = listOf("p", pubKeyHex)),
+                        privateKey = privateKey
+                    ),
+                    tags = earlierVersion.tags,
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(element = listOf("p", pubKeyHex)),
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            }
+        }
+
+        fun removeUser(earlierVersion: PeopleListEvent, pubKeyHex: String, isPrivate: Boolean, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            if (!earlierVersion.isTaggedUser(pubKeyHex, isPrivate, privateKey)) return earlierVersion
+
+            return if (isPrivate) {
+                create(
+                    content = encryptTags(
+                        privateTags = earlierVersion.privateTagsOrEmpty(privKey = privateKey).filter { it.size > 1 && it[1] != pubKeyHex },
+                        privateKey = privateKey
+                    ),
+                    tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            }
+        }
+
+        fun create(content: String, tags: List<List<String>>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = Utils.sign(id, privateKey)
-            return PeopleListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
+            return PeopleListEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }
 }

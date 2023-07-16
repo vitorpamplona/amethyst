@@ -363,6 +363,20 @@ private fun WatchReactionsZapsBoostsAndDisplayIfExists(baseNote: Note, content: 
     }
 }
 
+fun <T, K, R> LiveData<T>.combineWith(
+    liveData1: LiveData<K>,
+    block: (T?, K?) -> R
+): LiveData<R> {
+    val result = MediatorLiveData<R>()
+    result.addSource(this) {
+        result.value = block(this.value, liveData1.value)
+    }
+    result.addSource(liveData1) {
+        result.value = block(this.value, liveData1.value)
+    }
+    return result
+}
+
 fun <T, K, P, R> LiveData<T>.combineWith(
     liveData1: LiveData<K>,
     liveData2: LiveData<P>,

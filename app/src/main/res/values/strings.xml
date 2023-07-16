@@ -494,4 +494,6 @@
     <string name="automatically_play_videos">Automatically play videos</string>
     <string name="automatically_show_url_preview">Automatically show url preview</string>
     <string name="load_image">Load Image</string>
+
+    <string name="spamming_users">Spammers</string>
 </resources>

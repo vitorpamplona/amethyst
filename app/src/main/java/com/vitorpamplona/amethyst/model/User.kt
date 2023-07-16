@@ -275,6 +275,10 @@ class User(val pubkeyHex: String) {
         return latestContactList?.verifiedFollowTagSet ?: emptySet()
     }
 
+    fun cachedFollowingCommunitiesSet(): Set<HexKey> {
+        return latestContactList?.verifiedFollowCommunitySet ?: emptySet()
+    }
+
     fun cachedFollowCount(): Int? {
         return latestContactList?.verifiedFollowKeySet?.size
     }

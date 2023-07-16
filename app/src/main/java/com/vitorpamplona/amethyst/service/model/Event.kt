@@ -44,10 +44,10 @@ open class Event(
 
     fun hasAnyTaggedUser() = tags.any { it.size > 1 && it[0] == "p" }
 
-    fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
-    fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    override fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    override fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-    fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
+    override fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
     override fun taggedEmojis() = tags.filter { it.size > 2 && it[0] == "emoji" }.map { EmojiUrl(it[1], it[2]) }
 
@@ -63,7 +63,7 @@ open class Event(
 
     override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
 
-    fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
+    override fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
         val aTagValue = it[1]
         val relay = it.getOrNull(2)
 
@@ -76,7 +76,11 @@ open class Event(
 
     override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
 
+    override fun isTaggedEvent(idHex: String) = tags.any { it.size > 1 && it[0] == "e" && it[1] == idHex }
+
     override fun isTaggedAddressableNote(idHex: String) = tags.any { it.size > 1 && it[0] == "a" && it[1] == idHex }
+
+    override fun isTaggedAddressableNotes(idHexes: Set<String>) = tags.any { it.size > 1 && it[0] == "a" && it[1] in idHexes }
 
     override fun isTaggedHash(hashtag: String) = tags.any { it.size > 1 && it[0] == "t" && it[1].equals(hashtag, true) }
     override fun isTaggedHashes(hashtags: Set<String>) = tags.any { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }

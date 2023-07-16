@@ -32,7 +32,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,7 +85,7 @@ import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
-fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { multiSetCard.note }
 
     val popupExpanded = remember { mutableStateOf(false) }
@@ -154,6 +153,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, accoun
                     routeForLastRead = null,
                     modifier = remember { Modifier.padding(top = 5.dp) },
                     isBoostedNote = true,
+                    showHidden = showHidden,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav
@@ -562,7 +562,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
         }
     }
 
-    WatchFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
+    WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
         Crossfade(targetState = isFollowing) {
             if (it) {
                 Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {

@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { messageSetCard.note }
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -102,6 +102,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     routeForLastRead = null,
                     isBoostedNote = true,
                     addMarginTop = false,
+                    showHidden = showHidden,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav

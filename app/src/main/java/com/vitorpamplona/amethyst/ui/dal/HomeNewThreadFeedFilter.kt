@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
@@ -17,6 +18,10 @@ import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
+    }
+
+    override fun showHiddenKey(): Boolean {
+        return account.defaultHomeFollowList == PeopleListEvent.blockList
     }
 
     override fun feed(): List<Note> {
@@ -32,9 +37,11 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
+        val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val followingCommunities = account.selectedCommunitiesFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         val oneMinuteInTheFuture = TimeUtils.now() + (1 * 60) // one minute in the future.
         val oneHr = 60 * 60
@@ -44,9 +51,9 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             .filter { it ->
                 val noteEvent = it.event
                 (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
-                    (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet)) &&
+                    (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
-                    it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true &&
+                    (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
                     ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&
                     it.isNewThread() &&
                     (

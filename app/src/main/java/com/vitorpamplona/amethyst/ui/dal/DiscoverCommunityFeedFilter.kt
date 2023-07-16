@@ -13,6 +13,10 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
         return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList
     }
 
+    override fun showHiddenKey(): Boolean {
+        return account.defaultDiscoveryFollowList == PeopleListEvent.blockList
+    }
+
     override fun feed(): List<Note> {
         val allNotes = LocalCache.addressables.values
 
@@ -28,15 +32,24 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
+        val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
 
-        val activities = collection
+        val createEvents = collection.filter { it.event is CommunityDefinitionEvent }
+        val anyOtherCommunityEvent = collection
+            .asSequence()
+            .filter { it.event is CommunityPostApprovalEvent }
+            .mapNotNull { (it.event as? CommunityPostApprovalEvent)?.communities() }.flatten()
+            .map { LocalCache.getOrCreateAddressableNote(it) }
+            .toSet()
+
+        val activities = (createEvents + anyOtherCommunityEvent)
             .asSequence()
             .filter { it.event is CommunityDefinitionEvent }
             .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) == true }
-            .filter { it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
+            .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
             .filter { (it.createdAt() ?: 0) <= now }
             .toSet()
 

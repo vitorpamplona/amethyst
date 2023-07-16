@@ -33,7 +33,7 @@ object LocalCache {
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
-        checkNotInMainThread()
+        // checkNotInMainThread()
 
         if (isValidHex(key)) {
             return getOrCreateUser(key)
@@ -143,7 +143,7 @@ object LocalCache {
     }
 
     fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
-        checkNotInMainThread()
+        // checkNotInMainThread()
 
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.

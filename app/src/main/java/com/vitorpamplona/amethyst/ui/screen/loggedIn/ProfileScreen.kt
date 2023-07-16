@@ -702,44 +702,47 @@ private fun ProfileActions(
     baseUser: User,
     accountViewModel: AccountViewModel
 ) {
+    val isMe by remember(accountViewModel) {
+        derivedStateOf {
+            accountViewModel.userProfile() == baseUser
+        }
+    }
+
+    if (isMe) {
+        EditButton(accountViewModel.account)
+    }
+
+    WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
+        if (isHidden) {
+            val scope = rememberCoroutineScope()
+            ShowUserButton {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.account.showUser(baseUser.pubkeyHex)
+                }
+            }
+        } else {
+            DisplayFollowUnfollowButton(baseUser, accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun DisplayFollowUnfollowButton(
+    baseUser: User,
+    accountViewModel: AccountViewModel
+) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val accountLocalUserState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
+    val isLoggedInFollowingUser by accountViewModel.account.userProfile().live().follows.map {
+        it.user.isFollowing(baseUser)
+    }.distinctUntilChanged().observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
 
-    val accountUserState by accountViewModel.account.userProfile().live().follows.observeAsState()
-    val baseUserState by baseUser.live().follows.observeAsState()
+    val isUserFollowingLoggedIn by baseUser.live().follows.map {
+        it.user.isFollowing(accountViewModel.account.userProfile())
+    }.distinctUntilChanged().observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
 
-    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
-
-    val isHidden by remember(accountUserState, accountLocalUserState) {
-        derivedStateOf {
-            account.isHidden(baseUser)
-        }
-    }
-
-    val isLoggedInFollowingUser by remember(accountUserState, accountLocalUserState) {
-        derivedStateOf {
-            accountUser.isFollowingCached(baseUser)
-        }
-    }
-
-    val isUserFollowingLoggedIn by remember(baseUserState, accountLocalUserState) {
-        derivedStateOf {
-            baseUser.isFollowing(accountUser)
-        }
-    }
-
-    if (accountUser == baseUser) {
-        EditButton(account)
-    }
-
-    if (isHidden) {
-        ShowUserButton {
-            account.showUser(baseUser.pubkeyHex)
-        }
-    } else if (isLoggedInFollowingUser) {
+    if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 scope.launch {
@@ -753,7 +756,7 @@ private fun ProfileActions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    account.unfollow(baseUser)
+                    accountViewModel.account.unfollow(baseUser)
                 }
             }
         }
@@ -772,7 +775,7 @@ private fun ProfileActions(
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
-                        account.follow(baseUser)
+                        accountViewModel.account.follow(baseUser)
                     }
                 }
             }
@@ -790,12 +793,21 @@ private fun ProfileActions(
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
-                        account.follow(baseUser)
+                        accountViewModel.account.follow(baseUser)
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
+    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+        it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
+    }.observeAsState(accountViewModel.account.isHidden(baseUser))
+
+    content(isHidden)
 }
 
 @Composable
@@ -1638,6 +1650,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         val clipboardManager = LocalClipboardManager.current
         val accountState by accountViewModel.accountLiveData.observeAsState()
         val account = accountState?.account!!
+        val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
 
         val scope = rememberCoroutineScope()
 
