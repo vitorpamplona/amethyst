@@ -162,6 +162,7 @@
     <string name="translations_show_in_lang_first">முதலில் %1$s இல் காண்பி</string>
     <string name="translations_always_translate_to_lang">எப்போதும் %1$s க்கு மொழிபெயர்க்கவும்</string>
     <string name="translations_never_translate_from_lang">%1$s இலிருந்து ஒருபோதும் மொழிபெயர்க்க வேண்டாம்</string>
+    <string name="nip_05">Nostr முகவரி</string>
     <string name="never">ஒருபோதும் இல்லை</string>
     <string name="now">இப்போது</string>
     <string name="h">h</string>
@@ -245,7 +246,7 @@
     <string name="remove_from_private_bookmarks">தனிப்பட்ட புக்மார்க்குகளிலிருந்து அகற்று</string>
     <string name="remove_from_public_bookmarks">பொது புக்மார்க்குகளிலிருந்து அகற்று</string>
     <string name="wallet_connect_service">பணப்பை இணைப்பு சேவை</string>
-    <string name="wallet_connect_service_explainer">பயன்பாட்டை விட்டு வெளியேறாமல் ஜாப்களை செலுத்த ஒரு நாஸ்டர் ரகசியத்தை அங்கீகரிக்கிறது. ரகசியத்தை பாதுகாப்பாக வைத்து, முடிந்தால் தனியார் ரிலேவைப் பயன்படுத்துங்கள்</string>
+    <string name="wallet_connect_service_explainer">பயன்பாட்டை விட்டு வெளியேறாமல் ஜாப்களை செலுத்த ஒரு Nostr ரகசியத்தை அங்கீகரிக்கிறது. ரகசியத்தை பாதுகாப்பாக வைத்து, முடிந்தால் தனியார் ரிலேவைப் பயன்படுத்துங்கள்</string>
     <string name="wallet_connect_service_pubkey">பணப்பை இணைப்பு பொது சாவி</string>
     <string name="wallet_connect_service_relay">பணப்பை இணைப்பு ரிலே</string>
     <string name="wallet_connect_service_secret">பணப்பை இணைப்பு ரகசியம்</string>
@@ -449,5 +450,21 @@
 
         <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும் </string>
         <string name="community_no_descriptor">இந்த சமூகத்தின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
+
+	<string name="add_sensitive_content_label">உணர்ச்சிபூர்வமான உள்ளடக்கம்/string>
+        <string name="add_sensitive_content_description">இதை காண்பிக்கும் முன் உணர்ச்சிபூர்வமான உள்ளடக்க எச்சரிக்கை என குறிப்பிடுக</string>
+        <string name="settings">ஸெட்டிங்ஸ்</string>
+        <string name="always">எப்போதும்</string>
+        <string name="wifi_only">WiFi-ல் மட்டும்</string>
+        <string name="system">சிஸ்டம்</string>
+        <string name="light">லைட் </string>
+        <string name="dark">டார்க்</string>
+        <string name="application_preferences">ஆப் விருப்பங்கள்</string>
+        <string name="language">மொழி</string>
+        <string name="theme">தீம்</string>
+        <string name="automatically_load_images_gifs">தானாகவே படங்கள்/gifs லோட் செய்க</string>
+        <string name="automatically_play_videos">தானாகவே வீடியோக்களை ப்ளே செய்க</string>
+        <string name="automatically_show_url_preview">தானாகவே URL முன்னோட்டம் காண்பிக்க</string>
+        <string name="load_image">புகைப்படத்தை லோட் செய்க</string>
 	
 </resources>
