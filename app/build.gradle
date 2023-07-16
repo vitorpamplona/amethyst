@@ -139,9 +139,9 @@ dependencies {
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
 
     // view videos
-    implementation "com.google.android.exoplayer:exoplayer:${exoplayer_version}"
+    implementation "androidx.media3:media3-exoplayer:${exoplayer_version}"
     // important for proxy / tor
-    implementation "com.google.android.exoplayer:extension-okhttp:${exoplayer_version}"
+    implementation "androidx.media3:media3-datasource-okhttp:${exoplayer_version}"
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:$coil_version"
@@ -175,6 +175,8 @@ dependencies {
 
     // Language picker and Theme chooser
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
+    implementation 'androidx.media3:media3-ui:1.1.0'
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'
