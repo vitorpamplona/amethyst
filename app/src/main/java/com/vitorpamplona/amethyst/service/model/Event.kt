@@ -288,6 +288,7 @@ open class Event(
             LnZapRequestEvent.kind -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LongTextNoteEvent.kind -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             MetadataEvent.kind -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
+            NNSEvent.kind -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.kind -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
             PinListEvent.kind -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.kind -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)

@@ -545,6 +545,26 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun comsume(event: NNSEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     fun consume(event: AppDefinitionEvent) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -1335,6 +1355,7 @@ object LocalCache {
                 is LnZapPaymentResponseEvent -> consume(event)
                 is LongTextNoteEvent -> consume(event, relay)
                 is MetadataEvent -> consume(event)
+                is NNSEvent -> comsume(event)
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event)
                 is PeopleListEvent -> consume(event)
