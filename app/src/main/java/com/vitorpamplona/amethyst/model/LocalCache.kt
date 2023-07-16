@@ -176,6 +176,16 @@ object LocalCache {
         }
     }
 
+    fun consume(event: ContactListEvent) {
+        val user = getOrCreateUser(event.pubKey)
+
+        // avoids processing empty contact lists.
+        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
+            user.updateContactList(event)
+            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
+        }
+    }
+
     fun consume(event: BookmarkListEvent) {
         val user = getOrCreateUser(event.pubKey)
         if (user.latestBookmarkList == null || event.createdAt > user.latestBookmarkList!!.createdAt) {
@@ -578,16 +588,6 @@ object LocalCache {
     @Suppress("UNUSED_PARAMETER")
     fun consume(event: RecommendRelayEvent) {
 //        // Log.d("RR", event.toJson())
-    }
-
-    fun consume(event: ContactListEvent) {
-        val user = getOrCreateUser(event.pubKey)
-
-        // avoids processing empty contact lists.
-        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
-            user.updateContactList(event)
-            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
-        }
     }
 
     fun consume(event: PrivateDmEvent, relay: Relay?): Note {
