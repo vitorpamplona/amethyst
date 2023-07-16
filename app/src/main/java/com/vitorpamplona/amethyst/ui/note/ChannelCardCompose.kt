@@ -86,6 +86,7 @@ fun ChannelCardCompose(
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
+    forceEventKind: Int?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -107,14 +108,16 @@ fun ChannelCardCompose(
                 )
             }
         } else {
-            CheckHiddenChannelCardCompose(
-                baseNote,
-                routeForLastRead,
-                modifier,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
-            )
+            if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
+                CheckHiddenChannelCardCompose(
+                    baseNote,
+                    routeForLastRead,
+                    modifier,
+                    parentBackgroundColor,
+                    accountViewModel,
+                    nav
+                )
+            }
         }
     }
 }

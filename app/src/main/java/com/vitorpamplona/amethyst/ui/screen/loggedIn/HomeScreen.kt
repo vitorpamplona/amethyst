@@ -175,5 +175,6 @@ class TabItem(
     val resource: Int,
     val viewModel: FeedViewModel,
     val routeForLastRead: String,
-    val scrollStateKey: String
+    val scrollStateKey: String,
+    val forceEventKind: Int? = null
 )
