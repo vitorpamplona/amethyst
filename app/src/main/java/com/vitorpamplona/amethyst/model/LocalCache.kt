@@ -546,7 +546,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
