@@ -22,7 +22,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
         return TypedFilter(
@@ -40,7 +40,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
         return TypedFilter(
@@ -58,7 +58,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
         return TypedFilter(
