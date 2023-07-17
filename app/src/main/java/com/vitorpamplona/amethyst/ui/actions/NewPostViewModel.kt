@@ -22,6 +22,7 @@ import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import kotlinx.coroutines.Dispatchers
@@ -128,7 +129,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = account
     }
 
-    fun sendPost() {
+    fun sendPost(relayList: List<Relay>? = null) {
         val tagger = NewMessageTagger(originalNote?.channelHex(), mentions, replyTos, message.text)
         tagger.run()
 
@@ -145,7 +146,20 @@ open class NewPostViewModel() : ViewModel() {
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
         if (wantsPoll) {
-            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+            account?.sendPoll(
+                tagger.message,
+                tagger.replyTos,
+                tagger.mentions,
+                pollOptions,
+                valueMaximum,
+                valueMinimum,
+                consensusThreshold,
+                closedAt,
+                zapReceiver,
+                wantsToMarkAsSensitive,
+                localZapRaiserAmount,
+                relayList
+            )
         } else if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
                 account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
@@ -172,7 +186,8 @@ open class NewPostViewModel() : ViewModel() {
                 zapRaiserAmount = localZapRaiserAmount,
                 replyingTo = replyId,
                 root = rootId,
-                directMentions = tagger.directMentions
+                directMentions = tagger.directMentions,
+                relayList = relayList
             )
         }
 

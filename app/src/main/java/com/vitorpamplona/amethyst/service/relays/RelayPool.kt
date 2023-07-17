@@ -62,6 +62,12 @@ object RelayPool : Relay.Listener {
         relays.forEach { it.sendFilterOnlyIfDisconnected() }
     }
 
+    fun sendToSelectedRelays(list: List<Relay>, signedEvent: EventInterface) {
+        list.forEach { relay ->
+            relays.filter { it.url == relay.url }.forEach { it.send(signedEvent) }
+        }
+    }
+
     fun send(signedEvent: EventInterface) {
         relays.forEach { it.send(signedEvent) }
     }
