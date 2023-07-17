@@ -628,19 +628,19 @@ class Account(
         return Pair(data, signedEvent)
     }
 
-    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
+    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
-        Client.send(data)
+        Client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendHeader(headerInfo: FileHeader): Note? {
+    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
         val signedEvent = FileHeaderEvent.create(
@@ -655,7 +655,7 @@ class Account(
             privateKey = loggedIn.privKey!!
         )
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]

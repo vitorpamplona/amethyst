@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -56,7 +57,7 @@ open class NewMediaModel : ViewModel() {
         }
     }
 
-    fun upload(context: Context) {
+    fun upload(context: Context, relayList: List<Relay>? = null) {
         isUploadingImage = true
 
         val contentResolver = context.contentResolver
@@ -78,7 +79,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Loading"
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent)
+                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent, relayList = relayList)
                         }
                             ?: run {
                                 viewModelScope.launch {
@@ -98,7 +99,7 @@ open class NewMediaModel : ViewModel() {
                             server = serverToUse,
                             contentResolver = contentResolver,
                             onSuccess = { imageUrl, mimeType ->
-                                createNIP94Record(imageUrl, mimeType, description, sensitiveContent)
+                                createNIP94Record(imageUrl, mimeType, description, sensitiveContent, relayList = relayList)
                             },
                             onError = {
                                 isUploadingImage = false
@@ -138,7 +139,7 @@ open class NewMediaModel : ViewModel() {
         return !isUploadingImage && galleryUri != null && selectedServer != null
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         uploadingPercentage.value = 0.40f
         viewModelScope.launch(Dispatchers.IO) {
             uploadingDescription.value = "Server Processing"
@@ -162,7 +163,7 @@ open class NewMediaModel : ViewModel() {
                     onReady = {
                         uploadingPercentage.value = 0.90f
                         uploadingDescription.value = "Sending"
-                        account?.sendHeader(it)
+                        account?.sendHeader(it, relayList)
                         uploadingPercentage.value = 1.00f
                         isUploadingImage = false
                         onceUploaded()
@@ -191,7 +192,7 @@ open class NewMediaModel : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         uploadingPercentage.value = 0.30f
         uploadingDescription.value = "Hashing"
 
@@ -210,7 +211,7 @@ open class NewMediaModel : ViewModel() {
                     if (nip95 != null) {
                         uploadingDescription.value = "Sending"
                         uploadingPercentage.value = 0.60f
-                        account?.sendNip95(nip95.first, nip95.second)
+                        account?.sendNip95(nip95.first, nip95.second, relayList)
                     }
 
                     uploadingPercentage.value = 1.00f
