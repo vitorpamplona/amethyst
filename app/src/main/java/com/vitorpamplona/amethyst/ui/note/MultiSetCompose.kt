@@ -234,7 +234,7 @@ fun RenderLikeGallery(
                     )
                 } else {
                     when (val shortReaction = reactionType) {
-                        "+" -> LikedIcon(Size18dp)
+                        "+" -> LikedIcon(modifier.size(Size18dp))
                         "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
                         else -> Text(text = shortReaction, modifier = modifier)
                     }
