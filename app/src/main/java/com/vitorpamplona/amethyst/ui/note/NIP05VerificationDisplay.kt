@@ -6,13 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Downloading
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -23,21 +19,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.Nip05Verifier
-import com.vitorpamplona.amethyst.ui.theme.Nip05
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
+import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
+import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
+import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -152,52 +149,31 @@ private fun DisplayNIP05(
     if (user != "_") {
         Text(
             text = remember(nip05) { AnnotatedString(user) },
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colors.nip05,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
 
-    NIP05VerifiedSymbol(nip05Verified)
+    NIP05VerifiedSymbol(nip05Verified, NIP05IconSize)
 
     ClickableText(
         text = remember(nip05) { AnnotatedString(domain) },
         onClick = { runCatching { uri.openUri("https://$domain") } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary.copy(0.52f)),
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05),
         maxLines = 1,
         overflow = TextOverflow.Visible
     )
 }
 
 @Composable
-private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>) {
-    if (nip05Verified.value == null) {
-        Icon(
-            tint = Color.Yellow,
-            imageVector = Icons.Default.Downloading,
-            contentDescription = "Downloading",
-            modifier = Modifier
-                .size(14.dp)
-                .padding(top = 1.dp)
-        )
-    } else if (nip05Verified.value == true) {
-        Icon(
-            painter = painterResource(R.drawable.ic_verified_transparent),
-            "Nostr Address Verified",
-            tint = Nip05.copy(0.52f),
-            modifier = Modifier
-                .size(14.dp)
-                .padding(top = 1.dp)
-        )
-    } else {
-        Icon(
-            tint = Color.Red,
-            imageVector = Icons.Default.Report,
-            contentDescription = "Invalid Nostr Address",
-            modifier = Modifier
-                .size(14.dp)
-                .padding(top = 1.dp)
-        )
+private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>, modifier: Modifier) {
+    Crossfade(targetState = nip05Verified.value) {
+        when (it) {
+            null -> NIP05CheckingIcon(modifier = modifier)
+            true -> NIP05VerifiedIcon(modifier = modifier)
+            false -> NIP05FailedVerification(modifier = modifier)
+        }
     }
 }
 
@@ -207,31 +183,9 @@ fun DisplayNip05ProfileStatus(user: User) {
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size <= 2) {
-            val nip05Verified by nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+            val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (nip05Verified == null) {
-                    Icon(
-                        tint = Color.Yellow,
-                        imageVector = Icons.Default.Downloading,
-                        contentDescription = "Downloading",
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else if (nip05Verified == true) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_verified_transparent),
-                        "NIP-05 Verified",
-                        tint = Nip05,
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else {
-                    Icon(
-                        tint = Color.Red,
-                        imageVector = Icons.Default.Report,
-                        contentDescription = "Invalid Nip05",
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
+                NIP05VerifiedSymbol(nip05Verified, Size16Modifier)
                 var domainPadStart = 5.dp
 
                 val (user, domain) = remember(nip05) {
@@ -246,6 +200,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 if (user != "_") {
                     Text(
                         text = remember { AnnotatedString(user + "@") },
+                        color = MaterialTheme.colors.nip05,
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -256,7 +211,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 ClickableText(
                     text = AnnotatedString(domain),
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05),
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

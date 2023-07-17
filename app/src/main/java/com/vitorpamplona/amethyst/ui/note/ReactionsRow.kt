@@ -38,12 +38,6 @@ import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -112,7 +105,6 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
-import com.vitorpamplona.amethyst.ui.theme.subtleButton
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
@@ -405,19 +397,9 @@ private fun RenderShowIndividualReactionsButton(wantsToSeeReactions: MutableStat
     ) {
         Crossfade(targetState = wantsToSeeReactions.value) {
             if (it) {
-                Icon(
-                    imageVector = Icons.Default.ExpandLess,
-                    null,
-                    modifier = Size22Modifier,
-                    tint = MaterialTheme.colors.subtleButton
-                )
+                ExpandLessIcon(modifier = Size22Modifier)
             } else {
-                Icon(
-                    imageVector = Icons.Default.ExpandMore,
-                    null,
-                    modifier = Size22Modifier,
-                    tint = MaterialTheme.colors.subtleButton
-                )
+                ExpandMoreIcon(modifier = Size22Modifier)
             }
         }
     }
@@ -558,12 +540,7 @@ fun ReplyReaction(
             }
         }
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_comment),
-            contentDescription = null,
-            modifier = remember { Modifier.size(iconSize) },
-            tint = grayTint
-        )
+        CommentIcon(iconSize, grayTint)
     }
 
     if (showCounter) {
@@ -704,12 +681,7 @@ fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountV
         Modifier.size(iconSize)
     }
 
-    Icon(
-        painter = painterResource(R.drawable.ic_retweeted),
-        null,
-        modifier = iconModifier,
-        tint = iconTint
-    )
+    RepostedIcon(iconModifier, iconTint)
 }
 
 @Composable
@@ -819,7 +791,7 @@ fun LikeIcon(
         if (value != null) {
             RenderReactionType(value, iconSize, iconFontSize)
         } else {
-            RenderLikeIcon(iconSize, grayTint)
+            LikeIcon(iconSize, grayTint)
         }
     }
 }
@@ -837,32 +809,11 @@ private fun WatchReactionTypeForNote(baseNote: Note, accountViewModel: AccountVi
 }
 
 @Composable
-private fun RenderLikeIcon(
-    iconSize: Dp = Size20dp,
-    grayTint: Color
-) {
-    val iconModifier = remember {
-        Modifier.size(iconSize)
-    }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_like),
-        null,
-        modifier = iconModifier,
-        tint = grayTint
-    )
-}
-
-@Composable
 private fun RenderReactionType(
     reactionType: String,
     iconSize: Dp = Size20dp,
     iconFontSize: TextUnit
 ) {
-    val iconModifier = remember {
-        Modifier.size(iconSize)
-    }
-
     if (reactionType.startsWith(":")) {
         val noStartColon = reactionType.removePrefix(":")
         val url = noStartColon.substringAfter(":")
@@ -879,15 +830,7 @@ private fun RenderReactionType(
         )
     } else {
         when (reactionType) {
-            "+" -> {
-                Icon(
-                    painter = painterResource(R.drawable.ic_liked),
-                    null,
-                    modifier = iconModifier,
-                    tint = Color.Unspecified
-                )
-            }
-
+            "+" -> LikedIcon(iconSize)
             "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
             else -> Text(text = reactionType, fontSize = iconFontSize)
         }
@@ -1151,19 +1094,9 @@ private fun ZapIcon(
 
     Crossfade(targetState = wasZappedByLoggedInUser) {
         if (it.value) {
-            Icon(
-                imageVector = Icons.Default.Bolt,
-                contentDescription = stringResource(R.string.zaps),
-                modifier = remember { Modifier.size(iconSize) },
-                tint = BitcoinOrange
-            )
+            ZappedIcon(iconSize)
         } else {
-            Icon(
-                imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = remember { Modifier.size(iconSize) },
-                tint = grayTint
-            )
+            ZapIcon(iconSize, grayTint)
         }
     }
 }
@@ -1219,25 +1152,8 @@ fun ViewCountReaction(
     numberSize: Dp = Size24dp,
     viewCountColorFilter: ColorFilter
 ) {
-    DrawViewCountIcon(barChartSize, grayTint)
+    ViewCountIcon(barChartSize, grayTint)
     DrawViewCount(note, numberSize, viewCountColorFilter)
-}
-
-@Composable
-private fun DrawViewCountIcon(
-    barChartSize: Dp = Size19dp,
-    grayTint: Color
-) {
-    val iconButtonModifier = remember {
-        Modifier.size(barChartSize)
-    }
-
-    Icon(
-        imageVector = Icons.Outlined.BarChart,
-        null,
-        modifier = iconButtonModifier,
-        tint = grayTint
-    )
 }
 
 @Composable

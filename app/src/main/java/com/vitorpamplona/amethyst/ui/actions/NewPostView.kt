@@ -21,7 +21,6 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
@@ -73,7 +72,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.*
+import com.vitorpamplona.amethyst.ui.note.CancelIcon
+import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.PollIcon
+import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
@@ -517,19 +520,9 @@ private fun AddPollButton(
         }
     ) {
         if (!isPollActive) {
-            Icon(
-                painter = painterResource(R.drawable.ic_poll),
-                null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onBackground
-            )
+            PollIcon()
         } else {
-            Icon(
-                painter = painterResource(R.drawable.ic_lists),
-                null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onBackground
-            )
+            RegularPostIcon()
         }
     }
 }
@@ -763,12 +756,7 @@ fun CloseButton(onCancel: () -> Unit) {
                 backgroundColor = Color.Gray
             )
     ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_close),
-            contentDescription = stringResource(id = R.string.cancel),
-            modifier = Modifier.size(20.dp),
-            tint = Color.White
-        )
+        CloseIcon()
     }
 }
 
@@ -827,30 +815,6 @@ fun CreateButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
             )
     ) {
         Text(text = stringResource(R.string.create), color = Color.White)
-    }
-}
-
-@Composable
-fun SearchButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = Modifier) {
-    Button(
-        modifier = modifier,
-        onClick = {
-            if (isActive) {
-                onPost()
-            }
-        },
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_search),
-            null,
-            modifier = Modifier.size(26.dp),
-            tint = Color.White
-        )
     }
 }
 
@@ -948,17 +912,10 @@ fun ImageVideoDescription(
                 )
 
                 IconButton(
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.size(30.dp).padding(end = 5.dp),
                     onClick = onCancel
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Cancel,
-                        null,
-                        modifier = Modifier
-                            .padding(end = 5.dp)
-                            .size(30.dp),
-                        tint = MaterialTheme.colors.placeholderText
-                    )
+                    CancelIcon()
                 }
             }
 

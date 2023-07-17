@@ -11,12 +11,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
 
 @Composable
 fun SelectTextDialog(text: String, onDismiss: () -> Unit) {
@@ -41,7 +39,7 @@ fun SelectTextDialog(text: String, onDismiss: () -> Unit) {
     ) {
         Card {
             Column(
-                modifier = Modifier.heightIn(24.dp, maxHeight)
+                modifier = Modifier.heightIn(Size24dp, maxHeight)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -50,11 +48,7 @@ fun SelectTextDialog(text: String, onDismiss: () -> Unit) {
                     IconButton(
                         onClick = onDismiss
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = null,
-                            tint = MaterialTheme.colors.primary
-                        )
+                        ArrowBackIcon(Size24dp)
                     }
                     Text(text = stringResource(R.string.select_text_dialog_top))
                 }
