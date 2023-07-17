@@ -300,7 +300,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         url,
                                         account.defaultFileServer,
                                         onAdd = { description, server, sensitiveContent ->
-                                            postViewModel.upload(url, description, sensitiveContent, server, context)
+                                            postViewModel.upload(url, description, sensitiveContent, server, context, relayList)
                                             account.changeDefaultFileServer(server)
                                         },
                                         onCancel = {

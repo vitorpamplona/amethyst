@@ -194,7 +194,7 @@ open class NewPostViewModel() : ViewModel() {
         cancel()
     }
 
-    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context) {
+    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
         isUploadingImage = true
         contentToAddUrl = null
 
@@ -209,7 +209,7 @@ open class NewPostViewModel() : ViewModel() {
                 onReady = { fileUri, contentType, size ->
                     if (server == ServersAvailable.NIP95) {
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent)
+                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent, relayList = relayList)
                         }
                     } else {
                         ImageUploader.uploadImage(
@@ -385,7 +385,7 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
             FileHeader.prepare(
@@ -394,7 +394,7 @@ open class NewPostViewModel() : ViewModel() {
                 description,
                 sensitiveContent,
                 onReady = {
-                    val note = account?.sendHeader(it)
+                    val note = account?.sendHeader(it, relayList = relayList)
 
                     isUploadingImage = false
 
@@ -416,7 +416,7 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
@@ -426,7 +426,7 @@ open class NewPostViewModel() : ViewModel() {
                 sensitiveContent,
                 onReady = {
                     val nip95 = account?.createNip95(bytes, headerInfo = it)
-                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second) }
+                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second, relayList = relayList) }
 
                     isUploadingImage = false
 
