@@ -1,7 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,8 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 
 data class RelayList(
@@ -35,15 +37,22 @@ data class RelayList(
     val isSelected: Boolean
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun RelaySelectionDialog(list: List<Relay>, onClose: () -> Unit, onPost: (list: List<Relay>) -> Unit, account: Account) {
+fun RelaySelectionDialog(
+    list: List<Relay>,
+    onClose: () -> Unit,
+    onPost: (list: List<Relay>) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val relayList = account.activeRelays()?.filter {
+    val relayList = accountViewModel.account.activeRelays()?.filter {
         it.write
     }?.map {
         it
-    } ?: account.convertLocalRelays().filter {
+    } ?: accountViewModel.account.convertLocalRelays().filter {
         it.write
     }
 
@@ -55,6 +64,18 @@ fun RelaySelectionDialog(list: List<Relay>, onClose: () -> Unit, onPost: (list: 
                     list.any { relay -> it.url == relay.url }
                 )
             }
+        )
+    }
+    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
+
+    if (relayInfo != null) {
+        RelayInformationDialog(
+            onClose = {
+                relayInfo = null
+            },
+            relayInfo = relayInfo!!,
+            accountViewModel,
+            nav
         )
     }
 
@@ -95,8 +116,8 @@ fun RelaySelectionDialog(list: List<Relay>, onClose: () -> Unit, onPost: (list: 
                             if (selectedRelays.isEmpty()) {
                                 scope.launch {
                                     Toast.makeText(context, "Select a relay to continue", Toast.LENGTH_SHORT).show()
-                                    return@launch
                                 }
+                                return@PostButton
                             }
                             onPost(selectedRelays.map { it.relay })
                             onClose()
@@ -120,17 +141,29 @@ fun RelaySelectionDialog(list: List<Relay>, onClose: () -> Unit, onPost: (list: 
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    relays = relays.mapIndexed { j, item ->
-                                        if (index == j) {
-                                            item.copy(isSelected = !item.isSelected)
-                                        } else {
-                                            item
+                                .combinedClickable(
+                                    onClick = {
+                                        relays = relays.mapIndexed { j, item ->
+                                            if (index == j) {
+                                                item.copy(isSelected = !item.isSelected)
+                                            } else {
+                                                item
+                                            }
+                                        }
+                                    },
+                                    onLongClick = {
+                                        loadRelayInfo(item.relay.url, context, scope) {
+                                            relayInfo = it
                                         }
                                     }
-                                }
+                                )
                         ) {
-                            Text(text = item.relay.url)
+                            Text(
+                                item.relay.url
+                                    .removePrefix("ws://")
+                                    .removePrefix("wss://")
+                                    .removeSuffix("/")
+                            )
                             Switch(
                                 checked = item.isSelected,
                                 onCheckedChange = {

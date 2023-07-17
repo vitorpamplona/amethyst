@@ -107,7 +107,8 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                     onPost = {
                         relayList = it
                     },
-                    account = account
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
 

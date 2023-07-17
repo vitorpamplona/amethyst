@@ -163,7 +163,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                     onPost = {
                         relayList = it
                     },
-                    account = account
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
 
