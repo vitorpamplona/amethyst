@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -72,7 +71,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
-import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -97,11 +95,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class RelayList(
-    val relay: Relay,
-    val isSelected: Boolean
-)
-
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -120,23 +113,12 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    val relayList = account.activeRelays()?.filter {
+    var relayList = account.activeRelays()?.filter {
         it.write
     }?.map {
         it
     } ?: account.convertLocalRelays().filter {
         it.write
-    }
-
-    var relays by remember {
-        mutableStateOf(
-            relayList.map {
-                RelayList(
-                    it,
-                    true
-                )
-            }
-        )
     }
 
     LaunchedEffect(Unit) {
@@ -173,87 +155,16 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                 .fillMaxHeight()
         ) {
             if (showRelaysDialog) {
-                Dialog(
-                    onDismissRequest = { showRelaysDialog = false },
-                    properties = DialogProperties(
-                        usePlatformDefaultWidth = false,
-                        dismissOnClickOutside = false,
-                        decorFitsSystemWindows = false
-                    )
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight()
-                                .padding(start = 10.dp, end = 10.dp, top = 10.dp)
-
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CloseButton(
-                                    onCancel = {
-                                        showRelaysDialog = false
-                                    }
-                                )
-
-                                PostButton(
-                                    onPost = {
-                                        scope.launch(Dispatchers.IO) {
-                                            showRelaysDialog = false
-                                        }
-                                    },
-                                    isActive = true
-                                )
-                            }
-
-                            LazyColumn(
-                                contentPadding = PaddingValues(
-                                    top = 10.dp,
-                                    bottom = 10.dp
-                                )
-                            ) {
-                                itemsIndexed(
-                                    relays,
-                                    key = { _, item -> item.relay.url }
-                                ) { index, item ->
-                                    Row(
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                relays = relays.mapIndexed { j, item ->
-                                                    if (index == j) {
-                                                        item.copy(isSelected = !item.isSelected)
-                                                    } else { item }
-                                                }
-                                            }
-                                    ) {
-                                        Text(text = item.relay.url)
-                                        Switch(
-                                            checked = item.isSelected,
-                                            onCheckedChange = {
-                                                relays = relays.mapIndexed { j, item ->
-                                                    if (index == j) {
-                                                        item.copy(isSelected = !item.isSelected)
-                                                    } else { item }
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                RelaySelectionDialog(
+                    list = relayList,
+                    onClose = {
+                        showRelaysDialog = false
+                    },
+                    onPost = {
+                        relayList = it
+                    },
+                    account = account
+                )
             }
 
             Column(
@@ -294,10 +205,8 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                         }
                         PostButton(
                             onPost = {
-                                val list = relays.filter { it.isSelected }.map { it.relay }
-
                                 scope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPost(relayList = list)
+                                    postViewModel.sendPost(relayList = relayList)
                                     onClose()
                                 }
                             },
