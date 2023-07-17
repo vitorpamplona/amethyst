@@ -12,6 +12,10 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
         return account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList
     }
 
+    override fun showHiddenKey(): Boolean {
+        return account.defaultStoriesFollowList == PeopleListEvent.blockList
+    }
+
     override fun feed(): List<Note> {
         val notes = innerApplyFilter(LocalCache.notes.values)
 
@@ -25,6 +29,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
         val isGlobal = account.defaultStoriesFollowList == GLOBAL_FOLLOWS
+        val isHiddenList = account.defaultStoriesFollowList == PeopleListEvent.blockList
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultStoriesFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultStoriesFollowList) ?: emptySet()
@@ -33,7 +38,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
             .asSequence()
             .filter { it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent }
             .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false) }
-            .filter { account.isAcceptable(it) }
+            .filter { isHiddenList || account.isAcceptable(it) }
             .filter { it.createdAt()!! <= now }
             .toSet()
     }

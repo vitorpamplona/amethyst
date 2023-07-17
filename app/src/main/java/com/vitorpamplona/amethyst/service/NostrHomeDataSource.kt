@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
+import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
 import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
 import com.vitorpamplona.amethyst.service.model.HighlightEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
@@ -103,11 +104,37 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         )
     }
 
+    fun createFollowCommunitiesFilter(): TypedFilter? {
+        val communitiesToLoad = account.selectedCommunitiesFollowList(account.defaultHomeFollowList) ?: emptySet()
+
+        if (communitiesToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter = JsonFilter(
+                kinds = listOf(
+                    TextNoteEvent.kind,
+                    LongTextNoteEvent.kind,
+                    ClassifiedsEvent.kind,
+                    HighlightEvent.kind,
+                    AudioTrackEvent.kind,
+                    PinListEvent.kind,
+                    CommunityPostApprovalEvent.kind
+                ),
+                tags = mapOf(
+                    "a" to communitiesToLoad.toList()
+                ),
+                limit = 100,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
+            )
+        )
+    }
+
     val followAccountChannel = requestNewChannel { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultHomeFollowList, relayUrl, time)
     }
 
     override fun updateChannelFilters() {
-        followAccountChannel.typedFilters = listOfNotNull(createFollowAccountsFilter(), createFollowTagsFilter()).ifEmpty { null }
+        followAccountChannel.typedFilters = listOfNotNull(createFollowAccountsFilter(), createFollowCommunitiesFilter(), createFollowTagsFilter()).ifEmpty { null }
     }
 }

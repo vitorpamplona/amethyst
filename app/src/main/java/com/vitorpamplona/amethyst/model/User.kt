@@ -31,10 +31,6 @@ class User(val pubkeyHex: String) {
 
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
-    var latestAcceptedBadges: AddressableNote? = null
-
-    var notes = setOf<Note>()
-        private set
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -106,21 +102,6 @@ class User(val pubkeyHex: String) {
         liveSet?.relays?.invalidateData()
     }
 
-    fun addNote(note: Note) {
-        if (note !in notes) {
-            notes = notes + note
-            // No need for Listener yet
-        }
-    }
-
-    fun removeNote(note: Note) {
-        notes = notes - note
-    }
-
-    fun clearNotes() {
-        notes = setOf<Note>()
-    }
-
     fun addReport(note: Note) {
         val author = note.author ?: return
 
@@ -141,13 +122,6 @@ class User(val pubkeyHex: String) {
                 reports = reports + Pair(author, it.minus(deleteNote))
                 liveSet?.reports?.invalidateData()
             }
-        }
-    }
-
-    fun updateAcceptedBadges(note: AddressableNote) {
-        if (latestAcceptedBadges?.idHex != note.idHex) {
-            latestAcceptedBadges = note
-            liveSet?.badges?.invalidateData()
         }
     }
 
@@ -301,6 +275,10 @@ class User(val pubkeyHex: String) {
         return latestContactList?.verifiedFollowTagSet ?: emptySet()
     }
 
+    fun cachedFollowingCommunitiesSet(): Set<HexKey> {
+        return latestContactList?.verifiedFollowCommunitySet ?: emptySet()
+    }
+
     fun cachedFollowCount(): Int? {
         return latestContactList?.verifiedFollowKeySet?.size
     }
@@ -351,7 +329,6 @@ class UserLiveSet(u: User) {
     val relayInfo: UserLiveData = UserLiveData(u)
     val metadata: UserLiveData = UserLiveData(u)
     val zaps: UserLiveData = UserLiveData(u)
-    val badges: UserLiveData = UserLiveData(u)
     val bookmarks: UserLiveData = UserLiveData(u)
 
     fun isInUse(): Boolean {
@@ -363,7 +340,6 @@ class UserLiveSet(u: User) {
             relayInfo.hasObservers() ||
             metadata.hasObservers() ||
             zaps.hasObservers() ||
-            badges.hasObservers() ||
             bookmarks.hasObservers()
     }
 }

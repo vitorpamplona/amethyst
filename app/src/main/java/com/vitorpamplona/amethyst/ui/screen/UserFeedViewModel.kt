@@ -13,6 +13,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.SpammerAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import kotlinx.collections.immutable.ImmutableList
@@ -45,6 +46,14 @@ class NostrHiddenAccountsFeedViewModel(val account: Account) : UserFeedViewModel
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenAccountsFeedViewModel>): NostrHiddenAccountsFeedViewModel {
             return NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
+        }
+    }
+}
+
+class NostrSpammerAccountsFeedViewModel(val account: Account) : UserFeedViewModel(SpammerAccountsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrSpammerAccountsFeedViewModel>): NostrSpammerAccountsFeedViewModel {
+            return NostrSpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
         }
     }
 }

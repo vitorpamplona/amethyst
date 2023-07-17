@@ -12,6 +12,10 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         return account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList
     }
 
+    override fun showHiddenKey(): Boolean {
+        return account.defaultNotificationFollowList == PeopleListEvent.blockList
+    }
+
     override fun feed(): List<Note> {
         return sort(innerApplyFilter(LocalCache.notes.values))
     }
@@ -22,6 +26,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val isGlobal = account.defaultNotificationFollowList == GLOBAL_FOLLOWS
+        val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultNotificationFollowList) ?: emptySet()
 
@@ -37,7 +42,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
                 it.author !== loggedInUser &&
                 (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
                 it.event?.isTaggedUser(loggedInUserHex) ?: false &&
-                (it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
+                (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
                 tagsAnEventByUser(it, loggedInUserHex)
         }.toSet()
     }

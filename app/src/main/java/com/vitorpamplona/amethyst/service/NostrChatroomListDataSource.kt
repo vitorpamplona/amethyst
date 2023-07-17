@@ -44,17 +44,23 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         )
     )
 
-    fun createMyChannelsFilter() = TypedFilter(
-        types = COMMON_FEED_TYPES, // Metadata comes from any relay
-        filter = JsonFilter(
-            kinds = listOf(ChannelCreateEvent.kind),
-            ids = account.followingChannels.toList(),
-            since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
-        )
-    )
+    fun createMyChannelsFilter(): TypedFilter {
+        val followingEvents = account.selectedChatsFollowList()
 
-    fun createLastChannelInfoFilter(): List<TypedFilter> {
-        return account.followingChannels.map {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES, // Metadata comes from any relay
+            filter = JsonFilter(
+                kinds = listOf(ChannelCreateEvent.kind),
+                ids = followingEvents.toList(),
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
+            )
+        )
+    }
+
+    fun createLastChannelInfoFilter(): List<TypedFilter>? {
+        val followingEvents = account.selectedChatsFollowList()
+
+        return followingEvents.map {
             TypedFilter(
                 types = COMMON_FEED_TYPES, // Metadata comes from any relay
                 filter = JsonFilter(
@@ -66,8 +72,10 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         }
     }
 
-    fun createLastMessageOfEachChannelFilter(): List<TypedFilter> {
-        return account.followingChannels.map {
+    fun createLastMessageOfEachChannelFilter(): List<TypedFilter>? {
+        val followingEvents = account.selectedChatsFollowList()
+
+        return followingEvents.map {
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter = JsonFilter(

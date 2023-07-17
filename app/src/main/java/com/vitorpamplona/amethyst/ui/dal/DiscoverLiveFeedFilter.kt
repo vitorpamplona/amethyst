@@ -16,6 +16,10 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList
     }
 
+    override fun showHiddenKey(): Boolean {
+        return account.defaultDiscoveryFollowList == PeopleListEvent.blockList
+    }
+
     override fun feed(): List<Note> {
         val allChannelNotes =
             LocalCache.channels.values.mapNotNull { LocalCache.getNoteIfExists(it.idHex) }
@@ -33,6 +37,7 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
+        val isHiddenList = showHiddenKey()
 
         val followingKeySet =
             account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
@@ -47,7 +52,7 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                     followingTagSet
                 ) == true
             }
-            .filter { it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
+            .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
             .filter { (it.createdAt() ?: 0) <= now }
             .toSet()
 

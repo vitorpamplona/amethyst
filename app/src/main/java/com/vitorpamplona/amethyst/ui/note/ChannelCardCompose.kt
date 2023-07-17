@@ -86,6 +86,8 @@ fun ChannelCardCompose(
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
+    forceEventKind: Int?,
+    showHidden: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -107,14 +109,17 @@ fun ChannelCardCompose(
                 )
             }
         } else {
-            CheckHiddenChannelCardCompose(
-                baseNote,
-                routeForLastRead,
-                modifier,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
-            )
+            if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
+                CheckHiddenChannelCardCompose(
+                    baseNote,
+                    routeForLastRead,
+                    modifier,
+                    parentBackgroundColor,
+                    showHidden,
+                    accountViewModel,
+                    nav
+                )
+            }
         }
     }
 }
@@ -125,23 +130,46 @@ fun CheckHiddenChannelCardCompose(
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
+    showHidden: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isHidden by accountViewModel.accountLiveData.map {
-        accountViewModel.isNoteHidden(note)
-    }.distinctUntilChanged().observeAsState(accountViewModel.isNoteHidden(note))
-
-    Crossfade(targetState = isHidden) {
-        if (!it) {
-            LoadedChannelCardCompose(
-                note,
-                routeForLastRead,
-                modifier,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
+    if (showHidden) {
+        var state by remember {
+            mutableStateOf(
+                NoteComposeReportState(
+                    isAcceptable = true,
+                    canPreview = true,
+                    relevantReports = persistentSetOf()
+                )
             )
+        }
+
+        RenderChannelCardReportState(
+            state = state,
+            note = note,
+            routeForLastRead = routeForLastRead,
+            modifier = modifier,
+            parentBackgroundColor = parentBackgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
+    } else {
+        val isHidden by accountViewModel.account.liveHiddenUsers.map {
+            note.isHiddenFor(it)
+        }.distinctUntilChanged().observeAsState(accountViewModel.isNoteHidden(note))
+
+        Crossfade(targetState = isHidden) {
+            if (!it) {
+                LoadedChannelCardCompose(
+                    note,
+                    routeForLastRead,
+                    modifier,
+                    parentBackgroundColor,
+                    accountViewModel,
+                    nav
+                )
+            }
         }
     }
 }
@@ -632,11 +660,11 @@ fun RenderChannelThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: 
 fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val channelUpdates by channel.live.observeAsState()
 
-    val name = remember(channelUpdates) { channel.toBestDisplayName() }
-    val description = remember(channelUpdates) { channel.summary() }
+    val name = remember(channelUpdates) { channelUpdates?.channel?.toBestDisplayName() ?: "" }
+    val description = remember(channelUpdates) { channelUpdates?.channel?.summary() }
     val cover by remember(channelUpdates) {
         derivedStateOf {
-            channel.profilePicture()?.ifBlank { null }
+            channelUpdates?.channel?.profilePicture()?.ifBlank { null }
         }
     }
 

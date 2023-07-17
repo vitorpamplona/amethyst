@@ -33,7 +33,7 @@ object LocalCache {
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
-        checkNotInMainThread()
+        // checkNotInMainThread()
 
         if (isValidHex(key)) {
             return getOrCreateUser(key)
@@ -143,7 +143,7 @@ object LocalCache {
     }
 
     fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
-        checkNotInMainThread()
+        // checkNotInMainThread()
 
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
@@ -173,6 +173,16 @@ object LocalCache {
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
+        }
+    }
+
+    fun consume(event: ContactListEvent) {
+        val user = getOrCreateUser(event.pubKey)
+
+        // avoids processing empty contact lists.
+        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
+            user.updateContactList(event)
+            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
         }
     }
 
@@ -238,9 +248,6 @@ object LocalCache {
 
         // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
 
-        // Prepares user's profile view.
-        author.addNote(note)
-
         // Counts the replies
         replyTo.forEach {
             it.addReply(note)
@@ -279,8 +286,6 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
 
-            author.addNote(note)
-
             refreshObservers(note)
         }
     }
@@ -309,9 +314,6 @@ object LocalCache {
         note.loadEvent(event, author, replyTo)
 
         // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Prepares user's profile view.
-        author.addNote(note)
 
         // Counts the replies
         replyTo.forEach {
@@ -518,7 +520,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
 
-            author.updateAcceptedBadges(note)
+            refreshObservers(note)
         }
     }
 
@@ -543,6 +545,26 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun comsume(event: NNSEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     fun consume(event: AppDefinitionEvent) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -554,7 +576,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event?.id() == event.id()) return
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
@@ -586,16 +608,6 @@ object LocalCache {
     @Suppress("UNUSED_PARAMETER")
     fun consume(event: RecommendRelayEvent) {
 //        // Log.d("RR", event.toJson())
-    }
-
-    fun consume(event: ContactListEvent) {
-        val user = getOrCreateUser(event.pubKey)
-
-        // avoids processing empty contact lists.
-        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
-            user.updateContactList(event)
-            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
-        }
     }
 
     fun consume(event: PrivateDmEvent, relay: Relay?): Note {
@@ -634,8 +646,6 @@ object LocalCache {
         event.deleteEvents().mapNotNull { notes[it] }.forEach { deleteNote ->
             // must be the same author
             if (deleteNote.author?.pubkeyHex == event.pubKey) {
-                deleteNote.author?.removeNote(deleteNote)
-
                 // reverts the add
                 val mentions = deleteNote.event?.tags()?.filter { it.firstOrNull() == "p" }
                     ?.mapNotNull { it.getOrNull(1) }?.mapNotNull { checkGetOrCreateUser(it) }
@@ -697,9 +707,6 @@ object LocalCache {
 
         note.loadEvent(event, author, repliesTo)
 
-        // Prepares user's profile view.
-        author.addNote(note)
-
         // Counts the replies
         repliesTo.forEach {
             it.addBoost(note)
@@ -721,9 +728,6 @@ object LocalCache {
             event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, repliesTo)
-
-        // Prepares user's profile view.
-        author.addNote(note)
 
         // Counts the replies
         repliesTo.forEach {
@@ -749,9 +753,6 @@ object LocalCache {
         val repliesTo = communities.map { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, eventsApproved)
-
-        // Prepares user's profile view.
-        author.addNote(note)
 
         // Counts the replies
         repliesTo.forEach {
@@ -1072,9 +1073,6 @@ object LocalCache {
 
         note.loadEvent(event, author, emptyList())
 
-        // Adds to user profile
-        author.addNote(note)
-
         refreshObservers(note)
     }
 
@@ -1245,24 +1243,26 @@ object LocalCache {
                 }
             }
 
-            println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
+            if (toBeRemoved.size > 100 || it.value.notes.size > 100) {
+                println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
+            }
         }
     }
 
     fun pruneHiddenMessages(account: Account) {
         checkNotInMainThread()
 
-        val toBeRemoved = account.hiddenUsers.map {
-            (users[it]?.notes ?: emptySet())
+        val toBeRemoved = account.hiddenUsers.map { userHex ->
+            (
+                notes.values.filter {
+                    it.event?.pubKey() == userHex
+                } + addressables.values.filter {
+                    it.event?.pubKey() == userHex
+                }
+                ).toSet()
         }.flatten()
 
-        account.hiddenUsers.forEach {
-            users[it]?.clearNotes()
-        }
-
         toBeRemoved.forEach {
-            it.author?.removeNote(it)
-
             // Counts the replies
             it.replyTo?.forEach { masterNote ->
                 masterNote.removeReply(it)
@@ -1357,6 +1357,7 @@ object LocalCache {
                 is LnZapPaymentResponseEvent -> consume(event)
                 is LongTextNoteEvent -> consume(event, relay)
                 is MetadataEvent -> consume(event)
+                is NNSEvent -> comsume(event)
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event)
                 is PeopleListEvent -> consume(event)

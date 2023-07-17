@@ -3,12 +3,15 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
 import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     lateinit var account: Account
+
+    val latestEOSEs = EOSEAccount()
 
     fun createContextualFilter(): TypedFilter? {
         val follows = account.selectedUsersFollowList(account.defaultStoriesFollowList)
@@ -22,7 +25,8 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
             filter = JsonFilter(
                 authors = followKeys,
                 kinds = listOf(FileHeaderEvent.kind, FileStorageHeaderEvent.kind),
-                limit = 200
+                limit = 200,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultStoriesFollowList)?.relayList
             )
         )
     }
@@ -41,12 +45,15 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
                     }.flatten()
                 ),
-                limit = 100
+                limit = 100,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultStoriesFollowList)?.relayList
             )
         )
     }
 
-    val videoFeedChannel = requestNewChannel()
+    val videoFeedChannel = requestNewChannel() { time, relayUrl ->
+        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultStoriesFollowList, relayUrl, time)
+    }
 
     override fun updateChannelFilters() {
         videoFeedChannel.typedFilters = listOfNotNull(createContextualFilter(), createFollowTagsFilter()).ifEmpty { null }

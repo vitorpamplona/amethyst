@@ -24,6 +24,7 @@ abstract class FeedFilter<T> {
      * Returns a string that serves as the key to invalidate the list if it changes.
      */
     abstract fun feedKey(): String
+    open fun showHiddenKey(): Boolean = false
 
     abstract fun feed(): List<T>
 }

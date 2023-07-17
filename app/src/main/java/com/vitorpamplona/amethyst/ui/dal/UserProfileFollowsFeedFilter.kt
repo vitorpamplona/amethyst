@@ -8,7 +8,7 @@ import com.vitorpamplona.amethyst.service.model.ContactListEvent
 class UserProfileFollowsFeedFilter(val user: User, val account: Account) : FeedFilter<User>() {
 
     override fun feedKey(): String {
-        return account.userProfile()?.pubkeyHex + "-" + user.pubkeyHex
+        return account.userProfile().pubkeyHex + "-" + user.pubkeyHex
     }
 
     val cache: MutableMap<ContactListEvent, List<User>> = mutableMapOf()

@@ -14,8 +14,6 @@ interface LnZapEventInterface : EventInterface {
 
     fun zappedRequestAuthor(): String?
 
-    fun taggedAddresses(): List<ATag>
-
     fun amount(): BigDecimal?
 
     fun containedPost(): Event?

@@ -164,7 +164,7 @@
     <string name="translations_show_in_lang_first">ابتدا به  نشان بده %1$s</string>
     <string name="translations_always_translate_to_lang">همیشه به  ترجمه کن %1$s</string>
     <string name="translations_never_translate_from_lang">هرگز به  ترجمه نکن %1$s</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="nip_05">Nostr Address</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">هرگز</string>
     <string name="now">اکنون</string>

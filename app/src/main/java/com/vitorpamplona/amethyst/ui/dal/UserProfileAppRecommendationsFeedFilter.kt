@@ -5,21 +5,37 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.AppRecommendationEvent
 
-class UserProfileAppRecommendationsFeedFilter(val user: User) : FeedFilter<Note>() {
+class UserProfileAppRecommendationsFeedFilter(val user: User) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
         return user.pubkeyHex
     }
 
     override fun feed(): List<Note> {
-        val recommendations = LocalCache.addressables.values.filter {
-            (it.event as? AppRecommendationEvent)?.pubKey == user.pubkeyHex
-        }.mapNotNull {
-            (it.event as? AppRecommendationEvent)?.recommendations()
-        }.flatten()
-            .map {
+        return sort(innerApplyFilter(LocalCache.addressables.values))
+    }
+
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
+        return innerApplyFilter(collection)
+    }
+
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val recommendations = collection.asSequence()
+            .filter { it.event is AppRecommendationEvent }
+            .mapNotNull {
+                val noteEvent = it.event as? AppRecommendationEvent
+                if (noteEvent != null && noteEvent.pubKey == user.pubkeyHex) {
+                    noteEvent.recommendations()
+                } else {
+                    null
+                }
+            }.flatten().map {
                 LocalCache.getOrCreateAddressableNote(it)
-            }.toSet().toList()
+            }.toSet()
 
         return recommendations
+    }
+
+    override fun sort(collection: Set<Note>): List<Note> {
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
     }
 }

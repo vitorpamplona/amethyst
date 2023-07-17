@@ -8,7 +8,7 @@ buildscript {
         accompanist_version = '0.30.0'
         coil_version = '2.4.0'
         vico_version = '1.7.1'
-        exoplayer_version = '2.19.0'
+        exoplayer_version = '1.1.0'
         room_version = '2.5.2'
     }
     dependencies {

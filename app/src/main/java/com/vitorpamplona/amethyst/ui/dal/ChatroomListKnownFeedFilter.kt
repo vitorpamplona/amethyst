@@ -32,7 +32,9 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                 ?.lastOrNull { it.event != null }
         }
 
-        val publicChannels = account.followingChannels().map { it ->
+        val publicChannels = account.selectedChatsFollowList().mapNotNull {
+            LocalCache.getChannelIfExists(it)
+        }.mapNotNull { it ->
             it.notes.values
                 .filter { account.isAcceptable(it) && it.event != null }
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
@@ -40,7 +42,6 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         }
 
         return (privateMessages + publicChannels)
-            .filterNotNull()
             .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
@@ -106,7 +107,7 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     private fun filterRelevantPublicMessages(newItems: Set<Note>, account: Account): MutableMap<String, Note> {
-        val followingChannels = account.followingChannels
+        val followingChannels = account.userProfile().latestContactList?.taggedEvents()?.toSet() ?: emptySet()
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems.filter { it.event is ChannelMessageEvent }.forEach { newNote ->
             newNote.channelHex()?.let { channelHex ->

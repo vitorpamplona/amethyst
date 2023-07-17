@@ -80,6 +80,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -863,13 +864,6 @@ private fun ShortChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
-        derivedStateOf {
-            accountState?.account?.followingChannels?.contains(channel.idHex) ?: false
-        }
-    }
-
     LoadNote(baseNoteHex = channel.idHex) {
         it?.let {
             var popupExpanded by remember { mutableStateOf(false) }
@@ -882,9 +876,26 @@ private fun ShortChannelActionOptions(
         }
     }
 
-    if (!isFollowing) {
-        JoinChatButton(accountViewModel, channel, nav)
+    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
+        if (!isFollowing) {
+            JoinChatButton(accountViewModel, channel, nav)
+        }
     }
+}
+
+@Composable
+private fun WatchChannelFollows(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    content: @Composable (Boolean) -> Unit
+) {
+    val isFollowing by accountViewModel.userProfile().live().follows.map {
+        it.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false
+    }.distinctUntilChanged().observeAsState(
+        accountViewModel.userProfile().latestContactList?.isTaggedEvent(channel.idHex) ?: false
+    )
+
+    content(isFollowing)
 }
 
 @Composable
@@ -899,19 +910,14 @@ private fun LongChannelActionOptions(
         }
     }
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
-        derivedStateOf {
-            accountState?.account?.followingChannels?.contains(channel.idHex) ?: false
-        }
-    }
-
     if (isMe) {
         EditButton(accountViewModel, channel)
     }
 
-    if (isFollowing) {
-        LeaveChatButton(accountViewModel, channel, nav)
+    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
+        if (isFollowing) {
+            LeaveChatButton(accountViewModel, channel, nav)
+        }
     }
 }
 
@@ -1074,10 +1080,14 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatCh
 
 @Composable
 fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            accountViewModel.account.joinChannel(channel.idHex)
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.account.follow(channel)
+            }
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
@@ -1092,10 +1102,14 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
 
 @Composable
 fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            accountViewModel.account.leaveChannel(channel.idHex)
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.account.unfollow(channel)
+            }
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
@@ -1109,11 +1123,15 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
 }
 
 @Composable
-fun JoinCommunityButton(accountViewModel: AccountViewModel, note: Note, nav: (String) -> Unit) {
+fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNote, nav: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            accountViewModel.account.joinCommunity(note.idHex)
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.account.follow(note)
+            }
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
@@ -1127,11 +1145,15 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: Note, nav: (St
 }
 
 @Composable
-fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: Note, nav: (String) -> Unit) {
+fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNote, nav: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            accountViewModel.account.leaveCommunity((note.idHex))
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.account.unfollow(note)
+            }
         },
         shape = ButtonBorder,
         colors = ButtonDefaults

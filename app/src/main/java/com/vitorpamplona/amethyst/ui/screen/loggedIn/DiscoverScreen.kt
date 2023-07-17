@@ -35,6 +35,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
+import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
@@ -92,9 +95,9 @@ fun DiscoverScreen(
     val tabs by remember(discoveryLiveFeedViewModel, discoveryCommunityFeedViewModel, discoveryChatFeedViewModel) {
         mutableStateOf(
             listOf(
-                TabItem(R.string.discover_live, discoveryLiveFeedViewModel, Route.Discover.base + "Live", ScrollStateKeys.DISCOVER_LIVE),
-                TabItem(R.string.discover_community, discoveryCommunityFeedViewModel, Route.Discover.base + "Community", ScrollStateKeys.DISCOVER_COMMUNITY),
-                TabItem(R.string.discover_chat, discoveryChatFeedViewModel, Route.Discover.base + "Chats", ScrollStateKeys.DISCOVER_CHATS)
+                TabItem(R.string.discover_live, discoveryLiveFeedViewModel, Route.Discover.base + "Live", ScrollStateKeys.DISCOVER_LIVE, LiveActivitiesEvent.kind),
+                TabItem(R.string.discover_community, discoveryCommunityFeedViewModel, Route.Discover.base + "Community", ScrollStateKeys.DISCOVER_COMMUNITY, CommunityDefinitionEvent.kind),
+                TabItem(R.string.discover_chat, discoveryChatFeedViewModel, Route.Discover.base + "Chats", ScrollStateKeys.DISCOVER_CHATS, ChannelCreateEvent.kind)
             ).toImmutableList()
         )
     }
@@ -139,7 +142,14 @@ private fun DiscoverPages(
     HorizontalPager(pageCount = 3, state = pagerState) { page ->
         RefresheableView(tabs[page].viewModel, true) {
             SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
-                RenderDiscoverFeed(tabs[page].viewModel, tabs[page].routeForLastRead, accountViewModel, listState, nav)
+                RenderDiscoverFeed(
+                    viewModel = tabs[page].viewModel,
+                    routeForLastRead = tabs[page].routeForLastRead,
+                    forceEventKind = tabs[page].forceEventKind,
+                    listState = listState,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
             }
         }
     }
@@ -149,8 +159,9 @@ private fun DiscoverPages(
 private fun RenderDiscoverFeed(
     viewModel: FeedViewModel,
     routeForLastRead: String?,
-    accountViewModel: AccountViewModel,
+    forceEventKind: Int?,
     listState: LazyListState,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val feedState by viewModel.feedContent.collectAsState()
@@ -177,6 +188,7 @@ private fun RenderDiscoverFeed(
                     state,
                     routeForLastRead,
                     listState,
+                    forceEventKind,
                     accountViewModel,
                     nav
                 )
@@ -212,6 +224,7 @@ private fun DiscoverFeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     listState: LazyListState,
+    forceEventKind: Int?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -232,6 +245,7 @@ private fun DiscoverFeedLoaded(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
                     modifier = Modifier,
+                    forceEventKind = forceEventKind,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

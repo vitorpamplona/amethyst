@@ -9,8 +9,28 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
         return account.userProfile().pubkeyHex
     }
 
+    override fun showHiddenKey(): Boolean {
+        return true
+    }
+
     override fun feed(): List<User> {
-        return (account.hiddenUsers + account.transientHiddenUsers)
-            .map { LocalCache.getOrCreateUser(it) }
+        return account.getBlockList()
+            ?.publicAndPrivateUsers(account.loggedIn.privKey)
+            ?.map { LocalCache.getOrCreateUser(it) }
+            ?: emptyList()
+    }
+}
+
+class SpammerAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex
+    }
+
+    override fun showHiddenKey(): Boolean {
+        return true
+    }
+
+    override fun feed(): List<User> {
+        return (account.transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
     }
 }

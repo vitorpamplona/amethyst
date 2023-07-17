@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,9 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
@@ -35,7 +32,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { messageSetCard.note }
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
@@ -94,7 +91,21 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
     Column(columnModifier) {
         Row(Modifier.fillMaxWidth()) {
-            MessageIcon()
+            Box(
+                modifier = remember {
+                    Modifier
+                        .width(55.dp)
+                        .padding(top = 5.dp, end = 5.dp)
+                }
+            ) {
+                MessageIcon(
+                    remember {
+                        Modifier
+                            .size(16.dp)
+                            .align(Alignment.TopEnd)
+                    }
+                )
+            }
 
             Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
                 NoteCompose(
@@ -102,6 +113,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     routeForLastRead = null,
                     isBoostedNote = true,
                     addMarginTop = false,
+                    showHidden = showHidden,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav
@@ -110,27 +122,5 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                 NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
             }
         }
-    }
-}
-
-@Composable
-private fun MessageIcon() {
-    Box(
-        modifier = remember {
-            Modifier
-                .width(55.dp)
-                .padding(top = 5.dp, end = 5.dp)
-        }
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_dm),
-            null,
-            modifier = remember {
-                Modifier
-                    .size(16.dp)
-                    .align(Alignment.TopEnd)
-            },
-            tint = MaterialTheme.colors.primary
-        )
     }
 }

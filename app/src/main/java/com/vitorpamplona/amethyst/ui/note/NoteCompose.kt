@@ -29,17 +29,11 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.darkColors
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -153,7 +147,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -164,6 +157,8 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -214,6 +209,7 @@ fun NoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
+    showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -237,17 +233,18 @@ fun NoteCompose(
             }
         } else {
             CheckHiddenNoteCompose(
-                baseNote,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
+                note = baseNote,
+                routeForLastRead = routeForLastRead,
+                modifier = modifier,
+                isBoostedNote = isBoostedNote,
+                isQuotedNote = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                addMarginTop = addMarginTop,
+                showHidden = showHidden,
+                parentBackgroundColor = parentBackgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
     }
@@ -263,29 +260,58 @@ fun CheckHiddenNoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
+    showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isHidden by accountViewModel.accountLiveData.map {
-        accountViewModel.isNoteHidden(note)
-    }.distinctUntilChanged().observeAsState(accountViewModel.isNoteHidden(note))
-
-    Crossfade(targetState = isHidden) {
-        if (!it) {
-            LoadedNoteCompose(
-                note,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
+    if (showHidden) {
+        // Ignores reports as well
+        val state by remember {
+            mutableStateOf(
+                NoteComposeReportState(
+                    isAcceptable = true,
+                    canPreview = true,
+                    relevantReports = persistentSetOf()
+                )
             )
+        }
+
+        RenderReportState(
+            state = state,
+            note = note,
+            routeForLastRead = routeForLastRead,
+            modifier = modifier,
+            isBoostedNote = isBoostedNote,
+            isQuotedNote = isQuotedNote,
+            unPackReply = unPackReply,
+            makeItShort = makeItShort,
+            addMarginTop = addMarginTop,
+            parentBackgroundColor = parentBackgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
+    } else {
+        val isHidden by accountViewModel.account.liveHiddenUsers.map {
+            note.isHiddenFor(it)
+        }.observeAsState(accountViewModel.isNoteHidden(note))
+
+        Crossfade(targetState = isHidden) {
+            if (!it) {
+                LoadedNoteCompose(
+                    note = note,
+                    routeForLastRead = routeForLastRead,
+                    modifier = modifier,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    addMarginTop = addMarginTop,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
         }
     }
 }
@@ -438,13 +464,15 @@ fun NormalNote(
             accountViewModel = accountViewModel,
             nav = nav
         )
-        is CommunityDefinitionEvent -> CommunityHeader(
-            baseNote = baseNote,
-            showBottomDiviser = true,
-            sendToCommunity = true,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
+        is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
+            CommunityHeader(
+                baseNote = it,
+                showBottomDiviser = true,
+                sendToCommunity = true,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
         is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
         is FileHeaderEvent -> FileHeaderDisplay(baseNote, accountViewModel)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, accountViewModel)
@@ -471,14 +499,14 @@ fun NormalNote(
 
 @Composable
 fun CommunityHeader(
-    baseNote: Note,
+    baseNote: AddressableNote,
     showBottomDiviser: Boolean,
     sendToCommunity: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var expanded = remember { mutableStateOf(false) }
+    val expanded = remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.clickable {
@@ -506,7 +534,7 @@ fun CommunityHeader(
 }
 
 @Composable
-fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
@@ -648,7 +676,7 @@ fun LongCommunityHeader(baseNote: Note, accountViewModel: AccountViewModel, nav:
 }
 
 @Composable
-fun ShortCommunityHeader(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ShortCommunityHeader(baseNote: AddressableNote, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
@@ -713,43 +741,44 @@ fun ShortCommunityHeader(baseNote: Note, expanded: MutableState<Boolean>, accoun
 
 @Composable
 private fun ShortCommunityActionOptions(
-    note: Note,
+    note: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
-        derivedStateOf {
-            accountState?.account?.followingCommunities?.contains(note.idHex) ?: false
-        }
-    }
-
     Spacer(modifier = StdHorzSpacer)
     LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
     Spacer(modifier = StdHorzSpacer)
     ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
 
-    if (!isFollowing) {
-        Spacer(modifier = StdHorzSpacer)
-        JoinCommunityButton(accountViewModel, note, nav)
+    WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
+        if (!isFollowing) {
+            Spacer(modifier = StdHorzSpacer)
+            JoinCommunityButton(accountViewModel, note, nav)
+        }
     }
 }
 
 @Composable
+fun WatchAddressableNoteFollows(note: AddressableNote, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
+    val showFollowingMark by accountViewModel.userFollows.map {
+        it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
+    }.distinctUntilChanged().observeAsState(
+        accountViewModel.userProfile().latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
+    )
+
+    onFollowChanges(showFollowingMark)
+}
+
+@Composable
 private fun LongCommunityActionOptions(
-    note: Note,
+    note: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val isFollowing by remember(accountState) {
-        derivedStateOf {
-            accountState?.account?.followingCommunities?.contains(note.idHex) ?: false
+    WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
+        if (isFollowing) {
+            LeaveCommunityButton(accountViewModel, note, nav)
         }
-    }
-
-    if (isFollowing) {
-        LeaveCommunityButton(accountViewModel, note, nav)
     }
 }
 
@@ -1397,12 +1426,7 @@ fun RenderAppDefinition(
                 val website = remember(it) { it.website }
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            tint = MaterialTheme.colors.placeholderText,
-                            imageVector = Icons.Default.Link,
-                            contentDescription = stringResource(R.string.website),
-                            modifier = Modifier.size(16.dp)
-                        )
+                        LinkIcon(Size16Modifier, MaterialTheme.colors.placeholderText)
 
                         ClickableText(
                             text = AnnotatedString(website.removePrefix("https://")),
@@ -2148,12 +2172,7 @@ fun RenderPinListEvent(
         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
             pinsToShow.forEach { pin ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.PushPin,
-                        contentDescription = null,
-                        tint = MaterialTheme.colors.onBackground.copy(0.32f),
-                        modifier = Modifier.size(15.dp)
-                    )
+                    PinIcon(modifier = Size15Modifier, tint = MaterialTheme.colors.onBackground.copy(0.32f))
 
                     Spacer(modifier = Modifier.width(5.dp))
 
@@ -2464,16 +2483,6 @@ fun MoreOptionsButton(
             accountViewModel
         )
     }
-}
-
-@Composable
-private fun VerticalDotsIcon() {
-    Icon(
-        imageVector = Icons.Default.MoreVert,
-        null,
-        modifier = Size15Modifier,
-        tint = MaterialTheme.colors.placeholderText
-    )
 }
 
 @Composable
@@ -2991,19 +3000,9 @@ private fun RenderPledgeAmount(
     }
 
     if (hasPledge) {
-        Icon(
-            imageVector = Icons.Default.Bolt,
-            contentDescription = stringResource(R.string.zaps),
-            modifier = Modifier.size(20.dp),
-            tint = BitcoinOrange
-        )
+        ZappedIcon(modifier = Size20Modifier)
     } else {
-        Icon(
-            imageVector = Icons.Default.Bolt,
-            contentDescription = stringResource(R.string.zaps),
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colors.placeholderText
-        )
+        ZapIcon(modifier = Size20Modifier, MaterialTheme.colors.placeholderText)
     }
 
     Text(

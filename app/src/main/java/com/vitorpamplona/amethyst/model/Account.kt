@@ -6,6 +6,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -18,6 +20,10 @@ import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
+import com.vitorpamplona.amethyst.ui.note.combineWith
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -49,9 +55,11 @@ val KIND3_FOLLOWS = " All Follows "
 @Stable
 class Account(
     val loggedIn: Persona,
-    var followingChannels: Set<String> = DefaultChannels,
-    var followingCommunities: Set<String> = setOf(),
-    var hiddenUsers: Set<String> = setOf(),
+
+    var followingChannels: Set<String> = DefaultChannels, // deprecated
+    var followingCommunities: Set<String> = setOf(), // deprecated
+    var hiddenUsers: Set<String> = setOf(), // deprecated
+
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
@@ -76,7 +84,7 @@ class Account(
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
     var settings: Settings = Settings()
 ) {
-    var transientHiddenUsers: Set<String> = setOf()
+    var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
@@ -84,7 +92,24 @@ class Account(
     val liveLastRead: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
+    @Immutable
+    data class LiveHiddenUsers(
+        val hiddenUsers: ImmutableSet<String>,
+        val spammers: ImmutableSet<String>,
+        val showSensitiveContent: Boolean?
+    )
+
+    val liveHiddenUsers: LiveData<LiveHiddenUsers> = live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
+        val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(loggedIn.privKey)
+        LiveHiddenUsers(
+            hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
+            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+            showSensitiveContent = showSensitiveContent
+        )
+    }.distinctUntilChanged()
+
     var userProfileCache: User? = null
+
     fun updateAutomaticallyStartPlayback(
         automaticallyStartPlayback: Boolean?
     ) {
@@ -114,7 +139,7 @@ class Account(
         filterSpamFromStrangers = filterSpam
         OptOutFromFilters.start(warnAboutPostsWithReports, filterSpamFromStrangers)
         if (!filterSpamFromStrangers) {
-            transientHiddenUsers = setOf()
+            transientHiddenUsers = persistentSetOf()
         }
         live.invalidateData()
         saveable.invalidateData()
@@ -128,14 +153,6 @@ class Account(
         }
     }
 
-    fun followingChannels(): List<Channel> {
-        return followingChannels.mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
-    }
-
-    fun followingCommunities(): List<AddressableNote> {
-        return followingCommunities.mapNotNull { LocalCache.checkGetOrCreateAddressableNote(it) }
-    }
-
     fun isWriteable(): Boolean {
         return loggedIn.privKey != null
     }
@@ -144,21 +161,25 @@ class Account(
         if (!isWriteable()) return
 
         val contactList = userProfile().latestContactList
-        val follows = contactList?.follows() ?: emptyList()
-        val followsTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
 
-        if (contactList != null && follows.isNotEmpty()) {
-            val event = ContactListEvent.create(
-                follows,
-                followsTags,
-                relays,
-                loggedIn.privKey!!
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.updateRelayList(
+                earlierVersion = contactList,
+                relayUse = relays,
+                privateKey = loggedIn.privKey!!
             )
 
             Client.send(event)
             LocalCache.consume(event)
         } else {
-            val event = ContactListEvent.create(listOf(), listOf(), relays, loggedIn.privKey!!)
+            val event = ContactListEvent.createFromScratch(
+                followUsers = listOf(),
+                followTags = listOf(),
+                followCommunities = listOf(),
+                followEvents = DefaultChannels.toList(),
+                relayUse = relays,
+                privateKey = loggedIn.privKey!!
+            )
 
             // Keep this local to avoid erasing a good contact list.
             // Client.send(event)
@@ -398,27 +419,90 @@ class Account(
         }
     }
 
+    private fun migrateCommunitiesAndChannelsIfNeeded(latestContactList: ContactListEvent?): ContactListEvent? {
+        if (latestContactList == null) return latestContactList
+
+        var returningContactList: ContactListEvent = latestContactList
+
+        if (followingCommunities.isNotEmpty()) {
+            followingCommunities.forEach {
+                ATag.parse(it, null)?.let {
+                    returningContactList = ContactListEvent.followAddressableEvent(returningContactList, it, loggedIn.privKey!!)
+                }
+            }
+            followingCommunities = emptySet()
+        }
+
+        if (followingChannels.isNotEmpty()) {
+            followingChannels.forEach {
+                returningContactList = ContactListEvent.followEvent(returningContactList, it, loggedIn.privKey!!)
+            }
+            followingChannels = emptySet()
+        }
+
+        return returningContactList
+    }
+
     fun follow(user: User) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
-        val followingUsers = contactList?.follows() ?: emptyList()
-        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.create(
-                followingUsers.plus(Contact(user.pubkeyHex, null)),
-                followingTags,
-                contactList.relays(),
-                loggedIn.privKey!!
+            ContactListEvent.followUser(contactList, user.pubkeyHex, loggedIn.privKey!!)
+        } else {
+            ContactListEvent.createFromScratch(
+                followUsers = listOf(Contact(user.pubkeyHex, null)),
+                followTags = emptyList(),
+                followCommunities = emptyList(),
+                followEvents = DefaultChannels.toList(),
+                relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
+                privateKey = loggedIn.privKey!!
             )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun follow(channel: Channel) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        val event = if (contactList != null) {
+            ContactListEvent.followEvent(contactList, channel.idHex, loggedIn.privKey!!)
+        } else {
+            ContactListEvent.createFromScratch(
+                followUsers = emptyList(),
+                followTags = emptyList(),
+                followCommunities = emptyList(),
+                followEvents = DefaultChannels.toList().plus(channel.idHex),
+                relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
+                privateKey = loggedIn.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun follow(community: AddressableNote) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        val event = if (contactList != null) {
+            ContactListEvent.followAddressableEvent(contactList, community.address, loggedIn.privKey!!)
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
-            ContactListEvent.create(
-                listOf(Contact(user.pubkeyHex, null)),
-                followingTags,
-                relays,
-                loggedIn.privKey!!
+            ContactListEvent.createFromScratch(
+                followUsers = emptyList(),
+                followTags = emptyList(),
+                followCommunities = listOf(community.address),
+                followEvents = DefaultChannels.toList(),
+                relayUse = relays,
+                privateKey = loggedIn.privKey!!
             )
         }
 
@@ -429,24 +513,22 @@ class Account(
     fun follow(tag: String) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
-        val followingUsers = contactList?.follows() ?: emptyList()
-        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.create(
-                followingUsers,
-                followingTags.plus(tag),
-                contactList.relays(),
+            ContactListEvent.followHashtag(
+                contactList,
+                tag,
                 loggedIn.privKey!!
             )
         } else {
-            val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
-            ContactListEvent.create(
-                followingUsers,
-                followingTags.plus(tag),
-                relays,
-                loggedIn.privKey!!
+            ContactListEvent.createFromScratch(
+                followUsers = emptyList(),
+                followTags = listOf(tag),
+                followCommunities = emptyList(),
+                followEvents = DefaultChannels.toList(),
+                relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
+                privateKey = loggedIn.privKey!!
             )
         }
 
@@ -457,15 +539,12 @@ class Account(
     fun unfollow(user: User) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
-        val followingUsers = contactList?.follows() ?: emptyList()
-        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        if (contactList != null && (followingUsers.isNotEmpty() || followingTags.isNotEmpty())) {
-            val event = ContactListEvent.create(
-                followingUsers.filter { it.pubKeyHex != user.pubkeyHex },
-                followingTags,
-                contactList.relays(),
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.unfollowUser(
+                contactList,
+                user.pubkeyHex,
                 loggedIn.privKey!!
             )
 
@@ -477,15 +556,46 @@ class Account(
     fun unfollow(tag: String) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
-        val followingUsers = contactList?.follows() ?: emptyList()
-        val followingTags = contactList?.unverifiedFollowTagSet() ?: emptyList()
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        if (contactList != null && (followingUsers.isNotEmpty() || followingTags.isNotEmpty())) {
-            val event = ContactListEvent.create(
-                followingUsers,
-                followingTags.filter { !it.equals(tag, ignoreCase = true) },
-                contactList.relays(),
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.unfollowHashtag(
+                contactList,
+                tag,
+                loggedIn.privKey!!
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+    }
+
+    fun unfollow(channel: Channel) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.unfollowEvent(
+                contactList,
+                channel.idHex,
+                loggedIn.privKey!!
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+    }
+
+    fun unfollow(community: AddressableNote) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.unfollowAddressableEvent(
+                contactList,
+                community.address,
                 loggedIn.privKey!!
             )
 
@@ -708,7 +818,9 @@ class Account(
         Client.send(event)
         LocalCache.consume(event)
 
-        joinChannel(event.id)
+        LocalCache.getChannelIfExists(event.id)?.let {
+            follow(it)
+        }
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
@@ -932,43 +1044,70 @@ class Account(
         }
     }
 
-    fun joinChannel(idHex: String) {
-        followingChannels = followingChannels + idHex
-        live.invalidateData()
-
-        saveable.invalidateData()
+    fun getBlockListNote(): AddressableNote {
+        val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, PeopleListEvent.blockList, null)
+        return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
-    fun leaveChannel(idHex: String) {
-        followingChannels = followingChannels - idHex
-        live.invalidateData()
-
-        saveable.invalidateData()
+    fun getBlockList(): PeopleListEvent? {
+        return getBlockListNote().event as? PeopleListEvent
     }
 
-    fun joinCommunity(idHex: String) {
-        followingCommunities = followingCommunities + idHex
-        live.invalidateData()
+    private fun migrateHiddenUsersIfNeeded(latestList: PeopleListEvent?): PeopleListEvent? {
+        if (latestList == null) return latestList
 
-        saveable.invalidateData()
-    }
+        var returningList: PeopleListEvent = latestList
 
-    fun leaveCommunity(idHex: String) {
-        followingCommunities = followingCommunities - idHex
-        live.invalidateData()
+        if (hiddenUsers.isNotEmpty()) {
+            returningList = PeopleListEvent.addUsers(returningList, hiddenUsers.toList(), true, loggedIn.privKey!!)
+            hiddenUsers = emptySet()
+        }
 
-        saveable.invalidateData()
+        return returningList
     }
 
     fun hideUser(pubkeyHex: String) {
-        hiddenUsers = hiddenUsers + pubkeyHex
+        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+
+        val event = if (blockList != null) {
+            PeopleListEvent.addUser(
+                earlierVersion = blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                privateKey = loggedIn.privKey!!
+            )
+        } else {
+            PeopleListEvent.createListWithUser(
+                name = PeopleListEvent.blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                privateKey = loggedIn.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
+
         live.invalidateData()
         saveable.invalidateData()
     }
 
     fun showUser(pubkeyHex: String) {
-        hiddenUsers = hiddenUsers - pubkeyHex
-        transientHiddenUsers = transientHiddenUsers - pubkeyHex
+        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+
+        if (blockList != null) {
+            val event = PeopleListEvent.removeUser(
+                earlierVersion = blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                privateKey = loggedIn.privKey!!
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+
+        transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -1055,7 +1194,53 @@ class Account(
         if (listName == GLOBAL_FOLLOWS) return null
         if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingTagSet()
 
-        return emptySet()
+        val privKey = loggedIn.privKey
+
+        return if (listName != null) {
+            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val list = LocalCache.addressables[aTag]
+            if (list != null) {
+                val publicAddresses = list.event?.hashtags() ?: emptySet()
+                val privateAddresses = privKey?.let {
+                    (list.event as? GeneralListEvent)?.privateHashtags(it)
+                } ?: emptySet()
+
+                (publicAddresses + privateAddresses).toSet()
+            } else {
+                emptySet()
+            }
+        } else {
+            emptySet()
+        }
+    }
+
+    fun selectedCommunitiesFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingCommunitiesSet()
+
+        val privKey = loggedIn.privKey
+
+        return if (listName != null) {
+            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val list = LocalCache.addressables[aTag]
+            if (list != null) {
+                val publicAddresses = list.event?.taggedAddresses()?.map { it.toTag() } ?: emptySet()
+                val privateAddresses = privKey?.let {
+                    (list.event as? GeneralListEvent)?.privateTaggedAddresses(it)?.map { it.toTag() }
+                } ?: emptySet()
+
+                (publicAddresses + privateAddresses).toSet()
+            } else {
+                emptySet()
+            }
+        } else {
+            emptySet()
+        }
+    }
+
+    fun selectedChatsFollowList(): Set<String> {
+        val contactList = userProfile().latestContactList
+        return contactList?.taggedEvents()?.toSet() ?: DefaultChannels
     }
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
@@ -1076,7 +1261,7 @@ class Account(
         Client.send(event)
         LocalCache.consume(event)
 
-        joinChannel(event.id)
+        follow(channel)
     }
 
     fun decryptContent(note: Note): String? {
@@ -1224,7 +1409,11 @@ class Account(
     }
 
     fun isHidden(user: User) = isHidden(user.pubkeyHex)
-    fun isHidden(userHex: String) = userHex in hiddenUsers || userHex in transientHiddenUsers
+    fun isHidden(userHex: String): Boolean {
+        val blockList = getBlockList()
+
+        return (blockList?.publicAndPrivateUsers(loggedIn.privKey)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
+    }
 
     fun followingKeySet(): Set<HexKey> {
         return userProfile().cachedFollowingKeySet()
@@ -1343,7 +1532,7 @@ class Account(
                 it.cache.spamMessages.snapshot().values.forEach {
                     if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
                         if (it.pubkeyHex != userProfile().pubkeyHex && it.pubkeyHex !in followingKeySet()) {
-                            transientHiddenUsers = transientHiddenUsers + it.pubkeyHex
+                            transientHiddenUsers = (transientHiddenUsers + it.pubkeyHex).toImmutableSet()
                             live.invalidateData()
                         }
                     }
@@ -1356,6 +1545,7 @@ class Account(
         Log.d("Init", "Account")
         backupContactList?.let {
             println("Loading saved contacts ${it.toJson()}")
+
             if (userProfile().latestContactList == null) {
                 LocalCache.consume(it)
             }

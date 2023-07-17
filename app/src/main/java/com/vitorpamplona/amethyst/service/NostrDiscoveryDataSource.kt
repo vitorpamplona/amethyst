@@ -17,13 +17,12 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     lateinit var account: Account
 
     val latestEOSEs = EOSEAccount()
-    val dataSource = "Discovery"
 
     fun createLiveStreamFilter(): TypedFilter {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
         return TypedFilter(
@@ -32,7 +31,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                 authors = followKeys,
                 kinds = listOf(LiveActivitiesChatMessageEvent.kind, LiveActivitiesEvent.kind),
                 limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
             )
         )
     }
@@ -41,7 +40,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
         return TypedFilter(
@@ -50,7 +49,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                 authors = followKeys,
                 kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
                 limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
             )
         )
     }
@@ -59,7 +58,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
         return TypedFilter(
@@ -68,7 +67,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                 authors = followKeys,
                 kinds = listOf(CommunityDefinitionEvent.kind, CommunityPostApprovalEvent.kind),
                 limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
             )
         )
     }
@@ -88,7 +87,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                     }.flatten()
                 ),
                 limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
             )
         )
     }
@@ -108,7 +107,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                     }.flatten()
                 ),
                 limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
             )
         )
     }
@@ -128,12 +127,14 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                     }.flatten()
                 ),
                 limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(dataSource)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
             )
         )
     }
 
-    val discoveryFeedChannel = requestNewChannel()
+    val discoveryFeedChannel = requestNewChannel() { time, relayUrl ->
+        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultDiscoveryFollowList, relayUrl, time)
+    }
 
     override fun updateChannelFilters() {
         discoveryFeedChannel.typedFilters = listOfNotNull(

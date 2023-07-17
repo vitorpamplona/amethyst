@@ -11,17 +11,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,22 +39,26 @@ import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import coil.imageLoader
 import coil.request.ImageRequest
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
-import com.google.android.exoplayer2.ui.StyledPlayerView
-import com.google.android.exoplayer2.upstream.DataSource
 import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
+import com.vitorpamplona.amethyst.ui.note.MuteIcon
+import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -175,6 +171,7 @@ fun VideoView(
 }
 
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun VideoView1(
     videoUri: String,
     description: String? = null,
@@ -263,6 +260,7 @@ data class VideoThumb(
 )
 
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun RenderVideoPlayer(
     playerData: VideoPlayer,
     thumbData: VideoThumb?,
@@ -290,7 +288,7 @@ private fun RenderVideoPlayer(
                     }
                 },
             factory = {
-                StyledPlayerView(context).apply {
+                PlayerView(context).apply {
                     player = playerData.exoPlayer
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -350,14 +348,7 @@ fun LayoutCoordinates.isCompletelyVisible(view: View): Boolean {
 
 @Composable
 private fun MuteButton(toggle: (Boolean) -> Unit) {
-    Box(
-        remember {
-            Modifier
-                .width(70.dp)
-                .height(70.dp)
-                .padding(10.dp)
-        }
-    ) {
+    Box(modifier = VolumeBottomIconSize) {
         Box(
             Modifier
                 .clip(CircleShape)
@@ -373,22 +364,12 @@ private fun MuteButton(toggle: (Boolean) -> Unit) {
                 mutedInstance.value = !mutedInstance.value
                 toggle(mutedInstance.value)
             },
-            modifier = Modifier.size(50.dp)
+            modifier = Size50Modifier
         ) {
             if (mutedInstance.value) {
-                Icon(
-                    imageVector = Icons.Default.VolumeOff,
-                    "Hash Verified",
-                    tint = MaterialTheme.colors.onBackground,
-                    modifier = Modifier.size(30.dp)
-                )
+                MutedIcon()
             } else {
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    "Hash Verified",
-                    tint = MaterialTheme.colors.onBackground,
-                    modifier = Modifier.size(30.dp)
-                )
+                MuteIcon()
             }
         }
     }

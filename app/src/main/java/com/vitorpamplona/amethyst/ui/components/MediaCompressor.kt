@@ -38,11 +38,10 @@ class MediaCompressor {
                 //    videoName = "compressed_video" // => required name
                 // ),
                 // OR AND NOT BOTH
-                appSpecificStorageConfiguration = AppSpecificStorageConfiguration(
-                    videoName = UUID.randomUUID().toString() // => required name
-                ),
+                appSpecificStorageConfiguration = AppSpecificStorageConfiguration(),
                 configureWith = Configuration(
-                    quality = VideoQuality.LOW
+                    quality = VideoQuality.LOW,
+                    videoNames = listOf(UUID.randomUUID().toString()) // => required name
                 ),
                 listener = object : CompressionListener {
                     override fun onProgress(index: Int, percent: Float) {

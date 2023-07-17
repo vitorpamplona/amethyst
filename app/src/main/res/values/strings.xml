@@ -167,7 +167,7 @@
     <string name="translations_show_in_lang_first">Show in %1$s first</string>
     <string name="translations_always_translate_to_lang">Always translate to %1$s</string>
     <string name="translations_never_translate_from_lang">Never translate from %1$s</string>
-    <string name="nip_05" translatable="false">NIP-05</string>
+    <string name="nip_05">Nostr Address</string>
     <string name="lnurl" translatable="false">LNURL...</string>
     <string name="never">never</string>
     <string name="now">now</string>
@@ -299,8 +299,8 @@
     <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
 
-    <string name="hash_verification_passed">Image is the same since the post</string>
-    <string name="hash_verification_failed">Image has changed. The author might not have seen the change</string>
+    <string name="hash_verification_passed">This content is the same since the post</string>
+    <string name="hash_verification_failed">This content has changed. The author might not have seen or approved the change</string>
 
     <string name="content_description_add_image">Add Image</string>
     <string name="content_description_add_video">Add Video</string>
@@ -359,9 +359,6 @@
 
     <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
     <string name="upload_server_nostrcheckme_nip94_explainer">Checks if Nostrcheck.me modified the file. New NIP: other clients might not see it</string>
-
-
-
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
@@ -497,4 +494,14 @@
     <string name="automatically_play_videos">Automatically play videos</string>
     <string name="automatically_show_url_preview">Automatically show url preview</string>
     <string name="load_image">Load Image</string>
+
+    <string name="spamming_users">Spammers</string>
+
+    <string name="muted_button">Muted. Click to unmute</string>
+    <string name="mute_button">Sound on. Click to mute</string>
+    <string name="search_button">Search local and remote records</string>
+
+    <string name="nip05_verified">Nostr address was verified</string>
+    <string name="nip05_failed">Nostr address failed verification</string>
+    <string name="nip05_checking">Checking Nostr address</string>
 </resources>

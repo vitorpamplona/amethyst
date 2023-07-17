@@ -12,9 +12,12 @@ val BitcoinOrange = Color(0xFFF7931A)
 val RoyalBlue = Color(0xFF4169E1)
 
 val Following = Color(0xFF03DAC5)
-val Nip05 = Color(0xFF01BAFF)
 val FollowsFollow = Color.Yellow
 val NIP05Verified = Color.Blue
+
+val Nip05EmailColor = Color(0xFFb198ec)
+val Nip05EmailColorDark = Color(0xFF6e5490)
+val Nip05EmailColorLight = Color(0xFFa770f3)
 
 val DarkerGreen = Color.Green.copy(alpha = 0.32f)
 

@@ -148,11 +148,11 @@ private fun RenderFeed(
 
             is FeedState.Loaded -> {
                 FeedLoaded(
-                    state,
-                    listState,
-                    routeForLastRead,
-                    accountViewModel,
-                    nav
+                    state = state,
+                    listState = listState,
+                    routeForLastRead = routeForLastRead,
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
 
@@ -210,6 +210,7 @@ private fun FeedLoaded(
                         routeForLastRead = routeForLastRead,
                         modifier = baseModifier,
                         isBoostedNote = false,
+                        showHidden = state.showHidden.value,
                         accountViewModel = accountViewModel,
                         nav = nav
                     )

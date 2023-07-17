@@ -141,9 +141,9 @@ fun RenderCardFeed(
                 FeedLoaded(
                     state = state,
                     listState = listState,
+                    routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = routeForLastRead
+                    nav = nav
                 )
             }
             CardFeedState.Loading -> {
@@ -158,9 +158,9 @@ fun RenderCardFeed(
 private fun FeedLoaded(
     state: CardFeedState.Loaded,
     listState: LazyListState,
+    routeForLastRead: String,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    routeForLastRead: String
+    nav: (String) -> Unit
 ) {
     LazyColumn(
         modifier = remember { Modifier.fillMaxSize() },
@@ -179,7 +179,7 @@ private fun FeedLoaded(
             }
 
             Row(defaultModifier) {
-                RenderCardItem(item, accountViewModel, nav, routeForLastRead)
+                RenderCardItem(item, routeForLastRead, showHidden = state.showHidden.value, accountViewModel, nav)
             }
         }
     }
@@ -188,15 +188,17 @@ private fun FeedLoaded(
 @Composable
 private fun RenderCardItem(
     item: Card,
+    routeForLastRead: String,
+    showHidden: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    routeForLastRead: String
+    nav: (String) -> Unit
 ) {
     when (item) {
         is NoteCard -> NoteCompose(
             item,
             isBoostedNote = false,
             accountViewModel = accountViewModel,
+            showHidden = showHidden,
             nav = nav,
             routeForLastRead = routeForLastRead
         )
@@ -212,6 +214,7 @@ private fun RenderCardItem(
         is MultiSetCard -> MultiSetCompose(
             item,
             accountViewModel = accountViewModel,
+            showHidden = showHidden,
             nav = nav,
             routeForLastRead = routeForLastRead
         )
@@ -219,6 +222,7 @@ private fun RenderCardItem(
         is BadgeCard -> BadgeCompose(
             item,
             accountViewModel = accountViewModel,
+            showHidden = showHidden,
             nav = nav,
             routeForLastRead = routeForLastRead
         )
@@ -226,6 +230,7 @@ private fun RenderCardItem(
         is MessageSetCard -> MessageSetCompose(
             messageSetCard = item,
             routeForLastRead = routeForLastRead,
+            showHidden = showHidden,
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -242,6 +247,7 @@ fun NoteCompose(
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
+    showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -259,6 +265,7 @@ fun NoteCompose(
         unPackReply = unPackReply,
         makeItShort = makeItShort,
         addMarginTop = addMarginTop,
+        showHidden = showHidden,
         parentBackgroundColor = parentBackgroundColor,
         accountViewModel = accountViewModel,
         nav = nav

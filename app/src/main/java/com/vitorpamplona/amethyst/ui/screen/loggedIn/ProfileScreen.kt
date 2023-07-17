@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
@@ -49,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -78,6 +80,8 @@ import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
@@ -93,10 +97,11 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -697,44 +702,47 @@ private fun ProfileActions(
     baseUser: User,
     accountViewModel: AccountViewModel
 ) {
+    val isMe by remember(accountViewModel) {
+        derivedStateOf {
+            accountViewModel.userProfile() == baseUser
+        }
+    }
+
+    if (isMe) {
+        EditButton(accountViewModel.account)
+    }
+
+    WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
+        if (isHidden) {
+            val scope = rememberCoroutineScope()
+            ShowUserButton {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.account.showUser(baseUser.pubkeyHex)
+                }
+            }
+        } else {
+            DisplayFollowUnfollowButton(baseUser, accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun DisplayFollowUnfollowButton(
+    baseUser: User,
+    accountViewModel: AccountViewModel
+) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val accountLocalUserState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountLocalUserState) { accountLocalUserState?.account } ?: return
+    val isLoggedInFollowingUser by accountViewModel.account.userProfile().live().follows.map {
+        it.user.isFollowing(baseUser)
+    }.distinctUntilChanged().observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
 
-    val accountUserState by accountViewModel.account.userProfile().live().follows.observeAsState()
-    val baseUserState by baseUser.live().follows.observeAsState()
+    val isUserFollowingLoggedIn by baseUser.live().follows.map {
+        it.user.isFollowing(accountViewModel.account.userProfile())
+    }.distinctUntilChanged().observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
 
-    val accountUser = remember(accountUserState) { accountUserState?.user } ?: return
-
-    val isHidden by remember(accountUserState, accountLocalUserState) {
-        derivedStateOf {
-            account.isHidden(baseUser)
-        }
-    }
-
-    val isLoggedInFollowingUser by remember(accountUserState, accountLocalUserState) {
-        derivedStateOf {
-            accountUser.isFollowingCached(baseUser)
-        }
-    }
-
-    val isUserFollowingLoggedIn by remember(baseUserState, accountLocalUserState) {
-        derivedStateOf {
-            baseUser.isFollowing(accountUser)
-        }
-    }
-
-    if (accountUser == baseUser) {
-        EditButton(account)
-    }
-
-    if (isHidden) {
-        ShowUserButton {
-            account.showUser(baseUser.pubkeyHex)
-        }
-    } else if (isLoggedInFollowingUser) {
+    if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 scope.launch {
@@ -748,7 +756,7 @@ private fun ProfileActions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    account.unfollow(baseUser)
+                    accountViewModel.account.unfollow(baseUser)
                 }
             }
         }
@@ -767,7 +775,7 @@ private fun ProfileActions(
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
-                        account.follow(baseUser)
+                        accountViewModel.account.follow(baseUser)
                     }
                 }
             }
@@ -785,12 +793,21 @@ private fun ProfileActions(
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
-                        account.follow(baseUser)
+                        accountViewModel.account.follow(baseUser)
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
+    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+        it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
+    }.observeAsState(accountViewModel.account.isHidden(baseUser))
+
+    content(isHidden)
 }
 
 @Composable
@@ -967,12 +984,7 @@ fun DisplayLNAddress(
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                tint = BitcoinOrange,
-                imageVector = Icons.Default.Bolt,
-                contentDescription = stringResource(R.string.lightning_address),
-                modifier = Modifier.size(16.dp)
-            )
+            LightningAddressIcon(modifier = Size16Modifier)
 
             ClickableText(
                 text = AnnotatedString(lud16),
@@ -1110,31 +1122,42 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun DisplayBadges(
     baseUser: User,
     nav: (String) -> Unit
 ) {
-    val userBadgeState by baseUser.live().badges.observeAsState()
-    val badgeList by remember(userBadgeState) {
-        derivedStateOf {
-            val list = (userBadgeState?.user?.latestAcceptedBadges?.event as? BadgeProfilesEvent)?.badgeAwardEvents()
-            if (list.isNullOrEmpty()) {
-                null
-            } else {
-                list.toImmutableList()
+    LoadAddressableNote(
+        aTag = ATag(
+            BadgeProfilesEvent.kind,
+            baseUser.pubkeyHex,
+            BadgeProfilesEvent.standardDTAg,
+            null
+        )
+    ) {
+        if (it != null) {
+            val badgeList by it.live().metadata.map {
+                (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
+            }.distinctUntilChanged().observeAsState()
+
+            badgeList?.let { list ->
+                RenderBadgeList(list, nav)
             }
         }
     }
+}
 
-    badgeList?.let { list ->
-        FlowRow(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 5.dp)
-        ) {
-            list.forEach { badgeAwardEvent ->
-                LoadAndRenderBadge(badgeAwardEvent, nav)
-            }
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun RenderBadgeList(
+    list: ImmutableList<String>,
+    nav: (String) -> Unit
+) {
+    FlowRow(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 5.dp)
+    ) {
+        list.forEach { badgeAwardEvent ->
+            LoadAndRenderBadge(badgeAwardEvent, nav)
         }
     }
 }
@@ -1622,6 +1645,7 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         val clipboardManager = LocalClipboardManager.current
         val accountState by accountViewModel.accountLiveData.observeAsState()
         val account = accountState?.account!!
+        val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
 
         val scope = rememberCoroutineScope()
 

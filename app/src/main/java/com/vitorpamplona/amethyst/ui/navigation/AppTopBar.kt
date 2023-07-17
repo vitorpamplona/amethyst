@@ -77,10 +77,12 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -246,7 +248,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                 }
             },
             actions = {
-                SearchIcon() {
+                SearchButton() {
                     nav(Route.Search.route)
                 }
             }
@@ -256,16 +258,11 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
 }
 
 @Composable
-private fun SearchIcon(onClick: () -> Unit) {
+private fun SearchButton(onClick: () -> Unit) {
     IconButton(
         onClick = onClick
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_search),
-            contentDescription = null,
-            modifier = Modifier.size(22.dp),
-            tint = Color.Unspecified
-        )
+        SearchIcon(modifier = Size22Modifier, Color.Unspecified)
     }
 }
 

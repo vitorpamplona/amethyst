@@ -54,7 +54,13 @@ abstract class GeneralListEvent(
         return privateTagsCache
     }
 
+    fun privateTagsOrEmpty(privKey: ByteArray): List<List<String>> {
+        return privateTags(privKey) ?: emptyList()
+    }
+
     fun privateTaggedUsers(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "p" }?.map { it[1] }
+
+    fun privateHashtags(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }
     fun privateTaggedEvents(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "e" }?.map { it[1] }
     fun privateTaggedAddresses(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
         val aTagValue = it.getOrNull(1)
@@ -88,6 +94,17 @@ abstract class GeneralListEvent(
                 msg,
                 privateKey,
                 pubKey
+            )
+        }
+
+        fun encryptTags(
+            privateTags: List<List<String>>? = null,
+            privateKey: ByteArray
+        ): String {
+            return Utils.encrypt(
+                msg = gson.toJson(privateTags),
+                privateKey = privateKey,
+                pubKey = Utils.pubkeyCreate(privateKey)
             )
         }
     }

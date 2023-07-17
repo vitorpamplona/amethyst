@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by likeSetCard.note.live().metadata.observeAsState()
     val note = noteState?.note
 
@@ -158,6 +158,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                             baseNote = it,
                             routeForLastRead = null,
                             isBoostedNote = true,
+                            showHidden = showHidden,
                             parentBackgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
                             nav = nav

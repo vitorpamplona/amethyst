@@ -25,5 +25,6 @@ class BadgeProfilesEvent(
 
     companion object {
         const val kind = 30008
+        const val standardDTAg = "profile_badges"
     }
 }

@@ -160,25 +160,23 @@ fun ProfileContent(
         }
 
         Column(modifier = modifier) {
-            profilePicture?.let {
-                RobohashAsyncImageProxy(
-                    robot = profilePubHex,
-                    model = profilePicture,
-                    contentDescription = stringResource(id = R.string.profile_image),
-                    modifier = Modifier
-                        .width(100.dp)
-                        .height(100.dp)
-                        .clip(shape = CircleShape)
-                        .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                        .background(MaterialTheme.colors.background)
-                        .clickable(onClick = {
-                            nav(route)
-                            coroutineScope.launch {
-                                scaffoldState.drawerState.close()
-                            }
-                        })
-                )
-            }
+            RobohashAsyncImageProxy(
+                robot = profilePubHex,
+                model = profilePicture,
+                contentDescription = stringResource(id = R.string.profile_image),
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(100.dp)
+                    .clip(shape = CircleShape)
+                    .border(3.dp, MaterialTheme.colors.background, CircleShape)
+                    .background(MaterialTheme.colors.background)
+                    .clickable(onClick = {
+                        nav(route)
+                        coroutineScope.launch {
+                            scaffoldState.drawerState.close()
+                        }
+                    })
+            )
 
             if (bestDisplayName != null) {
                 CreateTextWithEmoji(

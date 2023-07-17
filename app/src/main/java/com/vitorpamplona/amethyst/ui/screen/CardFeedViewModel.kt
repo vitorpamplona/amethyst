@@ -223,9 +223,10 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             if (notes.isEmpty()) {
                 _feedContent.update { CardFeedState.Empty }
             } else if (currentState is CardFeedState.Loaded) {
+                currentState.showHidden.value = localFilter.showHiddenKey()
                 currentState.feed.value = notes
             } else {
-                _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes)) }
+                _feedContent.update { CardFeedState.Loaded(mutableStateOf(notes), mutableStateOf(localFilter.showHiddenKey())) }
             }
         }
     }

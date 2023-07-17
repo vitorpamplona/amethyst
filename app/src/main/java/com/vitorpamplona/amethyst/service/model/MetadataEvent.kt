@@ -147,8 +147,8 @@ class MetadataEvent(
             UserMetadata::class.java
         )
     } catch (e: Exception) {
-        e.printStackTrace()
-        Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
+        // e.printStackTrace()
+        Log.w("MT", "Content Parse Error: ${e.localizedMessage} $content")
         null
     }
 
