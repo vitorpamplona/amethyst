@@ -336,7 +336,7 @@ fun NIP05CheckingIcon(modifier: Modifier) {
 @Composable
 fun NIP05VerifiedIcon(modifier: Modifier) {
     Icon(
-        painter = painterResource(R.drawable.nip_05_light),
+        painter = painterResource(R.drawable.nip_05),
         contentDescription = stringResource(id = R.string.nip05_verified),
         modifier = modifier,
         tint = Color.Unspecified

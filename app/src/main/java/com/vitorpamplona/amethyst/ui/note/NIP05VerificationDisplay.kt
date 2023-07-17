@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,8 +33,8 @@ import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
-import com.vitorpamplona.amethyst.ui.theme.Nip05EmailColor
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -148,7 +149,7 @@ private fun DisplayNIP05(
     if (user != "_") {
         Text(
             text = remember(nip05) { AnnotatedString(user) },
-            color = Nip05EmailColor,
+            color = MaterialTheme.colors.nip05,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -159,7 +160,7 @@ private fun DisplayNIP05(
     ClickableText(
         text = remember(nip05) { AnnotatedString(domain) },
         onClick = { runCatching { uri.openUri("https://$domain") } },
-        style = LocalTextStyle.current.copy(color = Nip05EmailColor),
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05),
         maxLines = 1,
         overflow = TextOverflow.Visible
     )
@@ -199,7 +200,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 if (user != "_") {
                     Text(
                         text = remember { AnnotatedString(user + "@") },
-                        color = Nip05EmailColor,
+                        color = MaterialTheme.colors.nip05,
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -210,7 +211,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 ClickableText(
                     text = AnnotatedString(domain),
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = Nip05EmailColor),
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05),
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

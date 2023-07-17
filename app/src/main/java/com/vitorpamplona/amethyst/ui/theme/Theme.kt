@@ -260,6 +260,9 @@ val Colors.veryImportantLink: Color
 val Colors.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
 
+val Colors.nip05: Color
+    get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
+
 val Colors.placeholderTextColorFilter: ColorFilter
     get() = if (isLight) LightPlaceholderTextColorFilter else DarkPlaceholderTextColorFilter
 
