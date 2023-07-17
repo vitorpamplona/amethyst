@@ -142,7 +142,6 @@ fun RenderCardFeed(
                     state = state,
                     listState = listState,
                     routeForLastRead = routeForLastRead,
-                    showHidden = viewModel.showHidden(),
                     accountViewModel = accountViewModel,
                     nav = nav
                 )
@@ -159,7 +158,6 @@ fun RenderCardFeed(
 private fun FeedLoaded(
     state: CardFeedState.Loaded,
     listState: LazyListState,
-    showHidden: Boolean,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -181,7 +179,7 @@ private fun FeedLoaded(
             }
 
             Row(defaultModifier) {
-                RenderCardItem(item, routeForLastRead, showHidden, accountViewModel, nav)
+                RenderCardItem(item, routeForLastRead, showHidden = state.showHidden.value, accountViewModel, nav)
             }
         }
     }

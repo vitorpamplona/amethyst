@@ -238,18 +238,18 @@ fun NoteCompose(
             }
         } else {
             CheckHiddenNoteCompose(
-                baseNote,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                showHidden,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
+                note = baseNote,
+                routeForLastRead = routeForLastRead,
+                modifier = modifier,
+                isBoostedNote = isBoostedNote,
+                isQuotedNote = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                addMarginTop = addMarginTop,
+                showHidden = showHidden,
+                parentBackgroundColor = parentBackgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
     }
@@ -272,7 +272,7 @@ fun CheckHiddenNoteCompose(
 ) {
     if (showHidden) {
         // Ignores reports as well
-        var state by remember {
+        val state by remember {
             mutableStateOf(
                 NoteComposeReportState(
                     isAcceptable = true,
@@ -283,18 +283,18 @@ fun CheckHiddenNoteCompose(
         }
 
         RenderReportState(
-            state,
-            note,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            parentBackgroundColor,
-            accountViewModel,
-            nav
+            state = state,
+            note = note,
+            routeForLastRead = routeForLastRead,
+            modifier = modifier,
+            isBoostedNote = isBoostedNote,
+            isQuotedNote = isQuotedNote,
+            unPackReply = unPackReply,
+            makeItShort = makeItShort,
+            addMarginTop = addMarginTop,
+            parentBackgroundColor = parentBackgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     } else {
         val isHidden by accountViewModel.account.liveHiddenUsers.map {
@@ -304,17 +304,17 @@ fun CheckHiddenNoteCompose(
         Crossfade(targetState = isHidden) {
             if (!it) {
                 LoadedNoteCompose(
-                    note,
-                    routeForLastRead,
-                    modifier,
-                    isBoostedNote,
-                    isQuotedNote,
-                    unPackReply,
-                    makeItShort,
-                    addMarginTop,
-                    parentBackgroundColor,
-                    accountViewModel,
-                    nav
+                    note = note,
+                    routeForLastRead = routeForLastRead,
+                    modifier = modifier,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    addMarginTop = addMarginTop,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
         }

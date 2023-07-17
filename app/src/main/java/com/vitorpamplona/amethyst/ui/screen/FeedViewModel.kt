@@ -217,10 +217,6 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         scrolltoTopPending = false
     }
 
-    fun showHidden(): Boolean {
-        return localFilter.showHiddenKey()
-    }
-
     private fun refresh() {
         val scope = CoroutineScope(Job() + Dispatchers.Default)
         scope.launch {
@@ -252,9 +248,10 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                 _feedContent.update { FeedState.Empty }
             } else if (currentState is FeedState.Loaded) {
                 // updates the current list
+                currentState.showHidden.value = localFilter.showHiddenKey()
                 currentState.feed.value = notes
             } else {
-                _feedContent.update { FeedState.Loaded(mutableStateOf(notes)) }
+                _feedContent.update { FeedState.Loaded(mutableStateOf(notes), mutableStateOf(localFilter.showHiddenKey())) }
             }
         }
     }

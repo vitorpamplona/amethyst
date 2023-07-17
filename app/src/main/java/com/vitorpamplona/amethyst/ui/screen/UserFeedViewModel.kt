@@ -70,10 +70,6 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
         }
     }
 
-    fun showHidden(): Boolean {
-        return dataSource.showHiddenKey()
-    }
-
     private fun refreshSuspended() {
         checkNotInMainThread()
 

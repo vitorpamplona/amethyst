@@ -90,7 +90,7 @@ sealed class CardFeedState {
     object Loading : CardFeedState()
 
     @Stable
-    class Loaded(val feed: MutableState<ImmutableList<Card>>) : CardFeedState()
+    class Loaded(val feed: MutableState<ImmutableList<Card>>, val showHidden: MutableState<Boolean>) : CardFeedState()
 
     @Immutable
     object Empty : CardFeedState()
