@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import android.util.Log
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
