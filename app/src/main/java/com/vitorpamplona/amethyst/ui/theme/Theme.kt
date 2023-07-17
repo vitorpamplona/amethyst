@@ -89,9 +89,6 @@ private val LightReplyItemBackground = LightColorPalette.onSurface.copy(alpha = 
 private val DarkZapraiserBackground = BitcoinOrange.copy(0.52f).compositeOver(DarkColorPalette.background)
 private val LightZapraiserBackground = BitcoinOrange.copy(0.52f).compositeOver(LightColorPalette.background)
 
-private val DarkImageVerifier = Nip05.copy(0.52f).compositeOver(DarkColorPalette.background)
-private val LightImageVerifier = Nip05.copy(0.52f).compositeOver(LightColorPalette.background)
-
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
 
@@ -277,9 +274,6 @@ val Colors.subtleBorder: Color
 
 val Colors.subtleButton: Color
     get() = if (isLight) LightSubtleButton else DarkSubtleButton
-
-val Colors.hashVerified: Color
-    get() = if (isLight) LightImageVerifier else DarkImageVerifier
 
 val Colors.overPictureBackground: Color
     get() = if (isLight) LightOverPictureBackground else DarkOverPictureBackground

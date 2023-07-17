@@ -17,11 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,7 +35,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -61,11 +57,11 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size18dp
+import com.vitorpamplona.amethyst.ui.theme.Size19dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -238,13 +234,7 @@ fun RenderLikeGallery(
                     )
                 } else {
                     when (val shortReaction = reactionType) {
-                        "+" -> Icon(
-                            painter = painterResource(R.drawable.ic_liked),
-                            null,
-                            modifier = modifier.size(Size18dp),
-                            tint = Color.Unspecified
-                        )
-
+                        "+" -> LikedIcon(Size18dp)
                         "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
                         else -> Text(text = shortReaction, modifier = modifier)
                     }
@@ -264,27 +254,17 @@ fun RenderZapGallery(
     accountViewModel: AccountViewModel
 ) {
     Row(Modifier.fillMaxWidth()) {
-        ZapIcon()
+        Box(
+            modifier = WidthAuthorPictureModifier
+        ) {
+            ZappedIcon(
+                modifier = remember {
+                    Modifier.size(Size25dp).align(Alignment.TopEnd)
+                }
+            )
+        }
 
         AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
-    }
-}
-
-@Composable
-private fun ZapIcon() {
-    Box(
-        modifier = WidthAuthorPictureModifier
-    ) {
-        Icon(
-            imageVector = Icons.Default.Bolt,
-            contentDescription = "Zaps",
-            tint = BitcoinOrange,
-            modifier =
-            Modifier
-                .size(Size25dp)
-                .align(Alignment.TopEnd)
-
-        )
     }
 }
 
@@ -300,15 +280,8 @@ fun RenderBoostGallery(
         Box(
             modifier = NotificationIconModifierSmaller
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_retweeted),
-                null,
-                modifier = remember {
-                    Modifier
-                        .size(19.dp)
-                        .align(Alignment.TopEnd)
-                },
-                tint = Color.Unspecified
+            RepostedIcon(
+                modifier = remember { Modifier.size(Size19dp).align(Alignment.TopEnd) }
             )
         }
 

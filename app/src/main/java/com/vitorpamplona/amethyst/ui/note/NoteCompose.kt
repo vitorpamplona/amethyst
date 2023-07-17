@@ -29,17 +29,11 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.darkColors
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -153,7 +147,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -164,6 +157,8 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -1431,12 +1426,7 @@ fun RenderAppDefinition(
                 val website = remember(it) { it.website }
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            tint = MaterialTheme.colors.placeholderText,
-                            imageVector = Icons.Default.Link,
-                            contentDescription = stringResource(R.string.website),
-                            modifier = Modifier.size(16.dp)
-                        )
+                        LinkIcon(Size16Modifier, MaterialTheme.colors.placeholderText)
 
                         ClickableText(
                             text = AnnotatedString(website.removePrefix("https://")),
@@ -2182,12 +2172,7 @@ fun RenderPinListEvent(
         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
             pinsToShow.forEach { pin ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.PushPin,
-                        contentDescription = null,
-                        tint = MaterialTheme.colors.onBackground.copy(0.32f),
-                        modifier = Modifier.size(15.dp)
-                    )
+                    PinIcon(modifier = Size15Modifier, tint = MaterialTheme.colors.onBackground.copy(0.32f))
 
                     Spacer(modifier = Modifier.width(5.dp))
 
@@ -2498,16 +2483,6 @@ fun MoreOptionsButton(
             accountViewModel
         )
     }
-}
-
-@Composable
-private fun VerticalDotsIcon() {
-    Icon(
-        imageVector = Icons.Default.MoreVert,
-        null,
-        modifier = Size15Modifier,
-        tint = MaterialTheme.colors.placeholderText
-    )
 }
 
 @Composable
@@ -3025,19 +3000,9 @@ private fun RenderPledgeAmount(
     }
 
     if (hasPledge) {
-        Icon(
-            imageVector = Icons.Default.Bolt,
-            contentDescription = stringResource(R.string.zaps),
-            modifier = Modifier.size(20.dp),
-            tint = BitcoinOrange
-        )
+        ZappedIcon(modifier = Size20Modifier)
     } else {
-        Icon(
-            imageVector = Icons.Default.Bolt,
-            contentDescription = stringResource(R.string.zaps),
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colors.placeholderText
-        )
+        ZapIcon(modifier = Size20Modifier, MaterialTheme.colors.placeholderText)
     }
 
     Text(

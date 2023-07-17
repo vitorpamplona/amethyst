@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
@@ -81,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
@@ -97,8 +97,8 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
@@ -984,12 +984,7 @@ fun DisplayLNAddress(
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                tint = BitcoinOrange,
-                imageVector = Icons.Default.Bolt,
-                contentDescription = stringResource(R.string.lightning_address),
-                modifier = Modifier.size(16.dp)
-            )
+            LightningAddressIcon(modifier = Size16Modifier)
 
             ClickableText(
                 text = AnnotatedString(lud16),

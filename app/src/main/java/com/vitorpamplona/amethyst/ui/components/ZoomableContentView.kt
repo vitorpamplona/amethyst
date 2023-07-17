@@ -26,15 +26,11 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DownloadForOffline
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -47,12 +43,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -75,8 +69,14 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
+import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
+import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -367,15 +367,10 @@ fun ImageUrlWithDownloadButton(url: String, showImage: MutableState<Boolean>) {
     FlowRow() {
         ClickableUrl(urlText = url, url = url)
         IconButton(
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(Size20dp),
             onClick = { showImage.value = true }
         ) {
-            Icon(
-                imageVector = Icons.Default.DownloadForOffline,
-                null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colors.primary
-            )
+            DownloadForOfflineIcon(Size24dp)
         }
     }
 }
@@ -717,12 +712,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
                     }
                 }
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_verified),
-                    "Hash Verified",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(30.dp)
-                )
+                HashCheckIcon(Size30dp)
             }
         } else {
             IconButton(
@@ -736,12 +726,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
                     }
                 }
             ) {
-                Icon(
-                    tint = Color.Red,
-                    imageVector = Icons.Default.Report,
-                    contentDescription = "Invalid Hash",
-                    modifier = Modifier.size(30.dp)
-                )
+                HashCheckFailedIcon(Size30dp)
             }
         }
     }

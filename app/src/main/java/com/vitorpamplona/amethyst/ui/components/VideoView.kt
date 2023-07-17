@@ -11,17 +11,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,7 +54,11 @@ import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.VideoCache
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
+import com.vitorpamplona.amethyst.ui.note.MuteIcon
+import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -352,14 +348,7 @@ fun LayoutCoordinates.isCompletelyVisible(view: View): Boolean {
 
 @Composable
 private fun MuteButton(toggle: (Boolean) -> Unit) {
-    Box(
-        remember {
-            Modifier
-                .width(70.dp)
-                .height(70.dp)
-                .padding(10.dp)
-        }
-    ) {
+    Box(modifier = VolumeBottomIconSize) {
         Box(
             Modifier
                 .clip(CircleShape)
@@ -375,22 +364,12 @@ private fun MuteButton(toggle: (Boolean) -> Unit) {
                 mutedInstance.value = !mutedInstance.value
                 toggle(mutedInstance.value)
             },
-            modifier = Modifier.size(50.dp)
+            modifier = Size50Modifier
         ) {
             if (mutedInstance.value) {
-                Icon(
-                    imageVector = Icons.Default.VolumeOff,
-                    "Hash Verified",
-                    tint = MaterialTheme.colors.onBackground,
-                    modifier = Modifier.size(30.dp)
-                )
+                MutedIcon()
             } else {
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    "Hash Verified",
-                    tint = MaterialTheme.colors.onBackground,
-                    modifier = Modifier.size(30.dp)
-                )
+                MuteIcon()
             }
         }
     }

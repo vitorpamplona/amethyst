@@ -5,12 +5,9 @@ import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -163,16 +160,8 @@ fun DrawPlayName(name: String) {
 
 @Composable
 fun DrawPlayNameIcon(onClick: () -> Unit) {
-    IconButton(
-        onClick = onClick,
-        modifier = StdButtonSizeModifier
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.PlayCircle,
-            contentDescription = null,
-            modifier = StdButtonSizeModifier,
-            tint = MaterialTheme.colors.placeholderText
-        )
+    IconButton(onClick = onClick, modifier = StdButtonSizeModifier) {
+        PlayIcon(modifier = StdButtonSizeModifier, tint = MaterialTheme.colors.placeholderText)
     }
 }
 
