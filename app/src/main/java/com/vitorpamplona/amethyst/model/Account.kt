@@ -671,7 +671,8 @@ class Account(
         zapRaiserAmount: Long? = null,
         replyingTo: String?,
         root: String?,
-        directMentions: Set<HexKey>
+        directMentions: Set<HexKey>,
+        relayList: List<Relay>? = null
     ) {
         if (!isWriteable()) return
 
@@ -694,7 +695,7 @@ class Account(
             privateKey = loggedIn.privKey!!
         )
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
     }
 
@@ -709,7 +710,8 @@ class Account(
         closedAt: Int?,
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
-        zapRaiserAmount: Long? = null
+        zapRaiserAmount: Long? = null,
+        relayList: List<Relay>? = null
     ) {
         if (!isWriteable()) return
 
@@ -733,7 +735,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
     }
 

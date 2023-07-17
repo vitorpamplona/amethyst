@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -92,6 +94,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class RelayList(
+    val relay: Relay,
+    val isSelected: Boolean
+)
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -107,6 +114,27 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    var showRelaysDialog by remember {
+        mutableStateOf(false)
+    }
+    val relayList = account.activeRelays()?.filter {
+        it.write
+    }?.map {
+        it
+    } ?: account.convertLocalRelays().filter {
+        it.write
+    }
+
+    var relays by remember {
+        mutableStateOf(
+            relayList.map {
+                RelayList(
+                    it,
+                    true
+                )
+            }
+        )
+    }
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
@@ -141,6 +169,90 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                 .fillMaxWidth()
                 .fillMaxHeight()
         ) {
+            if (showRelaysDialog) {
+                Dialog(
+                    onDismissRequest = { showRelaysDialog = false },
+                    properties = DialogProperties(
+                        usePlatformDefaultWidth = false,
+                        dismissOnClickOutside = false,
+                        decorFitsSystemWindows = false
+                    )
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight()
+                                .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CloseButton(
+                                    onCancel = {
+                                        showRelaysDialog = false
+                                    }
+                                )
+
+                                PostButton(
+                                    onPost = {
+                                        scope.launch(Dispatchers.IO) {
+                                            showRelaysDialog = false
+                                        }
+                                    },
+                                    isActive = true
+                                )
+                            }
+
+                            LazyColumn(
+                                contentPadding = PaddingValues(
+                                    top = 10.dp,
+                                    bottom = 10.dp
+                                )
+                            ) {
+                                itemsIndexed(
+                                    relays,
+                                    key = { _, item -> item.relay.url }
+                                ) { index, item ->
+                                    Row(
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                relays = relays.mapIndexed { j, item ->
+                                                    if (index == j) {
+                                                        item.copy(isSelected = !item.isSelected)
+                                                    } else { item }
+                                                }
+                                            }
+                                    ) {
+                                        Text(text = item.relay.url)
+                                        Switch(
+                                            checked = item.isSelected,
+                                            onCheckedChange = {
+                                                relays = relays.mapIndexed { j, item ->
+                                                    if (index == j) {
+                                                        item.copy(isSelected = !item.isSelected)
+                                                    } else { item }
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -162,10 +274,27 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             onClose()
                         })
 
+                        Box {
+                            IconButton(
+                                modifier = Modifier.align(Alignment.Center),
+                                onClick = {
+                                    showRelaysDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.relays),
+                                    contentDescription = null,
+                                    modifier = Modifier.height(25.dp),
+                                    tint = MaterialTheme.colors.onBackground
+                                )
+                            }
+                        }
                         PostButton(
                             onPost = {
+                                val list = relays.filter { it.isSelected }.map { it.relay }
+
                                 scope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPost()
+                                    postViewModel.sendPost(relayList = list)
                                     onClose()
                                 }
                             },

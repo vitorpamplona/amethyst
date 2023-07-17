@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import android.util.Log
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.Event
@@ -73,10 +74,18 @@ object Client : RelayPool.Listener {
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
-    fun send(signedEvent: EventInterface, relay: String? = null, feedTypes: Set<FeedType>? = null, onDone: (() -> Unit)? = null) {
+    fun send(
+        signedEvent: EventInterface,
+        relay: String? = null,
+        feedTypes: Set<FeedType>? = null,
+        relayList: List<Relay>? = null,
+        onDone: (() -> Unit)? = null
+    ) {
         checkNotInMainThread()
 
-        if (relay == null) {
+        if (relayList != null) {
+            RelayPool.sendToSelectedRelays(relayList, signedEvent)
+        } else if (relay == null) {
             RelayPool.send(signedEvent)
         } else {
             val useConnectedRelayIfPresent = RelayPool.getRelays(relay)
