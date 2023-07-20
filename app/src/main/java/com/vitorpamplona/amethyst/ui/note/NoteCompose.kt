@@ -2827,7 +2827,7 @@ fun DisplayFollowingHashtagsInPost(
     }
 
     firstTag?.let {
-        Column() {
+        Column(verticalArrangement = Arrangement.Center) {
             Row(verticalAlignment = CenterVertically) {
                 DisplayTagList(it, nav)
             }
