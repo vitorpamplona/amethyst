@@ -301,6 +301,26 @@ fun PinIcon(modifier: Modifier, tint: Color) {
 }
 
 @Composable
+fun LyricsIcon(modifier: Modifier, tint: Color) {
+    Icon(
+        painter = painterResource(id = R.drawable.lyrics_on),
+        contentDescription = null,
+        modifier = modifier,
+        tint = tint
+    )
+}
+
+@Composable
+fun LyricsOffIcon(modifier: Modifier, tint: Color) {
+    Icon(
+        painter = painterResource(id = R.drawable.lyrics_off),
+        contentDescription = null,
+        modifier = modifier,
+        tint = tint
+    )
+}
+
+@Composable
 fun ClearTextIcon() {
     Icon(
         imageVector = Icons.Default.Clear,
