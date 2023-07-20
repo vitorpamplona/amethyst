@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -343,7 +344,7 @@ fun VerticalDotsIcon() {
     Icon(
         imageVector = Icons.Default.MoreVert,
         null,
-        modifier = Size15Modifier,
+        modifier = Size18Modifier,
         tint = MaterialTheme.colors.placeholderText
     )
 }
