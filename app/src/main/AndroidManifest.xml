@@ -32,7 +32,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Keeps screen on while playing videos -->
-    <uses-permission android:name="android.Manifest.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Old permission to access media -->
     <uses-permission
