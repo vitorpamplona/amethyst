@@ -170,7 +170,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
@@ -2465,7 +2464,7 @@ private fun BoostedMark() {
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colors.placeholderText,
         maxLines = 1,
-        modifier = StdStartPadding
+        modifier = HalfStartPadding
     )
 }
 
