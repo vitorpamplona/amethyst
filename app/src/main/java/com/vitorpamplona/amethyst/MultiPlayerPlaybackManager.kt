@@ -66,7 +66,6 @@ class MultiPlayerPlaybackManager(
             repeatMode = Player.REPEAT_MODE_ALL
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             volume = 0f
-            setWakeMode(C.WAKE_MODE_NETWORK)
         }
 
         val mediaSession = MediaSession.Builder(context, player).run {
@@ -80,8 +79,10 @@ class MultiPlayerPlaybackManager(
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
+                    player.setWakeMode(C.WAKE_MODE_NETWORK)
                     playingMap.put(id, mediaSession)
                 } else {
+                    player.setWakeMode(C.WAKE_MODE_NONE)
                     cache.put(id, mediaSession)
                     playingMap.remove(id, mediaSession)
                 }
