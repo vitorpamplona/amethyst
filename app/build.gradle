@@ -20,7 +20,7 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
-        resConfigs("ar", "cs", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW", "ja")
+        resConfigs("ar", "cs", "de", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW", "ja")
     }
 
     buildTypes {
