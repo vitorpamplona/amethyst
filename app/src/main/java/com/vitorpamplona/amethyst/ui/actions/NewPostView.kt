@@ -110,6 +110,16 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    var showRelaysDialog by remember {
+        mutableStateOf(false)
+    }
+    var relayList = account.activeRelays()?.filter {
+        it.write
+    }?.map {
+        it
+    } ?: account.convertLocalRelays().filter {
+        it.write
+    }
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
@@ -144,6 +154,20 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                 .fillMaxWidth()
                 .fillMaxHeight()
         ) {
+            if (showRelaysDialog) {
+                RelaySelectionDialog(
+                    list = relayList,
+                    onClose = {
+                        showRelaysDialog = false
+                    },
+                    onPost = {
+                        relayList = it
+                    },
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -165,10 +189,25 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             onClose()
                         })
 
+                        Box {
+                            IconButton(
+                                modifier = Modifier.align(Alignment.Center),
+                                onClick = {
+                                    showRelaysDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.relays),
+                                    contentDescription = null,
+                                    modifier = Modifier.height(25.dp),
+                                    tint = MaterialTheme.colors.onBackground
+                                )
+                            }
+                        }
                         PostButton(
                             onPost = {
                                 scope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPost()
+                                    postViewModel.sendPost(relayList = relayList)
                                     onClose()
                                 }
                             },
@@ -265,7 +304,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                         url,
                                         account.defaultFileServer,
                                         onAdd = { description, server, sensitiveContent ->
-                                            postViewModel.upload(url, description, sensitiveContent, server, context)
+                                            postViewModel.upload(url, description, sensitiveContent, server, context, relayList)
                                             account.changeDefaultFileServer(server)
                                         },
                                         onCancel = {

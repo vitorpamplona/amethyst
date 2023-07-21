@@ -22,6 +22,7 @@ import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import kotlinx.coroutines.Dispatchers
@@ -128,7 +129,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = account
     }
 
-    fun sendPost() {
+    fun sendPost(relayList: List<Relay>? = null) {
         val tagger = NewMessageTagger(originalNote?.channelHex(), mentions, replyTos, message.text)
         tagger.run()
 
@@ -145,7 +146,20 @@ open class NewPostViewModel() : ViewModel() {
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
         if (wantsPoll) {
-            account?.sendPoll(tagger.message, tagger.replyTos, tagger.mentions, pollOptions, valueMaximum, valueMinimum, consensusThreshold, closedAt, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+            account?.sendPoll(
+                tagger.message,
+                tagger.replyTos,
+                tagger.mentions,
+                pollOptions,
+                valueMaximum,
+                valueMinimum,
+                consensusThreshold,
+                closedAt,
+                zapReceiver,
+                wantsToMarkAsSensitive,
+                localZapRaiserAmount,
+                relayList
+            )
         } else if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
                 account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
@@ -172,14 +186,15 @@ open class NewPostViewModel() : ViewModel() {
                 zapRaiserAmount = localZapRaiserAmount,
                 replyingTo = replyId,
                 root = rootId,
-                directMentions = tagger.directMentions
+                directMentions = tagger.directMentions,
+                relayList = relayList
             )
         }
 
         cancel()
     }
 
-    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context) {
+    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
         isUploadingImage = true
         contentToAddUrl = null
 
@@ -194,7 +209,7 @@ open class NewPostViewModel() : ViewModel() {
                 onReady = { fileUri, contentType, size ->
                     if (server == ServersAvailable.NIP95) {
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent)
+                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent, relayList = relayList)
                         }
                     } else {
                         ImageUploader.uploadImage(
@@ -370,7 +385,7 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
             FileHeader.prepare(
@@ -379,7 +394,7 @@ open class NewPostViewModel() : ViewModel() {
                 description,
                 sensitiveContent,
                 onReady = {
-                    val note = account?.sendHeader(it)
+                    val note = account?.sendHeader(it, relayList = relayList)
 
                     isUploadingImage = false
 
@@ -401,7 +416,7 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
@@ -411,7 +426,7 @@ open class NewPostViewModel() : ViewModel() {
                 sensitiveContent,
                 onReady = {
                     val nip95 = account?.createNip95(bytes, headerInfo = it)
-                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second) }
+                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second, relayList = relayList) }
 
                     isUploadingImage = false
 

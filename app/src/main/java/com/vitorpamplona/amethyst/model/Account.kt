@@ -628,19 +628,19 @@ class Account(
         return Pair(data, signedEvent)
     }
 
-    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
+    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
-        Client.send(data)
+        Client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendHeader(headerInfo: FileHeader): Note? {
+    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
         val signedEvent = FileHeaderEvent.create(
@@ -655,7 +655,7 @@ class Account(
             privateKey = loggedIn.privKey!!
         )
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
@@ -671,7 +671,8 @@ class Account(
         zapRaiserAmount: Long? = null,
         replyingTo: String?,
         root: String?,
-        directMentions: Set<HexKey>
+        directMentions: Set<HexKey>,
+        relayList: List<Relay>? = null
     ) {
         if (!isWriteable()) return
 
@@ -694,7 +695,7 @@ class Account(
             privateKey = loggedIn.privKey!!
         )
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
     }
 
@@ -709,7 +710,8 @@ class Account(
         closedAt: Int?,
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
-        zapRaiserAmount: Long? = null
+        zapRaiserAmount: Long? = null,
+        relayList: List<Relay>? = null
     ) {
         if (!isWriteable()) return
 
@@ -733,7 +735,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
     }
 

@@ -7,17 +7,21 @@ import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
@@ -33,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -70,6 +75,17 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
         }
     }
 
+    var showRelaysDialog by remember {
+        mutableStateOf(false)
+    }
+    var relayList = account.activeRelays()?.filter {
+        it.write
+    }?.map {
+        it
+    } ?: account.convertLocalRelays().filter {
+        it.write
+    }
+
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
@@ -82,6 +98,20 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
             modifier = Modifier
                 .fillMaxWidth()
         ) {
+            if (showRelaysDialog) {
+                RelaySelectionDialog(
+                    list = relayList,
+                    onClose = {
+                        showRelaysDialog = false
+                    },
+                    onPost = {
+                        relayList = it
+                    },
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+
             Column(
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp)
                     .fillMaxWidth()
@@ -97,10 +127,26 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                         onClose()
                     })
 
+                    Box {
+                        IconButton(
+                            modifier = Modifier.align(Alignment.Center),
+                            onClick = {
+                                showRelaysDialog = true
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.relays),
+                                contentDescription = null,
+                                modifier = Modifier.height(25.dp),
+                                tint = MaterialTheme.colors.onBackground
+                            )
+                        }
+                    }
+
                     PostButton(
                         onPost = {
                             onClose()
-                            postViewModel.upload(context)
+                            postViewModel.upload(context, relayList)
                             postViewModel.selectedServer?.let { account.changeDefaultFileServer(it) }
                         },
                         isActive = postViewModel.canPost()
