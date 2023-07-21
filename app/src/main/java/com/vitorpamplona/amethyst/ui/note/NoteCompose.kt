@@ -3439,9 +3439,9 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 }
         ) {
             ClickableUserPicture(it.second, 25.dp, accountViewModel)
-            Spacer(Modifier.width(5.dp))
+            Spacer(StdHorzSpacer)
             UsernameDisplay(it.second, Modifier.weight(1f))
-            Spacer(Modifier.width(5.dp))
+            Spacer(StdHorzSpacer)
             it.first.role?.let {
                 Text(
                     text = it.capitalize(Locale.ROOT),
@@ -3456,8 +3456,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
         if (status == STATUS_LIVE) {
             if (isOnline) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(10.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     VideoView(
                         videoUri = media,
