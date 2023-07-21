@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +9,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
@@ -22,8 +20,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 
 @Composable
 fun UrlPreviewCard(
@@ -46,14 +43,10 @@ fun UrlPreviewCard(
         val uri = LocalUriHandler.current
 
         Row(
-            modifier = Modifier
-                .clickable { runCatching { uri.openUri(url) } }
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colors.subtleBorder,
-                    QuoteBorder
-                )
+            modifier = MaterialTheme.colors.innerPostModifier
+                .clickable {
+                    runCatching { uri.openUri(url) }
+                }
         ) {
             Column {
                 AsyncImage(
