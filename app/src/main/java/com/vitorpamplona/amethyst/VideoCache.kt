@@ -22,33 +22,33 @@ import com.vitorpamplona.amethyst.service.HttpClient
 
     @Synchronized
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-    fun init(context: Context) {
-        if (!this::simpleCache.isInitialized) {
-            exoDatabaseProvider = StandaloneDatabaseProvider(context)
+    private fun init(context: Context) {
+        exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
-            simpleCache = SimpleCache(
-                context.cacheDir,
-                leastRecentlyUsedCacheEvictor,
-                exoDatabaseProvider
-            )
+        simpleCache = SimpleCache(
+            context.cacheDir,
+            leastRecentlyUsedCacheEvictor,
+            exoDatabaseProvider
+        )
 
-            cacheDataSourceFactory = CacheDataSource.Factory()
-                .setCache(simpleCache)
-                .setUpstreamDataSourceFactory(
-                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
-                )
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-        } else {
-            cacheDataSourceFactory = CacheDataSource.Factory()
-                .setCache(simpleCache)
-                .setUpstreamDataSourceFactory(
-                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
-                )
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-        }
+        renewCacheFactory()
     }
 
-    fun get(): CacheDataSource.Factory {
+    // This method should be called when proxy setting changes.
+    fun renewCacheFactory() {
+        cacheDataSourceFactory = CacheDataSource.Factory()
+            .setCache(simpleCache)
+            .setUpstreamDataSourceFactory(
+                OkHttpDataSource.Factory(HttpClient.getHttpClient())
+            )
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    fun get(context: Context): CacheDataSource.Factory {
+        if (!this::simpleCache.isInitialized) {
+            init(context)
+        }
+
         return cacheDataSourceFactory
     }
 }

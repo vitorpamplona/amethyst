@@ -16,7 +16,7 @@ class PlaybackService : MediaSessionService() {
         MultiPlayerPlaybackManager(HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClient.getHttpClient())))
     }
     private val managerProgressive by lazy {
-        MultiPlayerPlaybackManager(ProgressiveMediaSource.Factory(VideoCache.get()))
+        MultiPlayerPlaybackManager(ProgressiveMediaSource.Factory(VideoCache.get(applicationContext)))
     }
     private val managerLocal by lazy {
         MultiPlayerPlaybackManager()
@@ -27,13 +27,8 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        // Initializes video cache.
-        VideoCache.init(applicationContext)
-
         setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(applicationContext)
-                // .setNotificationIdProvider { session -> session.id.hashCode() }
-                .build()
+            DefaultMediaNotificationProvider.Builder(applicationContext).build()
         )
     }
 
