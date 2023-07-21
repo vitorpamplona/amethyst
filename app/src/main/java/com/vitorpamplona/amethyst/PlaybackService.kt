@@ -21,6 +21,9 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initializes video cache.
+        VideoCache.init(applicationContext)
+
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(applicationContext)
                 // .setNotificationIdProvider { session -> session.id.hashCode() }
