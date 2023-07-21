@@ -291,8 +291,9 @@ fun CheckHiddenNoteCompose(
             nav = nav
         )
     } else {
+        val boostedNote = note.replyTo?.lastOrNull()
         val isHidden by accountViewModel.account.liveHiddenUsers.map {
-            note.isHiddenFor(it)
+            note.isHiddenFor(it) || boostedNote?.isHiddenFor(it) == true
         }.observeAsState(accountViewModel.isNoteHidden(note))
 
         Crossfade(targetState = isHidden) {
