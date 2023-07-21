@@ -26,13 +26,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
@@ -49,25 +49,14 @@ fun ChatroomScreen(
 ) {
     if (userId == null) return
 
-    var userRoom by remember(userId) { mutableStateOf<User?>(null) }
-
-    if (userRoom == null) {
-        LaunchedEffect(userId) {
-            launch(Dispatchers.IO) {
-                val newUser = LocalCache.checkGetOrCreateUser(userId)
-                if (newUser != userRoom) {
-                    userRoom = newUser
-                }
-            }
+    LoadUser(userId) {
+        it?.let {
+            PrepareChatroomViewModels(
+                baseUser = it,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
-    }
-
-    userRoom?.let {
-        PrepareChatroomViewModels(
-            baseUser = it,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
     }
 }
 

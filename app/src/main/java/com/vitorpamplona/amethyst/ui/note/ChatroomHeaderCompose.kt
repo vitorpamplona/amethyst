@@ -68,7 +68,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun ChatroomCompose(
+fun ChatroomHeaderCompose(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -305,13 +305,16 @@ private fun WatchNotificationChanges(
 @Composable
 fun LoadUser(baseUserHex: String, content: @Composable (User?) -> Unit) {
     var user by remember(baseUserHex) {
-        mutableStateOf<User?>(LocalCache.getUserIfExists(baseUserHex))
+        mutableStateOf(LocalCache.getUserIfExists(baseUserHex))
     }
 
     if (user == null) {
         LaunchedEffect(key1 = baseUserHex) {
             launch(Dispatchers.IO) {
-                user = LocalCache.checkGetOrCreateUser(baseUserHex)
+                val newUser = LocalCache.checkGetOrCreateUser(baseUserHex)
+                if (user != newUser) {
+                    user = newUser
+                }
             }
         }
     }
