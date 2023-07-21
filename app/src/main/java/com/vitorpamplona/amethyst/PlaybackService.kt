@@ -12,9 +12,15 @@ import com.vitorpamplona.amethyst.service.HttpClient
 
 @UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
-    private val managerHls = MultiPlayerPlaybackManager(HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClient.getHttpClient())))
-    private val managerProgressive = MultiPlayerPlaybackManager(ProgressiveMediaSource.Factory(VideoCache.get()))
-    private val managerLocal = MultiPlayerPlaybackManager()
+    private val managerHls by lazy {
+        MultiPlayerPlaybackManager(HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClient.getHttpClient())))
+    }
+    private val managerProgressive by lazy {
+        MultiPlayerPlaybackManager(ProgressiveMediaSource.Factory(VideoCache.get()))
+    }
+    private val managerLocal by lazy {
+        MultiPlayerPlaybackManager()
+    }
 
     // Create your Player and MediaSession in the onCreate lifecycle event
     @OptIn(UnstableApi::class)
