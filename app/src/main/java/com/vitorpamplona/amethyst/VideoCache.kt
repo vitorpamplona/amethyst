@@ -7,7 +7,7 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import com.vitorpamplona.amethyst.service.HttpClient
+import okhttp3.OkHttpClient
 
 @UnstableApi object VideoCache {
 
@@ -22,7 +22,7 @@ import com.vitorpamplona.amethyst.service.HttpClient
 
     @Synchronized
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-    private fun init(context: Context) {
+    private fun init(context: Context, client: OkHttpClient) {
         exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
         simpleCache = SimpleCache(
@@ -31,22 +31,22 @@ import com.vitorpamplona.amethyst.service.HttpClient
             exoDatabaseProvider
         )
 
-        renewCacheFactory()
+        renewCacheFactory(client)
     }
 
     // This method should be called when proxy setting changes.
-    fun renewCacheFactory() {
+    fun renewCacheFactory(client: OkHttpClient) {
         cacheDataSourceFactory = CacheDataSource.Factory()
             .setCache(simpleCache)
             .setUpstreamDataSourceFactory(
-                OkHttpDataSource.Factory(HttpClient.getHttpClient())
+                OkHttpDataSource.Factory(client)
             )
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    fun get(context: Context): CacheDataSource.Factory {
+    fun get(context: Context, client: OkHttpClient): CacheDataSource.Factory {
         if (!this::simpleCache.isInitialized) {
-            init(context)
+            init(context, client)
         }
 
         return cacheDataSourceFactory

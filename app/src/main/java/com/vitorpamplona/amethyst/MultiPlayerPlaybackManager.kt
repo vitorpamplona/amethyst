@@ -12,11 +12,15 @@ import androidx.media3.common.Player.STATE_READY
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.vitorpamplona.amethyst.ui.MainActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-class MultiPlayerPlaybackManager(private val dataSourceFactory: androidx.media3.exoplayer.source.MediaSource.Factory? = null) {
-    private val cachedPositions = LruCache<String, Long>(100)
-
+class MultiPlayerPlaybackManager(
+    private val dataSourceFactory: androidx.media3.exoplayer.source.MediaSource.Factory? = null,
+    private val cachedPositions: VideoViewedPositionCache
+) {
     // protects from LruCache killing playing sessions
     private val playingMap = mutableMapOf<String, MediaSession>()
 
@@ -87,7 +91,7 @@ class MultiPlayerPlaybackManager(private val dataSourceFactory: androidx.media3.
                 when (playbackState) {
                     STATE_IDLE -> {
                         if (player.currentPosition > 5 * 60) { // 5 seconds
-                            cachedPositions.put(uri, player.currentPosition)
+                            cachedPositions.add(uri, player.currentPosition)
                         }
                     }
                     STATE_READY -> {
@@ -99,7 +103,7 @@ class MultiPlayerPlaybackManager(private val dataSourceFactory: androidx.media3.
                     }
                     else -> {
                         if (player.currentPosition > 5 * 60) { // 5 seconds
-                            cachedPositions.put(uri, player.currentPosition)
+                            cachedPositions.add(uri, player.currentPosition)
                         }
                     }
                 }
@@ -112,7 +116,14 @@ class MultiPlayerPlaybackManager(private val dataSourceFactory: androidx.media3.
     }
 
     fun releaseAppPlayers() {
-        cache.evictAll()
+        GlobalScope.launch(Dispatchers.Main) {
+            cache.evictAll()
+            playingMap.forEach {
+                it.value.player.release()
+                it.value.release()
+            }
+            playingMap.clear()
+        }
     }
 
     fun playingContent(): Collection<MediaSession> {

@@ -5,19 +5,29 @@ import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
+import kotlin.properties.Delegates
 
 object HttpClient {
-    private var proxy: Proxy? = null
+    var proxyChangeListeners = ArrayList<() -> Unit>()
+
+    // fires off every time value of the property changes
+    private var internalProxy: Proxy? by Delegates.observable(null) { _, oldValue, newValue ->
+        if (oldValue != newValue) {
+            proxyChangeListeners.forEach {
+                it()
+            }
+        }
+    }
 
     fun start(account: Account?) {
-        this.proxy = account?.proxy
+        this.internalProxy = account?.proxy
     }
 
     fun getHttpClient(): OkHttpClient {
-        val seconds = if (proxy != null) 20L else 10L
+        val seconds = if (internalProxy != null) 20L else 10L
         val duration = Duration.ofSeconds(seconds)
         return OkHttpClient.Builder()
-            .proxy(proxy)
+            .proxy(internalProxy)
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
@@ -25,7 +35,7 @@ object HttpClient {
     }
 
     fun getProxy(): Proxy? {
-        return proxy
+        return internalProxy
     }
 
     fun initProxy(useProxy: Boolean, hostname: String, port: Int): Proxy? {

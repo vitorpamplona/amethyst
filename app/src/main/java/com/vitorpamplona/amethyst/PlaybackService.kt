@@ -4,6 +4,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
@@ -12,14 +13,18 @@ import com.vitorpamplona.amethyst.service.HttpClient
 
 @UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
-    private val managerHls by lazy {
-        MultiPlayerPlaybackManager(HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClient.getHttpClient())))
+    private var videoViewedPositionCache = VideoViewedPositionCache()
+
+    private var managerHls: MultiPlayerPlaybackManager? = null
+    private var managerProgressive: MultiPlayerPlaybackManager? = null
+    private var managerLocal: MultiPlayerPlaybackManager? = null
+
+    fun newHslDataSource(): MediaSource.Factory {
+        return HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClient.getHttpClient()))
     }
-    private val managerProgressive by lazy {
-        MultiPlayerPlaybackManager(ProgressiveMediaSource.Factory(VideoCache.get(applicationContext)))
-    }
-    private val managerLocal by lazy {
-        MultiPlayerPlaybackManager()
+
+    fun newProgressiveDataSource(): MediaSource.Factory {
+        return ProgressiveMediaSource.Factory(VideoCache.get(applicationContext, HttpClient.getHttpClient()))
     }
 
     // Create your Player and MediaSession in the onCreate lifecycle event
@@ -27,20 +32,36 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
+        managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+        managerLocal = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
+
+        // Stop all videos and recreates all managers when the proxy changes.
+        HttpClient.proxyChangeListeners.add {
+            val toDestroyHls = managerHls
+            val toDestroyProgressive = managerProgressive
+
+            managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
+            managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+
+            toDestroyHls?.releaseAppPlayers()
+            toDestroyProgressive?.releaseAppPlayers()
+        }
+
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(applicationContext).build()
         )
     }
 
     override fun onDestroy() {
-        managerHls.releaseAppPlayers()
-        managerLocal.releaseAppPlayers()
-        managerProgressive.releaseAppPlayers()
+        managerHls?.releaseAppPlayers()
+        managerLocal?.releaseAppPlayers()
+        managerProgressive?.releaseAppPlayers()
 
         super.onDestroy()
     }
 
-    fun getAppropriateMediaSessionManager(fileName: String): MultiPlayerPlaybackManager {
+    fun getAppropriateMediaSessionManager(fileName: String): MultiPlayerPlaybackManager? {
         return if (fileName.startsWith("file")) {
             managerLocal
         } else if (fileName.endsWith("m3u8")) {
@@ -55,34 +76,34 @@ class PlaybackService : MediaSessionService() {
         super.onUpdateNotification(session, startInForegroundRequired)
 
         // Overrides the notification with any player actually playing
-        managerHls.playingContent().forEach {
+        managerHls?.playingContent()?.forEach {
             if (it.player.isPlaying) {
                 super.onUpdateNotification(it, startInForegroundRequired)
             }
         }
-        managerLocal.playingContent().forEach {
+        managerLocal?.playingContent()?.forEach {
             if (it.player.isPlaying) {
                 super.onUpdateNotification(session, startInForegroundRequired)
             }
         }
-        managerProgressive.playingContent().forEach {
+        managerProgressive?.playingContent()?.forEach {
             if (it.player.isPlaying) {
                 super.onUpdateNotification(session, startInForegroundRequired)
             }
         }
 
         // Overrides again with playing with audio
-        managerHls.playingContent().forEach {
+        managerHls?.playingContent()?.forEach {
             if (it.player.isPlaying && it.player.volume > 0) {
                 super.onUpdateNotification(it, startInForegroundRequired)
             }
         }
-        managerLocal.playingContent().forEach {
+        managerLocal?.playingContent()?.forEach {
             if (it.player.isPlaying && it.player.volume > 0) {
                 super.onUpdateNotification(session, startInForegroundRequired)
             }
         }
-        managerProgressive.playingContent().forEach {
+        managerProgressive?.playingContent()?.forEach {
             if (it.player.isPlaying && it.player.volume > 0) {
                 super.onUpdateNotification(session, startInForegroundRequired)
             }
@@ -98,6 +119,6 @@ class PlaybackService : MediaSessionService() {
 
         val manager = getAppropriateMediaSessionManager(uri)
 
-        return manager.getMediaSession(id, uri, callbackUri, context = this, applicationContext = applicationContext)
+        return manager?.getMediaSession(id, uri, callbackUri, context = this, applicationContext = applicationContext)
     }
 }

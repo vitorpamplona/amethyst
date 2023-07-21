@@ -2,8 +2,8 @@ package com.vitorpamplona.amethyst
 
 import android.util.LruCache
 
-object VideoViewedPositionCache {
-    val cachedPosition = LruCache<String, Long>(10)
+class VideoViewedPositionCache {
+    val cachedPosition = LruCache<String, Long>(100)
 
     fun add(uri: String, position: Long) {
         cachedPosition.put(uri, position)
