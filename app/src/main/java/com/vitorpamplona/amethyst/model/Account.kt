@@ -1549,7 +1549,9 @@ class Account(
             println("Loading saved contacts ${it.toJson()}")
 
             if (userProfile().latestContactList == null) {
-                LocalCache.consume(it)
+                GlobalScope.launch(Dispatchers.IO) {
+                    LocalCache.consume(it)
+                }
             }
         }
     }
