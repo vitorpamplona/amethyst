@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -757,9 +756,9 @@ private fun KeepPlayingButton(
                 modifier = Size50Modifier
             ) {
                 if (keepPlaying.value) {
-                    LyricsIcon(Size22Modifier, Color.White)
+                    LyricsIcon(Size22Modifier, MaterialTheme.colors.onBackground)
                 } else {
-                    LyricsOffIcon(Size22Modifier, Color.White)
+                    LyricsOffIcon(Size22Modifier, MaterialTheme.colors.onBackground)
                 }
             }
         }
