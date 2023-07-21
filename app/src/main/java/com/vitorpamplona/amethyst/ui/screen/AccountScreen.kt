@@ -7,12 +7,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
 
 @Composable
-fun AccountScreen(accountStateViewModel: AccountStateViewModel, themeViewModel: ThemeViewModel, startingPage: String?) {
+fun AccountScreen(
+    accountStateViewModel: AccountStateViewModel,
+    themeViewModel: ThemeViewModel,
+    navController: NavHostController
+) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
 
     Column() {
@@ -27,7 +32,7 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, themeViewModel: 
                         factory = AccountViewModel.Factory(state.account)
                     )
 
-                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, startingPage)
+                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, navController)
                 }
                 is AccountState.LoggedInViewOnly -> {
                     val accountViewModel: AccountViewModel = viewModel(
@@ -35,7 +40,7 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel, themeViewModel: 
                         factory = AccountViewModel.Factory(state.account)
                     )
 
-                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, startingPage)
+                    MainScreen(accountViewModel, accountStateViewModel, themeViewModel, navController)
                 }
             }
         }

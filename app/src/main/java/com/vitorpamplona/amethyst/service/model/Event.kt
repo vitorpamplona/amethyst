@@ -7,6 +7,7 @@ import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import nostr.postr.Utils
@@ -130,6 +131,18 @@ open class Event(
         } catch (e: Exception) {
             null
         }
+    }
+
+    open fun toNIP19(): String {
+        return if (this is AddressableEvent) {
+            ATag(kind, pubKey, dTag(), null).toNAddr()
+        } else {
+            Nip19.createNEvent(id, pubKey, kind, null)
+        }
+    }
+
+    fun toNostrUri(): String {
+        return "nostr:${toNIP19()}"
     }
 
     /**

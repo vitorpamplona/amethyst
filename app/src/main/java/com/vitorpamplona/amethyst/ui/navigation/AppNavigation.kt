@@ -2,11 +2,8 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -56,11 +53,8 @@ fun AppNavigation(
 
     navController: NavHostController,
     accountViewModel: AccountViewModel,
-    themeViewModel: ThemeViewModel,
-    nextPage: String? = null
+    themeViewModel: ThemeViewModel
 ) {
-    var actionableNextPage by remember { mutableStateOf<String?>(nextPage) }
-
     val scope = rememberCoroutineScope()
     val nav = remember {
         { route: String ->
@@ -231,12 +225,5 @@ fun AppNavigation(
                 )
             })
         }
-    }
-
-    actionableNextPage?.let {
-        LaunchedEffect(it) {
-            nav(it)
-        }
-        actionableNextPage = null
     }
 }

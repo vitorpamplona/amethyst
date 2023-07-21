@@ -27,8 +27,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -61,10 +61,9 @@ fun MainScreen(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
     themeViewModel: ThemeViewModel,
-    startingPage: String? = null
+    navController: NavHostController
 ) {
     val scope = rememberCoroutineScope()
-    val navController = rememberNavController()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
     val sheetState = rememberModalBottomSheetState(
         initialValue = ModalBottomSheetValue.Hidden,
@@ -218,8 +217,7 @@ fun MainScreen(
                     userReactionsStatsModel = userReactionsStatsModel,
                     navController = navController,
                     accountViewModel = accountViewModel,
-                    themeViewModel = themeViewModel,
-                    nextPage = startingPage
+                    themeViewModel = themeViewModel
                 )
             }
         }

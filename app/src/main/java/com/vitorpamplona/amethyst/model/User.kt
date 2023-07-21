@@ -51,6 +51,8 @@ class User(val pubkeyHex: String) {
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
+    fun toNostrUri() = "nostr:${pubkeyNpub()}"
+
     override fun toString(): String = pubkeyHex
 
     fun toBestDisplayName(): String {

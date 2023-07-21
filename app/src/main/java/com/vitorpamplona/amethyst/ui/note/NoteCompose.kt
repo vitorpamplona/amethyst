@@ -170,7 +170,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
@@ -1347,7 +1346,11 @@ fun RenderAppDefinition(
                 )
 
                 if (zoomImageDialogOpen) {
-                    ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
+                    ZoomableImageDialog(
+                        imageUrl = figureOutMimeType(it.banner!!),
+                        onDismiss = { zoomImageDialogOpen = false },
+                        accountViewModel = accountViewModel
+                    )
                 }
             } else {
                 Image(
@@ -1398,7 +1401,11 @@ fun RenderAppDefinition(
                     }
 
                     if (zoomImageDialogOpen) {
-                        ZoomableImageDialog(imageUrl = figureOutMimeType(it.banner!!), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
+                        ZoomableImageDialog(
+                            imageUrl = figureOutMimeType(it.banner!!),
+                            onDismiss = { zoomImageDialogOpen = false },
+                            accountViewModel = accountViewModel
+                        )
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -1484,15 +1491,15 @@ private fun RenderHighlight(
     }
 
     DisplayHighlight(
-        quote,
-        author,
-        url,
-        postHex,
-        makeItShort,
-        canPreview,
-        backgroundColor,
-        accountViewModel,
-        nav
+        highlight = quote,
+        authorHex = author,
+        url = url,
+        postAddress = postHex,
+        makeItShort = makeItShort,
+        canPreview = canPreview,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav
     )
 }
 
@@ -2222,7 +2229,7 @@ private fun RenderAudioTrack(
 ) {
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
-    AudioTrackHeader(noteEvent, accountViewModel, nav)
+    AudioTrackHeader(noteEvent, note, accountViewModel, nav)
 }
 
 @Composable
@@ -2457,7 +2464,7 @@ private fun BoostedMark() {
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colors.placeholderText,
         maxLines = 1,
-        modifier = StdStartPadding
+        modifier = HalfStartPadding
     )
 }
 
@@ -2820,7 +2827,7 @@ fun DisplayFollowingHashtagsInPost(
     }
 
     firstTag?.let {
-        Column() {
+        Column(verticalArrangement = Arrangement.Center) {
             Row(verticalAlignment = CenterVertically) {
                 DisplayTagList(it, nav)
             }
@@ -3132,11 +3139,25 @@ fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
                 val description = event.content
                 val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
                 val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-                val uri = "nostr:" + note.toNEvent()
+                val uri = note.toNostrUri()
                 val newContent = if (isImage) {
-                    ZoomableUrlImage(fullUrl, description, hash, blurHash, dimensions, uri)
+                    ZoomableUrlImage(
+                        url = fullUrl,
+                        description = description,
+                        hash = hash,
+                        blurhash = blurHash,
+                        dim = dimensions,
+                        uri = uri
+                    )
                 } else {
-                    ZoomableUrlVideo(fullUrl, description, hash, uri)
+                    ZoomableUrlVideo(
+                        url = fullUrl,
+                        description = description,
+                        hash = hash,
+                        dim = dimensions,
+                        uri = uri,
+                        authorName = note.author?.toBestDisplayName()
+                    )
                 }
 
                 launch(Dispatchers.Main) {
@@ -3196,7 +3217,7 @@ private fun RenderNIP95(
     if (content == null) {
         LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
             launch(Dispatchers.IO) {
-                val uri = "nostr:" + header.toNEvent()
+                val uri = header.toNostrUri()
                 val localDir =
                     note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
                 val blurHash = eventHeader.blurhash()
@@ -3221,7 +3242,8 @@ private fun RenderNIP95(
                         description = description,
                         dim = dimensions,
                         isVerified = true,
-                        uri = uri
+                        uri = uri,
+                        authorName = header.author?.toBestDisplayName()
                     )
                 }
 
@@ -3242,7 +3264,7 @@ private fun RenderNIP95(
 }
 
 @Composable
-fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
     val subject = remember { noteEvent.subject() }
@@ -3304,14 +3326,17 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, accountViewModel: AccountViewMo
                     cover?.let { cover ->
                         LoadThumbAndThenVideoView(
                             videoUri = media,
-                            description = noteEvent.subject(),
+                            title = noteEvent.subject(),
                             thumbUri = cover,
+                            authorName = note.author?.toBestDisplayName(),
+                            nostrUriCallback = "nostr:${note.toNEvent()}",
                             accountViewModel = accountViewModel
                         )
                     }
                         ?: VideoView(
                             videoUri = media,
-                            description = noteEvent.subject(),
+                            title = noteEvent.subject(),
+                            authorName = note.author?.toBestDisplayName(),
                             accountViewModel = accountViewModel
                         )
                 }
@@ -3436,8 +3461,11 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 ) {
                     VideoView(
                         videoUri = media,
-                        description = subject,
-                        accountViewModel = accountViewModel
+                        title = subject,
+                        artworkUri = cover,
+                        authorName = baseNote.author?.toBestDisplayName(),
+                        accountViewModel = accountViewModel,
+                        nostrUriCallback = "nostr:${baseNote.toNEvent()}"
                     )
                 }
             } else {

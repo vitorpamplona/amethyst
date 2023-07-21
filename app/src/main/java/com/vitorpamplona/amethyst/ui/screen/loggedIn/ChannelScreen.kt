@@ -607,25 +607,47 @@ private fun ShowVideoStreaming(
             event = it,
             accountViewModel = accountViewModel
         ) {
-            val streamingUrl by baseChannel.live.map {
+            val streamingInfo by baseChannel.live.map {
                 val activity = it.channel as? LiveActivitiesChannel
-                activity?.info?.streaming()
-            }.distinctUntilChanged().observeAsState(baseChannel.info?.streaming())
+                activity?.info
+            }.distinctUntilChanged().observeAsState(baseChannel.info)
 
-            streamingUrl?.let {
-                CheckIfUrlIsOnline(it) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = remember { Modifier.heightIn(max = 300.dp) }
-                    ) {
-                        val zoomableUrlVideo = remember(it) {
-                            ZoomableUrlVideo(url = it)
+            streamingInfo?.let { event ->
+                val url = remember(streamingInfo) {
+                    event.streaming()
+                }
+                val artworkUri = remember(streamingInfo) {
+                    event.image()
+                }
+                val title = remember(streamingInfo) {
+                    baseChannel.toBestDisplayName()
+                }
+
+                val author = remember(streamingInfo) {
+                    baseChannel.creatorName()
+                }
+
+                url?.let {
+                    CheckIfUrlIsOnline(url) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = remember { Modifier.heightIn(max = 300.dp) }
+                        ) {
+                            val zoomableUrlVideo = remember(it) {
+                                ZoomableUrlVideo(
+                                    url = url,
+                                    description = title,
+                                    artworkUri = artworkUri,
+                                    authorName = author,
+                                    uri = event.toNostrUri()
+                                )
+                            }
+
+                            ZoomableContentView(
+                                content = zoomableUrlVideo,
+                                accountViewModel = accountViewModel
+                            )
                         }
-
-                        ZoomableContentView(
-                            content = zoomableUrlVideo,
-                            accountViewModel = accountViewModel
-                        )
                     }
                 }
             }

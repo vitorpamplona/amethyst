@@ -4007,7 +4007,7 @@ class RichTextParserTest {
             "Bech(npub17m7f7q08k4x746s2v45eyvwppck32dcahw7uj2mu5txuswldgqkqw9zms7)"
         )
 
-        state.paragraphs.flatten().forEachIndexed { index, seg ->
+        state.paragraphs.map { it.words }.flatten().forEachIndexed { index, seg ->
             Assert.assertEquals(
                 expectedResult[index],
                 "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})"
@@ -4027,7 +4027,7 @@ class RichTextParserTest {
         Assert.assertTrue(state.imagesForPager.isEmpty())
         Assert.assertTrue(state.imageList.isEmpty())
         Assert.assertTrue(state.customEmoji.isEmpty())
-        Assert.assertEquals("Hi, how are you doing? ", state.paragraphs.firstOrNull()?.firstOrNull()?.segmentText)
+        Assert.assertEquals("Hi, how are you doing? ", state.paragraphs.firstOrNull()?.words?.firstOrNull()?.segmentText)
     }
 
     @Test
@@ -4039,7 +4039,7 @@ class RichTextParserTest {
         Assert.assertTrue(state.customEmoji.isEmpty())
         Assert.assertEquals(
             "\nHi, \nhow\n\n\n are you doing? \n",
-            state.paragraphs.joinToString("\n") { it.joinToString(" ") { it.segmentText } }
+            state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } }
         )
     }
 
@@ -4102,7 +4102,7 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
             "Image(https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg)"
         )
 
-        state.paragraphs.flatten().forEachIndexed { index, seg ->
+        state.paragraphs.map { it.words }.flatten().forEachIndexed { index, seg ->
             Assert.assertEquals(
                 expectedResult[index],
                 "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})"
@@ -4112,7 +4112,7 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
 
     private fun printStateForDebug(state: RichTextViewerState) {
         state.paragraphs.forEachIndexed { index, paragraph ->
-            paragraph.forEach { seg ->
+            paragraph.words.forEach { seg ->
                 println(
                     "\"${
                     seg.javaClass.simpleName.replace(

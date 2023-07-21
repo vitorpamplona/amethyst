@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.theme
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -95,8 +94,8 @@ val DividerThickness = 0.25.dp
 
 val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
-val UserNameRowHeight = Modifier.height(22.dp).fillMaxWidth()
-val UserNameMaxRowHeight = Modifier.heightIn(max = 22.dp).fillMaxWidth()
+val UserNameRowHeight = Modifier.fillMaxWidth()
+val UserNameMaxRowHeight = Modifier.fillMaxWidth()
 
 val Height4dpModifier = Modifier.height(4.dp)
 
@@ -117,4 +116,5 @@ val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
 val ChatHeadlineBorders = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
 
 val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
+val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(14.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)

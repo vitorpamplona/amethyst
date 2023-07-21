@@ -6,18 +6,28 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
@@ -25,13 +35,17 @@ import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
+import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
+import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -45,11 +59,13 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
+    lateinit var navController: NavHostController
+
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val uri = intent?.data?.toString()
-
         val startingPage = uriToRoute(uri)
 
         LocalPreferences.migrateSingleUserPrefs()
@@ -58,8 +74,11 @@ class MainActivity : AppCompatActivity() {
             val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
             AppCompatDelegate.setApplicationLocales(appLocale)
         }
+
         setContent {
+            navController = rememberNavController()
             val themeViewModel: ThemeViewModel = viewModel()
+
             themeViewModel.onChange(LocalPreferences.getTheme())
             AmethystTheme(themeViewModel) {
                 // A surface container using the 'background' color from the theme
@@ -68,8 +87,16 @@ class MainActivity : AppCompatActivity() {
                         AccountStateViewModel(this@MainActivity)
                     }
 
-                    AccountScreen(accountStateViewModel, themeViewModel, startingPage)
+                    AccountScreen(accountStateViewModel, themeViewModel, navController)
                 }
+            }
+
+            var actionableNextPage by remember { mutableStateOf(startingPage) }
+            actionableNextPage?.let {
+                LaunchedEffect(it) {
+                    navController.navigate(it)
+                }
+                actionableNextPage = null
             }
         }
 
@@ -88,6 +115,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
+
         // starts muted every time
         DefaultMutedSetting.value = true
 
@@ -109,6 +137,11 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        keepPlayingMutex?.stop()
+    }
+
     /**
      * Release memory when the UI becomes hidden or when system resources become low.
      * @param level the memory-related event that was raised.
@@ -119,6 +152,39 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.Default) {
             ServiceManager.cleanUp()
         }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+
+        val uri = intent?.data?.toString()
+        val startingPage = uriToRoute(uri)
+
+        startingPage?.let { route ->
+            val currentRoute = getRouteWithArguments(navController)
+            if (!isSameRoute(currentRoute, route)) {
+                navController.navigate(route) {
+                    popUpTo(Route.Home.route)
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    private fun isSameRoute(currentRoute: String?, newRoute: String): Boolean {
+        if (currentRoute == null) return false
+
+        if (currentRoute == newRoute) {
+            return true
+        }
+
+        if (newRoute.startsWith("Event/") && currentRoute.contains("/")) {
+            if (newRoute.split("/")[1] == currentRoute.split("/")[1]) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -196,7 +262,14 @@ fun uriToRoute(uri: String?): String? {
                     }
                 }
 
-                Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
+                Nip19.Type.ADDRESS ->
+                    if (nip19.kind == CommunityDefinitionEvent.kind) {
+                        "Community/${nip19.hex}"
+                    } else if (nip19.kind == LiveActivitiesEvent.kind) {
+                        "Channel/${nip19.hex}"
+                    } else {
+                        "Event/${nip19.hex}"
+                    }
                 else -> null
             }
         } ?: try {
