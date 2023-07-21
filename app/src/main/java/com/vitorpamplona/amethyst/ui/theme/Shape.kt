@@ -69,6 +69,9 @@ val StdTopPadding = Modifier.padding(top = 10.dp)
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
 
+val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
+val HalfVertPadding = Modifier.padding(vertical = 5.dp)
+
 val Size6Modifier = Modifier.size(6.dp)
 val Size10Modifier = Modifier.size(10.dp)
 val Size15Modifier = Modifier.size(15.dp)
