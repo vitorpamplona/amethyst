@@ -21,6 +21,7 @@ import com.vitorpamplona.amethyst.service.HttpClient
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
     @Synchronized
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun init(context: Context) {
         if (!this::simpleCache.isInitialized) {
             exoDatabaseProvider = StandaloneDatabaseProvider(context)

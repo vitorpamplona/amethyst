@@ -22,6 +22,8 @@ fun timeAgo(mills: Long?, context: Context): String {
         .replace(" hr. ago", context.getString(R.string.h))
         .replace(" min. ago", context.getString(R.string.m))
         .replace(" days ago", context.getString(R.string.d))
+        .replace(" hr ago", context.getString(R.string.h))
+        .replace(" min ago", context.getString(R.string.m))
         .replace("Yesterday", "1" + context.getString(R.string.d))
 }
 

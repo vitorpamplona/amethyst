@@ -238,7 +238,10 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
             }
         } else {
             postViewModel.galleryUri?.let {
-                VideoView(it.toString(), accountViewModel = accountViewModel)
+                VideoView(
+                    videoUri = it.toString(),
+                    accountViewModel = accountViewModel
+                )
             }
         }
     }

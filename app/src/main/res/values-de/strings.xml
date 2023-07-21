@@ -24,6 +24,7 @@
     <string name="broadcast">Senden</string>
     <string name="request_deletion">Löschung beantragen</string>
     <string name="block_hide_user"><![CDATA[Benutzer blockieren und ausblenden]]></string>
+    <string name="block_report">Blockieren / Melden</string>
     <string name="report_spam_scam">Spam / Betrug melden</string>
     <string name="report_impersonation">Vortäuschung melden</string>
     <string name="report_explicit_content">Expliziten Inhalt melden</string>
@@ -168,6 +169,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="translations_show_in_lang_first">Zuerst in %1$s anzeigen</string>
     <string name="translations_always_translate_to_lang">Immer ins %1$s übersetzen</string>
     <string name="translations_never_translate_from_lang">Niemals aus dem %1$s übersetzen</string>
+    <string name="nip_05">Nostr-Adresse</string>
     <string name="never">nie</string>
     <string name="now">jetzt</string>
     <string name="h">h</string>
@@ -456,4 +458,38 @@ anz der Bedingungen ist erforderlich</string>
     <string name="followed_tags">Gefolgte Tags</string>
 
     <string name="relay_setup">Relais</string>
+
+    <string name="discover_live">Live</string>
+    <string name="discover_community">Community</string>
+    <string name="discover_chat">Chats</string>
+    <string name="community_approved_posts">Genehmigte Beiträge</string>
+
+    <string name="groups_no_descriptor">Diese Gruppe hat keine Beschreibung oder Regeln. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
+    <string name="community_no_descriptor">Diese Community hat keine Beschreibung. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
+
+    <string name="add_sensitive_content_label">Sensibler Inhalt</string>
+    <string name="add_sensitive_content_description">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor dieser Inhalt angezeigt wird.</string>
+    <string name="settings">Einstellungen</string>
+    <string name="always">Immer</string>
+    <string name="wifi_only">Nur WLAN</string>
+    <string name="system">System</string>
+    <string name="light">Hell</string>
+    <string name="dark">Dunkel</string>
+    <string name="application_preferences">Anwendungseinstellungen</string>
+    <string name="language">Sprache</string>
+    <string name="theme">Design</string>
+    <string name="automatically_load_images_gifs">Bilder/GIFs automatisch laden</string>
+    <string name="automatically_play_videos">Videos automatisch abspielen</string>
+    <string name="automatically_show_url_preview">URL-Vorschau automatisch anzeigen</string>
+    <string name="load_image">Bild laden</string>
+
+    <string name="spamming_users">Spammer</string>
+
+    <string name="muted_button">Ton aus. Klicken, um Ton einzuschalten</string>
+    <string name="mute_button">Ton an. Klicken, um Ton auszuschalten</string>
+    <string name="search_button">Lokale und entfernte Einträge durchsuchen</string>
+
+    <string name="nip05_verified">Nostr-Adresse verifiziert</string>
+    <string name="nip05_failed">Nostr-Adresse konnte nicht verifiziert werden</string>
+    <string name="nip05_checking">Nostr-Adresse wird überprüft</string>
 </resources>

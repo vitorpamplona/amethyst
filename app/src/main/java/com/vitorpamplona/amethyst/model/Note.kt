@@ -75,6 +75,10 @@ open class Note(val idHex: String) {
         return Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
     }
 
+    fun toNostrUri(): String {
+        return "nostr:${toNEvent()}"
+    }
+
     open fun idDisplayNote() = idNote().toShortenHex()
 
     fun channelHex(): HexKey? {

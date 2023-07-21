@@ -95,6 +95,10 @@ abstract class Channel(val idHex: String) {
         return null
     }
 
+    open fun creatorName(): String? {
+        return creator?.toBestDisplayName()
+    }
+
     open fun profilePicture(): String? {
         return creator?.profilePicture()
     }

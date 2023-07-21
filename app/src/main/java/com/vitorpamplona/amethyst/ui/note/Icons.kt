@@ -29,7 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -301,6 +301,26 @@ fun PinIcon(modifier: Modifier, tint: Color) {
 }
 
 @Composable
+fun LyricsIcon(modifier: Modifier, tint: Color) {
+    Icon(
+        painter = painterResource(id = R.drawable.lyrics_on),
+        contentDescription = null,
+        modifier = modifier,
+        tint = tint
+    )
+}
+
+@Composable
+fun LyricsOffIcon(modifier: Modifier, tint: Color) {
+    Icon(
+        painter = painterResource(id = R.drawable.lyrics_off),
+        contentDescription = null,
+        modifier = modifier,
+        tint = tint
+    )
+}
+
+@Composable
 fun ClearTextIcon() {
     Icon(
         imageVector = Icons.Default.Clear,
@@ -323,7 +343,7 @@ fun VerticalDotsIcon() {
     Icon(
         imageVector = Icons.Default.MoreVert,
         null,
-        modifier = Size15Modifier,
+        modifier = Size18Modifier,
         tint = MaterialTheme.colors.placeholderText
     )
 }

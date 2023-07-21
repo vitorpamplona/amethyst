@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,12 +50,16 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.NoteComposeReportState
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
+import com.vitorpamplona.amethyst.ui.note.RenderReportState
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
+import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
@@ -68,6 +73,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun VideoScreen(
@@ -213,7 +221,75 @@ fun SlidingCarousel(
         }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            RenderVideoOrPictureNote(note, accountViewModel, nav)
+            LoadedVideoCompose(note, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun LoadedVideoCompose(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var state by remember {
+        mutableStateOf(
+            NoteComposeReportState(
+                isAcceptable = true,
+                canPreview = true,
+                relevantReports = persistentSetOf()
+            )
+        )
+    }
+
+    val scope = rememberCoroutineScope()
+
+    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
+        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
+            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+            scope.launch(Dispatchers.Main) {
+                state = newState
+            }
+        }
+    }
+
+    Crossfade(targetState = state) {
+        RenderReportState(
+            it,
+            note,
+            accountViewModel,
+            nav
+        )
+    }
+}
+
+@Composable
+fun RenderReportState(
+    state: NoteComposeReportState,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var showReportedNote by remember { mutableStateOf(false) }
+
+    Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
+        if (showHiddenNote) {
+            Column(remember { Modifier.fillMaxSize(1f) }, verticalArrangement = Arrangement.Center) {
+                HiddenNote(
+                    state.relevantReports,
+                    accountViewModel,
+                    Modifier,
+                    false,
+                    nav,
+                    onClick = { showReportedNote = true }
+                )
+            }
+        } else {
+            RenderVideoOrPictureNote(
+                note,
+                accountViewModel,
+                nav
+            )
         }
     }
 }
@@ -224,7 +300,7 @@ private fun RenderVideoOrPictureNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Column(remember { Modifier.fillMaxSize(1f) }) {
+    Column(remember { Modifier.fillMaxSize(1f) }, verticalArrangement = Arrangement.Center) {
         Row(remember { Modifier.weight(1f) }, verticalAlignment = Alignment.CenterVertically) {
             val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {

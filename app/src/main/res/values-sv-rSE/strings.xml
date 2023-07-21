@@ -23,6 +23,7 @@
     <string name="broadcast">Sänd ut</string>
     <string name="request_deletion">Begär radering</string>
     <string name="block_hide_user"><![CDATA[Blockera och göm användare]]></string>
+    <string name="block_report">Blockera / Rapportera</string>
     <string name="report_spam_scam">Rapportera Spam / Scam</string>
     <string name="report_impersonation">Rapportera identitetsstöld</string>
     <string name="report_explicit_content">Rapportera explicit innehåll</string>
@@ -163,6 +164,7 @@
     <string name="translations_show_in_lang_first">Visa i %1$s first</string>
     <string name="translations_always_translate_to_lang">Översätt alltid till %1$s</string>
     <string name="translations_never_translate_from_lang">Översätt aldrig från %1$s</string>
+    <string name="nip_05">Nostr-adress</string>
     <string name="never">aldrig</string>
     <string name="now">nu</string>
     <string name="h">h</string>
@@ -444,6 +446,40 @@
     <string name="followed_tags">Följda taggar</string>
 
     <string name="relay_setup">Reläer</string>
+
+    <string name="discover_live">Live</string>
+    <string name="discover_community">Gemenskap</string>
+    <string name="discover_chat">Chattar</string>
+    <string name="community_approved_posts">Godkända Inlägg</string>
+
+    <string name="groups_no_descriptor">Denna grupp har ingen beskrivning eller regler. Prata med ägaren för att lägga till en.</string>
+    <string name="community_no_descriptor">Denna gemenskap har ingen beskrivning. Prata med ägaren för att lägga till en.</string>
+
+    <string name="add_sensitive_content_label">Känsligt innehåll</string>
+    <string name="add_sensitive_content_description">Lägger till varning för känsligt innehåll innan detta innehåll visas.</string>
+    <string name="settings">Inställningar</string>
+    <string name="always">Alltid</string>
+    <string name="wifi_only">Endast Wi-Fi</string>
+    <string name="system">System</string>
+    <string name="light">Ljus</string>
+    <string name="dark">Mörk</string>
+    <string name="application_preferences">Applikationsinställningar</string>
+    <string name="language">Språk</string>
+    <string name="theme">Tema</string>
+    <string name="automatically_load_images_gifs">Ladda automatiskt bilder/gif</string>
+    <string name="automatically_play_videos">Spela automatiskt videor</string>
+    <string name="automatically_show_url_preview">Visa automatiskt förhandsgranskning av URL</string>
+    <string name="load_image">Ladda bild</string>
+
+    <string name="spamming_users">Spammare</string>
+
+    <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>
+    <string name="mute_button">Ljud på. Klicka för att stänga av ljudet</string>
+    <string name="search_button">Sök lokala och externa poster</string>
+
+    <string name="nip05_verified">Nostr-adress verifierad</string>
+    <string name="nip05_failed">Verifikation av Nostr-adress misslyckades</string>
+    <string name="nip05_checking">Kontrollerar Nostr-adress</string>
 </resources>
 
 
