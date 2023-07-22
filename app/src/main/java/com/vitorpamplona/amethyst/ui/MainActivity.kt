@@ -128,12 +128,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        ServiceManager.pause()
-
         if (BuildConfig.DEBUG) {
             debugState(this)
         }
 
+        ServiceManager.pause()
         super.onPause()
     }
 
