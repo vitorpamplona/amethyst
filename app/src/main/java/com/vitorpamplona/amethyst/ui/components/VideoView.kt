@@ -531,6 +531,7 @@ private fun RenderVideoPlayer(
             // if the user unmutes a video and it's not the current playing, switches to that one.
             if (!mute && keepPlayingMutex != null && keepPlayingMutex != controller) {
                 keepPlayingMutex?.stop()
+                keepPlayingMutex?.release()
                 keepPlayingMutex = null
             }
 
@@ -542,6 +543,7 @@ private fun RenderVideoPlayer(
             if (newKeepPlaying) {
                 if (keepPlayingMutex != null && keepPlayingMutex != controller) {
                     keepPlayingMutex?.stop()
+                    keepPlayingMutex?.release()
                 }
                 keepPlayingMutex = controller
             } else {
