@@ -229,7 +229,7 @@ fun VideoViewInner(
 }
 
 @Composable
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@OptIn(UnstableApi::class)
 fun GetVideoController(
     mediaItem: MediaItem,
     videoUri: String,
