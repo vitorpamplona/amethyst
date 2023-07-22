@@ -140,6 +140,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         keepPlayingMutex?.stop()
+        keepPlayingMutex?.release()
+        keepPlayingMutex = null
     }
 
     /**
