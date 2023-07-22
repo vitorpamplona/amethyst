@@ -10,6 +10,9 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.service.HttpClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
@@ -32,25 +35,27 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
-        managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
-        managerLocal = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
-
-        // Stop all videos and recreates all managers when the proxy changes.
-        HttpClient.proxyChangeListeners.add {
-            val toDestroyHls = managerHls
-            val toDestroyProgressive = managerProgressive
-
+        GlobalScope.launch(Dispatchers.IO) {
             managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
             managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+            managerLocal = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
 
-            toDestroyHls?.releaseAppPlayers()
-            toDestroyProgressive?.releaseAppPlayers()
+            // Stop all videos and recreates all managers when the proxy changes.
+            HttpClient.proxyChangeListeners.add {
+                val toDestroyHls = managerHls
+                val toDestroyProgressive = managerProgressive
+
+                managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
+                managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+
+                toDestroyHls?.releaseAppPlayers()
+                toDestroyProgressive?.releaseAppPlayers()
+            }
+
+            setMediaNotificationProvider(
+                DefaultMediaNotificationProvider.Builder(applicationContext).build()
+            )
         }
-
-        setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(applicationContext).build()
-        )
     }
 
     override fun onDestroy() {
