@@ -7,7 +7,6 @@ import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource

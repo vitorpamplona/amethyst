@@ -24,7 +24,7 @@ object RelayPool : Relay.Listener {
     }
 
     fun connectedRelays(): Int {
-        return relays.filter { it.isConnected() }.size
+        return relays.count { it.isConnected() }
     }
 
     fun getRelay(url: String): Relay? {

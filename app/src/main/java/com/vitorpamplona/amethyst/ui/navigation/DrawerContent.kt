@@ -34,7 +34,6 @@ import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
@@ -296,8 +296,10 @@ fun ListContent(
     modifier: Modifier,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
+    val route = remember(accountViewModel) {
+        "User/${accountViewModel.userProfile().pubkeyHex}"
+    }
+
     val coroutineScope = rememberCoroutineScope()
     val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
     var wantsToEditRelays by remember {
@@ -322,7 +324,7 @@ fun ListContent(
             tint = MaterialTheme.colors.primary,
             nav = nav,
             scaffoldState = scaffoldState,
-            route = "User/${account.userProfile().pubkeyHex}"
+            route = route
         )
 
         NavigationRow(
@@ -481,20 +483,8 @@ private fun enableTor(
 private fun RelayStatus(
     relayViewModel: RelayPoolViewModel
 ) {
-    val connectedRelaysLiveData = relayViewModel.connectedRelaysLiveData.observeAsState()
-    val availableRelaysLiveData = relayViewModel.availableRelaysLiveData.observeAsState()
-
-    val connectedRelaysText by remember(connectedRelaysLiveData, availableRelaysLiveData) {
-        derivedStateOf {
-            "${connectedRelaysLiveData.value ?: "--"}/${availableRelaysLiveData.value ?: "--"}"
-        }
-    }
-
-    val isConnected by remember(connectedRelaysLiveData) {
-        derivedStateOf {
-            (connectedRelaysLiveData.value ?: 0) > 0
-        }
-    }
+    val connectedRelaysText by relayViewModel.connectionStatus.observeAsState("--/--")
+    val isConnected by relayViewModel.isConnected.distinctUntilChanged().observeAsState(false)
 
     RenderRelayStatus(connectedRelaysText, isConnected)
 }
