@@ -224,7 +224,7 @@ class NostrCheckMeServer : FileServer() {
         var id = tree?.get("id")?.asText()
         var isCompleted = false
 
-        val client = OkHttpClient()
+        val client = HttpClient.getHttpClient()
         var requrl = "https://nostrcheck.me/api/v1/media?id=" + id // + "&apikey=26d075787d261660682fb9d20dbffa538c708b1eda921d0efa2be95fbef4910a"
 
         val request = Request.Builder()
