@@ -66,6 +66,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
@@ -248,15 +249,13 @@ private fun LocalImageView(
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
-            val settings = accountViewModel?.account?.settings
-            val isMobile = ConnectivityStatus.isOnMobileData.value
-
             val showImage = remember {
                 mutableStateOf(
                     if (alwayShowImage) { true } else {
-                        when (settings?.automaticallyShowImages) {
-                            true -> !isMobile
-                            false -> false
+                        when (accountViewModel?.account?.settings?.automaticallyShowImages) {
+                            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                            ConnectivityType.NEVER -> false
+                            ConnectivityType.ALWAYS -> true
                             else -> true
                         }
                     }
@@ -318,15 +317,13 @@ private fun UrlImageView(
     alwayShowImage: Boolean = false
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val settings = accountViewModel?.account?.settings
-        val isMobile = ConnectivityStatus.isOnMobileData.value
-
         val showImage = remember {
             mutableStateOf(
                 if (alwayShowImage) { true } else {
-                    when (settings?.automaticallyShowImages) {
-                        true -> !isMobile
-                        false -> false
+                    when (accountViewModel?.account?.settings?.automaticallyShowImages) {
+                        ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                        ConnectivityType.NEVER -> false
+                        ConnectivityType.ALWAYS -> true
                         else -> true
                     }
                 }

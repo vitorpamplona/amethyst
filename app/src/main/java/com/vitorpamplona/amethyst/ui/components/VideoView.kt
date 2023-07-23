@@ -55,6 +55,7 @@ import androidx.media3.ui.PlayerView
 import coil.imageLoader
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.PlaybackClientController
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.note.LyricsIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
@@ -173,16 +174,13 @@ fun VideoViewInner(
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
-    val settings = accountViewModel.account.settings
-    val isMobile = ConnectivityStatus.isOnMobileData.value
-
     val automaticallyStartPlayback = remember {
         mutableStateOf(
             if (alwaysShowVideo) { true } else {
-                when (settings.automaticallyStartPlayback) {
-                    true -> !isMobile
-                    false -> false
-                    else -> true
+                when (accountViewModel.account.settings.automaticallyStartPlayback) {
+                    ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                    ConnectivityType.NEVER -> false
+                    ConnectivityType.ALWAYS -> true
                 }
             }
         )

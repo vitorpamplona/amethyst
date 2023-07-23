@@ -415,8 +415,8 @@
     <string name="add_sensitive_content_label">Conteúdo sensível</string>
     <string name="add_sensitive_content_description">Adiciona aviso de conteúdo sensível antes de mostrar este conteúdo</string>
     <string name="settings">Configurações</string>
-    <string name="always">Sempre</string>
-    <string name="wifi_only">Somente wifi</string>
+    <string name="connectivity_type_always">Sempre</string>
+    <string name="connectivity_type_wifi_only">Somente wifi</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>

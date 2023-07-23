@@ -208,14 +208,13 @@ class MainActivity : AppCompatActivity() {
             super.onCapabilitiesChanged(network, networkCapabilities)
 
             GlobalScope.launch(Dispatchers.IO) {
-                val hasMobileData =
-                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                val hasMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
                 val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                 Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $hasMobileData")
                 Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasWifi $hasWifi")
                 ConnectivityStatus.updateConnectivityStatus(
-                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
-                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                    hasMobileData,
+                    hasWifi
                 )
             }
         }

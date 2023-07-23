@@ -77,6 +77,7 @@ import coil.request.SuccessResult
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -3484,14 +3485,14 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             )
     ) {
         Column {
-            val settings = accountViewModel.account.settings
-            val isMobile = ConnectivityStatus.isOnMobileData.value
-
-            val automaticallyShowUrlPreview = when (settings.automaticallyShowUrlPreview) {
-                true -> !isMobile
-                false -> false
-                else -> true
+            val automaticallyShowUrlPreview = remember {
+                when (accountViewModel.account.settings.automaticallyShowUrlPreview) {
+                    ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                    ConnectivityType.NEVER -> false
+                    ConnectivityType.ALWAYS -> true
+                }
             }
+
             if (automaticallyShowUrlPreview) {
                 image?.let {
                     AsyncImage(

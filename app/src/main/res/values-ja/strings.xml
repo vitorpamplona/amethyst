@@ -460,8 +460,8 @@
     <string name="add_sensitive_content_label">センシティブなコンテンツ</string>
     <string name="add_sensitive_content_description">コンテンツを表示する前に、センシティブなコンテンツであることを示す警告を表示します</string>
     <string name="settings">設定</string>
-    <string name="always">常に</string>
-    <string name="wifi_only">Wifiのみ</string>
+    <string name="connectivity_type_always">常に</string>
+    <string name="connectivity_type_wifi_only">Wifiのみ</string>
     <string name="system">システム</string>
     <string name="light">ライト</string>
     <string name="dark">ダーク</string>

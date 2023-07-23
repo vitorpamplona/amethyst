@@ -458,8 +458,8 @@
     <string name="add_sensitive_content_label">Känsligt innehåll</string>
     <string name="add_sensitive_content_description">Lägger till varning för känsligt innehåll innan detta innehåll visas.</string>
     <string name="settings">Inställningar</string>
-    <string name="always">Alltid</string>
-    <string name="wifi_only">Endast Wi-Fi</string>
+    <string name="connectivity_type_always">Alltid</string>
+    <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>

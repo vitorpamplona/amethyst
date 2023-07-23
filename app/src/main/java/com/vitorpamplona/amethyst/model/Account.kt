@@ -111,7 +111,7 @@ class Account(
     var userProfileCache: User? = null
 
     fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: Boolean?
+        automaticallyStartPlayback: ConnectivityType
     ) {
         settings.automaticallyStartPlayback = automaticallyStartPlayback
         live.invalidateData()
@@ -119,7 +119,7 @@ class Account(
     }
 
     fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: Boolean?
+        automaticallyShowUrlPreview: ConnectivityType
     ) {
         settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
         live.invalidateData()
@@ -127,7 +127,7 @@ class Account(
     }
 
     fun updateAutomaticallyShowImages(
-        automaticallyShowImages: Boolean?
+        automaticallyShowImages: ConnectivityType
     ) {
         settings.automaticallyShowImages = automaticallyShowImages
         live.invalidateData()

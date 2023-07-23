@@ -470,8 +470,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_sensitive_content_label">Sensibler Inhalt</string>
     <string name="add_sensitive_content_description">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor dieser Inhalt angezeigt wird.</string>
     <string name="settings">Einstellungen</string>
-    <string name="always">Immer</string>
-    <string name="wifi_only">Nur WLAN</string>
+    <string name="connectivity_type_always">Immer</string>
+    <string name="connectivity_type_wifi_only">Nur WLAN</string>
     <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>
