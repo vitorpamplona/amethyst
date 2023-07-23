@@ -123,6 +123,7 @@ import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.MeasureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -3128,130 +3129,99 @@ fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
 
-    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+    val content by remember(note) {
+        val blurHash = event.blurhash()
+        val hash = event.hash()
+        val dimensions = event.dimensions()
+        val description = event.content
+        val isImage = imageExtensions.any { fullUrl.split("?")[0].lowercase().endsWith(it) }
+        val uri = note.toNostrUri()
 
-    if (content == null) {
-        LaunchedEffect(key1 = event.id) {
-            launch(Dispatchers.IO) {
-                val blurHash = event.blurhash()
-                val hash = event.hash()
-                val dimensions = event.dimensions()
-                val description = event.content
-                val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
-                val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-                val uri = note.toNostrUri()
-                val newContent = if (isImage) {
-                    ZoomableUrlImage(
-                        url = fullUrl,
-                        description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri
-                    )
-                } else {
-                    ZoomableUrlVideo(
-                        url = fullUrl,
-                        description = description,
-                        hash = hash,
-                        dim = dimensions,
-                        uri = uri,
-                        authorName = note.author?.toBestDisplayName()
-                    )
-                }
-
-                launch(Dispatchers.Main) {
-                    content = newContent
-                }
+        mutableStateOf<ZoomableContent>(
+            if (isImage) {
+                ZoomableUrlImage(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    uri = uri
+                )
+            } else {
+                ZoomableUrlVideo(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    dim = dimensions,
+                    uri = uri,
+                    authorName = note.author?.toBestDisplayName()
+                )
             }
-        }
+        )
     }
 
-    Crossfade(targetState = content) {
-        if (it != null) {
-            SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it, accountViewModel = accountViewModel)
-            }
-        }
+    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+        ZoomableContentView(content = content, accountViewModel = accountViewModel)
     }
 }
 
 @Composable
 fun FileStorageHeaderDisplay(baseNote: Note, accountViewModel: AccountViewModel) {
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
+    val dataEventId = eventHeader.dataEventId() ?: return
 
-    var fileNote by remember { mutableStateOf<Note?>(null) }
-
-    if (fileNote == null) {
-        LaunchedEffect(key1 = eventHeader.id) {
-            launch(Dispatchers.IO) {
-                val newFileNote = eventHeader.dataEventId()?.let { LocalCache.checkGetOrCreateNote(it) }
-                launch(Dispatchers.Main) {
-                    fileNote = newFileNote
-                }
-            }
-        }
-    }
-
-    Crossfade(targetState = fileNote) {
-        if (it != null) {
-            RenderNIP95(it, eventHeader, baseNote, accountViewModel)
+    LoadNote(baseNoteHex = dataEventId) { contentNote ->
+        if (contentNote != null) {
+            ObserverAndRenderNIP95(baseNote, contentNote, accountViewModel)
         }
     }
 }
 
 @Composable
-private fun RenderNIP95(
-    content: Note,
-    eventHeader: FileStorageHeaderEvent,
+private fun ObserverAndRenderNIP95(
     header: Note,
+    content: Note,
     accountViewModel: AccountViewModel
 ) {
+    val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
+
     val appContext = LocalContext.current.applicationContext
 
     val noteState by content.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState?.note }
 
-    var content by remember { mutableStateOf<ZoomableContent?>(null) }
+    val content by remember(noteState) {
+        // Creates a new object when the event arrives to force an update of the image.
+        val note = noteState?.note
+        val uri = header.toNostrUri()
+        val localDir = note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
+        val blurHash = eventHeader.blurhash()
+        val dimensions = eventHeader.dimensions()
+        val description = eventHeader.content
+        val mimeType = eventHeader.mimeType()
 
-    if (content == null) {
-        LaunchedEffect(key1 = eventHeader.id, key2 = noteState, key3 = note?.event) {
-            launch(Dispatchers.IO) {
-                val uri = header.toNostrUri()
-                val localDir =
-                    note?.idHex?.let { File(File(appContext.externalCacheDir, "NIP95"), it) }
-                val blurHash = eventHeader.blurhash()
-                val dimensions = eventHeader.dimensions()
-                val description = eventHeader.content
-                val mimeType = eventHeader.mimeType()
-
-                val newContent = if (mimeType?.startsWith("image") == true) {
-                    ZoomableLocalImage(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri
-                    )
-                } else {
-                    ZoomableLocalVideo(
-                        localFile = localDir,
-                        mimeType = mimeType,
-                        description = description,
-                        dim = dimensions,
-                        isVerified = true,
-                        uri = uri,
-                        authorName = header.author?.toBestDisplayName()
-                    )
-                }
-
-                launch(Dispatchers.Main) {
-                    content = newContent
-                }
-            }
+        val newContent = if (mimeType?.startsWith("image") == true) {
+            ZoomableLocalImage(
+                localFile = localDir,
+                mimeType = mimeType,
+                description = description,
+                blurhash = blurHash,
+                dim = dimensions,
+                isVerified = true,
+                uri = uri
+            )
+        } else {
+            ZoomableLocalVideo(
+                localFile = localDir,
+                mimeType = mimeType,
+                description = description,
+                dim = dimensions,
+                isVerified = true,
+                uri = uri,
+                authorName = header.author?.toBestDisplayName()
+            )
         }
+
+        mutableStateOf<ZoomableContent?>(newContent)
     }
 
     Crossfade(targetState = content) {
