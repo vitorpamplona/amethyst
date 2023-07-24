@@ -14,7 +14,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
@@ -147,6 +146,7 @@ class MainActivity : AppCompatActivity() {
      * Release memory when the UI becomes hidden or when system resources become low.
      * @param level the memory-related event that was raised.
      */
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         println("Trim Memory $level")
@@ -188,6 +188,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         // network is available for use
         override fun onAvailable(network: Network) {

@@ -178,6 +178,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onAuth(relay: Relay, challenge: String) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
