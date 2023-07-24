@@ -9,7 +9,12 @@ import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.toNpub
 
-class NewMessageTagger(var channelHex: String?, var mentions: List<User>?, var replyTos: List<Note>?, var message: String) {
+class NewMessageTagger(
+    var message: String,
+    var mentions: List<User>? = null,
+    var replyTos: List<Note>? = null,
+    var channelHex: String? = null
+) {
 
     val directMentions = mutableSetOf<HexKey>()
 

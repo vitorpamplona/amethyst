@@ -272,10 +272,10 @@ fun ChannelScreen(
         EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
             scope.launch(Dispatchers.IO) {
                 val tagger = NewMessageTagger(
-                    channelHex = channel.idHex,
+                    message = newPostModel.message.text,
                     mentions = listOfNotNull(replyTo.value?.author),
                     replyTos = listOfNotNull(replyTo.value),
-                    message = newPostModel.message.text
+                    channelHex = channel.idHex
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {
