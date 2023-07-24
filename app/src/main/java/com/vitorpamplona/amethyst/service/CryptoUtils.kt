@@ -38,9 +38,9 @@ object CryptoUtils {
         random.nextBytes(iv)
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(iv))
-        val ivBase64 = Base64.getEncoder().encode(iv)
+        val ivBase64 = Base64.getEncoder().encodeToString(iv)
         val encryptedMsg = cipher.doFinal(msg.toByteArray())
-        val encryptedMsgBase64 = Base64.getEncoder().encode(encryptedMsg)
+        val encryptedMsgBase64 = Base64.getEncoder().encodeToString(encryptedMsg)
         return "$encryptedMsgBase64?iv=$ivBase64"
     }
 
