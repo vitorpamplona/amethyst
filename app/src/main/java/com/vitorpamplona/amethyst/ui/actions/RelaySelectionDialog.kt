@@ -39,7 +39,6 @@ data class RelayList(
     val isSelected: Boolean
 )
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RelaySelectionDialog(
     list: List<Relay>,
@@ -137,7 +136,7 @@ fun RelaySelectionDialog(
                     checked = selected,
                     onClick = {
                         selected = !selected
-                        relays = relays.mapIndexed { j, item ->
+                        relays = relays.mapIndexed { _, item ->
                             item.copy(isSelected = selected)
                         }
                     }
