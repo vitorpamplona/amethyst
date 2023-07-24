@@ -506,4 +506,5 @@
     <string name="nip05_verified">Nostr address was verified</string>
     <string name="nip05_failed">Nostr address failed verification</string>
     <string name="nip05_checking">Checking Nostr address</string>
+    <string name="select_deselect_all">Select/Deselect all</string>
 </resources>

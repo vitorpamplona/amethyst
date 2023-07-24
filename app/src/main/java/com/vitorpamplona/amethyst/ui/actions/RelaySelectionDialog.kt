@@ -24,9 +24,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -37,7 +39,6 @@ data class RelayList(
     val isSelected: Boolean
 )
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RelaySelectionDialog(
     list: List<Relay>,
@@ -77,6 +78,10 @@ fun RelaySelectionDialog(
             accountViewModel,
             nav
         )
+    }
+
+    var selected by remember {
+        mutableStateOf(true)
     }
 
     Dialog(
@@ -126,6 +131,17 @@ fun RelaySelectionDialog(
                     )
                 }
 
+                RelaySwitch(
+                    text = stringResource(R.string.select_deselect_all),
+                    checked = selected,
+                    onClick = {
+                        selected = !selected
+                        relays = relays.mapIndexed { _, item ->
+                            item.copy(isSelected = selected)
+                        }
+                    }
+                )
+
                 LazyColumn(
                     contentPadding = PaddingValues(
                         top = 10.dp,
@@ -136,48 +152,55 @@ fun RelaySelectionDialog(
                         relays,
                         key = { _, item -> item.relay.url }
                     ) { index, item ->
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        relays = relays.mapIndexed { j, item ->
-                                            if (index == j) {
-                                                item.copy(isSelected = !item.isSelected)
-                                            } else {
-                                                item
-                                            }
-                                        }
-                                    },
-                                    onLongClick = {
-                                        loadRelayInfo(item.relay.url, context, scope) {
-                                            relayInfo = it
-                                        }
-                                    }
-                                )
-                        ) {
-                            Text(
-                                item.relay.url
-                                    .removePrefix("ws://")
-                                    .removePrefix("wss://")
-                                    .removeSuffix("/")
-                            )
-                            Switch(
-                                checked = item.isSelected,
-                                onCheckedChange = {
-                                    relays = relays.mapIndexed { j, item ->
-                                        if (index == j) {
-                                            item.copy(isSelected = !item.isSelected)
-                                        } else { item }
+                        RelaySwitch(
+                            text = item.relay.url
+                                .removePrefix("ws://")
+                                .removePrefix("wss://")
+                                .removeSuffix("/"),
+                            checked = item.isSelected,
+                            onClick = {
+                                relays = relays.mapIndexed { j, item ->
+                                    if (index == j) {
+                                        item.copy(isSelected = !item.isSelected)
+                                    } else {
+                                        item
                                     }
                                 }
-                            )
-                        }
+                            },
+                            onLongPress = {
+                                loadRelayInfo(item.relay.url, context, scope) {
+                                    relayInfo = it
+                                }
+                            }
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun RelaySwitch(text: String, checked: Boolean, onClick: () -> Unit, onLongPress: () -> Unit = { }) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
+    ) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = text
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = {
+                onClick()
+            }
+        )
     }
 }
