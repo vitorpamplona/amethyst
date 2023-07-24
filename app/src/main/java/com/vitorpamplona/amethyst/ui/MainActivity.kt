@@ -158,15 +158,17 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
 
-        val uri = intent?.data?.toString()
-        val startingPage = uriToRoute(uri)
+        if (this::navController.isInitialized) {
+            val uri = intent?.data?.toString()
+            val startingPage = uriToRoute(uri)
 
-        startingPage?.let { route ->
-            val currentRoute = getRouteWithArguments(navController)
-            if (!isSameRoute(currentRoute, route)) {
-                navController.navigate(route) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
+            startingPage?.let { route ->
+                val currentRoute = getRouteWithArguments(navController)
+                if (!isSameRoute(currentRoute, route)) {
+                    navController.navigate(route) {
+                        popUpTo(Route.Home.route)
+                        launchSingleTop = true
+                    }
                 }
             }
         }
