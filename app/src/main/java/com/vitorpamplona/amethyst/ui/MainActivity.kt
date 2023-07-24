@@ -99,7 +99,10 @@ class MainActivity : AppCompatActivity() {
         val uri = intent?.data?.toString()
         val startingPage = uriToRoute(uri)
         if (startingPage != null) {
-            navController.navigate(startingPage)
+            navController.navigate(startingPage) {
+                popUpTo(Route.Home.route)
+                launchSingleTop = true
+            }
         }
     }
 
