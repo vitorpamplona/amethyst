@@ -29,9 +29,9 @@ public typealias Int5 = Byte
  * See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki and https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki.
  */
 object Bech32 {
-    public const val alphabet: String = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+    const val alphabet: String = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
-    public enum class Encoding(public val constant: Int) {
+    enum class Encoding(public val constant: Int) {
         Bech32(1),
         Bech32m(0x2bc830a3),
         Beck32WithoutChecksum(0)
@@ -197,4 +197,17 @@ object Bech32 {
         require((buffer and ((1L shl count) - 1L)) == 0L) { "Non-zero padding in 8-to-5 conversion" }
         return output.toByteArray()
     }
+}
+
+fun ByteArray.toNsec() = Bech32.encodeBytes(hrp = "nsec", this, Bech32.Encoding.Bech32)
+fun ByteArray.toNpub() = Bech32.encodeBytes(hrp = "npub", this, Bech32.Encoding.Bech32)
+
+fun String.bechToBytes(hrp: String? = null): ByteArray {
+    val decodedForm = Bech32.decodeBytes(this)
+    hrp?.also {
+        if (it != decodedForm.first) {
+            throw IllegalArgumentException("Expected $it but obtained ${decodedForm.first}")
+        }
+    }
+    return decodedForm.second
 }

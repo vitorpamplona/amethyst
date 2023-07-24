@@ -72,16 +72,3 @@ fun Int.toByteArray(): ByteArray {
     }
     return bytes
 }
-
-fun ByteArray.toNsec() = Bech32.encodeBytes(hrp = "nsec", this, Bech32.Encoding.Bech32)
-fun ByteArray.toNpub() = Bech32.encodeBytes(hrp = "npub", this, Bech32.Encoding.Bech32)
-
-fun String.bechToBytes(hrp: String? = null): ByteArray {
-    val decodedForm = Bech32.decodeBytes(this)
-    hrp?.also {
-        if (it != decodedForm.first) {
-            throw IllegalArgumentException("Expected $it but obtained ${decodedForm.first}")
-        }
-    }
-    return decodedForm.second
-}
