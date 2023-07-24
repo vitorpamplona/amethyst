@@ -33,8 +33,11 @@ object PlaybackClientController {
 
             controllerFuture.addListener(
                 {
-                    val controller = controllerFuture.get()
-                    onReady(controller)
+                    try {
+                        onReady(controllerFuture.get())
+                    } catch (e: Exception) {
+                        Log.e("Playback Client", "Failed to load Playback Client for $videoUri", e)
+                    }
                 },
                 MoreExecutors.directExecutor()
             )
