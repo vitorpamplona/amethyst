@@ -34,6 +34,9 @@
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- This notification permission is needed for some phones -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <!-- Old permission to access media -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"

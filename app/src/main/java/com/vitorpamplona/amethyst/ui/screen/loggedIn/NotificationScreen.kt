@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.Manifest
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,9 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.endAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
@@ -64,6 +68,8 @@ fun NotificationScreen(
 ) {
     WatchAccountForNotifications(notifFeedViewModel, accountViewModel)
 
+    CheckifItNeedsToRequestNotificationPermission()
+
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -92,6 +98,20 @@ fun NotificationScreen(
                 routeForLastRead = Route.Notification.base,
                 scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun CheckifItNeedsToRequestNotificationPermission() {
+    val notificationPermissionState = rememberPermissionState(
+        Manifest.permission.POST_NOTIFICATIONS
+    )
+
+    if (!notificationPermissionState.status.isGranted) {
+        LaunchedEffect(notificationPermissionState) {
+            notificationPermissionState.launchPermissionRequest()
         }
     }
 }
