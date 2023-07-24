@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.Bech32
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.toLnUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -131,7 +132,7 @@ class LightningAddressResolver() {
         fetchLightningAddressJson(
             lnaddress,
             onSuccess = {
-                onSuccess(Bech32.encodeBytes("lnurl", it.toByteArray(), Bech32.Encoding.Bech32))
+                onSuccess(it.toByteArray().toLnUrl())
             },
             onError = onError
         )
