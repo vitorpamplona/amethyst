@@ -12,6 +12,7 @@ import androidx.media3.common.Player.STATE_READY
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.vitorpamplona.amethyst.ui.MainActivity
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -116,6 +117,7 @@ class MultiPlayerPlaybackManager(
         return mediaSession
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun releaseAppPlayers() {
         GlobalScope.launch(Dispatchers.Main) {
             cache.evictAll()

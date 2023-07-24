@@ -10,6 +10,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.service.HttpClient
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -31,6 +32,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     // Create your Player and MediaSession in the onCreate lifecycle event
+    @kotlin.OptIn(DelicateCoroutinesApi::class)
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
