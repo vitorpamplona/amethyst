@@ -90,6 +90,12 @@ class NewRelayListViewModel : ViewModel() {
         }
     }
 
+    fun deleteAll() {
+        _relays.update { relays ->
+            relays.dropWhile { relays.isNotEmpty() }
+        }
+    }
+
     fun toggleDownload(relay: RelaySetupInfo) {
         _relays.update {
             it.updated(relay, relay.copy(read = !relay.read))
