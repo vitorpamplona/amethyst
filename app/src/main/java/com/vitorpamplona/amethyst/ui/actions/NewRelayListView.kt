@@ -109,7 +109,14 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                     Button(
                         onClick = {
                             postViewModel.deleteAll()
-                            defaultRelays.forEach { postViewModel.addRelay(it) }
+                            defaultRelays.forEach {
+                                postViewModel.addRelay(it)
+                            }
+                            postViewModel.relays.value.forEach { item ->
+                                loadRelayInfo(item.url, context, scope) {
+                                    postViewModel.togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                                }
+                            }
                         }
                     ) {
                         Text(stringResource(R.string.default_relays))
