@@ -6,7 +6,6 @@ import android.util.Log
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import io.trbl.blurhash.BlurHash
-import java.security.MessageDigest
 import kotlin.math.roundToInt
 
 class FileHeader(
@@ -45,9 +44,7 @@ class FileHeader(
             onError: () -> Unit
         ) {
             try {
-                val sha256 = MessageDigest.getInstance("SHA-256")
-
-                val hash = sha256.digest(data).toHexKey()
+                val hash = CryptoUtils.sha256(data).toHexKey()
                 val size = data.size
 
                 val (blurHash, dim) = if (mimeType?.startsWith("image/") == true) {

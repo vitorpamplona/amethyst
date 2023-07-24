@@ -5,7 +5,6 @@ import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.Bech32
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import java.nio.charset.Charset
-import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
@@ -133,7 +132,7 @@ class LnZapRequestEvent(
         fun createEncryptionPrivateKey(privkey: String, id: String, createdAt: Long): ByteArray {
             var str = privkey + id + createdAt.toString()
             var strbyte = str.toByteArray(Charset.forName("utf-8"))
-            return MessageDigest.getInstance("SHA-256").digest(strbyte)
+            return CryptoUtils.sha256(strbyte)
         }
 
         private fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {

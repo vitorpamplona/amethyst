@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
@@ -9,6 +10,9 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 object CryptoUtils {
+    private val secp256k1 = Secp256k1.get()
+    private val random = SecureRandom()
+
     /**
      * Provides a 32B "private key" aka random number
      */
@@ -54,15 +58,24 @@ object CryptoUtils {
         return String(cipher.doFinal(encryptedMsg))
     }
 
+    fun verifySignature(
+        signature: ByteArray,
+        hash: ByteArray,
+        pubKey: ByteArray
+    ): Boolean {
+        return secp256k1.verifySchnorr(signature, hash, pubKey)
+    }
+
+    fun sha256(data: ByteArray): ByteArray {
+        // Creates a new buffer every time
+        return MessageDigest.getInstance("SHA-256").digest(data)
+    }
+
     /**
      * @return 32B shared secret
      */
     fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
         secp256k1.pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
-
-    private val secp256k1 = Secp256k1.get()
-
-    private val random = SecureRandom()
 }
 
 fun Int.toByteArray(): ByteArray {

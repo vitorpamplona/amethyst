@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
@@ -91,7 +92,6 @@ import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import java.io.File
-import java.security.MessageDigest
 
 @Immutable
 abstract class ZoomableContent(
@@ -697,11 +697,7 @@ private fun verifyHash(content: ZoomableUrlContent, context: Context): Boolean? 
     if (content.hash == null) return null
 
     context.imageLoader.diskCache?.get(content.url)?.use { snapshot ->
-        val imageFile = snapshot.data.toFile()
-        val bytes = imageFile.readBytes()
-        val sha256 = MessageDigest.getInstance("SHA-256")
-
-        val hash = sha256.digest(bytes).toHexKey()
+        val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
         Log.d("Image Hash Verification", "$hash == ${content.hash}")
 

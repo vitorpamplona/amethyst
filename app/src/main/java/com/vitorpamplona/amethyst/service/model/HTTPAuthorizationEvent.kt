@@ -5,7 +5,6 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
-import java.security.MessageDigest
 
 @Immutable
 class HTTPAuthorizationEvent(
@@ -27,11 +26,9 @@ class HTTPAuthorizationEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): HTTPAuthorizationEvent {
-            val sha256 = MessageDigest.getInstance("SHA-256")
-
             var hash = ""
             body?.let {
-                hash = sha256.digest(it.toByteArray()).toHexKey()
+                hash = CryptoUtils.sha256(it.toByteArray()).toHexKey()
             }
 
             val tags = listOfNotNull(

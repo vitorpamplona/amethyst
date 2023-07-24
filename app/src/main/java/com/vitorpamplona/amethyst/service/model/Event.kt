@@ -13,7 +13,6 @@ import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
 import java.lang.reflect.Type
 import java.math.BigDecimal
-import java.security.MessageDigest
 import java.util.*
 
 @Immutable
@@ -157,14 +156,14 @@ open class Event(
                 """.trimIndent()
             )
         }
-        if (!secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
+        if (!CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))) {
             throw Exception("""Bad signature!""")
         }
     }
 
     override fun hasValidSignature(): Boolean {
         return try {
-            id.contentEquals(generateId()) && secp256k1.verifySchnorr(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+            id.contentEquals(generateId()) && CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
         } catch (e: Exception) {
             Log.e("Event", "Fail checking if event $id has a valid signature", e)
             false
@@ -182,7 +181,7 @@ open class Event(
             .replace("\\u2028", "\u2028")
             .replace("\\u2029", "\u2029")
 
-        return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray()).toHexKey()
+        return CryptoUtils.sha256(rawEventJson.toByteArray()).toHexKey()
     }
 
     private class EventDeserializer : JsonDeserializer<Event> {
@@ -336,7 +335,7 @@ open class Event(
                 .replace("\\u2028", "\u2028")
                 .replace("\\u2029", "\u2029")
 
-            return MessageDigest.getInstance("SHA-256").digest(rawEventJson.toByteArray())
+            return CryptoUtils.sha256(rawEventJson.toByteArray())
         }
 
         fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = TimeUtils.now()): Event {
