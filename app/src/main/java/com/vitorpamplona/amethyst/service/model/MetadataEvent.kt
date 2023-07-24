@@ -10,7 +10,7 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import java.io.ByteArrayInputStream
 
 @Stable
@@ -172,7 +172,7 @@ class MetadataEvent(
         }
 
         fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): MetadataEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
 
             identities.forEach {
@@ -180,7 +180,7 @@ class MetadataEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, contactMetaData)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, contactMetaData, sig.toHexKey())
         }
     }

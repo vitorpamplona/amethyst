@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class BookmarkListEvent(
@@ -32,7 +32,7 @@ class BookmarkListEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): BookmarkListEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey)
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
             val content = createPrivateTags(privEvents, privUsers, privAddresses, privateKey, pubKey)
 
             val tags = mutableListOf<List<String>>()
@@ -49,7 +49,7 @@ class BookmarkListEvent(
             }
 
             val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return BookmarkListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
         }
     }

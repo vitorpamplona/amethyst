@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 
 @Immutable
@@ -35,7 +35,7 @@ class RepostEvent(
             val replyToPost = listOf("e", boostedPost.id())
             val replyToAuthor = listOf("p", boostedPost.pubKey())
 
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             var tags: List<List<String>> = listOf(replyToPost, replyToAuthor)
 
             if (boostedPost is AddressableEvent) {
@@ -43,7 +43,7 @@ class RepostEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return RepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

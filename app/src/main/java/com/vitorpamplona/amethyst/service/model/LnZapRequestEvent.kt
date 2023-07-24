@@ -3,11 +3,10 @@ package com.vitorpamplona.amethyst.service.model
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.Bech32
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import java.nio.charset.Charset
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.util.*
 import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
@@ -68,7 +67,7 @@ class LnZapRequestEvent(
         ): LnZapRequestEvent {
             var content = message
             var privkey = privateKey
-            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            var pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("e", originalNote.id()),
                 listOf("p", originalNote.pubKey()),
@@ -82,8 +81,8 @@ class LnZapRequestEvent(
             }
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
                 tags = tags + listOf(listOf("anon", ""))
-                privkey = Utils.privkeyCreate()
-                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+                privkey = CryptoUtils.privkeyCreate()
+                pubKey = CryptoUtils.pubkeyCreate(privkey).toHexKey()
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
                 var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), originalNote.id(), createdAt)
                 var noteJson = (create(privkey, 9733, listOf(tags[0], tags[1]), message)).toJson()
@@ -91,10 +90,10 @@ class LnZapRequestEvent(
                 tags = tags + listOf(listOf("anon", encryptedContent))
                 content = "" // make sure public content is empty, as the content is encrypted
                 privkey = encryptionPrivateKey // sign event with generated privkey
-                pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey() // updated event with according pubkey
+                pubKey = CryptoUtils.pubkeyCreate(encryptionPrivateKey).toHexKey() // updated event with according pubkey
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privkey)
+            val sig = CryptoUtils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
@@ -108,14 +107,14 @@ class LnZapRequestEvent(
         ): LnZapRequestEvent {
             var content = message
             var privkey = privateKey
-            var pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            var pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("p", userHex),
                 listOf("relays") + relays
             )
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                privkey = Utils.privkeyCreate()
-                pubKey = Utils.pubkeyCreate(privkey).toHexKey()
+                privkey = CryptoUtils.privkeyCreate()
+                pubKey = CryptoUtils.pubkeyCreate(privkey).toHexKey()
                 tags = tags + listOf(listOf("anon", ""))
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
                 var encryptionPrivateKey = createEncryptionPrivateKey(privateKey.toHexKey(), userHex, createdAt)
@@ -124,10 +123,10 @@ class LnZapRequestEvent(
                 tags = tags + listOf(listOf("anon", encryptedContent))
                 content = ""
                 privkey = encryptionPrivateKey
-                pubKey = Utils.pubkeyCreate(encryptionPrivateKey).toHexKey()
+                pubKey = CryptoUtils.pubkeyCreate(encryptionPrivateKey).toHexKey()
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privkey)
+            val sig = CryptoUtils.sign(id, privkey)
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
@@ -138,7 +137,7 @@ class LnZapRequestEvent(
         }
 
         private fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
-            var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
+            var sharedSecret = CryptoUtils.getSharedSecret(privkey, pubkey)
             val iv = ByteArray(16)
             SecureRandom().nextBytes(iv)
 
@@ -157,7 +156,7 @@ class LnZapRequestEvent(
         }
 
         private fun decryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
-            var sharedSecret = Utils.getSharedSecret(privkey, pubkey)
+            var sharedSecret = CryptoUtils.getSharedSecret(privkey, pubkey)
             if (sharedSecret.size != 16 && sharedSecret.size != 32) {
                 throw IllegalArgumentException("Invalid shared secret size")
             }

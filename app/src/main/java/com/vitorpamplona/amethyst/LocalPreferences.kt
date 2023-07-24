@@ -16,7 +16,7 @@ import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.Persona
+import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
@@ -211,8 +211,8 @@ object LocalPreferences {
     fun saveToEncryptedStorage(account: Account) {
         val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
         prefs.edit().apply {
-            account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
-            account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
+            account.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
+            account.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
             putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
@@ -412,7 +412,7 @@ object LocalPreferences {
             }
 
             val a = Account(
-                loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
+                keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels = followingChannels,
                 followingCommunities = followingCommunities,
                 hiddenUsers = hiddenUsers,

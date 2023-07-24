@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 const val POLL_OPTION = "poll_option"
 const val VALUE_MAXIMUM = "value_maximum"
@@ -55,7 +55,7 @@ class PollNoteEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?
         ): PollNoteEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 tags.add(listOf("e", it))
@@ -85,7 +85,7 @@ class PollNoteEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }

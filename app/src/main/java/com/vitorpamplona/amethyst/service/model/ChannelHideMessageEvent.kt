@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class ChannelHideMessageEvent(
@@ -27,14 +27,14 @@ class ChannelHideMessageEvent(
         const val kind = 43
 
         fun create(reason: String, messagesToHide: List<String>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ChannelHideMessageEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags =
                 messagesToHide?.map {
                     listOf("e", it)
                 } ?: emptyList()
 
             val id = generateId(pubKey, createdAt, kind, tags, reason)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return ChannelHideMessageEvent(id.toHexKey(), pubKey, createdAt, tags, reason, sig.toHexKey())
         }
     }

@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.Persona
+import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
@@ -53,14 +53,14 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(Persona(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
             } else if (pubKeyParsed != null) {
-                Account(Persona(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
             } else if (pattern.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(Persona(), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
             } else {
-                Account(Persona(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
@@ -75,7 +75,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
 
     fun newKey(useProxy: Boolean, proxyPort: Int) {
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
-        val account = Account(Persona(), proxy = proxy, proxyPort = proxyPort)
+        val account = Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
         // saves to local preferences
         LocalPreferences.updatePrefsForLogin(account)
         startUI(account)
@@ -83,7 +83,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
 
     @OptIn(DelicateCoroutinesApi::class)
     fun startUI(account: Account) {
-        if (account.loggedIn.privKey != null) {
+        if (account.keyPair.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }

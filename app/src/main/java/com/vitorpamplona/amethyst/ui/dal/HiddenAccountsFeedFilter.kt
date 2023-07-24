@@ -15,7 +15,7 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
 
     override fun feed(): List<User> {
         return account.getBlockList()
-            ?.publicAndPrivateUsers(account.loggedIn.privKey)
+            ?.publicAndPrivateUsers(account.keyPair.privKey)
             ?.map { LocalCache.getOrCreateUser(it) }
             ?: emptyList()
     }

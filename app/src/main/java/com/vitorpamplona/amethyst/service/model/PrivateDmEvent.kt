@@ -5,8 +5,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.HexValidator
-import com.vitorpamplona.amethyst.service.Utils
 import fr.acinq.secp256k1.Hex
 
 @Immutable
@@ -55,9 +55,9 @@ class PrivateDmEvent(
 
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubKey)
+            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey)
 
-            val retVal = Utils.decrypt(content, sharedSecret)
+            val retVal = CryptoUtils.decrypt(content, sharedSecret)
 
             if (retVal.startsWith(nip18Advertisement)) {
                 retVal.substring(16)
@@ -88,12 +88,12 @@ class PrivateDmEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?
         ): PrivateDmEvent {
-            val content = Utils.encrypt(
+            val content = CryptoUtils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
                 privateKey,
                 recipientPubKey
             )
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             publishedRecipientPubKey?.let {
                 tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
@@ -114,7 +114,7 @@ class PrivateDmEvent(
                 tags.add(listOf("zapraiser", "$it"))
             }
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

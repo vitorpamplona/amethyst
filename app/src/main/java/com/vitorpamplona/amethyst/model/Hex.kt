@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.Bech32
-import com.vitorpamplona.amethyst.service.Persona
+import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.toNpub
@@ -41,7 +41,7 @@ fun decodePublicKey(key: String): ByteArray {
     val pubKeyParsed = parsed?.hex?.hexToByteArray()
 
     return if (key.startsWith("nsec")) {
-        Persona(privKey = key.bechToBytes()).pubKey
+        KeyPair(privKey = key.bechToBytes()).pubKey
     } else if (pubKeyParsed != null) {
         pubKeyParsed
     } else {
@@ -55,7 +55,7 @@ fun decodePublicKeyAsHexOrNull(key: String): HexKey? {
         val pubKeyParsed = parsed?.hex
 
         if (key.startsWith("nsec")) {
-            Persona(privKey = key.bechToBytes()).pubKey.toHexKey()
+            KeyPair(privKey = key.bechToBytes()).pubKey.toHexKey()
         } else if (pubKeyParsed != null) {
             pubKeyParsed
         } else {
@@ -86,7 +86,7 @@ fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
 
         if (key.startsWith("nsec1", true)) {
             // Converts to npub
-            val pubkey = Nip19.uriToRoute(Persona(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
+            val pubkey = Nip19.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
 
             return DirtyKeyInfo(pubkey, restOfWord)
         } else if (key.startsWith("npub1", true)) {

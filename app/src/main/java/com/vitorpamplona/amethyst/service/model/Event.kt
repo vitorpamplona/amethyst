@@ -7,7 +7,7 @@ import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
@@ -340,9 +340,9 @@ open class Event(
         }
 
         fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = TimeUtils.now()): Event {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val id = Companion.generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey).toHexKey()
+            val sig = CryptoUtils.sign(id, privateKey).toHexKey()
             return Event(id.toHexKey(), pubKey, createdAt, kind, tags, content, sig)
         }
     }

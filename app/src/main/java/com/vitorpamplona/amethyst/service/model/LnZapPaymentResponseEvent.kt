@@ -8,7 +8,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import java.lang.reflect.Type
 
 @Immutable
@@ -30,9 +30,9 @@ class LnZapPaymentResponseEvent(
 
     private fun decrypt(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubKey)
+            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey)
 
-            val retVal = Utils.decrypt(content, sharedSecret)
+            val retVal = CryptoUtils.decrypt(content, sharedSecret)
 
             if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {
                 retVal.substring(16)

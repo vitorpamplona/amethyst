@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class CommunityDefinitionEvent(
@@ -33,9 +33,9 @@ class CommunityDefinitionEvent(
             createdAt: Long = TimeUtils.now()
         ): CommunityDefinitionEvent {
             val tags = mutableListOf<List<String>>()
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return CommunityDefinitionEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
         }
     }

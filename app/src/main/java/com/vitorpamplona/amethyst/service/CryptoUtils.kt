@@ -9,7 +9,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-object Utils {
+object CryptoUtils {
     private val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
 
     /**
