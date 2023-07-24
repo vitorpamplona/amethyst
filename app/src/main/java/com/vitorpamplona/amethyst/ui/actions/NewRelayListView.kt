@@ -58,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -104,6 +105,22 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                         postViewModel.clear()
                         onClose()
                     })
+
+                    Button(
+                        onClick = {
+                            postViewModel.deleteAll()
+                            defaultRelays.forEach {
+                                postViewModel.addRelay(it)
+                            }
+                            postViewModel.relays.value.forEach { item ->
+                                loadRelayInfo(item.url, context, scope) {
+                                    postViewModel.togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                                }
+                            }
+                        }
+                    ) {
+                        Text(stringResource(R.string.default_relays))
+                    }
 
                     PostButton(
                         onPost = {
