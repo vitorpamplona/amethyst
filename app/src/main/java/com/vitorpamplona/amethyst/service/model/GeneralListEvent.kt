@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.hexToByteArray
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.Utils
 
 @Immutable
 abstract class GeneralListEvent(

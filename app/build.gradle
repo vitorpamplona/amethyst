@@ -118,13 +118,6 @@ dependencies {
     // Bitcoin secp256k1 bindings to Android
     implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.1'
 
-    // Nostr Base Protocol
-    implementation('com.github.vitorpamplona.NostrPostr:nostrpostrlib:master-SNAPSHOT') {
-        exclude group:'fr.acinq.secp256k1'
-        exclude module: 'guava'
-        exclude module: 'guava-testlib'
-    }
-
     // Websockets API
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 

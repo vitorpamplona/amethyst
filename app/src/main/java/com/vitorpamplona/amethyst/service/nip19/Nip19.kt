@@ -4,9 +4,9 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Bech32
-import nostr.postr.bechToBytes
-import nostr.postr.toByteArray
+import com.vitorpamplona.amethyst.service.Bech32
+import com.vitorpamplona.amethyst.service.bechToBytes
+import com.vitorpamplona.amethyst.service.toByteArray
 import java.util.regex.Pattern
 
 object Nip19 {

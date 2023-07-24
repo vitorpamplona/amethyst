@@ -10,6 +10,8 @@ import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
+import com.vitorpamplona.amethyst.service.Persona
+import com.vitorpamplona.amethyst.service.Utils
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
@@ -27,8 +29,6 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import nostr.postr.Persona
-import nostr.postr.Utils
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale

@@ -7,11 +7,10 @@ import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Utils
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import fr.acinq.secp256k1.Secp256k1
-import nostr.postr.Utils
-import nostr.postr.toHex
 import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.security.MessageDigest
@@ -251,7 +250,7 @@ open class Event(
             src: ByteArray,
             typeOfSrc: Type?,
             context: JsonSerializationContext?
-        ) = JsonPrimitive(src.toHex())
+        ) = JsonPrimitive(src.toHexKey())
     }
 
     companion object {

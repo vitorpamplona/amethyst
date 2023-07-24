@@ -1,13 +1,12 @@
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.service.Bech32
+import com.vitorpamplona.amethyst.service.Persona
+import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.service.toNpub
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
-import nostr.postr.Bech32
-import nostr.postr.Persona
-import nostr.postr.bechToBytes
-import nostr.postr.toHex
-import nostr.postr.toNpub
 
 /** Makes the distinction between String and Hex **/
 typealias HexKey = String
@@ -26,7 +25,7 @@ fun NoteId.toDisplayId(): String {
 fun ByteArray.toNote() = Bech32.encodeBytes(hrp = "note", this, Bech32.Encoding.Bech32)
 
 fun ByteArray.toHexKey(): HexKey {
-    return toHex()
+    return Hex.encode(this)
 }
 
 fun HexKey.hexToByteArray(): ByteArray {

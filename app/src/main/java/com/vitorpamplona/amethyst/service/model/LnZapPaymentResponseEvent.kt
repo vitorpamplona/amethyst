@@ -8,7 +8,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.Utils
 import java.lang.reflect.Type
 
 @Immutable

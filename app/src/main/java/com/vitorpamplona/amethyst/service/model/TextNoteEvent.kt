@@ -6,8 +6,8 @@ import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.Utils
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
-import nostr.postr.Utils
 
 @Immutable
 class TextNoteEvent(

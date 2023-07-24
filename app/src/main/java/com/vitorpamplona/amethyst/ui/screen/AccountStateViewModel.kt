@@ -9,6 +9,8 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.Persona
+import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import nostr.postr.Persona
-import nostr.postr.bechToBytes
 import java.util.regex.Pattern
 
 @Stable

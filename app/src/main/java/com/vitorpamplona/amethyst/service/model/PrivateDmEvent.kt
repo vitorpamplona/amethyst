@@ -6,9 +6,8 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HexValidator
+import com.vitorpamplona.amethyst.service.Utils
 import fr.acinq.secp256k1.Hex
-import nostr.postr.Utils
-import nostr.postr.toHex
 
 @Immutable
 class PrivateDmEvent(
@@ -97,7 +96,7 @@ class PrivateDmEvent(
             val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             publishedRecipientPubKey?.let {
-                tags.add(listOf("p", publishedRecipientPubKey.toHex()))
+                tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
             }
             replyTos?.forEach {
                 tags.add(listOf("e", it))

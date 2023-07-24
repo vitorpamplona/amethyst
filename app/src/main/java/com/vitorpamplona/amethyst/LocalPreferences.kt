@@ -14,17 +14,17 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.parseConnectivityType
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.Persona
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.toNpub
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import fr.acinq.secp256k1.Hex
-import nostr.postr.Persona
-import nostr.postr.toHex
-import nostr.postr.toNpub
 import java.io.File
 import java.util.Locale
 
@@ -211,8 +211,8 @@ object LocalPreferences {
     fun saveToEncryptedStorage(account: Account) {
         val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
         prefs.edit().apply {
-            account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHex()) }
-            account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHex()) }
+            account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
+            account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
             putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)

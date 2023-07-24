@@ -2,8 +2,8 @@ package com.vitorpamplona.amethyst.service.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.*
-import nostr.postr.Bech32
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.Bech32
+import com.vitorpamplona.amethyst.service.Utils
 import java.nio.charset.Charset
 import java.security.MessageDigest
 import java.security.SecureRandom
