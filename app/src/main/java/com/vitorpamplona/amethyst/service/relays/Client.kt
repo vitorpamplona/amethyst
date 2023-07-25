@@ -112,7 +112,7 @@ object Client : RelayPool.Listener {
         val relay = Relay(url, true, true, feedTypes ?: emptySet(), HttpClient.getProxy())
         RelayPool.addRelay(relay)
 
-        relay.requestAndWatch {
+        relay.connectAndRun {
             allSubscriptions().forEach {
                 relay.sendFilter(requestId = it)
             }

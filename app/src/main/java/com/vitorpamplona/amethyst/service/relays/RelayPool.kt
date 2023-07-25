@@ -51,7 +51,7 @@ object RelayPool : Relay.Listener {
     fun requestAndWatch() {
         checkNotInMainThread()
 
-        relays.forEach { it.requestAndWatch() }
+        relays.forEach { it.connect() }
     }
 
     fun sendFilter(subscriptionId: String) {
