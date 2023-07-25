@@ -86,7 +86,8 @@ class PrivateDmEvent(
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
             markAsSensitive: Boolean,
-            zapRaiserAmount: Long?
+            zapRaiserAmount: Long?,
+            geohash: String? = null
         ): PrivateDmEvent {
             val content = CryptoUtils.encrypt(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
@@ -113,6 +114,10 @@ class PrivateDmEvent(
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
             }
+            geohash?.let {
+                tags.add(listOf("g", it))
+            }
+
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = CryptoUtils.sign(id, privateKey)
             return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())

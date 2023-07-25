@@ -45,6 +45,7 @@ interface EventInterface {
 
     fun getReward(): BigDecimal?
     fun getPoWRank(): Int
+    fun getGeoHash(): String?
 
     fun zapAddress(): String?
     fun isSensitive(): Boolean

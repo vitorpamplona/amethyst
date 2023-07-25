@@ -37,6 +37,9 @@
     <!-- This notification permission is needed for some phones -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Adds Geohash to posts if active -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <!-- Old permission to access media -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"

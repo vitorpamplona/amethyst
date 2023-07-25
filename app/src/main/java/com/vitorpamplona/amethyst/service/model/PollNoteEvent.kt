@@ -53,7 +53,8 @@ class PollNoteEvent(
             closedAt: Int?,
             zapReceiver: String?,
             markAsSensitive: Boolean,
-            zapRaiserAmount: Long?
+            zapRaiserAmount: Long?,
+            geohash: String? = null
         ): PollNoteEvent {
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
@@ -82,6 +83,9 @@ class PollNoteEvent(
             }
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
+            }
+            geohash?.let {
+                tags.add(listOf("g", it))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

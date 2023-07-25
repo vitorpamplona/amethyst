@@ -122,6 +122,10 @@ open class Event(
         return rank
     }
 
+    override fun getGeoHash(): String? {
+        return tags.firstOrNull { it.size > 1 && it[0] == "g" }?.get(1)?.ifBlank { null }
+    }
+
     override fun getReward(): BigDecimal? {
         return try {
             tags.firstOrNull { it.size > 1 && it[0] == "reward" }?.get(1)?.let { BigDecimal(it) }

@@ -38,6 +38,7 @@ class TextNoteEvent(
             replyingTo: String?,
             root: String?,
             directMentions: Set<HexKey>,
+            geohash: String? = null,
 
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
@@ -92,6 +93,9 @@ class TextNoteEvent(
             }
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
+            }
+            geohash?.let {
+                tags.add(listOf("g", it))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)

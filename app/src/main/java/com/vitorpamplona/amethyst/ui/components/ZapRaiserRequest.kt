@@ -35,66 +35,62 @@ fun ZapRaiserRequest(
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.lightning),
-                    null,
-                    modifier = Size20Modifier,
-                    tint = Color.Unspecified
-                )
-
-                Text(
-                    text = titleText ?: stringResource(R.string.zapraiser),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier = Modifier.padding(start = 10.dp)
-                )
-            }
-
-            Divider()
+            Icon(
+                painter = painterResource(R.drawable.lightning),
+                null,
+                modifier = Size20Modifier,
+                tint = Color.Unspecified
+            )
 
             Text(
-                text = stringResource(R.string.zapraiser_explainer),
-                color = MaterialTheme.colors.placeholderText,
-                modifier = Modifier.padding(vertical = 10.dp)
-            )
-
-            OutlinedTextField(
-                label = { Text(text = stringResource(R.string.zapraiser_target_amount_in_sats)) },
-                modifier = Modifier.fillMaxWidth(),
-                value = if (newPostViewModel.zapRaiserAmount != null) {
-                    newPostViewModel.zapRaiserAmount.toString()
-                } else {
-                    ""
-                },
-                onValueChange = {
-                    runCatching {
-                        if (it.isEmpty()) {
-                            newPostViewModel.zapRaiserAmount = null
-                        } else {
-                            newPostViewModel.zapRaiserAmount = it.toLongOrNull()
-                        }
-                    }
-                },
-                placeholder = {
-                    Text(
-                        text = "1000",
-                        color = MaterialTheme.colors.placeholderText
-                    )
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    keyboardType = KeyboardType.Number
-                ),
-                singleLine = true
+                text = titleText ?: stringResource(R.string.zapraiser),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W500,
+                modifier = Modifier.padding(start = 10.dp)
             )
         }
+
+        Divider()
+
+        Text(
+            text = stringResource(R.string.zapraiser_explainer),
+            color = MaterialTheme.colors.placeholderText,
+            modifier = Modifier.padding(vertical = 10.dp)
+        )
+
+        OutlinedTextField(
+            label = { Text(text = stringResource(R.string.zapraiser_target_amount_in_sats)) },
+            modifier = Modifier.fillMaxWidth(),
+            value = if (newPostViewModel.zapRaiserAmount != null) {
+                newPostViewModel.zapRaiserAmount.toString()
+            } else {
+                ""
+            },
+            onValueChange = {
+                runCatching {
+                    if (it.isEmpty()) {
+                        newPostViewModel.zapRaiserAmount = null
+                    } else {
+                        newPostViewModel.zapRaiserAmount = it.toLongOrNull()
+                    }
+                }
+            },
+            placeholder = {
+                Text(
+                    text = "1000",
+                    color = MaterialTheme.colors.placeholderText
+                )
+            },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number
+            ),
+            singleLine = true
+        )
     }
 }

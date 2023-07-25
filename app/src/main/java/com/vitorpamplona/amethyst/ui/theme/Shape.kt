@@ -46,6 +46,7 @@ val DoubleVertSpacer = Modifier.height(10.dp)
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
 val Size0dp = 0.dp
+val Size5dp = 5.dp
 val Size10dp = 10.dp
 val Size13dp = 13.dp
 val Size15dp = 15.dp

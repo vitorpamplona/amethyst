@@ -36,7 +36,8 @@ class ChannelMessageEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
-            zapRaiserAmount: Long?
+            zapRaiserAmount: Long?,
+            geohash: String? = null
         ): ChannelMessageEvent {
             val content = message
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
@@ -57,6 +58,9 @@ class ChannelMessageEvent(
             }
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
+            }
+            geohash?.let {
+                tags.add(listOf("g", it))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

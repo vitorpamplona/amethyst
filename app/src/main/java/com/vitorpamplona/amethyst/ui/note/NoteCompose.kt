@@ -74,6 +74,7 @@ import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
+import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
@@ -2405,6 +2407,11 @@ fun SecondUserInfoRow(
     Row(verticalAlignment = CenterVertically, modifier = UserNameMaxRowHeight) {
         ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) })
 
+        val geo = remember { noteEvent.getGeoHash() }
+        if (geo != null) {
+            DisplayLocation(geo)
+        }
+
         val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
         if (baseReward != null) {
             DisplayReward(baseReward, note, accountViewModel, nav)
@@ -2415,6 +2422,22 @@ fun SecondUserInfoRow(
             DisplayPoW(pow)
         }
     }
+}
+
+@Composable
+fun DisplayLocation(geohash: String) {
+    val context = LocalContext.current
+    val cityName = remember(geohash) {
+        ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)
+    }
+
+    Text(
+        text = cityName ?: geohash,
+        color = MaterialTheme.colors.lessImportantLink,
+        fontSize = Font14SP,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1
+    )
 }
 
 @Composable

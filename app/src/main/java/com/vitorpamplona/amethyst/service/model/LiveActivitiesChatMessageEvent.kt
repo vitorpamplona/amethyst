@@ -51,7 +51,8 @@ class LiveActivitiesChatMessageEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
-            zapRaiserAmount: Long?
+            zapRaiserAmount: Long?,
+            geohash: String? = null
         ): LiveActivitiesChatMessageEvent {
             val content = message
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
@@ -72,6 +73,9 @@ class LiveActivitiesChatMessageEvent(
             }
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
+            }
+            geohash?.let {
+                tags.add(listOf("g", it))
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)

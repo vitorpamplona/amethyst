@@ -191,6 +191,9 @@ dependencies {
     // immutable collections to avoid recomposition
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
 
+    // GeoHash
+    implementation 'com.github.drfonfon:android-kotlin-geohash:1.0'
+
     // Video compression lib
     implementation 'com.github.AbedElazizShe:LightCompressor:1.3.1'
     // Image compression lib

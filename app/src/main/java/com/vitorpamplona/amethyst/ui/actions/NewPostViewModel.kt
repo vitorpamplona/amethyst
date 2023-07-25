@@ -13,8 +13,10 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.model.AddressableEvent
 import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
@@ -26,7 +28,9 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 
 @Stable
@@ -77,6 +81,11 @@ open class NewPostViewModel() : ViewModel() {
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
 
+    // GeoHash
+    var wantsToAddGeoHash by mutableStateOf(false)
+    var locUtil: LocationUtil? = null
+    var location: Flow<String>? = null
+
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
@@ -121,6 +130,7 @@ open class NewPostViewModel() : ViewModel() {
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        wantsToAddGeoHash = false
         wantsZapraiser = false
         zapRaiserAmount = null
         forwardZapTo = null
@@ -143,6 +153,13 @@ open class NewPostViewModel() : ViewModel() {
             null
         }
 
+        val geoLocation = locUtil?.locationStateFlow?.value
+        val geoHash = if (wantsToAddGeoHash && geoLocation != null) {
+            geoLocation.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
+        } else {
+            null
+        }
+
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
         if (wantsPoll) {
@@ -158,16 +175,17 @@ open class NewPostViewModel() : ViewModel() {
                 zapReceiver,
                 wantsToMarkAsSensitive,
                 localZapRaiserAmount,
-                relayList
+                relayList,
+                geoHash
             )
         } else if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
-                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
             } else {
-                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
             }
         } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount)
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
         } else {
             // adds markers
             val rootId =
@@ -187,7 +205,8 @@ open class NewPostViewModel() : ViewModel() {
                 replyingTo = replyId,
                 root = rootId,
                 directMentions = tagger.directMentions,
-                relayList = relayList
+                relayList = relayList,
+                geohash = geoHash
             )
         }
 
@@ -267,6 +286,7 @@ open class NewPostViewModel() : ViewModel() {
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        wantsToAddGeoHash = false
         forwardZapTo = null
         forwardZapToEditting = TextFieldValue("")
 
@@ -449,4 +469,50 @@ open class NewPostViewModel() : ViewModel() {
     fun selectImage(uri: Uri) {
         contentToAddUrl = uri
     }
+
+    fun startLocation(context: Context) {
+        locUtil = LocationUtil(context)
+        locUtil?.let {
+            location = it.locationStateFlow.mapLatest {
+                it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            locUtil?.start()
+        }
+    }
+
+    fun stopLocation() {
+        viewModelScope.launch(Dispatchers.IO) {
+            locUtil?.stop()
+        }
+        location = null
+        locUtil = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        viewModelScope.launch(Dispatchers.IO) {
+            locUtil?.stop()
+        }
+        location = null
+        locUtil = null
+    }
+}
+
+enum class GeohashPrecision(val digits: Int) {
+    KM_5000_X_5000(1), // 5,000km	×	5,000km
+    KM_1250_X_625(2), // 1,250km	×	625km
+    KM_156_X_156(3), //   156km	×	156km
+    KM_39_X_19(4), //  39.1km	×	19.5km
+    KM_5_X_5(5), //  4.89km	×	4.89km
+
+    M_1000_X_600(6), //  1.22km	×	0.61km
+    M_153_X_153(7), //    153m	×	153m
+    M_38_X_19(8), //   38.2m	×	19.1m
+    M_5_X_5(9), //   4.77m	×	4.77m
+
+    MM_1000_X_1000(10), //   1.19m	×	0.596m
+    MM_149_X_149(11), //   149mm	×	149mm
+    MM_37_X_18(12) //  37.2mm	×	18.6mm
 }

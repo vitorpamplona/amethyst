@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.Manifest
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
+import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -32,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -66,10 +70,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.fonfon.kgeohash.toGeoHash
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
@@ -82,8 +91,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -92,6 +102,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -278,28 +289,72 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             )
 
                             if (postViewModel.wantsPoll) {
-                                postViewModel.pollOptions.values.forEachIndexed { index, _ ->
-                                    NewPollOption(postViewModel, index)
-                                }
-
-                                Button(
-                                    onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
-                                    border = BorderStroke(1.dp, MaterialTheme.colors.placeholderText),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colors.placeholderText
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)
                                 ) {
-                                    Image(
-                                        painterResource(id = android.R.drawable.ic_input_add),
-                                        contentDescription = "Add poll option button",
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        postViewModel.pollOptions.values.forEachIndexed { index, _ ->
+                                            NewPollOption(postViewModel, index)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                postViewModel.pollOptions[postViewModel.pollOptions.size] =
+                                                    ""
+                                            },
+                                            border = BorderStroke(
+                                                1.dp,
+                                                MaterialTheme.colors.placeholderText
+                                            ),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colors.placeholderText
+                                            )
+                                        ) {
+                                            Image(
+                                                painterResource(id = android.R.drawable.ic_input_add),
+                                                contentDescription = "Add poll option button",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (postViewModel.wantsToMarkAsSensitive) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .padding(vertical = Size5dp, horizontal = Size10dp)
+                                ) {
+                                    ContentSensitivityExplainer(postViewModel)
+                                }
+                            }
+
+                            if (postViewModel.wantsToAddGeoHash) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .padding(vertical = Size5dp, horizontal = Size10dp)
+                                ) {
+                                    LocationAsHash(postViewModel)
+                                }
+                            }
+
+                            if (postViewModel.wantsForwardZapTo) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)
+                                ) {
+                                    FowardZapTo(postViewModel)
                                 }
                             }
 
                             val url = postViewModel.contentToAddUrl
                             if (url != null) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                     ImageVideoDescription(
                                         url,
                                         account.defaultFileServer,
@@ -324,26 +379,28 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             val lud16 = user?.info?.lnAddress()
 
                             if (lud16 != null && postViewModel.wantsInvoice) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
-                                    InvoiceRequest(
-                                        lud16,
-                                        user.pubkeyHex,
-                                        account,
-                                        stringResource(id = R.string.lightning_invoice),
-                                        stringResource(id = R.string.lightning_create_and_add_invoice),
-                                        onSuccess = {
-                                            postViewModel.message = TextFieldValue(postViewModel.message.text + "\n\n" + it)
-                                            postViewModel.wantsInvoice = false
-                                        },
-                                        onClose = {
-                                            postViewModel.wantsInvoice = false
-                                        }
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        InvoiceRequest(
+                                            lud16,
+                                            user.pubkeyHex,
+                                            account,
+                                            stringResource(id = R.string.lightning_invoice),
+                                            stringResource(id = R.string.lightning_create_and_add_invoice),
+                                            onSuccess = {
+                                                postViewModel.message = TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                                postViewModel.wantsInvoice = false
+                                            },
+                                            onClose = {
+                                                postViewModel.wantsInvoice = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
 
                             if (lud16 != null && postViewModel.wantsZapraiser) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                     ZapRaiserRequest(
                                         stringResource(id = R.string.zapraiser),
                                         postViewModel
@@ -353,7 +410,7 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
                             val myUrlPreview = postViewModel.urlPreview
                             if (myUrlPreview != null) {
-                                Row(modifier = Modifier.padding(top = 5.dp)) {
+                                Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                     if (isValidURL(myUrlPreview)) {
                                         val removedParamsFromUrl =
                                             myUrlPreview.split("?")[0].lowercase()
@@ -456,6 +513,10 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                             postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
                         }
 
+                        AddGeoHash(postViewModel) {
+                            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
+                        }
+
                         ForwardZapTo(postViewModel) {
                             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
                         }
@@ -464,6 +525,227 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
             }
         }
     }
+}
+
+@Composable
+fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
+        ) {
+            Box(
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VisibilityOff,
+                    contentDescription = stringResource(id = R.string.content_warning),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .align(Alignment.BottomStart),
+                    tint = Color.Red
+                )
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = stringResource(id = R.string.content_warning),
+                    modifier = Modifier
+                        .size(10.dp)
+                        .align(Alignment.TopEnd),
+                    tint = Color.Yellow
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.add_sensitive_content_label),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W500,
+                modifier = Modifier.padding(start = 10.dp)
+            )
+        }
+
+        Divider()
+
+        Text(
+            text = stringResource(R.string.add_sensitive_content_explainer),
+            color = MaterialTheme.colors.placeholderText,
+            modifier = Modifier.padding(vertical = 10.dp)
+        )
+    }
+}
+
+@Composable
+fun FowardZapTo(postViewModel: NewPostViewModel) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
+        ) {
+            Box(
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Bolt,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
+                    tint = BitcoinOrange
+                )
+                Icon(
+                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    contentDescription = stringResource(id = R.string.zaps),
+                    modifier = Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
+                    tint = BitcoinOrange
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.zap_forward_title),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W500,
+                modifier = Modifier.padding(start = 10.dp)
+            )
+        }
+
+        Divider()
+
+        Text(
+            text = stringResource(R.string.zap_forward_explainer),
+            color = MaterialTheme.colors.placeholderText,
+            modifier = Modifier.padding(vertical = 10.dp)
+        )
+
+        OutlinedTextField(
+            value = postViewModel.forwardZapToEditting,
+            onValueChange = {
+                postViewModel.updateZapForwardTo(it)
+            },
+
+            label = { Text(text = stringResource(R.string.zap_forward_lnAddress)) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.zap_forward_lnAddress),
+                    color = MaterialTheme.colors.placeholderText
+                )
+            },
+            singleLine = true,
+            visualTransformation = UrlUserTagTransformation(
+                MaterialTheme.colors.primary
+            ),
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+        )
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun LocationAsHash(postViewModel: NewPostViewModel) {
+    val context = LocalContext.current
+
+    val locationPermissionState = rememberPermissionState(
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+
+    if (locationPermissionState.status.isGranted) {
+        var locationDescriptionFlow by remember(postViewModel) {
+            mutableStateOf<Flow<String>?>(null)
+        }
+
+        DisposableEffect(key1 = Unit) {
+            postViewModel.startLocation(context = context)
+            locationDescriptionFlow = postViewModel.location
+
+            onDispose {
+                postViewModel.stopLocation()
+            }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                Box(
+                    Modifier
+                        .height(20.dp)
+                        .width(20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colors.primary
+                    )
+                }
+
+                Text(
+                    text = stringResource(R.string.geohash_title),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.W500,
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+
+                locationDescriptionFlow?.let { geoLocation ->
+                    DisplayLocationObserver(geoLocation)
+                }
+            }
+
+            Divider()
+
+            Text(
+                text = stringResource(R.string.geohash_explainer),
+                color = MaterialTheme.colors.placeholderText,
+                modifier = Modifier.padding(vertical = 10.dp)
+            )
+        }
+    } else {
+        LaunchedEffect(locationPermissionState) {
+            locationPermissionState.launchPermissionRequest()
+        }
+    }
+}
+
+@Composable
+fun DisplayLocationObserver(geoLocation: Flow<String>) {
+    val location by geoLocation.collectAsState(initial = null)
+
+    location?.let {
+        DisplayLocationInTitle(geohash = it)
+    }
+}
+
+@Composable
+fun DisplayLocationInTitle(geohash: String) {
+    val context = LocalContext.current
+    val cityName = remember(geohash) {
+        ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)
+    }
+
+    Text(
+        text = cityName ?: geohash,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.W500,
+        modifier = Modifier.padding(start = Size5dp)
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -583,6 +865,31 @@ private fun AddZapraiserButton(
 }
 
 @Composable
+fun AddGeoHash(postViewModel: NewPostViewModel, onClick: () -> Unit) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        if (!postViewModel.wantsToAddGeoHash) {
+            Icon(
+                imageVector = Icons.Default.LocationOff,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.onBackground
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colors.primary
+            )
+        }
+    }
+}
+
+@Composable
 private fun AddLnInvoiceButton(
     isLnInvoiceActive: Boolean,
     onClick: () -> Unit
@@ -661,33 +968,6 @@ private fun ForwardZapTo(
                 )
             }
         }
-    }
-
-    if (postViewModel.wantsForwardZapTo) {
-        OutlinedTextField(
-            value = postViewModel.forwardZapToEditting,
-            onValueChange = {
-                postViewModel.updateZapForwardTo(it)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                .padding(0.dp),
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.zap_forward_lnAddress),
-                    color = MaterialTheme.colors.placeholderText,
-                    fontSize = Font14SP
-                )
-            },
-            colors = TextFieldDefaults
-                .outlinedTextFieldColors(
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Color.Transparent
-                ),
-            visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
-            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-        )
     }
 }
 
@@ -913,7 +1193,9 @@ fun ImageVideoDescription(
                 )
 
                 IconButton(
-                    modifier = Modifier.size(30.dp).padding(end = 5.dp),
+                    modifier = Modifier
+                        .size(30.dp)
+                        .padding(end = 5.dp),
                     onClick = onCancel
                 ) {
                     CancelIcon()
