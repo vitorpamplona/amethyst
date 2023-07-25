@@ -10,7 +10,6 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import fr.acinq.secp256k1.Hex
-import fr.acinq.secp256k1.Secp256k1
 import java.lang.reflect.Type
 import java.math.BigDecimal
 import java.util.*
@@ -253,8 +252,6 @@ open class Event(
     }
 
     companion object {
-        private val secp256k1 = Secp256k1.get()
-
         val gson: Gson = GsonBuilder()
             .disableHtmlEscaping()
             .registerTypeAdapter(Event::class.java, EventSerializer())
