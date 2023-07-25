@@ -21,8 +21,7 @@ import okhttp3.OkHttpClient
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
     @Synchronized
-    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-    private fun init(context: Context, client: OkHttpClient) {
+    fun initFileCache(context: Context) {
         exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
         simpleCache = SimpleCache(
@@ -30,8 +29,6 @@ import okhttp3.OkHttpClient
             leastRecentlyUsedCacheEvictor,
             exoDatabaseProvider
         )
-
-        renewCacheFactory(client)
     }
 
     // This method should be called when proxy setting changes.
@@ -46,8 +43,11 @@ import okhttp3.OkHttpClient
 
     fun get(context: Context, client: OkHttpClient): CacheDataSource.Factory {
         if (!this::simpleCache.isInitialized) {
-            init(context, client)
+            initFileCache(context)
         }
+
+        // Renews the factory because OkHttpMight have changed.
+        renewCacheFactory(client)
 
         return cacheDataSourceFactory
     }

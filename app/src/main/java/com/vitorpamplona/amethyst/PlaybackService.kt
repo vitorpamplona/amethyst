@@ -6,14 +6,9 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.service.HttpClient
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 @UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
@@ -28,36 +23,31 @@ class PlaybackService : MediaSessionService() {
     }
 
     fun newProgressiveDataSource(): MediaSource.Factory {
-        return ProgressiveMediaSource.Factory(VideoCache.get(applicationContext, HttpClient.getHttpClient()))
+        return ProgressiveMediaSource.Factory(VideoCache.get(Amethyst.instance, HttpClient.getHttpClient()))
     }
 
     // Create your Player and MediaSession in the onCreate lifecycle event
-    @kotlin.OptIn(DelicateCoroutinesApi::class)
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
 
-        GlobalScope.launch(Dispatchers.IO) {
-            managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
-            managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
-            managerLocal = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
+        managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
+        managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+        managerLocal = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
 
-            // Stop all videos and recreates all managers when the proxy changes.
-            HttpClient.proxyChangeListeners.add {
-                val toDestroyHls = managerHls
-                val toDestroyProgressive = managerProgressive
+        // Stop all videos and recreates all managers when the proxy changes.
+        HttpClient.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
+    }
 
-                managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
-                managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+    private fun onProxyUpdated() {
+        val toDestroyHls = managerHls
+        val toDestroyProgressive = managerProgressive
 
-                toDestroyHls?.releaseAppPlayers()
-                toDestroyProgressive?.releaseAppPlayers()
-            }
+        managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
+        managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
 
-            setMediaNotificationProvider(
-                DefaultMediaNotificationProvider.Builder(applicationContext).build()
-            )
-        }
+        toDestroyHls?.releaseAppPlayers()
+        toDestroyProgressive?.releaseAppPlayers()
     }
 
     override fun onDestroy() {
