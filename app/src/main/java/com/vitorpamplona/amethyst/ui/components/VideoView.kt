@@ -324,10 +324,6 @@ fun GetVideoController(
         }
     }
 
-    controller.value?.let {
-        inner(it, keepPlaying)
-    }
-
     // User pauses and resumes the app. What to do with videos?
     val scope = rememberCoroutineScope()
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -391,6 +387,10 @@ fun GetVideoController(
                 controller.value = null
             }
         }
+    }
+
+    controller.value?.let {
+        inner(it, keepPlaying)
     }
 }
 
