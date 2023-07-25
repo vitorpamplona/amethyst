@@ -7,11 +7,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,11 +65,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.lang.Math.round
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "", nav: (String) -> Unit) {
     val postViewModel: NewRelayListViewModel = viewModel()
@@ -88,11 +91,12 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
+            decorFitsSystemWindows = false,
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false
         )
     ) {
-        Surface() {
+        Surface(modifier = Modifier.imePadding()) {
             Column(
                 modifier = Modifier.padding(10.dp)
             ) {
@@ -131,7 +135,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = StdVertSpacer)
 
                 Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     LazyColumn(
@@ -166,7 +170,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = StdVertSpacer)
 
                 EditableServerConfig(relayToAdd) {
                     postViewModel.addRelay(it)
