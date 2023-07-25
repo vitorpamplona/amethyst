@@ -80,16 +80,17 @@ class CashuProcessor {
                 .post(requestBody)
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body.string()
-            val tree = jacksonObjectMapper().readTree(body)
+            client.newCall(request).execute().use {
+                val body = it.body.string()
+                val tree = jacksonObjectMapper().readTree(body)
 
-            val successful = tree?.get("paid")?.asText() == "true"
+                val successful = tree?.get("paid")?.asText() == "true"
 
-            if (successful) {
-                onSuccess("Redeemed ${token.totalAmount} Sats" + " (Fees: ${token.fees} Sats)")
-            } else {
-                onError(tree?.get("detail")?.asText()?.split('.')?.getOrNull(0) ?: "Cashu: Tokens already spent.")
+                if (successful) {
+                    onSuccess("Redeemed ${token.totalAmount} Sats" + " (Fees: ${token.fees} Sats)")
+                } else {
+                    onError(tree?.get("detail")?.asText()?.split('.')?.getOrNull(0) ?: "Cashu: Tokens already spent.")
+                }
             }
         } catch (e: Exception) {
             onError("Token melt failure: " + e.message)

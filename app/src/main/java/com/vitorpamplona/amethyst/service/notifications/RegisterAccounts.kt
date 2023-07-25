@@ -56,7 +56,9 @@ class RegisterAccounts(
 
             val client = HttpClient.getHttpClient()
 
-            client.newCall(request).execute()
+            val isSucess = client.newCall(request).execute().use {
+                it.isSuccessful
+            }
         } catch (e: java.lang.Exception) {
             Log.e("FirebaseMsgService", "Unable to register with push server", e)
         }

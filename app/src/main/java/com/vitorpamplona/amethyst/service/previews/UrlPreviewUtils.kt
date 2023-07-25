@@ -63,7 +63,9 @@ private const val CONTENT = "content"
 suspend fun getDocument(url: String, timeOut: Int = 30000): Document =
     withContext(Dispatchers.IO) {
         val request: Request = Request.Builder().url(url).get().build()
-        val html = HttpClient.getHttpClient().newCall(request).execute().body.string()
+        val html = HttpClient.getHttpClient().newCall(request).execute().use {
+            it.body.string()
+        }
 
         Jsoup.parse(html)
     }
