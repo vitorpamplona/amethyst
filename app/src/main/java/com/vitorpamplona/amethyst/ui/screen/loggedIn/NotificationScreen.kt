@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -105,13 +106,15 @@ fun NotificationScreen(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CheckifItNeedsToRequestNotificationPermission() {
-    val notificationPermissionState = rememberPermissionState(
-        Manifest.permission.POST_NOTIFICATIONS
-    )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notificationPermissionState = rememberPermissionState(
+            Manifest.permission.POST_NOTIFICATIONS
+        )
 
-    if (!notificationPermissionState.status.isGranted) {
-        LaunchedEffect(notificationPermissionState) {
-            notificationPermissionState.launchPermissionRequest()
+        if (!notificationPermissionState.status.isGranted) {
+            LaunchedEffect(notificationPermissionState) {
+                notificationPermissionState.launchPermissionRequest()
+            }
         }
     }
 }
