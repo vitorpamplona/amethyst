@@ -36,6 +36,7 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
+        val followingGeohashSet = account.selectedGeohashesFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
 
         val createEvents = collection.filter { it.event is ChannelCreateEvent }
         val anyOtherChannelEvent = collection
@@ -48,7 +49,7 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val activities = (createEvents + anyOtherChannelEvent)
             .asSequence()
             // .filter { it.event is ChannelCreateEvent } // Event heads might not be loaded yet.
-            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) == true }
+            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) == true || it.event?.isTaggedGeoHashes(followingGeohashSet) == true }
             .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
             .filter { (it.createdAt() ?: 0) <= now }
             .toSet()

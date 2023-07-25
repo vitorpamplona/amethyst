@@ -39,6 +39,10 @@ class ContactListEvent(
         unverifiedFollowTagSet().map { it.lowercase() }.toSet()
     }
 
+    val verifiedFollowGeohashSet: Set<String> by lazy {
+        unverifiedFollowGeohashSet().map { it.lowercase() }.toSet()
+    }
+
     val verifiedFollowCommunitySet: Set<String> by lazy {
         unverifiedFollowAddressSet().toSet()
     }
@@ -49,6 +53,7 @@ class ContactListEvent(
 
     fun unverifiedFollowKeySet() = tags.filter { it[0] == "p" }.mapNotNull { it.getOrNull(1) }
     fun unverifiedFollowTagSet() = tags.filter { it[0] == "t" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowGeohashSet() = tags.filter { it[0] == "g" }.mapNotNull { it.getOrNull(1) }
 
     fun unverifiedFollowAddressSet() = tags.filter { it[0] == "a" }.mapNotNull { it.getOrNull(1) }
 
@@ -82,6 +87,7 @@ class ContactListEvent(
         fun createFromScratch(
             followUsers: List<Contact>,
             followTags: List<String>,
+            followGeohashes: List<String>,
             followCommunities: List<ATag>,
             followEvents: List<String>,
             relayUse: Map<String, ReadWrite>?,
@@ -110,6 +116,8 @@ class ContactListEvent(
                 } else {
                     listOf("a", it.toTag())
                 }
+            } + followGeohashes.map {
+                listOf("g", it)
             }
 
             return create(
@@ -155,6 +163,28 @@ class ContactListEvent(
 
         fun unfollowHashtag(earlierVersion: ContactListEvent, hashtag: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (!earlierVersion.isTaggedHash(hashtag)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag },
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun followGeohash(earlierVersion: ContactListEvent, hashtag: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedGeoHash(hashtag)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("g", hashtag)),
+                privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun unfollowGeohash(earlierVersion: ContactListEvent, hashtag: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedGeoHash(hashtag)) return earlierVersion
 
             return create(
                 content = earlierVersion.content,

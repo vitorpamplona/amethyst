@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.nip05
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -115,6 +116,14 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
     Crossfade(targetState = nip05, modifier = columnModifier) {
         if (it != null) {
             DisplayNIP05Line(it, baseUser, columnModifier)
+        } else {
+            Text(
+                text = baseUser.pubkeyDisplayHex(),
+                color = MaterialTheme.colors.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = columnModifier
+            )
         }
     }
 }

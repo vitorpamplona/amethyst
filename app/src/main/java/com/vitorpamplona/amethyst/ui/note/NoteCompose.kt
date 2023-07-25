@@ -2409,7 +2409,7 @@ fun SecondUserInfoRow(
 
         val geo = remember { noteEvent.getGeoHash() }
         if (geo != null) {
-            DisplayLocation(geo)
+            DisplayLocation(geo, nav)
         }
 
         val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
@@ -2425,17 +2425,22 @@ fun SecondUserInfoRow(
 }
 
 @Composable
-fun DisplayLocation(geohash: String) {
+fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
     val context = LocalContext.current
     val cityName = remember(geohash) {
         ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)
     }
 
-    Text(
-        text = cityName ?: geohash,
-        color = MaterialTheme.colors.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
+    ClickableText(
+        text = AnnotatedString(cityName ?: geohash),
+        onClick = { nav("Geohash/$geohash") },
+        style = LocalTextStyle.current.copy(
+            color = MaterialTheme.colors.primary.copy(
+                alpha = 0.52f
+            ),
+            fontSize = Font14SP,
+            fontWeight = FontWeight.Bold
+        ),
         maxLines = 1
     )
 }

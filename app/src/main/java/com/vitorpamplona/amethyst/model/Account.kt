@@ -174,6 +174,7 @@ class Account(
             val event = ContactListEvent.createFromScratch(
                 followUsers = listOf(),
                 followTags = listOf(),
+                followGeohashes = listOf(),
                 followCommunities = listOf(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
@@ -453,6 +454,7 @@ class Account(
             ContactListEvent.createFromScratch(
                 followUsers = listOf(Contact(user.pubkeyHex, null)),
                 followTags = emptyList(),
+                followGeohashes = emptyList(),
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
@@ -475,6 +477,7 @@ class Account(
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
                 followTags = emptyList(),
+                followGeohashes = emptyList(),
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList().plus(channel.idHex),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
@@ -498,6 +501,7 @@ class Account(
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
                 followTags = emptyList(),
+                followGeohashes = emptyList(),
                 followCommunities = listOf(community.address),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
@@ -509,7 +513,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun follow(tag: String) {
+    fun followHashtag(tag: String) {
         if (!isWriteable()) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -524,6 +528,34 @@ class Account(
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
                 followTags = listOf(tag),
+                followGeohashes = emptyList(),
+                followCommunities = emptyList(),
+                followEvents = DefaultChannels.toList(),
+                relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
+                privateKey = keyPair.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun followGeohash(geohash: String) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        val event = if (contactList != null) {
+            ContactListEvent.followGeohash(
+                contactList,
+                geohash,
+                keyPair.privKey!!
+            )
+        } else {
+            ContactListEvent.createFromScratch(
+                followUsers = emptyList(),
+                followTags = emptyList(),
+                followGeohashes = listOf(geohash),
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
@@ -552,7 +584,7 @@ class Account(
         }
     }
 
-    fun unfollow(tag: String) {
+    fun unfollowHashtag(tag: String) {
         if (!isWriteable()) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -561,6 +593,23 @@ class Account(
             val event = ContactListEvent.unfollowHashtag(
                 contactList,
                 tag,
+                keyPair.privKey!!
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+    }
+
+    fun unfollowGeohash(geohash: String) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.unfollowGeohash(
+                contactList,
+                geohash,
                 keyPair.privKey!!
             )
 
@@ -1211,6 +1260,30 @@ class Account(
                 val publicAddresses = list.event?.hashtags() ?: emptySet()
                 val privateAddresses = privKey?.let {
                     (list.event as? GeneralListEvent)?.privateHashtags(it)
+                } ?: emptySet()
+
+                (publicAddresses + privateAddresses).toSet()
+            } else {
+                emptySet()
+            }
+        } else {
+            emptySet()
+        }
+    }
+
+    fun selectedGeohashesFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingGeohashSet()
+
+        val privKey = keyPair.privKey
+
+        return if (listName != null) {
+            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val list = LocalCache.addressables[aTag]
+            if (list != null) {
+                val publicAddresses = list.event?.geohashes() ?: emptySet()
+                val privateAddresses = privKey?.let {
+                    (list.event as? GeneralListEvent)?.privateGeohashes(it)
                 } ?: emptySet()
 
                 (publicAddresses + privateAddresses).toSet()

@@ -249,6 +249,12 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingGeohashCached(geoTag: String): Boolean {
+        return latestContactList?.verifiedFollowGeohashSet?.let {
+            return geoTag.lowercase() in it
+        } ?: false
+    }
+
     fun isFollowingCached(user: User): Boolean {
         return latestContactList?.verifiedFollowKeySet?.let {
             return user.pubkeyHex in it
@@ -275,6 +281,10 @@ class User(val pubkeyHex: String) {
 
     fun cachedFollowingTagSet(): Set<HexKey> {
         return latestContactList?.verifiedFollowTagSet ?: emptySet()
+    }
+
+    fun cachedFollowingGeohashSet(): Set<HexKey> {
+        return latestContactList?.verifiedFollowGeohashSet ?: emptySet()
     }
 
     fun cachedFollowingCommunitiesSet(): Set<HexKey> {

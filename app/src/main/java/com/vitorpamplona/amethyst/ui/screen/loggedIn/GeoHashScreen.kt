@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,42 +28,44 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
+import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
+import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
+import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun GeoHashScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     if (tag == null) return
 
-    PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
+    PrepareViewModelsGeoHashScreen(tag, accountViewModel, nav)
 }
 
 @Composable
-fun PrepareViewModelsHashtagScreen(tag: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val followsFeedViewModel: NostrHashtagFeedViewModel = viewModel(
-        key = tag + "HashtagFeedViewModel",
-        factory = NostrHashtagFeedViewModel.Factory(
+fun PrepareViewModelsGeoHashScreen(tag: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val followsFeedViewModel: NostrGeoHashFeedViewModel = viewModel(
+        key = tag + "GeoHashFeedViewModel",
+        factory = NostrGeoHashFeedViewModel.Factory(
             tag,
             accountViewModel.account
         )
     )
 
-    HashtagScreen(tag, followsFeedViewModel, accountViewModel, nav)
+    GeoHashScreen(tag, followsFeedViewModel, accountViewModel, nav)
 }
 
 @Composable
-fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    NostrHashtagDataSource.loadHashtag(tag)
+    NostrGeohashDataSource.loadHashtag(tag)
 
     LaunchedEffect(tag) {
-        NostrHashtagDataSource.start()
+        NostrGeohashDataSource.start()
         feedViewModel.invalidateData()
     }
 
@@ -70,22 +73,22 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hashtag Start")
-                NostrHashtagDataSource.loadHashtag(tag)
-                NostrHashtagDataSource.start()
+                NostrGeohashDataSource.loadHashtag(tag)
+                NostrGeohashDataSource.start()
                 feedViewModel.invalidateData()
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Hashtag Stop")
-                NostrHashtagDataSource.loadHashtag(null)
-                NostrHashtagDataSource.stop()
+                NostrGeohashDataSource.loadHashtag(null)
+                NostrGeohashDataSource.stop()
             }
         }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            NostrHashtagDataSource.loadHashtag(null)
-            NostrHashtagDataSource.stop()
+            NostrGeohashDataSource.loadHashtag(null)
+            NostrGeohashDataSource.stop()
         }
     }
 
@@ -93,7 +96,7 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            HashtagHeader(tag, accountViewModel)
+            GeoHashHeader(tag, accountViewModel)
             RefresheableFeedView(
                 feedViewModel,
                 null,
@@ -105,7 +108,7 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
 }
 
 @Composable
-fun HashtagHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
+fun GeoHashHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
     Column(
         Modifier.clickable { onClick() }
     ) {
@@ -121,8 +124,13 @@ fun HashtagHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = 
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        val context = LocalContext.current
+                        val cityName = remember(tag) {
+                            ReverseGeoLocationUtil().execute(tag.toGeoHash().toLocation(), context)
+                        }
+
                         Text(
-                            "#$tag",
+                            "$cityName ($tag)",
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f)
                         )
@@ -151,7 +159,7 @@ private fun HashtagActionOptions(
     val userState by accountViewModel.userProfile().live().follows.observeAsState()
     val isFollowingTag by remember(userState) {
         derivedStateOf {
-            userState?.user?.isFollowingHashtagCached(tag) ?: false
+            userState?.user?.isFollowingGeohashCached(tag) ?: false
         }
     }
 
@@ -169,7 +177,7 @@ private fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollowHashtag(tag)
+                    accountViewModel.account.unfollowGeohash(tag)
                 }
             }
         }
@@ -187,7 +195,7 @@ private fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.followHashtag(tag)
+                    accountViewModel.account.followGeohash(tag)
                 }
             }
         }

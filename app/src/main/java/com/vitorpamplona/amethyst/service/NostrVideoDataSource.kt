@@ -51,11 +51,35 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
         )
     }
 
+    fun createFollowGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.selectedGeohashesFollowList(account.defaultStoriesFollowList)
+
+        if (hashToLoad.isNullOrEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.GLOBAL),
+            filter = JsonFilter(
+                kinds = listOf(FileHeaderEvent.kind, FileStorageHeaderEvent.kind),
+                tags = mapOf(
+                    "g" to hashToLoad.map {
+                        listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                    }.flatten()
+                ),
+                limit = 100,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultStoriesFollowList)?.relayList
+            )
+        )
+    }
+
     val videoFeedChannel = requestNewChannel() { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultStoriesFollowList, relayUrl, time)
     }
 
     override fun updateChannelFilters() {
-        videoFeedChannel.typedFilters = listOfNotNull(createContextualFilter(), createFollowTagsFilter()).ifEmpty { null }
+        videoFeedChannel.typedFilters = listOfNotNull(
+            createContextualFilter(),
+            createFollowTagsFilter(),
+            createFollowGeohashesFilter()
+        ).ifEmpty { null }
     }
 }
