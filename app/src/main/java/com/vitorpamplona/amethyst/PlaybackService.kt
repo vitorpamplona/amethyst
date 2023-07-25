@@ -51,6 +51,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        HttpClient.proxyChangeListeners.remove(this@PlaybackService::onProxyUpdated)
+
         managerHls?.releaseAppPlayers()
         managerLocal?.releaseAppPlayers()
         managerProgressive?.releaseAppPlayers()
