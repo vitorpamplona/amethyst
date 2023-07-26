@@ -7,7 +7,7 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import com.vitorpamplona.amethyst.service.HttpClient
+import okhttp3.OkHttpClient
 
 @UnstableApi object VideoCache {
 
@@ -21,33 +21,34 @@ import com.vitorpamplona.amethyst.service.HttpClient
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
     @Synchronized
-    fun init(context: Context) {
-        if (!this::simpleCache.isInitialized) {
-            exoDatabaseProvider = StandaloneDatabaseProvider(context)
+    fun initFileCache(context: Context) {
+        exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
-            simpleCache = SimpleCache(
-                context.cacheDir,
-                leastRecentlyUsedCacheEvictor,
-                exoDatabaseProvider
-            )
-
-            cacheDataSourceFactory = CacheDataSource.Factory()
-                .setCache(simpleCache)
-                .setUpstreamDataSourceFactory(
-                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
-                )
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-        } else {
-            cacheDataSourceFactory = CacheDataSource.Factory()
-                .setCache(simpleCache)
-                .setUpstreamDataSourceFactory(
-                    OkHttpDataSource.Factory(HttpClient.getHttpClient())
-                )
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-        }
+        simpleCache = SimpleCache(
+            context.cacheDir,
+            leastRecentlyUsedCacheEvictor,
+            exoDatabaseProvider
+        )
     }
 
-    fun get(): CacheDataSource.Factory {
+    // This method should be called when proxy setting changes.
+    fun renewCacheFactory(client: OkHttpClient) {
+        cacheDataSourceFactory = CacheDataSource.Factory()
+            .setCache(simpleCache)
+            .setUpstreamDataSourceFactory(
+                OkHttpDataSource.Factory(client)
+            )
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    fun get(context: Context, client: OkHttpClient): CacheDataSource.Factory {
+        if (!this::simpleCache.isInitialized) {
+            initFileCache(context)
+        }
+
+        // Renews the factory because OkHttpMight have changed.
+        renewCacheFactory(client)
+
         return cacheDataSourceFactory
     }
 }

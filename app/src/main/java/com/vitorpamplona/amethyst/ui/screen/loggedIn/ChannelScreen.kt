@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -124,6 +123,10 @@ import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldLeadingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
@@ -269,10 +272,10 @@ fun ChannelScreen(
         EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
             scope.launch(Dispatchers.IO) {
                 val tagger = NewMessageTagger(
-                    channelHex = channel.idHex,
+                    message = newPostModel.message.text,
                     mentions = listOfNotNull(replyTo.value?.author),
                     replyTos = listOfNotNull(replyTo.value),
-                    message = newPostModel.message.text
+                    channelHex = channel.idHex
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {
@@ -351,15 +354,13 @@ fun EditFieldRow(
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit
 ) {
-    val context = LocalContext.current
-
     Row(
-        modifier = Modifier
-            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
-            .fillMaxWidth(),
+        modifier = EditFieldModifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val context = LocalContext.current
+
         MyTextField(
             value = channelScreenModel.message,
             onValueChange = {
@@ -368,7 +369,7 @@ fun EditFieldRow(
             keyboardOptions = KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences
             ),
-            shape = RoundedCornerShape(25.dp),
+            shape = EditFieldBorder,
             modifier = Modifier.weight(1f, true),
             placeholder = {
                 Text(
@@ -383,18 +384,14 @@ fun EditFieldRow(
                         onSendNewMessage()
                     },
                     isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
-                    modifier = Modifier
-                        .height(32.dp)
-                        .padding(end = 10.dp)
+                    modifier = EditFieldTrailingIconModifier
                 )
             },
             leadingIcon = {
                 UploadFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
                     tint = MaterialTheme.colors.placeholderText,
-                    modifier = Modifier
-                        .height(32.dp)
-                        .padding(start = 2.dp)
+                    modifier = EditFieldLeadingIconModifier
                 ) {
                     val fileServer = if (isPrivate) {
                         // TODO: Make private servers
@@ -607,25 +604,47 @@ private fun ShowVideoStreaming(
             event = it,
             accountViewModel = accountViewModel
         ) {
-            val streamingUrl by baseChannel.live.map {
+            val streamingInfo by baseChannel.live.map {
                 val activity = it.channel as? LiveActivitiesChannel
-                activity?.info?.streaming()
-            }.distinctUntilChanged().observeAsState(baseChannel.info?.streaming())
+                activity?.info
+            }.distinctUntilChanged().observeAsState(baseChannel.info)
 
-            streamingUrl?.let {
-                CheckIfUrlIsOnline(it) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = remember { Modifier.heightIn(max = 300.dp) }
-                    ) {
-                        val zoomableUrlVideo = remember(it) {
-                            ZoomableUrlVideo(url = it)
+            streamingInfo?.let { event ->
+                val url = remember(streamingInfo) {
+                    event.streaming()
+                }
+                val artworkUri = remember(streamingInfo) {
+                    event.image()
+                }
+                val title = remember(streamingInfo) {
+                    baseChannel.toBestDisplayName()
+                }
+
+                val author = remember(streamingInfo) {
+                    baseChannel.creatorName()
+                }
+
+                url?.let {
+                    CheckIfUrlIsOnline(url) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = remember { Modifier.heightIn(max = 300.dp) }
+                        ) {
+                            val zoomableUrlVideo = remember(it) {
+                                ZoomableUrlVideo(
+                                    url = url,
+                                    description = title,
+                                    artworkUri = artworkUri,
+                                    authorName = author,
+                                    uri = event.toNostrUri()
+                                )
+                            }
+
+                            ZoomableContentView(
+                                content = zoomableUrlVideo,
+                                accountViewModel = accountViewModel
+                            )
                         }
-
-                        ZoomableContentView(
-                            content = zoomableUrlVideo,
-                            accountViewModel = accountViewModel
-                        )
                     }
                 }
             }

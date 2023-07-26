@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import java.net.URI
 
 @Immutable
@@ -29,10 +29,10 @@ class RecommendRelayEvent(
 
         fun create(relay: URI, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RecommendRelayEvent {
             val content = relay.toString()
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf<List<String>>()
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return RecommendRelayEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

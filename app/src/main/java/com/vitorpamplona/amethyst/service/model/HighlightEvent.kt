@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class HighlightEvent(
@@ -30,10 +30,10 @@ class HighlightEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): PollNoteEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }

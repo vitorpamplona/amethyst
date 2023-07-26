@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
@@ -285,7 +286,9 @@ private fun ZoomableContentView(
     accountViewModel: AccountViewModel
 ) {
     state.imagesForPager[word]?.let {
-        ZoomableContentView(it, state.imageList, accountViewModel)
+        Box(modifier = HalfVertPadding) {
+            ZoomableContentView(it, state.imageList, accountViewModel)
+        }
     }
 }
 

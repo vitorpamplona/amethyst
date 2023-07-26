@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class RelayAuthEvent(
@@ -23,13 +23,13 @@ class RelayAuthEvent(
 
         fun create(relay: String, challenge: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RelayAuthEvent {
             val content = ""
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf(
                 listOf("relay", relay),
                 listOf("challenge", challenge)
             )
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return RelayAuthEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

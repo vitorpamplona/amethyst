@@ -92,6 +92,26 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         )
     }
 
+    fun createLiveStreamGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.selectedGeohashesFollowList(account.defaultDiscoveryFollowList)
+
+        if (hashToLoad.isNullOrEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.GLOBAL),
+            filter = JsonFilter(
+                kinds = listOf(LiveActivitiesChatMessageEvent.kind, LiveActivitiesEvent.kind),
+                tags = mapOf(
+                    "g" to hashToLoad.map {
+                        listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                    }.flatten()
+                ),
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+            )
+        )
+    }
+
     fun createPublicChatsTagsFilter(): TypedFilter? {
         val hashToLoad = account.selectedTagsFollowList(account.defaultDiscoveryFollowList)
 
@@ -103,6 +123,26 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                 kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
                 tags = mapOf(
                     "t" to hashToLoad.map {
+                        listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                    }.flatten()
+                ),
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+            )
+        )
+    }
+
+    fun createPublicChatsGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.selectedGeohashesFollowList(account.defaultDiscoveryFollowList)
+
+        if (hashToLoad.isNullOrEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.PUBLIC_CHATS),
+            filter = JsonFilter(
+                kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
+                tags = mapOf(
+                    "g" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
                     }.flatten()
                 ),
@@ -132,6 +172,26 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         )
     }
 
+    fun createCommunitiesGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.selectedGeohashesFollowList(account.defaultDiscoveryFollowList)
+
+        if (hashToLoad.isNullOrEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.GLOBAL),
+            filter = JsonFilter(
+                kinds = listOf(CommunityDefinitionEvent.kind, CommunityPostApprovalEvent.kind),
+                tags = mapOf(
+                    "g" to hashToLoad.map {
+                        listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                    }.flatten()
+                ),
+                limit = 300,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+            )
+        )
+    }
+
     val discoveryFeedChannel = requestNewChannel() { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultDiscoveryFollowList, relayUrl, time)
     }
@@ -143,7 +203,10 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
             createCommunitiesFilter(),
             createLiveStreamTagsFilter(),
             createPublicChatsTagsFilter(),
-            createCommunitiesTagsFilter()
+            createCommunitiesTagsFilter(),
+            createCommunitiesGeohashesFilter(),
+            createPublicChatsGeohashesFilter(),
+            createLiveStreamGeohashesFilter()
         ).ifEmpty { null }
     }
 }

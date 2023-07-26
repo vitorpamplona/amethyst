@@ -33,11 +33,12 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultStoriesFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultStoriesFollowList) ?: emptySet()
+        val followingGeohashSet = account.selectedGeohashesFollowList(account.defaultStoriesFollowList) ?: emptySet()
 
         return collection
             .asSequence()
             .filter { it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent }
-            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false) }
+            .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false) || (it.event?.isTaggedGeoHashes(followingGeohashSet) ?: false) }
             .filter { isHiddenList || account.isAcceptable(it) }
             .filter { it.createdAt()!! <= now }
             .toSet()

@@ -12,7 +12,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
     }
 
     override fun feed(): List<Note> {
-        val privKey = account.loggedIn.privKey ?: return emptyList()
+        val privKey = account.keyPair.privKey ?: return emptyList()
 
         val bookmarks = account.userProfile().latestBookmarkList
 

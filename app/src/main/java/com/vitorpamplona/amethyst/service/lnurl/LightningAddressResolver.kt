@@ -2,14 +2,15 @@ package com.vitorpamplona.amethyst.service.lnurl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.Bech32
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.toLnUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nostr.postr.Bech32
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Request
@@ -131,7 +132,7 @@ class LightningAddressResolver() {
         fetchLightningAddressJson(
             lnaddress,
             onSuccess = {
-                onSuccess(Bech32.encodeBytes("lnurl", it.toByteArray(), Bech32.Encoding.Bech32))
+                onSuccess(it.toByteArray().toLnUrl())
             },
             onError = onError
         )

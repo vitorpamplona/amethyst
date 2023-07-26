@@ -104,6 +104,26 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         )
     }
 
+    fun createFollowGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.selectedGeohashesFollowList(account.defaultHomeFollowList) ?: emptySet()
+
+        if (hashToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter = JsonFilter(
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
+                tags = mapOf(
+                    "g" to hashToLoad.map {
+                        listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                    }.flatten()
+                ),
+                limit = 100,
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
+            )
+        )
+    }
+
     fun createFollowCommunitiesFilter(): TypedFilter? {
         val communitiesToLoad = account.selectedCommunitiesFollowList(account.defaultHomeFollowList) ?: emptySet()
 
@@ -135,6 +155,11 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     }
 
     override fun updateChannelFilters() {
-        followAccountChannel.typedFilters = listOfNotNull(createFollowAccountsFilter(), createFollowCommunitiesFilter(), createFollowTagsFilter()).ifEmpty { null }
+        followAccountChannel.typedFilters = listOfNotNull(
+            createFollowAccountsFilter(),
+            createFollowCommunitiesFilter(),
+            createFollowTagsFilter(),
+            createFollowGeohashesFilter()
+        ).ifEmpty { null }
     }
 }

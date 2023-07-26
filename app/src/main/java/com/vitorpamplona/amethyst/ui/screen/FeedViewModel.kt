@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
@@ -121,6 +122,14 @@ class NostrHashtagFeedViewModel(val hashtag: String, val account: Account) : Fee
     class Factory(val hashtag: String, val account: Account) : ViewModelProvider.Factory {
         override fun <NostrHashtagFeedViewModel : ViewModel> create(modelClass: Class<NostrHashtagFeedViewModel>): NostrHashtagFeedViewModel {
             return NostrHashtagFeedViewModel(hashtag, account) as NostrHashtagFeedViewModel
+        }
+    }
+}
+
+class NostrGeoHashFeedViewModel(val geohash: String, val account: Account) : FeedViewModel(GeoHashFeedFilter(geohash, account)) {
+    class Factory(val geohash: String, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrGeoHashFeedViewModel : ViewModel> create(modelClass: Class<NostrGeoHashFeedViewModel>): NostrGeoHashFeedViewModel {
+            return NostrGeoHashFeedViewModel(geohash, account) as NostrGeoHashFeedViewModel
         }
     }
 }

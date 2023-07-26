@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.previews
 import com.vitorpamplona.amethyst.service.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
@@ -61,10 +62,12 @@ private const val CONTENT = "content"
 
 suspend fun getDocument(url: String, timeOut: Int = 30000): Document =
     withContext(Dispatchers.IO) {
-        return@withContext Jsoup.connect(url)
-            .proxy(HttpClient.getProxy())
-            .timeout(timeOut)
-            .get()
+        val request: Request = Request.Builder().url(url).get().build()
+        val html = HttpClient.getHttpClient().newCall(request).execute().use {
+            it.body.string()
+        }
+
+        Jsoup.parse(html)
     }
 
 suspend fun parseHtml(url: String, document: Document): UrlInfoItem =

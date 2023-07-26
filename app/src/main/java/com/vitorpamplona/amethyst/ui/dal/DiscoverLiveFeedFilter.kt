@@ -39,10 +39,9 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
         val isHiddenList = showHiddenKey()
 
-        val followingKeySet =
-            account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
-        val followingTagSet =
-            account.selectedTagsFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
+        val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
+        val followingTagSet = account.selectedTagsFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
+        val followingGeohashSet = account.selectedGeohashesFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
 
         val activities = collection
             .asSequence()
@@ -50,6 +49,8 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             .filter {
                 isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(
                     followingTagSet
+                ) == true || it.event?.isTaggedGeoHashes(
+                    followingGeohashSet
                 ) == true
             }
             .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }

@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -170,7 +169,7 @@ private fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollow(tag)
+                    accountViewModel.account.unfollowHashtag(tag)
                 }
             }
         }
@@ -188,7 +187,7 @@ private fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.follow(tag)
+                    accountViewModel.account.followHashtag(tag)
                 }
             }
         }

@@ -2,11 +2,8 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +25,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
@@ -56,11 +54,8 @@ fun AppNavigation(
 
     navController: NavHostController,
     accountViewModel: AccountViewModel,
-    themeViewModel: ThemeViewModel,
-    nextPage: String? = null
+    themeViewModel: ThemeViewModel
 ) {
-    var actionableNextPage by remember { mutableStateOf<String?>(nextPage) }
-
     val scope = rememberCoroutineScope()
     val nav = remember {
         { route: String ->
@@ -184,6 +179,16 @@ fun AppNavigation(
             })
         }
 
+        Route.Geohash.let { route ->
+            composable(route.route, route.arguments, content = {
+                GeoHashScreen(
+                    tag = it.arguments?.getString("id"),
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
         Route.Community.let { route ->
             composable(route.route, route.arguments, content = {
                 CommunityScreen(
@@ -231,12 +236,5 @@ fun AppNavigation(
                 )
             })
         }
-    }
-
-    actionableNextPage?.let {
-        LaunchedEffect(it) {
-            nav(it)
-        }
-        actionableNextPage = null
     }
 }

@@ -482,8 +482,10 @@
     <string name="add_sensitive_content_label">Sensitive Content</string>
     <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
     <string name="settings">Settings</string>
-    <string name="always">Always</string>
-    <string name="wifi_only">Wifi-only</string>
+    <string name="connectivity_type_always">Always</string>
+    <string name="connectivity_type_wifi_only">Wifi-only</string>
+    <string name="connectivity_type_never">Never</string>
+
     <string name="system">System</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
@@ -504,4 +506,14 @@
     <string name="nip05_verified">Nostr address was verified</string>
     <string name="nip05_failed">Nostr address failed verification</string>
     <string name="nip05_checking">Checking Nostr address</string>
+    <string name="select_deselect_all">Select/Deselect all</string>
+    <string name="default_relays">Default</string>
+
+    <string name="zap_forward_title">Forward Zaps to:</string>
+    <string name="zap_forward_explainer">Supporting clients will forward zaps to the LNAddress or User Profile below instead of yours</string>
+
+    <string name="geohash_title">Expose Location as </string>
+    <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
+
+    <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
 </resources>

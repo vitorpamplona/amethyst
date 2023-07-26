@@ -34,7 +34,11 @@ interface EventInterface {
     fun isTaggedAddressableNotes(idHexes: Set<String>): Boolean
 
     fun isTaggedHash(hashtag: String): Boolean
+    fun isTaggedGeoHash(hashtag: String): Boolean
+
     fun isTaggedHashes(hashtags: Set<String>): Boolean
+    fun isTaggedGeoHashes(hashtags: Set<String>): Boolean
+
     fun firstIsTaggedHashes(hashtags: Set<String>): String?
     fun firstIsTaggedAddressableNote(addressableNotes: Set<String>): String?
 
@@ -42,9 +46,11 @@ interface EventInterface {
     fun getTagOfAddressableKind(kind: Int): ATag?
 
     fun hashtags(): List<String>
+    fun geohashes(): List<String>
 
     fun getReward(): BigDecimal?
     fun getPoWRank(): Int
+    fun getGeoHash(): String?
 
     fun zapAddress(): String?
     fun isSensitive(): Boolean

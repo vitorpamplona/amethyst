@@ -10,7 +10,7 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import java.lang.reflect.Type
 
 @Immutable
@@ -35,9 +35,9 @@ class LnZapPaymentRequestEvent(
         }
 
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubkey)
+            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubkey)
 
-            val jsonText = Utils.decrypt(content, sharedSecret)
+            val jsonText = CryptoUtils.decrypt(content, sharedSecret)
 
             val payInvoiceMethod = gson.fromJson(jsonText, Request::class.java)
 
@@ -59,10 +59,10 @@ class LnZapPaymentRequestEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): LnZapPaymentRequestEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey)
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
             val serializedRequest = gson.toJson(PayInvoiceMethod.create(lnInvoice))
 
-            val content = Utils.encrypt(
+            val content = CryptoUtils.encrypt(
                 serializedRequest,
                 privateKey,
                 walletServicePubkey.hexToByteArray()
@@ -72,7 +72,7 @@ class LnZapPaymentRequestEvent(
             tags.add(listOf("p", walletServicePubkey))
 
             val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return LnZapPaymentRequestEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
         }
     }

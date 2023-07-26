@@ -4,11 +4,11 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Tlv
+import com.vitorpamplona.amethyst.service.toByteArray
+import com.vitorpamplona.amethyst.service.toNAddress
 import fr.acinq.secp256k1.Hex
-import nostr.postr.Bech32
-import nostr.postr.bechToBytes
-import nostr.postr.toByteArray
 
 @Immutable
 data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val relay: String?) {
@@ -30,7 +30,7 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
             byteArrayOf(Tlv.Type.AUTHOR.id, author.size.toByte()) + author +
             byteArrayOf(Tlv.Type.KIND.id, kind.size.toByte()) + kind
 
-        return Bech32.encodeBytes(hrp = "naddr", fullArray, Bech32.Encoding.Bech32)
+        return fullArray.toNAddress()
     }
 
     companion object {

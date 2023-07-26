@@ -26,7 +26,7 @@ data class ResultOrError(
 object LanguageTranslatorService {
     var executorService = Executors.newScheduledThreadPool(5)
 
-    private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.6f).build()
+    private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.52f).build()
     private val languageIdentification = LanguageIdentification.getClient(options)
     val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
@@ -109,11 +109,12 @@ object LanguageTranslatorService {
     private fun tagDictionary(text: String): Map<String, String> {
         val matcher = tagRegex.matcher(text)
         val returningList = mutableMapOf<String, String>()
-        val counter = 0
+        var counter = 0
         while (matcher.find()) {
             try {
                 val tag = matcher.group()
-                val short = "Amethystmindexer$counter"
+                val short = "A$counter"
+                counter++
                 returningList.put(short, tag)
             } catch (e: Exception) {
             }
@@ -124,11 +125,12 @@ object LanguageTranslatorService {
     private fun lnDictionary(text: String): Map<String, String> {
         val matcher = lnRegex.matcher(text)
         val returningList = mutableMapOf<String, String>()
-        val counter = 0
+        var counter = 0
         while (matcher.find()) {
             try {
                 val lnInvoice = matcher.group()
-                val short = "Amethystlnindexer$counter"
+                val short = "A$counter"
+                counter++
                 returningList.put(short, lnInvoice)
             } catch (e: Exception) {
             }
@@ -140,10 +142,11 @@ object LanguageTranslatorService {
         val parser = UrlDetector(text, UrlDetectorOptions.Default)
         val urlsInText = parser.detect()
 
-        val counter = 0
+        var counter = 0
 
         return urlsInText.filter { !it.originalUrl.contains("，") && !it.originalUrl.contains("。") }.associate {
-            "Amethysturlindexer$counter" to it.originalUrl
+            counter++
+            "A$counter" to it.originalUrl
         }
     }
 

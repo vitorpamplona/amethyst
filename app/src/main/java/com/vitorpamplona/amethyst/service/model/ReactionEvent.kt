@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class ReactionEvent(
@@ -31,7 +31,7 @@ class ReactionEvent(
         }
 
         fun create(content: String, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
 
             var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
             if (originalNote is AddressableEvent) {
@@ -39,13 +39,13 @@ class ReactionEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
         fun create(emojiUrl: EmojiUrl, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
             val content = ":${emojiUrl.code}:"
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
 
             var tags = listOf(
                 listOf("e", originalNote.id()),
@@ -58,7 +58,7 @@ class ReactionEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

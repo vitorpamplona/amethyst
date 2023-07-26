@@ -4,9 +4,9 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Bech32
-import nostr.postr.bechToBytes
-import nostr.postr.toByteArray
+import com.vitorpamplona.amethyst.service.bechToBytes
+import com.vitorpamplona.amethyst.service.toByteArray
+import com.vitorpamplona.amethyst.service.toNEvent
 import java.util.regex.Pattern
 
 object Nip19 {
@@ -167,6 +167,6 @@ object Nip19 {
             fullArray = fullArray + byteArrayOf(Tlv.Type.KIND.id, kind.size.toByte()) + kind
         }
 
-        return Bech32.encodeBytes(hrp = "nevent", fullArray, Bech32.Encoding.Bech32)
+        return fullArray.toNEvent()
     }
 }

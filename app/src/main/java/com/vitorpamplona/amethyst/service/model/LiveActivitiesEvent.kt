@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class LiveActivitiesEvent(
@@ -51,9 +51,9 @@ class LiveActivitiesEvent(
             createdAt: Long = TimeUtils.now()
         ): LiveActivitiesEvent {
             val tags = mutableListOf<List<String>>()
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return LiveActivitiesEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
         }
     }

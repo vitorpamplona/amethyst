@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class LongTextNoteEvent(
@@ -33,7 +33,7 @@ class LongTextNoteEvent(
         const val kind = 30023
 
         fun create(msg: String, replyTos: List<String>?, mentions: List<String>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): LongTextNoteEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 tags.add(listOf("e", it))
@@ -42,7 +42,7 @@ class LongTextNoteEvent(
                 tags.add(listOf("p", it))
             }
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return LongTextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }

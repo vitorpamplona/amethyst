@@ -3,8 +3,10 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -101,6 +103,12 @@ sealed class Route(
 
     object Hashtag : Route(
         route = "Hashtag/{id}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
+    )
+
+    object Geohash : Route(
+        route = "Geohash/{id}",
         icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
@@ -288,6 +296,12 @@ object MessagesLatestItem : LatestItem() {
 fun getRouteWithArguments(navController: NavHostController): String? {
     val currentEntry = navController.currentBackStackEntry ?: return null
     return getRouteWithArguments(currentEntry.destination, currentEntry.arguments)
+}
+
+fun getRouteWithArguments(navState: State<NavBackStackEntry?>): String? {
+    return navState.value?.let {
+        getRouteWithArguments(it.destination, it.arguments)
+    }
 }
 
 private fun getRouteWithArguments(

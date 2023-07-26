@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class PinListEvent(
@@ -34,9 +34,9 @@ class PinListEvent(
                 tags.add(listOf("pin", it))
             }
 
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return PinListEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
         }
     }

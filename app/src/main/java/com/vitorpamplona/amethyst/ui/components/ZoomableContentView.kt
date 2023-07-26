@@ -1,8 +1,11 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import android.util.Log
+import android.view.Window
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -56,14 +59,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toUri
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
@@ -86,7 +92,6 @@ import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import java.io.File
-import java.security.MessageDigest
 
 @Immutable
 abstract class ZoomableContent(
@@ -119,7 +124,9 @@ class ZoomableUrlVideo(
     description: String? = null,
     hash: String? = null,
     dim: String? = null,
-    uri: String? = null
+    uri: String? = null,
+    val artworkUri: String? = null,
+    val authorName: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
 @Immutable
@@ -150,7 +157,9 @@ class ZoomableLocalVideo(
     description: String? = null,
     dim: String? = null,
     isVerified: Boolean? = null,
-    uri: String
+    uri: String,
+    val artworkUri: String? = null,
+    val authorName: String? = null
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
 fun figureOutMimeType(fullUrl: String): ZoomableContent {
@@ -202,19 +211,27 @@ fun ZoomableContentView(
     when (content) {
         is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel)
         is ZoomableUrlVideo -> VideoView(
-            content.url,
-            content.description,
+            videoUri = content.url,
+            title = content.description,
+            artworkUri = content.artworkUri,
+            authorName = content.authorName,
+            nostrUriCallback = content.uri,
+            onDialog = { dialogOpen = true },
             accountViewModel = accountViewModel
-        ) { dialogOpen = true }
+        )
 
         is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel)
         is ZoomableLocalVideo ->
             content.localFile?.let {
                 VideoView(
-                    it.toUri().toString(),
-                    content.description,
+                    videoUri = it.toUri().toString(),
+                    title = content.description,
+                    artworkUri = content.artworkUri,
+                    authorName = content.authorName,
+                    nostrUriCallback = content.uri,
+                    onDialog = { dialogOpen = true },
                     accountViewModel = accountViewModel
-                ) { dialogOpen = true }
+                )
             }
     }
 
@@ -232,15 +249,13 @@ private fun LocalImageView(
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
-            val settings = accountViewModel?.account?.settings
-            val isMobile = ConnectivityStatus.isOnMobileData.value
-
             val showImage = remember {
                 mutableStateOf(
                     if (alwayShowImage) { true } else {
-                        when (settings?.automaticallyShowImages) {
-                            true -> !isMobile
-                            false -> false
+                        when (accountViewModel?.account?.settings?.automaticallyShowImages) {
+                            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                            ConnectivityType.NEVER -> false
+                            ConnectivityType.ALWAYS -> true
                             else -> true
                         }
                     }
@@ -302,15 +317,13 @@ private fun UrlImageView(
     alwayShowImage: Boolean = false
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
-        val settings = accountViewModel?.account?.settings
-        val isMobile = ConnectivityStatus.isOnMobileData.value
-
         val showImage = remember {
             mutableStateOf(
                 if (alwayShowImage) { true } else {
-                    when (settings?.automaticallyShowImages) {
-                        true -> !isMobile
-                        false -> false
+                    when (accountViewModel?.account?.settings?.automaticallyShowImages) {
+                        ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                        ConnectivityType.NEVER -> false
+                        ConnectivityType.ALWAYS -> true
                         else -> true
                     }
                 }
@@ -652,7 +665,14 @@ private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: Accou
         UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(content.url, content.description, accountViewModel = accountViewModel, alwaysShowVideo = true)
+            VideoView(
+                videoUri = content.url,
+                title = content.description,
+                artworkUri = content.artworkUri,
+                authorName = content.authorName,
+                accountViewModel = accountViewModel,
+                alwaysShowVideo = true
+            )
         }
     } else if (content is ZoomableLocalImage) {
         LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
@@ -660,8 +680,10 @@ private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: Accou
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
                 VideoView(
-                    it.toUri().toString(),
-                    content.description,
+                    videoUri = it.toUri().toString(),
+                    title = content.description,
+                    artworkUri = content.artworkUri,
+                    authorName = content.authorName,
                     accountViewModel = accountViewModel,
                     alwaysShowVideo = true
                 )
@@ -675,11 +697,7 @@ private fun verifyHash(content: ZoomableUrlContent, context: Context): Boolean? 
     if (content.hash == null) return null
 
     context.imageLoader.diskCache?.get(content.url)?.use { snapshot ->
-        val imageFile = snapshot.data.toFile()
-        val bytes = imageFile.readBytes()
-        val sha256 = MessageDigest.getInstance("SHA-256")
-
-        val hash = sha256.digest(bytes).toHexKey()
+        val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
         Log.d("Image Hash Verification", "$hash == ${content.hash}")
 
@@ -731,3 +749,17 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
         }
     }
 }
+
+// Window utils
+@Composable
+fun getDialogWindow(): Window? = (LocalView.current.parent as? DialogWindowProvider)?.window
+
+@Composable
+fun getActivityWindow(): Window? = LocalView.current.context.getActivityWindow()
+
+private tailrec fun Context.getActivityWindow(): Window? =
+    when (this) {
+        is Activity -> window
+        is ContextWrapper -> baseContext.getActivityWindow()
+        else -> null
+    }

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class ChannelMessageEvent(
@@ -36,10 +36,11 @@ class ChannelMessageEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
-            zapRaiserAmount: Long?
+            zapRaiserAmount: Long?,
+            geohash: String? = null
         ): ChannelMessageEvent {
             val content = message
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf(
                 listOf("e", channel, "", "root")
             )
@@ -58,9 +59,12 @@ class ChannelMessageEvent(
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
             }
+            geohash?.let {
+                tags.add(listOf("g", it))
+            }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

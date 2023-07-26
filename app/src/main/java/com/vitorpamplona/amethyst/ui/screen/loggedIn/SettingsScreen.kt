@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -102,22 +104,14 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val selectedItens = persistentListOf(
-        stringResource(R.string.always),
-        stringResource(R.string.wifi_only),
-        stringResource(R.string.never).replaceFirstChar {
-            it.uppercase()
-        }
+        stringResource(ConnectivityType.ALWAYS.reourceId),
+        stringResource(ConnectivityType.WIFI_ONLY.reourceId),
+        stringResource(ConnectivityType.NEVER.reourceId)
     )
     val settings = accountViewModel.account.settings
-    val index = if (settings.automaticallyShowImages == null) { 0 } else {
-        if (settings.automaticallyShowImages == true) 1 else 2
-    }
-    val videoIndex = if (settings.automaticallyStartPlayback == null) { 0 } else {
-        if (settings.automaticallyShowImages == true) 1 else 2
-    }
-    val linkIndex = if (settings.automaticallyShowUrlPreview == null) { 0 } else {
-        if (settings.automaticallyShowUrlPreview == true) 1 else 2
-    }
+    val index = settings.automaticallyShowImages.screenCode
+    val videoIndex = settings.automaticallyStartPlayback.screenCode
+    val linkIndex = settings.automaticallyShowUrlPreview.screenCode
 
     val themeItens = persistentListOf(
         stringResource(R.string.system),
@@ -194,11 +188,7 @@ fun SettingsScreen(
                 placeholder = selectedItens[index],
                 options = selectedItens,
                 onSelect = {
-                    val automaticallyShowImages = when (it) {
-                        1 -> true
-                        2 -> false
-                        else -> null
-                    }
+                    val automaticallyShowImages = parseConnectivityType(it)
 
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.updateAutomaticallyShowImages(automaticallyShowImages)
@@ -220,11 +210,7 @@ fun SettingsScreen(
                 placeholder = selectedItens[videoIndex],
                 options = selectedItens,
                 onSelect = {
-                    val automaticallyStartPlayback = when (it) {
-                        1 -> true
-                        2 -> false
-                        else -> null
-                    }
+                    val automaticallyStartPlayback = parseConnectivityType(it)
 
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
@@ -246,11 +232,7 @@ fun SettingsScreen(
                 placeholder = selectedItens[linkIndex],
                 options = selectedItens,
                 onSelect = {
-                    val automaticallyShowUrlPreview = when (it) {
-                        1 -> true
-                        2 -> false
-                        else -> null
-                    }
+                    val automaticallyShowUrlPreview = parseConnectivityType(it)
 
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)

@@ -5,7 +5,7 @@ buildscript {
         compose_ui_version = '1.4.3'
         nav_version = "2.6.0"
         room_version = "2.4.3"
-        accompanist_version = '0.30.0'
+        accompanist_version = '0.30.1'
         coil_version = '2.4.0'
         vico_version = '1.7.1'
         exoplayer_version = '1.1.0'

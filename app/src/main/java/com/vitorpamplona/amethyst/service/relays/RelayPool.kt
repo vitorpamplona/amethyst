@@ -24,7 +24,7 @@ object RelayPool : Relay.Listener {
     }
 
     fun connectedRelays(): Int {
-        return relays.filter { it.isConnected() }.size
+        return relays.count { it.isConnected() }
     }
 
     fun getRelay(url: String): Relay? {
@@ -51,7 +51,7 @@ object RelayPool : Relay.Listener {
     fun requestAndWatch() {
         checkNotInMainThread()
 
-        relays.forEach { it.requestAndWatch() }
+        relays.forEach { it.connect() }
     }
 
     fun sendFilter(subscriptionId: String) {
@@ -60,6 +60,12 @@ object RelayPool : Relay.Listener {
 
     fun sendFilterOnlyIfDisconnected() {
         relays.forEach { it.sendFilterOnlyIfDisconnected() }
+    }
+
+    fun sendToSelectedRelays(list: List<Relay>, signedEvent: EventInterface) {
+        list.forEach { relay ->
+            relays.filter { it.url == relay.url }.forEach { it.send(signedEvent) }
+        }
     }
 
     fun send(signedEvent: EventInterface) {

@@ -85,7 +85,7 @@ private fun UserNameDisplay(
 }
 
 @Composable
-private fun NPubDisplay(npubDisplay: String, modifier: Modifier) {
+fun NPubDisplay(npubDisplay: String, modifier: Modifier) {
     Text(
         text = npubDisplay,
         fontWeight = FontWeight.Bold,

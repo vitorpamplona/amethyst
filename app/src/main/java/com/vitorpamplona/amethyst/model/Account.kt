@@ -7,9 +7,10 @@ import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.OptOutFromFilters
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -28,8 +29,6 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import nostr.postr.Persona
-import nostr.postr.Utils
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale
@@ -54,7 +53,7 @@ val KIND3_FOLLOWS = " All Follows "
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
-    val loggedIn: Persona,
+    val keyPair: KeyPair,
 
     var followingChannels: Set<String> = DefaultChannels, // deprecated
     var followingCommunities: Set<String> = setOf(), // deprecated
@@ -100,7 +99,7 @@ class Account(
     )
 
     val liveHiddenUsers: LiveData<LiveHiddenUsers> = live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
-        val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(loggedIn.privKey)
+        val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(keyPair.privKey)
         LiveHiddenUsers(
             hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
             spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
@@ -111,7 +110,7 @@ class Account(
     var userProfileCache: User? = null
 
     fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: Boolean?
+        automaticallyStartPlayback: ConnectivityType
     ) {
         settings.automaticallyStartPlayback = automaticallyStartPlayback
         live.invalidateData()
@@ -119,7 +118,7 @@ class Account(
     }
 
     fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: Boolean?
+        automaticallyShowUrlPreview: ConnectivityType
     ) {
         settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
         live.invalidateData()
@@ -127,7 +126,7 @@ class Account(
     }
 
     fun updateAutomaticallyShowImages(
-        automaticallyShowImages: Boolean?
+        automaticallyShowImages: ConnectivityType
     ) {
         settings.automaticallyShowImages = automaticallyShowImages
         live.invalidateData()
@@ -147,14 +146,14 @@ class Account(
 
     fun userProfile(): User {
         return userProfileCache ?: run {
-            val myUser: User = LocalCache.getOrCreateUser(loggedIn.pubKey.toHexKey())
+            val myUser: User = LocalCache.getOrCreateUser(keyPair.pubKey.toHexKey())
             userProfileCache = myUser
             myUser
         }
     }
 
     fun isWriteable(): Boolean {
-        return loggedIn.privKey != null
+        return keyPair.privKey != null
     }
 
     fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
@@ -166,7 +165,7 @@ class Account(
             val event = ContactListEvent.updateRelayList(
                 earlierVersion = contactList,
                 relayUse = relays,
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
 
             Client.send(event)
@@ -175,10 +174,11 @@ class Account(
             val event = ContactListEvent.createFromScratch(
                 followUsers = listOf(),
                 followTags = listOf(),
+                followGeohashes = listOf(),
                 followCommunities = listOf(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
 
             // Keep this local to avoid erasing a good contact list.
@@ -190,8 +190,8 @@ class Account(
     fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
         if (!isWriteable()) return
 
-        loggedIn.privKey?.let {
-            val event = MetadataEvent.create(toString, identities, loggedIn.privKey!!)
+        keyPair.privKey?.let {
+            val event = MetadataEvent.create(toString, identities, keyPair.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -225,7 +225,7 @@ class Account(
             val emojiUrl = EmojiUrl.decode(reaction)
             if (emojiUrl != null) {
                 note.event?.let {
-                    val event = ReactionEvent.create(emojiUrl, it, loggedIn.privKey!!)
+                    val event = ReactionEvent.create(emojiUrl, it, keyPair.privKey!!)
                     Client.send(event)
                     LocalCache.consume(event)
                 }
@@ -235,7 +235,7 @@ class Account(
         }
 
         note.event?.let {
-            val event = ReactionEvent.create(reaction, it, loggedIn.privKey!!)
+            val event = ReactionEvent.create(reaction, it, keyPair.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -249,7 +249,7 @@ class Account(
                 event,
                 userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                     ?: localRelays.map { it.url }.toSet(),
-                loggedIn.privKey!!,
+                keyPair.privKey!!,
                 pollOption,
                 message,
                 zapType
@@ -263,18 +263,18 @@ class Account(
     }
 
     fun isNIP47Author(pubkeyHex: String?): Boolean {
-        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: loggedIn.privKey
+        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
 
         if (privKey == null) return false
 
-        val pubKey = Utils.pubkeyCreate(privKey).toHexKey()
+        val pubKey = CryptoUtils.pubkeyCreate(privKey).toHexKey()
         return (pubKey == pubkeyHex)
     }
 
     fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
         val myNip47 = zapPaymentRequest ?: return null
 
-        val privKey = myNip47.secret?.hexToByteArray() ?: loggedIn.privKey
+        val privKey = myNip47.secret?.hexToByteArray() ?: keyPair.privKey
         val pubKey = myNip47.pubKeyHex.hexToByteArray()
 
         if (privKey == null) return null
@@ -287,7 +287,7 @@ class Account(
     }
 
     fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
-        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: loggedIn.privKey
+        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
         val pubKey = zapPaymentRequest?.pubKeyHex?.hexToByteArray()
         return zappedNote?.zappedAmount(privKey, pubKey) ?: BigDecimal.ZERO
     }
@@ -296,13 +296,13 @@ class Account(
         if (!isWriteable()) return
 
         zapPaymentRequest?.let { nip47 ->
-            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!)
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: keyPair.privKey!!)
 
             val wcListener = NostrLnZapPaymentResponseDataSource(
                 fromServiceHex = nip47.pubKeyHex,
                 toUserHex = event.pubKey,
                 replyingToHex = event.id,
-                authSigningKey = nip47.secret?.hexToByteArray() ?: loggedIn.privKey!!
+                authSigningKey = nip47.secret?.hexToByteArray() ?: keyPair.privKey!!
             )
             wcListener.start()
 
@@ -330,7 +330,7 @@ class Account(
         return LnZapRequestEvent.create(
             userPubKeyHex,
             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
-            loggedIn.privKey!!,
+            keyPair.privKey!!,
             message,
             zapType
         )
@@ -345,13 +345,13 @@ class Account(
         }
 
         note.event?.let {
-            val event = ReactionEvent.createWarning(it, loggedIn.privKey!!)
+            val event = ReactionEvent.createWarning(it, keyPair.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
 
         note.event?.let {
-            val event = ReportEvent.create(it, type, loggedIn.privKey!!, content = content)
+            val event = ReportEvent.create(it, type, keyPair.privKey!!, content = content)
             Client.send(event)
             LocalCache.consume(event, null)
         }
@@ -365,7 +365,7 @@ class Account(
             return
         }
 
-        val event = ReportEvent.create(user.pubkeyHex, type, loggedIn.privKey!!)
+        val event = ReportEvent.create(user.pubkeyHex, type, keyPair.privKey!!)
         Client.send(event)
         LocalCache.consume(event, null)
     }
@@ -380,7 +380,7 @@ class Account(
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
-            val event = DeletionEvent.create(myNotes, loggedIn.privKey!!)
+            val event = DeletionEvent.create(myNotes, keyPair.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
@@ -389,7 +389,7 @@ class Account(
     fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {
         if (!isWriteable()) return null
 
-        return HTTPAuthorizationEvent.create(url, method, body, loggedIn.privKey!!)
+        return HTTPAuthorizationEvent.create(url, method, body, keyPair.privKey!!)
     }
 
     fun boost(note: Note) {
@@ -402,11 +402,11 @@ class Account(
 
         note.event?.let {
             if (it.kind() == 1) {
-                val event = RepostEvent.create(it, loggedIn.privKey!!)
+                val event = RepostEvent.create(it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
             } else {
-                val event = GenericRepostEvent.create(it, loggedIn.privKey!!)
+                val event = GenericRepostEvent.create(it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
             }
@@ -427,7 +427,7 @@ class Account(
         if (followingCommunities.isNotEmpty()) {
             followingCommunities.forEach {
                 ATag.parse(it, null)?.let {
-                    returningContactList = ContactListEvent.followAddressableEvent(returningContactList, it, loggedIn.privKey!!)
+                    returningContactList = ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.privKey!!)
                 }
             }
             followingCommunities = emptySet()
@@ -435,7 +435,7 @@ class Account(
 
         if (followingChannels.isNotEmpty()) {
             followingChannels.forEach {
-                returningContactList = ContactListEvent.followEvent(returningContactList, it, loggedIn.privKey!!)
+                returningContactList = ContactListEvent.followEvent(returningContactList, it, keyPair.privKey!!)
             }
             followingChannels = emptySet()
         }
@@ -449,15 +449,16 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followUser(contactList, user.pubkeyHex, loggedIn.privKey!!)
+            ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair.privKey!!)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = listOf(Contact(user.pubkeyHex, null)),
                 followTags = emptyList(),
+                followGeohashes = emptyList(),
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
         }
 
@@ -471,15 +472,16 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followEvent(contactList, channel.idHex, loggedIn.privKey!!)
+            ContactListEvent.followEvent(contactList, channel.idHex, keyPair.privKey!!)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
                 followTags = emptyList(),
+                followGeohashes = emptyList(),
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList().plus(channel.idHex),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
         }
 
@@ -493,16 +495,17 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followAddressableEvent(contactList, community.address, loggedIn.privKey!!)
+            ContactListEvent.followAddressableEvent(contactList, community.address, keyPair.privKey!!)
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
                 followTags = emptyList(),
+                followGeohashes = emptyList(),
                 followCommunities = listOf(community.address),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
         }
 
@@ -510,7 +513,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun follow(tag: String) {
+    fun followHashtag(tag: String) {
         if (!isWriteable()) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -519,16 +522,44 @@ class Account(
             ContactListEvent.followHashtag(
                 contactList,
                 tag,
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
                 followTags = listOf(tag),
+                followGeohashes = emptyList(),
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
+            )
+        }
+
+        Client.send(event)
+        LocalCache.consume(event)
+    }
+
+    fun followGeohash(geohash: String) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        val event = if (contactList != null) {
+            ContactListEvent.followGeohash(
+                contactList,
+                geohash,
+                keyPair.privKey!!
+            )
+        } else {
+            ContactListEvent.createFromScratch(
+                followUsers = emptyList(),
+                followTags = emptyList(),
+                followGeohashes = listOf(geohash),
+                followCommunities = emptyList(),
+                followEvents = DefaultChannels.toList(),
+                relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
+                privateKey = keyPair.privKey!!
             )
         }
 
@@ -545,7 +576,7 @@ class Account(
             val event = ContactListEvent.unfollowUser(
                 contactList,
                 user.pubkeyHex,
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
 
             Client.send(event)
@@ -553,7 +584,7 @@ class Account(
         }
     }
 
-    fun unfollow(tag: String) {
+    fun unfollowHashtag(tag: String) {
         if (!isWriteable()) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -562,7 +593,24 @@ class Account(
             val event = ContactListEvent.unfollowHashtag(
                 contactList,
                 tag,
-                loggedIn.privKey!!
+                keyPair.privKey!!
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+    }
+
+    fun unfollowGeohash(geohash: String) {
+        if (!isWriteable()) return
+
+        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+
+        if (contactList != null && contactList.tags.isNotEmpty()) {
+            val event = ContactListEvent.unfollowGeohash(
+                contactList,
+                geohash,
+                keyPair.privKey!!
             )
 
             Client.send(event)
@@ -579,7 +627,7 @@ class Account(
             val event = ContactListEvent.unfollowEvent(
                 contactList,
                 channel.idHex,
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
 
             Client.send(event)
@@ -596,7 +644,7 @@ class Account(
             val event = ContactListEvent.unfollowAddressableEvent(
                 contactList,
                 community.address,
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
 
             Client.send(event)
@@ -610,7 +658,7 @@ class Account(
         val data = FileStorageEvent.create(
             mimeType = headerInfo.mimeType ?: "",
             data = byteArray,
-            privateKey = loggedIn.privKey!!
+            privateKey = keyPair.privKey!!
         )
 
         val signedEvent = FileStorageHeaderEvent.create(
@@ -622,25 +670,25 @@ class Account(
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
             sensitiveContent = headerInfo.sensitiveContent,
-            privateKey = loggedIn.privKey!!
+            privateKey = keyPair.privKey!!
         )
 
         return Pair(data, signedEvent)
     }
 
-    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
+    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
-        Client.send(data)
+        Client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendHeader(headerInfo: FileHeader): Note? {
+    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
         val signedEvent = FileHeaderEvent.create(
@@ -652,10 +700,10 @@ class Account(
             blurhash = headerInfo.blurHash,
             description = headerInfo.description,
             sensitiveContent = headerInfo.sensitiveContent,
-            privateKey = loggedIn.privKey!!
+            privateKey = keyPair.privKey!!
         )
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
@@ -671,7 +719,9 @@ class Account(
         zapRaiserAmount: Long? = null,
         replyingTo: String?,
         root: String?,
-        directMentions: Set<HexKey>
+        directMentions: Set<HexKey>,
+        relayList: List<Relay>? = null,
+        geohash: String? = null
     ) {
         if (!isWriteable()) return
 
@@ -691,10 +741,11 @@ class Account(
             replyingTo = replyingTo,
             root = root,
             directMentions = directMentions,
-            privateKey = loggedIn.privKey!!
+            geohash = geohash,
+            privateKey = keyPair.privKey!!
         )
 
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
     }
 
@@ -709,7 +760,9 @@ class Account(
         closedAt: Int?,
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
-        zapRaiserAmount: Long? = null
+        zapRaiserAmount: Long? = null,
+        relayList: List<Relay>? = null,
+        geohash: String? = null
     ) {
         if (!isWriteable()) return
 
@@ -722,7 +775,7 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             addresses = addresses,
-            privateKey = loggedIn.privKey!!,
+            privateKey = keyPair.privKey!!,
             pollOptions = pollOptions,
             valueMaximum = valueMaximum,
             valueMinimum = valueMinimum,
@@ -730,14 +783,15 @@ class Account(
             closedAt = closedAt,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
-            zapRaiserAmount = zapRaiserAmount
+            zapRaiserAmount = zapRaiserAmount,
+            geohash = geohash
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
-        Client.send(signedEvent)
+        Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -752,13 +806,14 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
-            privateKey = loggedIn.privKey!!
+            geohash = geohash,
+            privateKey = keyPair.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null) {
+    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -773,13 +828,14 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
-            privateKey = loggedIn.privKey!!
+            geohash = geohash,
+            privateKey = keyPair.privKey!!
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null) {
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -794,7 +850,8 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
-            privateKey = loggedIn.privKey!!,
+            geohash = geohash,
+            privateKey = keyPair.privKey!!,
             advertiseNip18 = false
         )
         Client.send(signedEvent)
@@ -812,7 +869,7 @@ class Account(
 
         val event = ChannelCreateEvent.create(
             channelInfo = metadata,
-            privateKey = loggedIn.privKey!!
+            privateKey = keyPair.privKey!!
         )
 
         Client.send(event)
@@ -833,7 +890,7 @@ class Account(
 
         val event = EmojiPackSelectionEvent.create(
             noteEvent.taggedAddresses().filter { it != emojiListEvent.address() },
-            loggedIn.privKey!!
+            keyPair.privKey!!
         )
 
         Client.send(event)
@@ -848,7 +905,7 @@ class Account(
         val event = if (usersEmojiList.event == null) {
             EmojiPackSelectionEvent.create(
                 listOf(emojiListEvent.address()),
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         } else {
             val noteEvent = usersEmojiList.event
@@ -860,7 +917,7 @@ class Account(
 
             EmojiPackSelectionEvent.create(
                 noteEvent.taggedAddresses().plus(emojiListEvent.address()),
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         }
 
@@ -880,11 +937,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.plus(note.address) ?: listOf(note.address),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!)?.plus(note.address) ?: listOf(note.address),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         } else {
             BookmarkListEvent.create(
@@ -893,11 +950,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         }
 
@@ -917,11 +974,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         } else {
             BookmarkListEvent.create(
@@ -930,11 +987,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         }
 
@@ -954,11 +1011,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!)?.minus(note.address) ?: listOf(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!)?.minus(note.address) ?: listOf(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         } else {
             BookmarkListEvent.create(
@@ -967,11 +1024,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!)?.minus(note.idHex) ?: listOf(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!)?.minus(note.idHex) ?: listOf(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         }
 
@@ -982,7 +1039,7 @@ class Account(
     fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
         if (!isWriteable()) return null
 
-        return RelayAuthEvent.create(relay.url, challenge, loggedIn.privKey!!)
+        return RelayAuthEvent.create(relay.url, challenge, keyPair.privKey!!)
     }
 
     fun removePublicBookmark(note: Note) {
@@ -997,11 +1054,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses()?.minus(note.address),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         } else {
             BookmarkListEvent.create(
@@ -1010,11 +1067,11 @@ class Account(
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
 
-                bookmarks?.privateTaggedEvents(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = loggedIn.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = loggedIn.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
+                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
 
-                loggedIn.privKey!!
+                keyPair.privKey!!
             )
         }
 
@@ -1026,10 +1083,10 @@ class Account(
         if (!isWriteable()) return false
 
         if (note is AddressableNote) {
-            return userProfile().latestBookmarkList?.privateTaggedAddresses(loggedIn.privKey!!)
+            return userProfile().latestBookmarkList?.privateTaggedAddresses(keyPair.privKey!!)
                 ?.contains(note.address) == true
         } else {
-            return userProfile().latestBookmarkList?.privateTaggedEvents(loggedIn.privKey!!)
+            return userProfile().latestBookmarkList?.privateTaggedEvents(keyPair.privKey!!)
                 ?.contains(note.idHex) == true
         }
     }
@@ -1059,7 +1116,7 @@ class Account(
         var returningList: PeopleListEvent = latestList
 
         if (hiddenUsers.isNotEmpty()) {
-            returningList = PeopleListEvent.addUsers(returningList, hiddenUsers.toList(), true, loggedIn.privKey!!)
+            returningList = PeopleListEvent.addUsers(returningList, hiddenUsers.toList(), true, keyPair.privKey!!)
             hiddenUsers = emptySet()
         }
 
@@ -1074,14 +1131,14 @@ class Account(
                 earlierVersion = blockList,
                 pubKeyHex = pubkeyHex,
                 isPrivate = true,
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
         } else {
             PeopleListEvent.createListWithUser(
                 name = PeopleListEvent.blockList,
                 pubKeyHex = pubkeyHex,
                 isPrivate = true,
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
         }
 
@@ -1100,7 +1157,7 @@ class Account(
                 earlierVersion = blockList,
                 pubKeyHex = pubkeyHex,
                 isPrivate = true,
-                privateKey = loggedIn.privKey!!
+                privateKey = keyPair.privKey!!
             )
 
             Client.send(event)
@@ -1170,7 +1227,7 @@ class Account(
         if (listName == GLOBAL_FOLLOWS) return null
         if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingKeySet()
 
-        val privKey = loggedIn.privKey
+        val privKey = keyPair.privKey
 
         return if (listName != null) {
             val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
@@ -1194,7 +1251,7 @@ class Account(
         if (listName == GLOBAL_FOLLOWS) return null
         if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingTagSet()
 
-        val privKey = loggedIn.privKey
+        val privKey = keyPair.privKey
 
         return if (listName != null) {
             val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
@@ -1214,11 +1271,35 @@ class Account(
         }
     }
 
+    fun selectedGeohashesFollowList(listName: String?): Set<String>? {
+        if (listName == GLOBAL_FOLLOWS) return null
+        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingGeohashSet()
+
+        val privKey = keyPair.privKey
+
+        return if (listName != null) {
+            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val list = LocalCache.addressables[aTag]
+            if (list != null) {
+                val publicAddresses = list.event?.geohashes() ?: emptySet()
+                val privateAddresses = privKey?.let {
+                    (list.event as? GeneralListEvent)?.privateGeohashes(it)
+                } ?: emptySet()
+
+                (publicAddresses + privateAddresses).toSet()
+            } else {
+                emptySet()
+            }
+        } else {
+            emptySet()
+        }
+    }
+
     fun selectedCommunitiesFollowList(listName: String?): Set<String>? {
         if (listName == GLOBAL_FOLLOWS) return null
         if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingCommunitiesSet()
 
-        val privKey = loggedIn.privKey
+        val privKey = keyPair.privKey
 
         return if (listName != null) {
             val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
@@ -1255,7 +1336,7 @@ class Account(
         val event = ChannelMetadataEvent.create(
             newChannelInfo = metadata,
             originalChannelIdHex = channel.idHex,
-            privateKey = loggedIn.privKey!!
+            privateKey = keyPair.privKey!!
         )
 
         Client.send(event)
@@ -1266,9 +1347,9 @@ class Account(
 
     fun decryptContent(note: Note): String? {
         val event = note.event
-        return if (event is PrivateDmEvent && loggedIn.privKey != null) {
-            event.plainContent(loggedIn.privKey!!, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
-        } else if (event is LnZapRequestEvent && loggedIn.privKey != null) {
+        return if (event is PrivateDmEvent && keyPair.privKey != null) {
+            event.plainContent(keyPair.privKey!!, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
+        } else if (event is LnZapRequestEvent && keyPair.privKey != null) {
             decryptZapContentAuthor(note)?.content()
         } else {
             event?.content()
@@ -1277,7 +1358,7 @@ class Account(
 
     fun decryptZapContentAuthor(note: Note): Event? {
         val event = note.event
-        val loggedInPrivateKey = loggedIn.privKey
+        val loggedInPrivateKey = keyPair.privKey
 
         return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
             val recipientPK = event.zappedAuthor().firstOrNull()
@@ -1310,7 +1391,7 @@ class Account(
 
                 try {
                     if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                        val altPubKeyFromPrivate = Utils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
+                        val altPubKeyFromPrivate = CryptoUtils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
 
                         if (altPubKeyFromPrivate == event.pubKey) {
                             val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
@@ -1412,7 +1493,7 @@ class Account(
     fun isHidden(userHex: String): Boolean {
         val blockList = getBlockList()
 
-        return (blockList?.publicAndPrivateUsers(loggedIn.privKey)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
+        return (blockList?.publicAndPrivateUsers(keyPair.privKey)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
     }
 
     fun followingKeySet(): Set<HexKey> {
@@ -1547,7 +1628,9 @@ class Account(
             println("Loading saved contacts ${it.toJson()}")
 
             if (userProfile().latestContactList == null) {
-                LocalCache.consume(it)
+                GlobalScope.launch(Dispatchers.IO) {
+                    LocalCache.consume(it)
+                }
             }
         }
     }

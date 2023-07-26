@@ -1,9 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import nostr.postr.toHex
+import com.vitorpamplona.amethyst.model.toHexKey
 
 fun ByteArray.toShortenHex(): String {
-    return toHex().toShortenHex()
+    return toHexKey().toShortenHex()
 }
 
 fun String.toShortenHex(): String {

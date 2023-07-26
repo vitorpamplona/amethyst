@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.theme
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +28,7 @@ val TabRowHeight = Modifier.height(40.dp)
 val SmallBorder = RoundedCornerShape(7.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
 val ButtonBorder = RoundedCornerShape(20.dp)
+val EditFieldBorder = RoundedCornerShape(25.dp)
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
@@ -46,6 +46,7 @@ val DoubleVertSpacer = Modifier.height(10.dp)
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
 val Size0dp = 0.dp
+val Size5dp = 5.dp
 val Size10dp = 10.dp
 val Size13dp = 13.dp
 val Size15dp = 15.dp
@@ -68,6 +69,9 @@ val StdTopPadding = Modifier.padding(top = 10.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
+
+val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
+val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 
 val Size6Modifier = Modifier.size(6.dp)
 val Size10Modifier = Modifier.size(10.dp)
@@ -95,8 +99,8 @@ val DividerThickness = 0.25.dp
 
 val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
-val UserNameRowHeight = Modifier.height(22.dp).fillMaxWidth()
-val UserNameMaxRowHeight = Modifier.heightIn(max = 22.dp).fillMaxWidth()
+val UserNameRowHeight = Modifier.fillMaxWidth()
+val UserNameMaxRowHeight = Modifier.fillMaxWidth()
 
 val Height4dpModifier = Modifier.height(4.dp)
 
@@ -117,4 +121,15 @@ val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
 val ChatHeadlineBorders = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
 
 val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
+val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(14.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
+
+val EditFieldModifier = Modifier
+    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
+    .fillMaxWidth()
+val EditFieldTrailingIconModifier = Modifier
+    .height(32.dp)
+    .padding(start = 5.dp, end = 10.dp)
+val EditFieldLeadingIconModifier = Modifier
+    .height(32.dp)
+    .padding(start = 2.dp)

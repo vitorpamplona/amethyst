@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class EmojiPackSelectionEvent(
@@ -28,7 +28,7 @@ class EmojiPackSelectionEvent(
             createdAt: Long = TimeUtils.now()
         ): EmojiPackSelectionEvent {
             val msg = ""
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
 
             listOfEmojiPacks?.forEach {
@@ -36,7 +36,7 @@ class EmojiPackSelectionEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return EmojiPackSelectionEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }

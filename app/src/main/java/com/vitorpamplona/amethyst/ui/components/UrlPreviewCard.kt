@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,8 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
@@ -19,11 +18,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 
 @Composable
 fun UrlPreviewCard(
@@ -31,13 +30,12 @@ fun UrlPreviewCard(
     previewInfo: UrlInfoItem,
     accountViewModel: AccountViewModel
 ) {
-    val settings = accountViewModel.account.settings
-    val isMobile = ConnectivityStatus.isOnMobileData.value
-
-    val automaticallyShowUrlPreview = when (settings.automaticallyShowUrlPreview) {
-        true -> !isMobile
-        false -> false
-        else -> true
+    val automaticallyShowUrlPreview = remember {
+        when (accountViewModel.account.settings.automaticallyShowUrlPreview) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
     }
 
     if (!automaticallyShowUrlPreview) {
@@ -46,14 +44,10 @@ fun UrlPreviewCard(
         val uri = LocalUriHandler.current
 
         Row(
-            modifier = Modifier
-                .clickable { runCatching { uri.openUri(url) } }
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colors.subtleBorder,
-                    QuoteBorder
-                )
+            modifier = MaterialTheme.colors.innerPostModifier
+                .clickable {
+                    runCatching { uri.openUri(url) }
+                }
         ) {
             Column {
                 AsyncImage(

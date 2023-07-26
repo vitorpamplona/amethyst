@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.hexToByteArray
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 abstract class GeneralListEvent(
@@ -28,9 +28,9 @@ abstract class GeneralListEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey.hexToByteArray())
 
-            return Utils.decrypt(content, sharedSecret)
+            return CryptoUtils.decrypt(content, sharedSecret)
         } catch (e: Exception) {
             Log.w("GeneralList", "Error decrypting the message ${e.message} for ${dTag()}")
             null
@@ -61,6 +61,7 @@ abstract class GeneralListEvent(
     fun privateTaggedUsers(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "p" }?.map { it[1] }
 
     fun privateHashtags(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }
+    fun privateGeohashes(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "g" }?.map { it[1] }
     fun privateTaggedEvents(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "e" }?.map { it[1] }
     fun privateTaggedAddresses(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
         val aTagValue = it.getOrNull(1)
@@ -90,7 +91,7 @@ abstract class GeneralListEvent(
             }
             val msg = gson.toJson(privTags)
 
-            return Utils.encrypt(
+            return CryptoUtils.encrypt(
                 msg,
                 privateKey,
                 pubKey
@@ -101,10 +102,10 @@ abstract class GeneralListEvent(
             privateTags: List<List<String>>? = null,
             privateKey: ByteArray
         ): String {
-            return Utils.encrypt(
+            return CryptoUtils.encrypt(
                 msg = gson.toJson(privateTags),
                 privateKey = privateKey,
-                pubKey = Utils.pubkeyCreate(privateKey)
+                pubKey = CryptoUtils.pubkeyCreate(privateKey)
             )
         }
     }

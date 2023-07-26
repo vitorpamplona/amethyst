@@ -377,7 +377,7 @@ fun NoteMaster(
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
-                        AudioTrackHeader(noteEvent, accountViewModel, nav)
+                        AudioTrackHeader(noteEvent, baseNote, accountViewModel, nav)
                     } else if (noteEvent is CommunityPostApprovalEvent) {
                         RenderPostApproval(
                             baseNote,

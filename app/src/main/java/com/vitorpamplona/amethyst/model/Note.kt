@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.service.toNote
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -73,6 +74,10 @@ open class Note(val idHex: String) {
 
     open fun toNEvent(): String {
         return Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+    }
+
+    fun toNostrUri(): String {
+        return "nostr:${toNEvent()}"
     }
 
     open fun idDisplayNote() = idNote().toShortenHex()
@@ -567,8 +572,15 @@ open class Note(val idHex: String) {
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
         if (event == null) return false
 
+        val isBoostedNoteHidden = if (event is GenericRepostEvent || event is RepostEvent || event is CommunityPostApprovalEvent) {
+            replyTo?.lastOrNull()?.isHiddenFor(accountChoices) ?: false
+        } else {
+            false
+        }
+
         val isSensitive = event?.isSensitive() ?: false
-        return accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
+        return isBoostedNoteHidden ||
+            accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
             accountChoices.spammers.contains(author?.pubkeyHex) ||
             (isSensitive && accountChoices.showSensitiveContent == false)
     }

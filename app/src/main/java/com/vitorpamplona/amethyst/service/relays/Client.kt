@@ -73,10 +73,18 @@ object Client : RelayPool.Listener {
         RelayPool.sendFilterOnlyIfDisconnected()
     }
 
-    fun send(signedEvent: EventInterface, relay: String? = null, feedTypes: Set<FeedType>? = null, onDone: (() -> Unit)? = null) {
+    fun send(
+        signedEvent: EventInterface,
+        relay: String? = null,
+        feedTypes: Set<FeedType>? = null,
+        relayList: List<Relay>? = null,
+        onDone: (() -> Unit)? = null
+    ) {
         checkNotInMainThread()
 
-        if (relay == null) {
+        if (relayList != null) {
+            RelayPool.sendToSelectedRelays(relayList, signedEvent)
+        } else if (relay == null) {
             RelayPool.send(signedEvent)
         } else {
             val useConnectedRelayIfPresent = RelayPool.getRelays(relay)
@@ -104,7 +112,7 @@ object Client : RelayPool.Listener {
         val relay = Relay(url, true, true, feedTypes ?: emptySet(), HttpClient.getProxy())
         RelayPool.addRelay(relay)
 
-        relay.requestAndWatch {
+        relay.connectAndRun {
             allSubscriptions().forEach {
                 relay.sendFilter(requestId = it)
             }
@@ -170,6 +178,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onAuth(relay: Relay, challenge: String) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.

@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.ATag
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.service.toNote
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
@@ -93,6 +94,10 @@ abstract class Channel(val idHex: String) {
 
     open fun summary(): String? {
         return null
+    }
+
+    open fun creatorName(): String? {
+        return creator?.toBestDisplayName()
     }
 
     open fun profilePicture(): String? {

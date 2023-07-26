@@ -1,10 +1,16 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,7 +28,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,38 +45,42 @@ import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.hls.HlsMediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.MediaController
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.imageLoader
 import coil.request.ImageRequest
-import com.vitorpamplona.amethyst.VideoCache
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.PlaybackClientController
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
+import com.vitorpamplona.amethyst.ui.note.LyricsIcon
+import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
 import com.vitorpamplona.amethyst.ui.note.MuteIcon
 import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
+import java.util.UUID
+import kotlin.math.abs
 
 public var DefaultMutedSetting = mutableStateOf(true)
 
 @Composable
 fun LoadThumbAndThenVideoView(
     videoUri: String,
-    description: String? = null,
+    title: String? = null,
     thumbUri: String,
+    authorName: String? = null,
+    nostrUriCallback: String? = null,
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
@@ -97,162 +107,360 @@ fun LoadThumbAndThenVideoView(
 
     if (loadingFinished.first) {
         if (loadingFinished.second != null) {
-            VideoView(videoUri, description, VideoThumb(loadingFinished.second), accountViewModel, onDialog = onDialog)
+            VideoView(
+                videoUri = videoUri,
+                title = title,
+                thumb = VideoThumb(loadingFinished.second),
+                artworkUri = thumbUri,
+                authorName = authorName,
+                nostrUriCallback = nostrUriCallback,
+                accountViewModel = accountViewModel,
+                onDialog = onDialog
+            )
         } else {
-            VideoView(videoUri, description, null, accountViewModel, onDialog = onDialog)
+            VideoView(
+                videoUri = videoUri,
+                title = title,
+                thumb = null,
+                artworkUri = thumbUri,
+                authorName = authorName,
+                nostrUriCallback = nostrUriCallback,
+                accountViewModel = accountViewModel,
+                onDialog = onDialog
+            )
         }
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 fun VideoView(
     videoUri: String,
-    description: String? = null,
+    title: String? = null,
     thumb: VideoThumb? = null,
-    accountViewModel: AccountViewModel,
-    alwaysShowVideo: Boolean = false,
-    onDialog: ((Boolean) -> Unit)? = null
-) {
-    val (value, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, thumb, onDialog, accountViewModel, alwaysShowVideo)
-    }
-    Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
-}
-
-@Composable
-fun VideoView1(
-    videoUri: String,
-    description: String? = null,
-    thumb: VideoThumb? = null,
+    artworkUri: String? = null,
+    authorName: String? = null,
+    nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false
 ) {
-    var exoPlayerData by remember { mutableStateOf<VideoPlayer?>(null) }
-    val defaultToStart by remember { mutableStateOf(DefaultMutedSetting.value) }
-    val context = LocalContext.current
+    val defaultToStart by remember(videoUri) { mutableStateOf(DefaultMutedSetting.value) }
 
-    LaunchedEffect(key1 = videoUri) {
-        if (exoPlayerData == null) {
-            launch(Dispatchers.Default) {
-                exoPlayerData = VideoPlayer(ExoPlayer.Builder(context).build())
-            }
-        }
-    }
-
-    exoPlayerData?.let {
-        VideoView(videoUri, description, it, defaultToStart, thumb, onDialog, accountViewModel, alwaysShowVideo)
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayerData?.exoPlayer?.release()
-        }
-    }
-}
-
-@OptIn(ExperimentalTime::class)
-@Composable
-fun VideoView(
-    videoUri: String,
-    description: String? = null,
-    exoPlayerData: VideoPlayer,
-    defaultToStart: Boolean = false,
-    thumb: VideoThumb? = null,
-    onDialog: ((Boolean) -> Unit)? = null,
-    accountViewModel: AccountViewModel,
-    alwaysShowVideo: Boolean = false
-) {
-    val (_, elapsed) = measureTimedValue {
-        VideoView1(videoUri, description, exoPlayerData, defaultToStart, thumb, onDialog, accountViewModel, alwaysShowVideo)
-    }
-    Log.d("Rendering Metrics", "VideoView $elapsed $videoUri")
+    VideoViewInner(
+        videoUri,
+        defaultToStart,
+        title,
+        thumb,
+        artworkUri,
+        authorName,
+        nostrUriCallback,
+        alwaysShowVideo,
+        accountViewModel,
+        onDialog
+    )
 }
 
 @Composable
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-fun VideoView1(
+fun VideoViewInner(
     videoUri: String,
-    description: String? = null,
-    exoPlayerData: VideoPlayer,
     defaultToStart: Boolean = false,
+    title: String? = null,
     thumb: VideoThumb? = null,
-    onDialog: ((Boolean) -> Unit)? = null,
+    artworkUri: String? = null,
+    authorName: String? = null,
+    nostrUriCallback: String? = null,
+    alwaysShowVideo: Boolean = false,
     accountViewModel: AccountViewModel,
-    alwaysShowVideo: Boolean = false
+    onDialog: ((Boolean) -> Unit)? = null
 ) {
-    val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
-
-    val media = remember { MediaItem.Builder().setUri(videoUri).build() }
-
-    val settings = accountViewModel.account.settings
-    val isMobile = ConnectivityStatus.isOnMobileData.value
-
     val automaticallyStartPlayback = remember {
         mutableStateOf(
             if (alwaysShowVideo) { true } else {
-                when (settings.automaticallyStartPlayback) {
-                    true -> !isMobile
-                    false -> false
-                    else -> true
+                when (accountViewModel.account.settings.automaticallyStartPlayback) {
+                    ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                    ConnectivityType.NEVER -> false
+                    ConnectivityType.ALWAYS -> true
                 }
             }
         )
     }
 
-    exoPlayerData.exoPlayer.apply {
-        repeatMode = Player.REPEAT_MODE_ALL
-        videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-        volume = if (defaultToStart) 0f else 1f
-        if (videoUri.startsWith("file")) {
-            setMediaItem(media)
-        } else if (videoUri.endsWith("m3u8")) {
-            // Should not use cache.
-            val dataSourceFactory: DataSource.Factory = OkHttpDataSource.Factory(HttpClient.getHttpClient())
-            setMediaSource(
-                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(
-                    media
-                )
-            )
-        } else {
-            setMediaSource(
-                ProgressiveMediaSource.Factory(VideoCache.get()).createMediaSource(
-                    media
-                )
-            )
-        }
-        prepare()
-    }
-
     if (!automaticallyStartPlayback.value) {
         ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
     } else {
-        RenderVideoPlayer(exoPlayerData, thumb, automaticallyStartPlayback, onDialog)
-    }
-
-    DisposableEffect(Unit) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> {
-                    exoPlayerData.exoPlayer.pause()
-                }
-                else -> {}
+        VideoPlayerActiveMutex(videoUri) { activeOnScreen ->
+            val mediaItem = remember(videoUri) {
+                MediaItem.Builder()
+                    .setMediaId(videoUri)
+                    .setUri(videoUri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setArtist(authorName?.ifBlank { null })
+                            .setTitle(title?.ifBlank { null } ?: videoUri)
+                            .setArtworkUri(
+                                try {
+                                    if (artworkUri != null) {
+                                        Uri.parse(artworkUri)
+                                    } else {
+                                        null
+                                    }
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            )
+                            .build()
+                    )
+                    .build()
             }
-        }
-        val lifecycle = lifecycleOwner.value.lifecycle
 
-        lifecycle.addObserver(observer)
-        onDispose {
-            lifecycle.removeObserver(observer)
+            GetVideoController(
+                mediaItem = mediaItem,
+                videoUri = videoUri,
+                defaultToStart = defaultToStart,
+                nostrUriCallback = nostrUriCallback
+            ) { controller, keepPlaying ->
+                RenderVideoPlayer(controller, thumb, keepPlaying, automaticallyStartPlayback, activeOnScreen, onDialog)
+            }
         }
     }
 }
 
+@Composable
+@OptIn(UnstableApi::class)
+fun GetVideoController(
+    mediaItem: MediaItem,
+    videoUri: String,
+    defaultToStart: Boolean = false,
+    nostrUriCallback: String? = null,
+    inner: @Composable (controller: MediaController, keepPlaying: MutableState<Boolean>) -> Unit
+) {
+    val context = LocalContext.current
+
+    val controller = remember(videoUri) {
+        mutableStateOf<MediaController?>(
+            if (videoUri == keepPlayingMutex?.currentMediaItem?.mediaId) keepPlayingMutex else null
+        )
+    }
+
+    val keepPlaying = remember(videoUri) {
+        mutableStateOf<Boolean>(
+            keepPlayingMutex != null && controller.value == keepPlayingMutex
+        )
+    }
+
+    val uid = remember(videoUri) {
+        UUID.randomUUID().toString()
+    }
+
+    // Prepares a VideoPlayer from the foreground service.
+    LaunchedEffect(key1 = videoUri) {
+        // If it is not null, the user might have come back from a playing video, like clicking on
+        // the notification of the video player.
+        if (controller.value == null) {
+            launch(Dispatchers.IO) {
+                PlaybackClientController.prepareController(
+                    uid,
+                    videoUri,
+                    nostrUriCallback,
+                    context
+                ) {
+                    // checks again because of race conditions.
+                    if (controller.value == null) { // still prone to race conditions.
+                        controller.value = it
+
+                        if (!it.isPlaying) {
+                            if (keepPlayingMutex?.isPlaying == true) {
+                                // There is a video playing, start this one on mute.
+                                controller.value?.volume = 0f
+                            } else {
+                                // There is no other video playing. Use the default mute state to
+                                // decide if sound is on or not.
+                                controller.value?.volume = if (defaultToStart) 0f else 1f
+                            }
+                        }
+
+                        controller.value?.setMediaItem(mediaItem)
+                        controller.value?.prepare()
+                    } else if (controller.value != it) {
+                        // discards the new controller because there is an existing one
+                        it.stop()
+                        it.release()
+
+                        controller.value?.let {
+                            if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                                if (it.isPlaying) {
+                                    // There is a video playing, start this one on mute.
+                                    it.volume = 0f
+                                } else {
+                                    // There is no other video playing. Use the default mute state to
+                                    // decide if sound is on or not.
+                                    it.volume = if (defaultToStart) 0f else 1f
+                                }
+
+                                it.setMediaItem(mediaItem)
+                                it.prepare()
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            controller.value?.let {
+                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                    if (it.isPlaying) {
+                        // There is a video playing, start this one on mute.
+                        it.volume = 0f
+                    } else {
+                        // There is no other video playing. Use the default mute state to
+                        // decide if sound is on or not.
+                        it.volume = if (defaultToStart) 0f else 1f
+                    }
+
+                    it.setMediaItem(mediaItem)
+                    it.prepare()
+                }
+            }
+        }
+    }
+
+    // User pauses and resumes the app. What to do with videos?
+    val scope = rememberCoroutineScope()
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(key1 = videoUri) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // if the controller is null, restarts the controller with a new one
+                // if the controller is not null, just continue playing what the controller was playing
+                if (controller.value == null) {
+                    scope.launch(Dispatchers.IO) {
+                        PlaybackClientController.prepareController(
+                            UUID.randomUUID().toString(),
+                            videoUri,
+                            nostrUriCallback,
+                            context
+                        ) {
+                            // checks again to make sure no other thread has created a controller.
+                            if (controller.value == null) {
+                                controller.value = it
+
+                                if (!it.isPlaying) {
+                                    if (keepPlayingMutex?.isPlaying == true) {
+                                        // There is a video playing, start this one on mute.
+                                        controller.value?.volume = 0f
+                                    } else {
+                                        // There is no other video playing. Use the default mute state to
+                                        // decide if sound is on or not.
+                                        controller.value?.volume = if (defaultToStart) 0f else 1f
+                                    }
+                                }
+
+                                controller.value?.setMediaItem(mediaItem)
+                                controller.value?.prepare()
+                            } else if (controller.value != it) {
+                                // discards the new controller because there is an existing one
+                                it.stop()
+                                it.release()
+                            }
+                        }
+                    }
+                }
+            }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                if (!keepPlaying.value) {
+                    // Stops and releases the media.
+                    controller.value?.stop()
+                    controller.value?.release()
+                    controller.value = null
+                }
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+
+            if (!keepPlaying.value) {
+                // Stops and releases the media.
+                controller.value?.stop()
+                controller.value?.release()
+                controller.value = null
+            }
+        }
+    }
+
+    controller.value?.let {
+        inner(it, keepPlaying)
+    }
+}
+
+// background playing mutex.
+var keepPlayingMutex: MediaController? = null
+
+// This keeps the position of all visible videos in the current screen.
+val trackingVideos = mutableListOf<VisibilityData>()
+
 @Stable
-data class VideoPlayer(
-    val exoPlayer: ExoPlayer
-)
+class VisibilityData() {
+    var distanceToCenter: Float? = null
+}
+
+/**
+ * This function selects only one Video to be active. The video that is closest to the center of
+ * the screen wins the mutex.
+ */
+@Composable
+fun VideoPlayerActiveMutex(videoUri: String, inner: @Composable (MutableState<Boolean>) -> Unit) {
+    val myCache = remember(videoUri) {
+        VisibilityData()
+    }
+
+    // Is the current video the closest to the center?
+    val active = remember(videoUri) {
+        mutableStateOf<Boolean>(false)
+    }
+
+    // Keep track of all available videos.
+    DisposableEffect(key1 = videoUri) {
+        trackingVideos.add(myCache)
+        onDispose {
+            trackingVideos.remove(myCache)
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 70.dp)
+            .onVisiblePositionChanges { distanceToCenter ->
+                myCache.distanceToCenter = distanceToCenter
+
+                if (distanceToCenter != null) {
+                    // finds out of the current video is the closest to the center.
+                    var newActive = true
+                    for (video in trackingVideos) {
+                        val videoPos = video.distanceToCenter
+                        if (videoPos != null && videoPos < distanceToCenter) {
+                            newActive = false
+                            break
+                        }
+                    }
+
+                    // marks the current video active
+                    if (active.value != newActive) {
+                        active.value = newActive
+                    }
+                } else {
+                    // got out of screen, marks video as inactive
+                    if (active.value) {
+                        active.value = false
+                    }
+                }
+            }
+    ) {
+        inner(active)
+    }
+}
 
 @Stable
 data class VideoThumb(
@@ -260,36 +468,32 @@ data class VideoThumb(
 )
 
 @Composable
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@OptIn(UnstableApi::class)
 private fun RenderVideoPlayer(
-    playerData: VideoPlayer,
+    controller: MediaController,
     thumbData: VideoThumb?,
+    keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
+    activeOnScreen: MutableState<Boolean>,
     onDialog: ((Boolean) -> Unit)?
 ) {
     val context = LocalContext.current
+
+    ControlWhenPlayerIsActive(controller, keepPlaying, automaticallyStartPlayback, activeOnScreen)
+
+    val controllerVisible = remember(controller) {
+        mutableStateOf(false)
+    }
 
     BoxWithConstraints() {
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 70.dp)
-                .align(Alignment.Center)
-                .onVisibilityChanges { visible ->
-                    if (!automaticallyStartPlayback.value) {
-                        playerData.exoPlayer.stop()
-                    }
-                    if (!automaticallyStartPlayback.value && visible && !playerData.exoPlayer.isPlaying) {
-                        playerData.exoPlayer.pause()
-                    } else if (visible && !playerData.exoPlayer.isPlaying) {
-                        playerData.exoPlayer.play()
-                    } else if (!visible && playerData.exoPlayer.isPlaying) {
-                        playerData.exoPlayer.pause()
-                    }
-                },
+                .align(Alignment.Center),
             factory = {
                 PlayerView(context).apply {
-                    player = playerData.exoPlayer
+                    player = controller
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
@@ -301,75 +505,229 @@ private fun RenderVideoPlayer(
                         if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                     onDialog?.let { innerOnDialog ->
                         setFullscreenButtonClickListener {
-                            playerData.exoPlayer.pause()
+                            controller.pause()
                             innerOnDialog(it)
                         }
                     }
+                    setControllerVisibilityListener(
+                        PlayerView.ControllerVisibilityListener {
+                            controllerVisible.value = it == View.VISIBLE
+                        }
+                    )
                 }
             }
         )
 
-        MuteButton() { mute: Boolean ->
+        val startingMuteState = remember(controller) {
+            controller.volume < 0.001
+        }
+
+        MuteButton(controllerVisible, startingMuteState) { mute: Boolean ->
+            // makes the new setting the default for new creations.
             DefaultMutedSetting.value = mute
 
-            playerData.exoPlayer.volume = if (mute) 0f else 1f
+            // if the user unmutes a video and it's not the current playing, switches to that one.
+            if (!mute && keepPlayingMutex != null && keepPlayingMutex != controller) {
+                keepPlayingMutex?.stop()
+                keepPlayingMutex?.release()
+                keepPlayingMutex = null
+            }
+
+            controller.volume = if (mute) 0f else 1f
+        }
+
+        KeepPlayingButton(keepPlaying, controllerVisible, Modifier.align(Alignment.TopEnd)) { newKeepPlaying: Boolean ->
+            // If something else is playing and the user marks this video to keep playing, stops the other one.
+            if (newKeepPlaying) {
+                if (keepPlayingMutex != null && keepPlayingMutex != controller) {
+                    keepPlayingMutex?.stop()
+                    keepPlayingMutex?.release()
+                }
+                keepPlayingMutex = controller
+            } else {
+                if (keepPlayingMutex == controller) {
+                    keepPlayingMutex = null
+                }
+            }
+
+            keepPlaying.value = newKeepPlaying
         }
     }
-}
-
-fun Modifier.onVisibilityChanges(onVisibilityChanges: (Boolean) -> Unit): Modifier = composed {
-    val view = LocalView.current
-    var isVisible: Boolean? by remember { mutableStateOf(null) }
-
-    onGloballyPositioned { coordinates ->
-        val newIsVisible = coordinates.isCompletelyVisible(view)
-        if (isVisible != newIsVisible) {
-            isVisible = newIsVisible
-            onVisibilityChanges(isVisible == true)
-        }
-    }
-}
-
-fun LayoutCoordinates.isCompletelyVisible(view: View): Boolean {
-    if (!isAttached) return false
-    // Window relative bounds of our compose root view that are visible on the screen
-    val globalRootRect = android.graphics.Rect()
-    if (!view.getGlobalVisibleRect(globalRootRect)) {
-        // we aren't visible at all.
-        return false
-    }
-    val bounds = boundsInWindow()
-    // Make sure we are completely in bounds.
-    return bounds.top >= globalRootRect.top &&
-        bounds.left >= globalRootRect.left &&
-        bounds.right <= globalRootRect.right &&
-        bounds.bottom <= globalRootRect.bottom
 }
 
 @Composable
-private fun MuteButton(toggle: (Boolean) -> Unit) {
-    Box(modifier = VolumeBottomIconSize) {
-        Box(
-            Modifier
-                .clip(CircleShape)
-                .fillMaxSize(0.6f)
-                .align(Alignment.Center)
-                .background(MaterialTheme.colors.background)
+fun ControlWhenPlayerIsActive(
+    controller: Player,
+    keepPlaying: MutableState<Boolean>,
+    automaticallyStartPlayback: MutableState<Boolean>,
+    activeOnScreen: MutableState<Boolean>
+) {
+    // active means being fully visible
+    if (activeOnScreen.value) {
+        // should auto start video from settings?
+        if (!automaticallyStartPlayback.value) {
+            if (controller.isPlaying) {
+                // if it is visible, it's playing but it wasn't supposed to start automatically.
+                controller.pause()
+            }
+        } else if (!controller.isPlaying) {
+            // if it is visible, was supposed to start automatically, but it's not
+
+            // If something else is playing, play on mute.
+            if (keepPlayingMutex != null && keepPlayingMutex != controller) {
+                controller.volume = 0f
+            }
+            controller.play()
+        }
+    } else {
+        // Pauses the video when it becomes invisible.
+        // Destroys the video later when it Disposes the element
+        // meanwhile if the user comes back, the position in the track is saved.
+        if (!keepPlaying.value) {
+            controller.pause()
+        }
+    }
+
+    val view = LocalView.current
+
+    // Keeps the screen on while playing and viewing videos.
+    DisposableEffect(key1 = controller) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                // doesn't consider the mutex because the screen can turn off if the video
+                // being played in the mutex is not visible.
+                view.keepScreenOn = isPlaying
+            }
+        }
+
+        controller.addListener(listener)
+        onDispose {
+            controller.removeListener(listener)
+        }
+    }
+}
+
+fun Modifier.onVisiblePositionChanges(onVisiblePosition: (Float?) -> Unit): Modifier = composed {
+    val view = LocalView.current
+
+    onGloballyPositioned { coordinates ->
+        onVisiblePosition(coordinates.getDistanceToVertCenterIfVisible(view))
+    }
+}
+
+fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
+    if (!isAttached) return null
+    // Window relative bounds of our compose root view that are visible on the screen
+    val globalRootRect = Rect()
+    if (!view.getGlobalVisibleRect(globalRootRect)) {
+        // we aren't visible at all.
+        return null
+    }
+
+    val bounds = boundsInWindow()
+
+    if (bounds.isEmpty) return null
+
+    // Make sure we are completely in bounds.
+    if (bounds.top >= globalRootRect.top &&
+        bounds.left >= globalRootRect.left &&
+        bounds.right <= globalRootRect.right &&
+        bounds.bottom <= globalRootRect.bottom
+    ) {
+        return abs(((bounds.top + bounds.bottom) / 2) - ((globalRootRect.top + globalRootRect.bottom) / 2))
+    }
+
+    return null
+}
+
+@Composable
+private fun MuteButton(
+    controllerVisible: MutableState<Boolean>,
+    startingMuteState: Boolean,
+    toggle: (Boolean) -> Unit
+) {
+    val holdOn = remember {
+        mutableStateOf<Boolean>(
+            true
         )
+    }
 
-        val mutedInstance = remember { mutableStateOf(DefaultMutedSetting.value) }
+    LaunchedEffect(key1 = controllerVisible) {
+        launch(Dispatchers.Default) {
+            delay(2000)
+            holdOn.value = false
+        }
+    }
 
-        IconButton(
-            onClick = {
-                mutedInstance.value = !mutedInstance.value
-                toggle(mutedInstance.value)
-            },
-            modifier = Size50Modifier
-        ) {
-            if (mutedInstance.value) {
-                MutedIcon()
-            } else {
-                MuteIcon()
+    val mutedInstance = remember(startingMuteState) { mutableStateOf(startingMuteState) }
+
+    AnimatedVisibility(
+        visible = holdOn.value || controllerVisible.value,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Box(modifier = VolumeBottomIconSize) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.6f)
+                    .align(Alignment.Center)
+                    .background(MaterialTheme.colors.background)
+            )
+
+            IconButton(
+                onClick = {
+                    mutedInstance.value = !mutedInstance.value
+                    toggle(mutedInstance.value)
+                },
+                modifier = Size50Modifier
+            ) {
+                if (mutedInstance.value) {
+                    MutedIcon()
+                } else {
+                    MuteIcon()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeepPlayingButton(
+    keepPlayingStart: MutableState<Boolean>,
+    controllerVisible: MutableState<Boolean>,
+    alignment: Modifier,
+    toggle: (Boolean) -> Unit
+) {
+    val keepPlaying = remember(keepPlayingStart.value) { mutableStateOf(keepPlayingStart.value) }
+
+    AnimatedVisibility(
+        visible = controllerVisible.value,
+        modifier = alignment,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Box(modifier = PinBottomIconSize) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.6f)
+                    .align(Alignment.Center)
+                    .background(MaterialTheme.colors.background)
+            )
+
+            IconButton(
+                onClick = {
+                    keepPlaying.value = !keepPlaying.value
+                    toggle(keepPlaying.value)
+                },
+                modifier = Size50Modifier
+            ) {
+                if (keepPlaying.value) {
+                    LyricsIcon(Size22Modifier, MaterialTheme.colors.onBackground)
+                } else {
+                    LyricsOffIcon(Size22Modifier, MaterialTheme.colors.onBackground)
+                }
             }
         }
     }

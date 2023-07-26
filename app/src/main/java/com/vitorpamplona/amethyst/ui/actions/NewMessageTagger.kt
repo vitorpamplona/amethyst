@@ -4,10 +4,17 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.parseDirtyWordForKey
+import com.vitorpamplona.amethyst.service.KeyPair
+import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.service.toNpub
 
-class NewMessageTagger(var channelHex: String?, var mentions: List<User>?, var replyTos: List<Note>?, var message: String) {
+class NewMessageTagger(
+    var message: String,
+    var mentions: List<User>? = null,
+    var replyTos: List<Note>? = null,
+    var channelHex: String? = null
+) {
 
     val directMentions = mutableSetOf<HexKey>()
 
@@ -82,5 +89,56 @@ class NewMessageTagger(var channelHex: String?, var mentions: List<User>?, var r
                 }
             }.joinToString(" ")
         }.joinToString("\n")
+    }
+
+    data class DirtyKeyInfo(val key: Nip19.Return, val restOfWord: String)
+
+    fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
+        var key = mightBeAKey
+        if (key.startsWith("nostr:", true)) {
+            key = key.substring("nostr:".length)
+        }
+
+        key = key.removePrefix("@")
+
+        if (key.length < 63) {
+            return null
+        }
+
+        try {
+            val keyB32 = key.substring(0, 63)
+            val restOfWord = key.substring(63)
+
+            if (key.startsWith("nsec1", true)) {
+                // Converts to npub
+                val pubkey = Nip19.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
+
+                return DirtyKeyInfo(pubkey, restOfWord)
+            } else if (key.startsWith("npub1", true)) {
+                val pubkey = Nip19.uriToRoute(keyB32) ?: return null
+
+                return DirtyKeyInfo(pubkey, restOfWord)
+            } else if (key.startsWith("note1", true)) {
+                val noteId = Nip19.uriToRoute(keyB32) ?: return null
+
+                return DirtyKeyInfo(noteId, restOfWord)
+            } else if (key.startsWith("nprofile", true)) {
+                val pubkeyRelay = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
+
+                return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
+            } else if (key.startsWith("nevent1", true)) {
+                val noteRelayId = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
+
+                return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
+            } else if (key.startsWith("naddr1", true)) {
+                val address = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
+
+                return DirtyKeyInfo(address, address.additionalChars) // no way to know when they address ends and dirt begins
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return null
     }
 }

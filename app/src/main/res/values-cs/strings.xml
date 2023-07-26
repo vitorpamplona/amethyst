@@ -23,6 +23,7 @@
     <string name="copy_note_id">Kopírovat ID poznámky</string>
     <string name="broadcast">Vysílání</string>
     <string name="request_deletion">Požadovat smazání</string>
+    <string name="block_report">Blockovat / Nahlásit</string>
     <string name="block_hide_user"><![CDATA[Blokovat a skrýt uživatele]]></string>
     <string name="report_spam_scam">Nahlásit spam / podvod</string>
     <string name="report_impersonation">Nahlásit zneužívání identity</string>
@@ -43,11 +44,11 @@
     <string name="new_amount_in_sats">Nová částka v sats</string>
     <string name="add">Přidat</string>
     <string name="replying_to">"odpovídá na "</string>
-    <string name="and">"a "</string>
+    <string name="and">" a "</string>
     <string name="in_channel">"v kanálu "</string>
     <string name="profile_banner">Banner profilu</string>
-    <string name="following">"Sleduje"</string>
-    <string name="followers">"Sledující"</string>
+    <string name="following">" Sleduje"</string>
+    <string name="followers">" Sledující"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Bezpečnostní filtry</string>
     <string name="log_out">Odhlásit</string>
@@ -164,6 +165,7 @@
     <string name="translations_show_in_lang_first">Zobrazit nejprve v %1$s</string>
     <string name="translations_always_translate_to_lang">Vždy překládat do %1$s</string>
     <string name="translations_never_translate_from_lang">Nikdy nepřekládat z %1$s</string>
+    <string name="nip_05">Nostr Adresa</string>
     <string name="never">nikdy</string>
     <string name="now">nyní</string>
     <string name="h">h</string>
@@ -447,4 +449,38 @@
     <string name="followed_tags">Sledované značky</string>
 
     <string name="relay_setup">Rele</string>
+
+    <string name="discover_live">Živě</string>
+    <string name="discover_community">Komunita</string>
+    <string name="discover_chat">Chaty</string>
+    <string name="community_approved_posts">Schválené příspěvky</string>
+
+    <string name="groups_no_descriptor">Tato skupina nemá popis ani pravidla. Promluvte si s majitelem, aby je přidal/a.</string>
+    <string name="community_no_descriptor">Tato komunita nemá popis. Promluvte si s majitelem, aby ho přidal/a.</string>
+
+    <string name="add_sensitive_content_label">Citlivý obsah</string>
+    <string name="add_sensitive_content_description">Před zobrazením tohoto obsahu přidá upozornění na citlivý obsah.</string>
+    <string name="settings">Nastavení</string>
+    <string name="connectivity_type_always">Vždy</string>
+    <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
+    <string name="system">Systém</string>
+    <string name="light">Světlý</string>
+    <string name="dark">Tmavý</string>
+    <string name="application_preferences">Předvolby aplikace</string>
+    <string name="language">Jazyk</string>
+    <string name="theme">Motiv</string>
+    <string name="automatically_load_images_gifs">Automaticky načítat obrázky/gif</string>
+    <string name="automatically_play_videos">Automaticky přehrávat videa</string>
+    <string name="automatically_show_url_preview">Automaticky zobrazit náhled URL</string>
+    <string name="load_image">Načíst obrázek</string>
+
+    <string name="spamming_users">Spamovací uživatelé</string>
+
+    <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>
+    <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
+    <string name="search_button">Hledat lokální a vzdálené záznamy</string>
+
+    <string name="nip05_verified">Adresa Nostr byla ověřena</string>
+    <string name="nip05_failed">Ověření adresy Nostr se nezdařilo</string>
+    <string name="nip05_checking">Kontrola adresy Nostr</string>
 </resources>

@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -41,19 +42,19 @@ class AccountViewModel(val account: Account) : ViewModel() {
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
     fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: Boolean?
+        automaticallyStartPlayback: ConnectivityType
     ) {
         account.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
     }
 
     fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: Boolean?
+        automaticallyShowUrlPreview: ConnectivityType
     ) {
         account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
     }
 
     fun updateAutomaticallyShowImages(
-        automaticallyShowImages: Boolean?
+        automaticallyShowImages: ConnectivityType
     ) {
         account.updateAutomaticallyShowImages(automaticallyShowImages)
     }

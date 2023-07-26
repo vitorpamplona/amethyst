@@ -5,8 +5,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.relays.Client
-import nostr.postr.Utils
 
 @Immutable
 class CommunityPostApprovalEvent(
@@ -53,10 +53,10 @@ class CommunityPostApprovalEvent(
             val replyToAuthor = listOf("p", approvedPost.pubKey())
             val kind = listOf("k", "${approvedPost.kind()}")
 
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags: List<List<String>> = listOf(communities, replyToPost, replyToAuthor, kind)
             val id = generateId(pubKey, createdAt, GenericRepostEvent.kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return GenericRepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
     }

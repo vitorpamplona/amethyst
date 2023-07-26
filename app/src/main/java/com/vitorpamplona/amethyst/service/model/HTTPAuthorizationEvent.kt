@@ -4,8 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
-import java.security.MessageDigest
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class HTTPAuthorizationEvent(
@@ -27,11 +26,9 @@ class HTTPAuthorizationEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): HTTPAuthorizationEvent {
-            val sha256 = MessageDigest.getInstance("SHA-256")
-
             var hash = ""
             body?.let {
-                hash = sha256.digest(it.toByteArray()).toHexKey()
+                hash = CryptoUtils.sha256(it.toByteArray()).toHexKey()
             }
 
             val tags = listOfNotNull(
@@ -40,9 +37,9 @@ class HTTPAuthorizationEvent(
                 listOf("payload", hash)
             )
 
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return HTTPAuthorizationEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
         }
     }

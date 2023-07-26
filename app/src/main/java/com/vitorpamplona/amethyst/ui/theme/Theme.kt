@@ -151,7 +151,7 @@ val LightReplyBorderModifier = Modifier
     )
 
 val DarkInnerPostBorderModifier = Modifier
-    .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+    .padding(top = 5.dp)
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
     .border(

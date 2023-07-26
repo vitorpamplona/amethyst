@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.nip05
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -115,6 +116,14 @@ fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifie
     Crossfade(targetState = nip05, modifier = columnModifier) {
         if (it != null) {
             DisplayNIP05Line(it, baseUser, columnModifier)
+        } else {
+            Text(
+                text = baseUser.pubkeyDisplayHex(),
+                color = MaterialTheme.colors.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = columnModifier
+            )
         }
     }
 }
@@ -200,7 +209,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 if (user != "_") {
                     Text(
                         text = remember { AnnotatedString(user + "@") },
-                        color = MaterialTheme.colors.nip05,
+                        color = MaterialTheme.colors.primary,
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -211,7 +220,7 @@ fun DisplayNip05ProfileStatus(user: User) {
                 ClickableText(
                     text = AnnotatedString(domain),
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05),
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

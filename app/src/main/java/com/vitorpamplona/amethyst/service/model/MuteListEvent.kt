@@ -7,7 +7,7 @@ import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
-import nostr.postr.Utils
+import com.vitorpamplona.amethyst.service.CryptoUtils
 
 @Immutable
 class MuteListEvent(
@@ -23,9 +23,9 @@ class MuteListEvent(
 
     fun plainContent(privKey: ByteArray): String? {
         return try {
-            val sharedSecret = Utils.getSharedSecret(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey.hexToByteArray())
 
-            return Utils.decrypt(content, sharedSecret)
+            return CryptoUtils.decrypt(content, sharedSecret)
         } catch (e: Exception) {
             Log.w("BookmarkList", "Error decrypting the message ${e.message}")
             null
@@ -73,7 +73,7 @@ class MuteListEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): MuteListEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey)
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
 
             val privTags = mutableListOf<List<String>>()
             privEvents?.forEach {
@@ -87,7 +87,7 @@ class MuteListEvent(
             }
             val msg = gson.toJson(privTags)
 
-            val content = Utils.encrypt(
+            val content = CryptoUtils.encrypt(
                 msg,
                 privateKey,
                 pubKey
@@ -105,7 +105,7 @@ class MuteListEvent(
             }
 
             val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return MuteListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
         }
     }

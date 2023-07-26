@@ -6,8 +6,8 @@ import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.findHashtags
-import nostr.postr.Utils
 
 @Immutable
 class TextNoteEvent(
@@ -38,11 +38,12 @@ class TextNoteEvent(
             replyingTo: String?,
             root: String?,
             directMentions: Set<HexKey>,
+            geohash: String? = null,
 
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): TextNoteEvent {
-            val pubKey = Utils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 if (it == replyingTo) {
@@ -93,9 +94,12 @@ class TextNoteEvent(
             zapRaiserAmount?.let {
                 tags.add(listOf("zapraiser", "$it"))
             }
+            geohash?.let {
+                tags.add(listOf("g", it))
+            }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = Utils.sign(id, privateKey)
+            val sig = CryptoUtils.sign(id, privateKey)
             return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }

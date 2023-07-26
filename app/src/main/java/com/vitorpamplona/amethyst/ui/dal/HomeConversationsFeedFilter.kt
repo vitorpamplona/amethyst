@@ -35,6 +35,7 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val followingGeoHashSet = account.selectedGeohashesFollowList(account.defaultHomeFollowList) ?: emptySet()
 
         val now = TimeUtils.now()
 
@@ -42,7 +43,7 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             .asSequence()
             .filter {
                 (it.event is TextNoteEvent || it.event is PollNoteEvent || it.event is ChannelMessageEvent || it.event is LiveActivitiesChatMessageEvent) &&
-                    (isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) ?: false) &&
+                    (isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(followingTagSet) ?: false || it.event?.isTaggedGeoHashes(followingGeoHashSet) ?: false) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     (isHiddenList || it.author?.let { !account.isHidden(it) } ?: true) &&
                     ((it.event?.createdAt() ?: 0) < now) &&

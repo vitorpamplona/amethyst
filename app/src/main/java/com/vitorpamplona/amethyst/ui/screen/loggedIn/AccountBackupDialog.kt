@@ -44,12 +44,12 @@ import com.halilibo.richtext.ui.material.MaterialRichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.toNsec
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import nostr.postr.toNsec
 
 @Composable
 fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
@@ -157,7 +157,7 @@ private fun copyNSec(
     account: Account,
     clipboardManager: ClipboardManager
 ) {
-    account.loggedIn.privKey?.let {
+    account.keyPair.privKey?.let {
         clipboardManager.setText(AnnotatedString(it.toNsec()))
         scope.launch {
             Toast.makeText(

@@ -224,7 +224,7 @@ class NostrCheckMeServer : FileServer() {
         var id = tree?.get("id")?.asText()
         var isCompleted = false
 
-        val client = OkHttpClient()
+        val client = HttpClient.getHttpClient()
         var requrl = "https://nostrcheck.me/api/v1/media?id=" + id // + "&apikey=26d075787d261660682fb9d20dbffa538c708b1eda921d0efa2be95fbef4910a"
 
         val request = Request.Builder()
@@ -234,14 +234,14 @@ class NostrCheckMeServer : FileServer() {
             .build()
 
         while (!isCompleted) {
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            val tree = jacksonObjectMapper().readTree(body)
-            isCompleted = tree?.get("status")?.asText() == "completed"
-            try {
-                Thread.sleep(500)
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
+            client.newCall(request).execute().use {
+                val tree = jacksonObjectMapper().readTree(it.body.string())
+                isCompleted = tree?.get("status")?.asText() == "completed"
+                try {
+                    Thread.sleep(500)
+                } catch (e: InterruptedException) {
+                    e.printStackTrace()
+                }
             }
         }
         return url

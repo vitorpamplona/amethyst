@@ -28,7 +28,9 @@ object OnlineChecker {
                 .get()
                 .build()
 
-            val result = HttpClient.getHttpClient().newCall(request).execute().code == 200
+            val result = HttpClient.getHttpClient().newCall(request).execute().use {
+                it.isSuccessful
+            }
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), result))
             result
         } catch (e: Exception) {

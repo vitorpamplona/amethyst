@@ -26,9 +26,12 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                 // adds to database
                 LocalCache.verifyAndConsume(event, null)
 
-                when (event) {
-                    is PrivateDmEvent -> notify(event)
-                    is LnZapEvent -> notify(event)
+                val manager = notificationManager()
+                if (manager.areNotificationsEnabled()) {
+                    when (event) {
+                        is PrivateDmEvent -> notify(event)
+                        is LnZapEvent -> notify(event)
+                    }
                 }
             }
         }

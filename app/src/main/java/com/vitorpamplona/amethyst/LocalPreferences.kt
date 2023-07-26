@@ -7,22 +7,24 @@ import androidx.compose.runtime.Immutable
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.hexToByteArray
+import com.vitorpamplona.amethyst.model.parseConnectivityType
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.service.toNpub
 import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import fr.acinq.secp256k1.Hex
-import nostr.postr.Persona
-import nostr.postr.toHex
-import nostr.postr.toNpub
 import java.io.File
 import java.util.Locale
 
@@ -209,8 +211,8 @@ object LocalPreferences {
     fun saveToEncryptedStorage(account: Account) {
         val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
         prefs.edit().apply {
-            account.loggedIn.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHex()) }
-            account.loggedIn.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHex()) }
+            account.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
+            account.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
             putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
@@ -245,21 +247,21 @@ object LocalPreferences {
 
         val globalPrefs = encryptedPreferences()
         globalPrefs.edit().apply {
-            if (account.settings.automaticallyShowImages == null) {
+            if (account.settings.automaticallyShowImages.prefCode == null) {
                 remove(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)
             } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, account.settings.automaticallyShowImages!!)
+                putBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, account.settings.automaticallyShowImages.prefCode!!)
             }
 
-            if (account.settings.automaticallyStartPlayback == null) {
+            if (account.settings.automaticallyStartPlayback.prefCode == null) {
                 remove(PrefKeys.AUTOMATICALLY_START_PLAYBACK)
             } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback!!)
+                putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback.prefCode!!)
             }
-            if (account.settings.automaticallyShowUrlPreview == null) {
+            if (account.settings.automaticallyShowUrlPreview.prefCode == null) {
                 remove(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)
             } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, account.settings.automaticallyShowUrlPreview!!)
+                putBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, account.settings.automaticallyShowUrlPreview.prefCode!!)
             }
             putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
         }.apply()
@@ -390,27 +392,27 @@ object LocalPreferences {
             val settings = Settings()
             encryptedPreferences().apply {
                 settings.automaticallyShowImages = if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
-                    getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false)
+                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false))
                 } else {
-                    null
+                    ConnectivityType.ALWAYS
                 }
 
                 settings.automaticallyStartPlayback = if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
-                    getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false)
+                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false))
                 } else {
-                    null
+                    ConnectivityType.ALWAYS
                 }
                 settings.automaticallyShowUrlPreview = if (contains(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)) {
-                    getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false)
+                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
                 } else {
-                    null
+                    ConnectivityType.ALWAYS
                 }
 
                 settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")
             }
 
             val a = Account(
-                loggedIn = Persona(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
+                keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels = followingChannels,
                 followingCommunities = followingCommunities,
                 hiddenUsers = hiddenUsers,

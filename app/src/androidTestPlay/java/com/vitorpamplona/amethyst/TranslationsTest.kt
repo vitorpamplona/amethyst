@@ -99,4 +99,13 @@ class TranslationsTest {
             "en"
         )
     }
+
+    @Test
+    fun testEmoji() {
+        assertTranslateContains(
+            "https://cdn.nostr.build/i/df3783dcdf7dd289ba02ba538dc039c8fe1d4db055e580b81604ed88c6af4ee0.jpg",
+            "\uD83E\uDD23 https://cdn.nostr.build/i/df3783dcdf7dd289ba02ba538dc039c8fe1d4db055e580b81604ed88c6af4ee0.jpg ",
+            "pt"
+        )
+    }
 }

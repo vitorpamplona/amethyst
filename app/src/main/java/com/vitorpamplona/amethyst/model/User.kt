@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.service.Bech32
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
@@ -12,14 +13,13 @@ import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.service.toNpub
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.Dispatchers
-import nostr.postr.Bech32
-import nostr.postr.toNpub
 import java.math.BigDecimal
 import java.util.regex.Pattern
 
@@ -50,6 +50,8 @@ class User(val pubkeyHex: String) {
     fun pubkeyNpub() = pubkey().toNpub()
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
+
+    fun toNostrUri() = "nostr:${pubkeyNpub()}"
 
     override fun toString(): String = pubkeyHex
 
@@ -247,6 +249,12 @@ class User(val pubkeyHex: String) {
         } ?: false
     }
 
+    fun isFollowingGeohashCached(geoTag: String): Boolean {
+        return latestContactList?.verifiedFollowGeohashSet?.let {
+            return geoTag.lowercase() in it
+        } ?: false
+    }
+
     fun isFollowingCached(user: User): Boolean {
         return latestContactList?.verifiedFollowKeySet?.let {
             return user.pubkeyHex in it
@@ -273,6 +281,10 @@ class User(val pubkeyHex: String) {
 
     fun cachedFollowingTagSet(): Set<HexKey> {
         return latestContactList?.verifiedFollowTagSet ?: emptySet()
+    }
+
+    fun cachedFollowingGeohashSet(): Set<HexKey> {
+        return latestContactList?.verifiedFollowGeohashSet ?: emptySet()
     }
 
     fun cachedFollowingCommunitiesSet(): Set<HexKey> {
