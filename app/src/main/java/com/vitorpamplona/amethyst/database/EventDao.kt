@@ -50,6 +50,18 @@ interface EventDao {
         "SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig " +
             "FROM EventEntity " +
             "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
+            "WHERE EventEntity.kind = :kind " +
+            "  AND TagEntity.col0 = 'p' " +
+            "  AND TagEntity.col1 in (:pubkeys) " +
+            "ORDER BY createdAt DESC"
+    )
+    @Transaction
+    fun getByPTagsAndKind(pubkeys: List<String>, kind: Int): List<EventWithTags>
+
+    @Query(
+        "SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig " +
+            "FROM EventEntity " +
+            "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
             "WHERE TagEntity.col0 = :col0 " +
             "AND TagEntity.col1 = :col1 " +
             "ORDER BY createdAt DESC"
@@ -73,6 +85,9 @@ interface EventDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertTag(vararg tags: TagEntity): List<Long>?
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertTags(tags: List<TagEntity>): List<Long>?
+
     @Delete
     fun delete(event: EventEntity)
 
@@ -85,7 +100,37 @@ interface EventDao {
                     it.pkEvent = eventPK
                 }
 
-                insertTag(*dbTags.toTypedArray())
+                insertTags(dbTags)
+            }
+        }
+    }
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Transaction
+    fun insertEventWithTags(dbEvent: EventWithTags) {
+        insertEvent(dbEvent.event)?.let { eventPK ->
+            if (eventPK >= 0) {
+                dbEvent.tags.forEach {
+                    it.pkEvent = eventPK
+                }
+
+                insertTags(dbEvent.tags)
+            }
+        }
+    }
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Transaction
+    fun insertListOfEventWithTags(dbEvent: List<EventWithTags>) {
+        dbEvent.forEach {
+            insertEvent(it.event)?.let { eventPK ->
+                if (eventPK >= 0) {
+                    it.tags.forEach {
+                        it.pkEvent = eventPK
+                    }
+
+                    insertTags(it.tags)
+                }
             }
         }
     }

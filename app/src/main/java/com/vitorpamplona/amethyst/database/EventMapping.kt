@@ -5,28 +5,11 @@ import com.vitorpamplona.amethyst.service.model.EventFactory
 
 class EventMapping(val eventDao: EventDao) {
     fun insert(event: Event) {
-        val dbEvent = EventEntity(
-            id = event.id,
-            pubkey = event.pubKey,
-            createdAt = event.createdAt,
-            kind = event.kind,
-            content = event.content,
-            sig = event.sig
-        )
+        eventDao.insertEventWithTags(event.toEventWithTags())
+    }
 
-        val dbTags = event.tags.mapIndexed { index, tag ->
-            TagEntity(
-                position = index,
-                col0 = tag.getOrNull(0),
-                col1 = tag.getOrNull(1),
-                col2 = tag.getOrNull(2),
-                col3 = tag.getOrNull(3),
-                col4 = tag.getOrNull(4),
-                col5 = tag.getOrNull(5)
-            )
-        }
-
-        eventDao.insertEventWithTags(dbEvent, dbTags)
+    fun insert(event: List<Event>) {
+        eventDao.insertListOfEventWithTags(event.map { it.toEventWithTags() })
     }
 
     fun get(id: String): Event? {
@@ -47,6 +30,12 @@ class EventMapping(val eventDao: EventDao) {
 
     fun get(authors: List<String>, kind: Int): List<Event> {
         return eventDao.getByAuthorsAndKind(authors, kind).map {
+            it.toEvent()
+        }
+    }
+
+    fun getByPTags(pTags: List<String>, kind: Int): List<Event> {
+        return eventDao.getByPTagsAndKind(pTags, kind).map {
             it.toEvent()
         }
     }
@@ -76,4 +65,29 @@ fun TagEntity.toTags(): List<String> {
         col4,
         col5
     )
+}
+
+fun Event.toEventWithTags(): EventWithTags {
+    val dbEvent = EventEntity(
+        id = id,
+        pubkey = pubKey,
+        createdAt = createdAt,
+        kind = kind,
+        content = content,
+        sig = sig
+    )
+
+    val dbTags = tags.mapIndexed { index, tag ->
+        TagEntity(
+            position = index,
+            col0 = tag.getOrNull(0),
+            col1 = tag.getOrNull(1),
+            col2 = tag.getOrNull(2),
+            col3 = tag.getOrNull(3),
+            col4 = tag.getOrNull(4),
+            col5 = tag.getOrNull(5)
+        )
+    }
+
+    return EventWithTags(dbEvent, dbTags)
 }

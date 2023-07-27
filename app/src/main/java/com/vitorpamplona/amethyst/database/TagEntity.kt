@@ -17,10 +17,6 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index(
-            value = ["col0"],
-            name = "search_by_tag_name"
-        ),
-        Index(
             value = ["pkEvent"],
             name = "search_by_pk_event"
         ),

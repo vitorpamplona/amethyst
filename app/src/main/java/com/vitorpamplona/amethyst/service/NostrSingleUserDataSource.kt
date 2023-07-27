@@ -74,13 +74,13 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
             }
         }
 
-        val authorsHex = usersToWatch.mapNotNull { it.pubkeyHex }
+        val authorsHex = usersToWatch.map { it.pubkeyHex }
 
         Amethyst.instance.eventDatabase.get(authors, MetadataEvent.kind).map {
             LocalCache.consumeEvent(it, null)
         }
 
-        Amethyst.instance.eventDatabase.get(authorsHex, ReportEvent.kind).map {
+        Amethyst.instance.eventDatabase.getByPTags(authorsHex, ReportEvent.kind).map {
             LocalCache.consumeEvent(it, null)
         }
     }

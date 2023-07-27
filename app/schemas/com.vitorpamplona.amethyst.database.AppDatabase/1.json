@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "28fbed5ad80216f8e1fb125fef8ce488",
+    "identityHash": "61f0e1ad1ed3d8c000f0e6aed13271cb",
     "entities": [
       {
         "tableName": "EventEntity",
@@ -150,15 +150,6 @@
         },
         "indices": [
           {
-            "name": "search_by_tag_name",
-            "unique": false,
-            "columnNames": [
-              "col0"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `search_by_tag_name` ON `${TABLE_NAME}` (`col0`)"
-          },
-          {
             "name": "search_by_pk_event",
             "unique": false,
             "columnNames": [
@@ -196,7 +187,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '28fbed5ad80216f8e1fb125fef8ce488')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '61f0e1ad1ed3d8c000f0e6aed13271cb')"
     ]
   }
 }

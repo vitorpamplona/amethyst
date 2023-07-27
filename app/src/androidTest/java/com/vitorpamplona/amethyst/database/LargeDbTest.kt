@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.InputStreamReader
@@ -39,7 +40,7 @@ class LargeDbTest {
 
     @Test
     fun insertDatabaseSample() = runBlocking {
-        val fullDBInputStream = getInstrumentation().context.assets.open("vitor.json")
+        val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_short.json")
 
         println("Large JSON of Events: Open")
 
@@ -53,6 +54,38 @@ class LargeDbTest {
         eventArray.forEach {
             eventDatabase.insert(it)
         }
+
+        println("Large JSON of Events: Inserted")
+
+        val job = async(Dispatchers.IO) {
+            val events = eventDatabase.getAll()
+
+            println("Large JSON of Events: Loaded")
+
+            events.forEach {
+                assertTrue(it.hasValidSignature() ?: false)
+            }
+
+            println("Large JSON of Events: Verified")
+        }
+        job.cancelAndJoin()
+    }
+
+    @Test
+    @Ignore
+    fun insertDatabaseSampleLarger() = runBlocking {
+        val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_all.json")
+
+        println("Large JSON of Events: Open")
+
+        val eventArray = Event.gson.fromJson(
+            InputStreamReader(fullDBInputStream),
+            object : TypeToken<ArrayList<Event>?>() {}.type
+        ) as List<Event>
+
+        println("Large JSON of Events: Parsed ${eventArray.size}")
+
+        eventDatabase.insert(eventArray)
 
         println("Large JSON of Events: Inserted")
 
