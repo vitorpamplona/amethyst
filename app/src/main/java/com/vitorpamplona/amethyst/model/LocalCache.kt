@@ -1313,6 +1313,10 @@ object LocalCache {
 
         Amethyst.instance.eventDatabase.insert(event)
 
+        consumeEvent(event, relay)
+    }
+
+    fun consumeEvent(event: Event, relay: Relay?) {
         try {
             when (event) {
                 is AppDefinitionEvent -> consume(event)

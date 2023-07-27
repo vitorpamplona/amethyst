@@ -44,6 +44,12 @@ class EventMapping(val eventDao: EventDao) {
             it.toEvent()
         }
     }
+
+    fun get(authors: List<String>, kind: Int): List<Event> {
+        return eventDao.getByAuthorsAndKind(authors, kind).map {
+            it.toEvent()
+        }
+    }
 }
 
 fun EventWithTags.toEvent(): Event {

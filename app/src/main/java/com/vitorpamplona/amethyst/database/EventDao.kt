@@ -38,6 +38,15 @@ interface EventDao {
     fun getByAuthorAndKind(pubkey: String, kind: Int): List<EventWithTags>
 
     @Query(
+        "SELECT * FROM EventEntity " +
+            "WHERE kind = :kind " +
+            "  AND pubkey in (:pubkeys) " +
+            "ORDER BY createdAt DESC"
+    )
+    @Transaction
+    fun getByAuthorsAndKind(pubkeys: List<String>, kind: Int): List<EventWithTags>
+
+    @Query(
         "SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig " +
             "FROM EventEntity " +
             "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +

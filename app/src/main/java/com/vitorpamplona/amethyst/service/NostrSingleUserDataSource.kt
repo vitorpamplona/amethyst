@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -65,7 +66,23 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     }
 
     override fun loadFromDatabase() {
-        Amethyst.instance.eventDatabase.loadUser()
+        val authors = usersToWatch.mapNotNull {
+            if (it.info?.latestMetadata == null) {
+                it.pubkeyHex
+            } else {
+                null
+            }
+        }
+
+        val authorsHex = usersToWatch.mapNotNull { it.pubkeyHex }
+
+        Amethyst.instance.eventDatabase.get(authors, MetadataEvent.kind).map {
+            LocalCache.consumeEvent(it, null)
+        }
+
+        Amethyst.instance.eventDatabase.get(authorsHex, ReportEvent.kind).map {
+            LocalCache.consumeEvent(it, null)
+        }
     }
 
     fun add(user: User) {
