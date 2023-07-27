@@ -6,13 +6,16 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import com.vitorpamplona.amethyst.service.model.Event
 
 @Dao
 interface EventDao {
     @Query("SELECT * FROM EventEntity WHERE id = :id")
     @Transaction
-    fun getById(id: String): EventWithTags
+    fun getById(id: String): EventWithTags?
+
+    @Query("SELECT * FROM EventEntity WHERE id IN (:ids)")
+    @Transaction
+    fun getByIds(ids: List<String>): List<EventWithTags>
 
     @Query("SELECT * FROM EventEntity ORDER BY createdAt DESC")
     @Transaction
@@ -66,29 +69,11 @@ interface EventDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     @Transaction
-    fun insertEventWithTags(event: Event) {
-        val dbEvent = EventEntity(
-            id = event.id,
-            pubkey = event.pubKey,
-            createdAt = event.createdAt,
-            kind = event.kind,
-            content = event.content,
-            sig = event.sig
-        )
-
+    fun insertEventWithTags(dbEvent: EventEntity, dbTags: List<TagEntity>) {
         insertEvent(dbEvent)?.let { eventPK ->
             if (eventPK >= 0) {
-                val dbTags = event.tags.mapIndexed { index, tag ->
-                    TagEntity(
-                        pkEvent = eventPK,
-                        position = index,
-                        col0 = tag.getOrNull(0),
-                        col1 = tag.getOrNull(1),
-                        col2 = tag.getOrNull(2),
-                        col3 = tag.getOrNull(3),
-                        col4 = tag.getOrNull(4),
-                        col5 = tag.getOrNull(5)
-                    )
+                dbTags.forEach {
+                    it.pkEvent = eventPK
                 }
 
                 insertTag(*dbTags.toTypedArray())

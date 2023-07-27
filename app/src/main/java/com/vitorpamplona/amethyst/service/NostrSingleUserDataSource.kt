@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
@@ -61,6 +62,10 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     override fun updateChannelFilters() {
         userChannel.typedFilters = listOfNotNull(createUserFilter()).flatten().ifEmpty { null }
         userChannelOnce.typedFilters = listOfNotNull(createUserReportFilter()).flatten().ifEmpty { null }
+    }
+
+    override fun loadFromDatabase() {
+        Amethyst.instance.eventDatabase.loadUser()
     }
 
     fun add(user: User) {

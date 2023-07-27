@@ -126,6 +126,8 @@ abstract class NostrDataSource(val debugName: String) {
     fun resetFiltersSuspend() {
         checkNotInMainThread()
 
+        loadFromDatabase()
+
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
         // saves the current content to only update if it changes
@@ -163,6 +165,8 @@ abstract class NostrDataSource(val debugName: String) {
             }
         }
     }
+
+    open fun loadFromDatabase() {}
 
     abstract fun updateChannelFilters()
     open fun auth(relay: Relay, challenge: String) = Unit

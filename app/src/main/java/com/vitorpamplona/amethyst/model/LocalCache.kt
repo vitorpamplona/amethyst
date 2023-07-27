@@ -1311,7 +1311,7 @@ object LocalCache {
             return
         }
 
-        Amethyst.instance.database.eventDao().insertEventWithTags(event)
+        Amethyst.instance.eventDatabase.insert(event)
 
         try {
             when (event) {

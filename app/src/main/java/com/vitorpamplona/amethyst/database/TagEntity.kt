@@ -33,7 +33,7 @@ import androidx.room.PrimaryKey
 data class TagEntity(
     @PrimaryKey(autoGenerate = true) val pk: Long? = null,
 
-    val pkEvent: Long,
+    var pkEvent: Long? = null,
     val position: Int,
 
     // Holds 6 columns but can be extended.
