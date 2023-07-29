@@ -18,6 +18,7 @@ import com.vitorpamplona.amethyst.ui.MainActivity
 object NotificationUtils {
     private var dmChannel: NotificationChannel? = null
     private var zapChannel: NotificationChannel? = null
+    const val NOTIFICATION_GROUP_KEY = "com.vitorpamplona.amethyst.NOTIFICATION"
 
     private fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
@@ -164,7 +165,7 @@ object NotificationUtils {
             .setContentTitle(messageTitle)
             .setContentText(applicationContext.getString(R.string.app_notification_private_message))
             .setLargeIcon(picture?.bitmap)
-            .setGroup(messageTitle)
+            .setGroup(NOTIFICATION_GROUP_KEY)
             .setContentIntent(contentPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -178,7 +179,7 @@ object NotificationUtils {
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
             .setLargeIcon(picture?.bitmap)
-            .setGroup(messageTitle)
+            .setGroup(NOTIFICATION_GROUP_KEY)
             .setContentIntent(contentPendingIntent)
             .setPublicVersion(builderPublic.build())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
