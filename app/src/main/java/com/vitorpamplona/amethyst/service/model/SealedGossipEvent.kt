@@ -38,14 +38,14 @@ class SealedGossipEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretNIP24(privKey, pubKey.hexToByteArray())
 
             val toDecrypt = gson.fromJson<EncryptedInfo>(
                 content,
                 EncryptedInfo::class.java
             )
 
-            return CryptoUtils.decryptXChaCha(toDecrypt, sharedSecret)
+            return CryptoUtils.decryptNIP24(toDecrypt, sharedSecret)
         } catch (e: Exception) {
             Log.w("GeneralList", "Error decrypting the message ${e.message}")
             null
@@ -71,10 +71,10 @@ class SealedGossipEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): SealedGossipEvent {
-            val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privateKey, encryptTo.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretNIP24(privateKey, encryptTo.hexToByteArray())
 
             val content = gson.toJson(
-                CryptoUtils.encryptXChaCha(
+                CryptoUtils.encryptNIP24(
                     gson.toJson(gossip),
                     sharedSecret
                 )

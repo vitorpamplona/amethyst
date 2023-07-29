@@ -30,9 +30,9 @@ class LnZapPaymentResponseEvent(
 
     private fun decrypt(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey)
+            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey)
 
-            val retVal = CryptoUtils.decrypt(content, sharedSecret)
+            val retVal = CryptoUtils.decryptNIP04(content, sharedSecret)
 
             if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {
                 retVal.substring(16)

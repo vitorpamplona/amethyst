@@ -6,7 +6,7 @@ import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Tlv
-import com.vitorpamplona.amethyst.service.toByteArray
+import com.vitorpamplona.amethyst.service.nip19.toByteArray
 import com.vitorpamplona.amethyst.service.toNAddress
 import fr.acinq.secp256k1.Hex
 

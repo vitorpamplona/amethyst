@@ -55,9 +55,9 @@ class PrivateDmEvent(
 
     fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey)
+            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey)
 
-            val retVal = CryptoUtils.decrypt(content, sharedSecret)
+            val retVal = CryptoUtils.decryptNIP04(content, sharedSecret)
 
             if (retVal.startsWith(nip18Advertisement)) {
                 retVal.substring(16)
@@ -89,7 +89,7 @@ class PrivateDmEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): PrivateDmEvent {
-            val content = CryptoUtils.encrypt(
+            val content = CryptoUtils.encryptNIP04(
                 if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
                 privateKey,
                 recipientPubKey

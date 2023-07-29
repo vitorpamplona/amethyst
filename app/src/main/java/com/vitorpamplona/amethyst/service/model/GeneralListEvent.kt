@@ -28,9 +28,9 @@ abstract class GeneralListEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey.hexToByteArray())
 
-            return CryptoUtils.decrypt(content, sharedSecret)
+            return CryptoUtils.decryptNIP04(content, sharedSecret)
         } catch (e: Exception) {
             Log.w("GeneralList", "Error decrypting the message ${e.message} for ${dTag()}")
             null
@@ -91,7 +91,7 @@ abstract class GeneralListEvent(
             }
             val msg = gson.toJson(privTags)
 
-            return CryptoUtils.encrypt(
+            return CryptoUtils.encryptNIP04(
                 msg,
                 privateKey,
                 pubKey
@@ -102,7 +102,7 @@ abstract class GeneralListEvent(
             privateTags: List<List<String>>? = null,
             privateKey: ByteArray
         ): String {
-            return CryptoUtils.encrypt(
+            return CryptoUtils.encryptNIP04(
                 msg = gson.toJson(privateTags),
                 privateKey = privateKey,
                 pubKey = CryptoUtils.pubkeyCreate(privateKey)

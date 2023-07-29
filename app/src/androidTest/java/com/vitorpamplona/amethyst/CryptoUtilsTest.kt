@@ -24,7 +24,7 @@ class CryptoUtilsTest {
         val privateKey = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561"
         val publicKey = "765cd7cf91d3ad07423d114d5a39c61d52b2cdbc18ba055ddbbeec71fbe2aa2f"
 
-        val key = CryptoUtils.getSharedSecretXChaCha(privateKey = privateKey.hexToByteArray(), pubKey = publicKey.hexToByteArray())
+        val key = CryptoUtils.getSharedSecretNIP24(privateKey = privateKey.hexToByteArray(), pubKey = publicKey.hexToByteArray())
 
         assertEquals("577c966f499dddd8e8dcc34e8f352e283cc177e53ae372794947e0b8ede7cfd8", key.toHexKey())
     }
@@ -34,8 +34,8 @@ class CryptoUtilsTest {
         val sender = KeyPair()
         val receiver = KeyPair()
 
-        val sharedSecret1 = CryptoUtils.getSharedSecretXChaCha(sender.privKey!!, receiver.pubKey)
-        val sharedSecret2 = CryptoUtils.getSharedSecretXChaCha(receiver.privKey!!, sender.pubKey)
+        val sharedSecret1 = CryptoUtils.getSharedSecretNIP24(sender.privKey!!, receiver.pubKey)
+        val sharedSecret2 = CryptoUtils.getSharedSecretNIP24(receiver.privKey!!, sender.pubKey)
 
         assertEquals(sharedSecret1.toHexKey(), sharedSecret2.toHexKey())
 
@@ -53,8 +53,8 @@ class CryptoUtilsTest {
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
 
-        val encrypted = CryptoUtils.encrypt(msg, privateKey, publicKey)
-        val decrypted = CryptoUtils.decrypt(encrypted, privateKey, publicKey)
+        val encrypted = CryptoUtils.encryptNIP04(msg, privateKey, publicKey)
+        val decrypted = CryptoUtils.decryptNIP04(encrypted, privateKey, publicKey)
 
         assertEquals(msg, decrypted)
     }
@@ -66,8 +66,8 @@ class CryptoUtilsTest {
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
 
-        val encrypted = CryptoUtils.encryptXChaCha(msg, privateKey, publicKey)
-        val decrypted = CryptoUtils.decryptXChaCha(encrypted, privateKey, publicKey)
+        val encrypted = CryptoUtils.encryptNIP24(msg, privateKey, publicKey)
+        val decrypted = CryptoUtils.decryptNIP24(encrypted, privateKey, publicKey)
 
         assertEquals(msg, decrypted)
     }
@@ -78,10 +78,10 @@ class CryptoUtilsTest {
 
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
-        val sharedSecret = CryptoUtils.getSharedSecret(privateKey, publicKey)
+        val sharedSecret = CryptoUtils.getSharedSecretNIP04(privateKey, publicKey)
 
-        val encrypted = CryptoUtils.encrypt(msg, sharedSecret)
-        val decrypted = CryptoUtils.decrypt(encrypted, sharedSecret)
+        val encrypted = CryptoUtils.encryptNIP04(msg, sharedSecret)
+        val decrypted = CryptoUtils.decryptNIP04(encrypted, sharedSecret)
 
         assertEquals(msg, decrypted)
     }
@@ -92,10 +92,10 @@ class CryptoUtilsTest {
 
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
-        val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privateKey, publicKey)
+        val sharedSecret = CryptoUtils.getSharedSecretNIP24(privateKey, publicKey)
 
-        val encrypted = CryptoUtils.encryptXChaCha(msg, sharedSecret)
-        val decrypted = CryptoUtils.decryptXChaCha(encrypted, sharedSecret)
+        val encrypted = CryptoUtils.encryptNIP24(msg, sharedSecret)
+        val decrypted = CryptoUtils.decryptNIP24(encrypted, sharedSecret)
 
         assertEquals(msg, decrypted)
     }

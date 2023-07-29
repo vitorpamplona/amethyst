@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
@@ -8,6 +9,7 @@ import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
+import com.vitorpamplona.amethyst.service.model.Gossip
 import com.vitorpamplona.amethyst.service.model.NIP24Factory
 import com.vitorpamplona.amethyst.service.model.SealedGossipEvent
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -33,18 +35,6 @@ class GiftWrapEventTest {
             listOf(receiver.pubKey.toHexKey()),
             sender.privKey!!
         )
-
-        events.forEach {
-            if (it.recipientPubKey() == sender.pubKey.toHexKey()) {
-                println(sender.privKey!!.toHexKey())
-                println(it.toJson())
-            }
-
-            if (it.recipientPubKey() == receiver.pubKey.toHexKey()) {
-                println(receiver.privKey!!.toHexKey())
-                println(it.toJson())
-            }
-        }
 
         // Simulate Receiver
         val eventsReceiverGets = events.filter { it.isTaggedUser(receiver.pubKey.toHexKey()) }
@@ -424,23 +414,11 @@ class GiftWrapEventTest {
  }
         """.trimIndent()
 
-        val privateKey = "de6152a85a0dea3b09a08a6f8139a314d498a7b52f7e5c28858b64270abd4c70".hexToByteArray()
-        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+        val privateKey = "de6152a85a0dea3b09a08a6f8139a314d498a7b52f7e5c28858b64270abd4c70"
+        val gossip = unwrapUnsealGossip(json, privateKey)
 
-        wrap.checkSignature()
-
-        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
-
-        val event = wrap.unwrap(privateKey)
-        assertNotNull(event)
-
-        if (event is SealedGossipEvent) {
-            val innerData = event.unseal(privateKey)
-            assertNotNull(innerData)
-            assertEquals("Hola, que tal?", innerData?.content)
-        } else {
-            fail("Inner event is not a Sealed Gossip")
-        }
+        assertNotNull(gossip)
+        assertEquals("Hola, que tal?", gossip?.content)
     }
 
     @Test
@@ -462,23 +440,11 @@ class GiftWrapEventTest {
 }
         """.trimIndent()
 
-        val privateKey = "409ff7654141eaa16cd2161fe5bd127aeaef71f270c67587474b78998a8e3533".hexToByteArray()
-        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+        val privateKey = "409ff7654141eaa16cd2161fe5bd127aeaef71f270c67587474b78998a8e3533"
+        val gossip = unwrapUnsealGossip(json, privateKey)
 
-        wrap.checkSignature()
-
-        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
-
-        val event = wrap.unwrap(privateKey)
-        assertNotNull(event)
-
-        if (event is SealedGossipEvent) {
-            val innerData = event.unseal(privateKey)
-            assertNotNull(innerData)
-            assertEquals("Hola, que tal?", innerData?.content)
-        } else {
-            fail("Inner event is not a Sealed Gossip")
-        }
+        assertNotNull(gossip)
+        assertEquals("Hola, que tal?", gossip?.content)
     }
 
     @Test
@@ -503,24 +469,11 @@ class GiftWrapEventTest {
 }
         """.trimIndent()
 
-        val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771".hexToByteArray()
-        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+        val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771"
+        val gossip = unwrapUnsealGossip(json, privateKey)
 
-        wrap.checkSignature()
-
-        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
-
-        val event = wrap.unwrap(privateKey)
-        assertNotNull(event)
-
-        if (event is SealedGossipEvent) {
-            val innerData = event.unseal(privateKey)
-            assertNotNull(innerData)
-            assertEquals("test", innerData?.content)
-        } else {
-            println(event?.toJson())
-            fail()
-        }
+        assertNotNull(gossip)
+        assertEquals("test", gossip?.content)
     }
 
     @Test
@@ -542,28 +495,35 @@ class GiftWrapEventTest {
 }
         """.trimIndent()
 
-        val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771".hexToByteArray()
-        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+        val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771"
 
+        val gossip = unwrapUnsealGossip(json, privateKey)
+
+        assertEquals("asdfasdfasdf", gossip?.content)
+        assertEquals(0L, gossip?.createdAt)
+        assertEquals("827ba09d32ab81d62c60f657b350198c8aaba84372dab9ad3f4f6b8b7274b707", gossip?.id)
+        assertEquals(14, gossip?.kind)
+        assertEquals("subject", gossip?.tags?.firstOrNull()?.get(0))
+        assertEquals("test", gossip?.tags?.firstOrNull()?.get(1))
+    }
+
+    fun unwrapUnsealGossip(json: String, privateKey: HexKey): Gossip? {
+        val pkBytes = privateKey.hexToByteArray()
+
+        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
         wrap.checkSignature()
 
-        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
+        assertEquals(CryptoUtils.pubkeyCreate(pkBytes).toHexKey(), wrap.recipientPubKey())
 
-        val event = wrap.unwrap(privateKey)
+        val event = wrap.unwrap(pkBytes)
         assertNotNull(event)
 
-        if (event is SealedGossipEvent) {
-            val innerData = event.unseal(privateKey)
-            assertNotNull(innerData)
-            assertEquals("asdfasdfasdf", innerData?.content)
-            assertEquals(0L, innerData?.createdAt)
-            assertEquals("827ba09d32ab81d62c60f657b350198c8aaba84372dab9ad3f4f6b8b7274b707", innerData?.id)
-            assertEquals(14, innerData?.kind)
-            assertEquals("subject", innerData?.tags?.firstOrNull()?.get(0))
-            assertEquals("test", innerData?.tags?.firstOrNull()?.get(1))
+        return if (event is SealedGossipEvent) {
+            return event.unseal(pkBytes)
         } else {
             println(event?.toJson())
-            fail()
+            fail("Event is not a Sealed Gossip")
+            null
         }
     }
 }

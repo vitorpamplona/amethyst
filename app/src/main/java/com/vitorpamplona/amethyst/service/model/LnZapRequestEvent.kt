@@ -136,7 +136,7 @@ class LnZapRequestEvent(
         }
 
         private fun encryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
-            var sharedSecret = CryptoUtils.getSharedSecret(privkey, pubkey)
+            var sharedSecret = CryptoUtils.getSharedSecretNIP04(privkey, pubkey)
             val iv = ByteArray(16)
             SecureRandom().nextBytes(iv)
 
@@ -155,7 +155,7 @@ class LnZapRequestEvent(
         }
 
         private fun decryptPrivateZapMessage(msg: String, privkey: ByteArray, pubkey: ByteArray): String {
-            var sharedSecret = CryptoUtils.getSharedSecret(privkey, pubkey)
+            var sharedSecret = CryptoUtils.getSharedSecretNIP04(privkey, pubkey)
             if (sharedSecret.size != 16 && sharedSecret.size != 32) {
                 throw IllegalArgumentException("Invalid shared secret size")
             }

@@ -35,9 +35,9 @@ class LnZapPaymentRequestEvent(
         }
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubkey)
+            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubkey)
 
-            val jsonText = CryptoUtils.decrypt(content, sharedSecret)
+            val jsonText = CryptoUtils.decryptNIP04(content, sharedSecret)
 
             val payInvoiceMethod = gson.fromJson(jsonText, Request::class.java)
 
@@ -62,7 +62,7 @@ class LnZapPaymentRequestEvent(
             val pubKey = CryptoUtils.pubkeyCreate(privateKey)
             val serializedRequest = gson.toJson(PayInvoiceMethod.create(lnInvoice))
 
-            val content = CryptoUtils.encrypt(
+            val content = CryptoUtils.encryptNIP04(
                 serializedRequest,
                 privateKey,
                 walletServicePubkey.hexToByteArray()

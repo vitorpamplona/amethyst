@@ -23,9 +23,9 @@ class MuteListEvent(
 
     fun plainContent(privKey: ByteArray): String? {
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey.hexToByteArray())
 
-            return CryptoUtils.decrypt(content, sharedSecret)
+            return CryptoUtils.decryptNIP04(content, sharedSecret)
         } catch (e: Exception) {
             Log.w("BookmarkList", "Error decrypting the message ${e.message}")
             null
@@ -87,7 +87,7 @@ class MuteListEvent(
             }
             val msg = gson.toJson(privTags)
 
-            val content = CryptoUtils.encrypt(
+            val content = CryptoUtils.encryptNIP04(
                 msg,
                 privateKey,
                 pubKey

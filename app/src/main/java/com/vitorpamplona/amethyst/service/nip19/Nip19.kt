@@ -5,7 +5,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.bechToBytes
-import com.vitorpamplona.amethyst.service.toByteArray
 import com.vitorpamplona.amethyst.service.toNEvent
 import java.util.regex.Pattern
 
@@ -169,4 +168,12 @@ object Nip19 {
 
         return fullArray.toNEvent()
     }
+}
+
+fun Int.toByteArray(): ByteArray {
+    val bytes = ByteArray(4)
+    (0..3).forEach {
+        bytes[3 - it] = ((this ushr (8 * it)) and 0xFFFF).toByte()
+    }
+    return bytes
 }
