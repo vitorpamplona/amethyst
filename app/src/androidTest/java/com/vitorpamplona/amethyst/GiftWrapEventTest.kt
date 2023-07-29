@@ -64,7 +64,6 @@ class GiftWrapEventTest {
     @Test()
     fun testNip24UtilsForGroups() {
         val sender = KeyPair()
-        println("AAAA - ${sender.privKey?.toHexKey()}")
         val receiver1 = KeyPair()
         val receiver2 = KeyPair()
         val receiver3 = KeyPair()
@@ -234,7 +233,7 @@ class GiftWrapEventTest {
         val receiverB = KeyPair()
 
         val senderMessage = ChatMessageEvent.create(
-            msg = "Hi There!",
+            msg = "Who is going to the party tonight?",
             to = listOf(receiverA.pubKey.toHexKey(), receiverB.pubKey.toHexKey()),
             privateKey = sender.privKey!!
         )
@@ -387,9 +386,9 @@ class GiftWrapEventTest {
             assertNull(unwrappedGossipToReceiverABySender)
             assertNull(unwrappedGossipToReceiverBBySender)
 
-            assertEquals("Hi There!", unwrappedGossipToReceiverAByReceiverA?.content)
-            assertEquals("Hi There!", unwrappedGossipToReceiverBByReceiverB?.content)
-            assertEquals("Hi There!", unwrappedGossipToSenderBySender?.content)
+            assertEquals("Who is going to the party tonight?", unwrappedGossipToReceiverAByReceiverA?.content)
+            assertEquals("Who is going to the party tonight?", unwrappedGossipToReceiverBByReceiverB?.content)
+            assertEquals("Who is going to the party tonight?", unwrappedGossipToSenderBySender?.content)
         } else {
             fail()
         }
