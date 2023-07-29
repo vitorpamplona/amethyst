@@ -18,7 +18,8 @@ import com.vitorpamplona.amethyst.ui.MainActivity
 object NotificationUtils {
     private var dmChannel: NotificationChannel? = null
     private var zapChannel: NotificationChannel? = null
-    const val NOTIFICATION_GROUP_KEY = "com.vitorpamplona.amethyst.NOTIFICATION"
+    private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
+    private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
 
     private fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
@@ -71,7 +72,7 @@ object NotificationUtils {
         val zapChannel = getOrCreateZapChannel(applicationContext)
         val channelId = applicationContext.getString(R.string.app_notification_zaps_channel_id)
 
-        sendNotification(id, messageBody, messageTitle, pictureUrl, uri, channelId, applicationContext)
+        sendNotification(id, messageBody, messageTitle, pictureUrl, uri, channelId, ZAP_GROUP_KEY, applicationContext)
     }
 
     fun NotificationManager.sendDMNotification(
@@ -85,7 +86,7 @@ object NotificationUtils {
         val dmChannel = getOrCreateDMChannel(applicationContext)
         val channelId = applicationContext.getString(R.string.app_notification_dms_channel_id)
 
-        sendNotification(id, messageBody, messageTitle, pictureUrl, uri, channelId, applicationContext)
+        sendNotification(id, messageBody, messageTitle, pictureUrl, uri, channelId, DM_GROUP_KEY, applicationContext)
     }
 
     fun NotificationManager.sendNotification(
@@ -95,6 +96,7 @@ object NotificationUtils {
         pictureUrl: String?,
         uri: String,
         channelId: String,
+        notificationGroupKey: String,
         applicationContext: Context
     ) {
         if (pictureUrl != null) {
@@ -111,6 +113,7 @@ object NotificationUtils {
                 picture = imageResult.drawable as? BitmapDrawable,
                 uri = uri,
                 channelId,
+                notificationGroupKey,
                 applicationContext = applicationContext
             )
         } else {
@@ -121,6 +124,7 @@ object NotificationUtils {
                 picture = null,
                 uri = uri,
                 channelId,
+                notificationGroupKey,
                 applicationContext = applicationContext
             )
         }
@@ -133,6 +137,7 @@ object NotificationUtils {
         picture: BitmapDrawable?,
         uri: String,
         channelId: String,
+        notificationGroupKey: String,
         applicationContext: Context
     ) {
         val notId = id.hashCode()
@@ -165,7 +170,7 @@ object NotificationUtils {
             .setContentTitle(messageTitle)
             .setContentText(applicationContext.getString(R.string.app_notification_private_message))
             .setLargeIcon(picture?.bitmap)
-            .setGroup(NOTIFICATION_GROUP_KEY)
+            .setGroup(notificationGroupKey)
             .setContentIntent(contentPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -179,7 +184,7 @@ object NotificationUtils {
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
             .setLargeIcon(picture?.bitmap)
-            .setGroup(NOTIFICATION_GROUP_KEY)
+            .setGroup(notificationGroupKey)
             .setContentIntent(contentPendingIntent)
             .setPublicVersion(builderPublic.build())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
