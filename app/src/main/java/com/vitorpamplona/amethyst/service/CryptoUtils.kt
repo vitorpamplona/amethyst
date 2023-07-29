@@ -65,7 +65,7 @@ object CryptoUtils {
     }
 
     fun encryptXChaCha(msg: String, privateKey: ByteArray, pubKey: ByteArray): EncryptedInfo {
-        val sharedSecret = getSharedSecret(privateKey, pubKey)
+        val sharedSecret = getSharedSecretXChaCha(privateKey, pubKey)
         return encryptXChaCha(msg, sharedSecret)
     }
 
@@ -94,7 +94,7 @@ object CryptoUtils {
     }
 
     fun decryptXChaCha(encryptedInfo: EncryptedInfo, privateKey: ByteArray, pubKey: ByteArray): String {
-        val sharedSecret = getSharedSecret(privateKey, pubKey)
+        val sharedSecret = getSharedSecretXChaCha(privateKey, pubKey)
         return decryptXChaCha(encryptedInfo, sharedSecret)
     }
 
@@ -132,6 +132,12 @@ object CryptoUtils {
      */
     fun getSharedSecret(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
         secp256k1.pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
+
+    /**
+     * @return 32B shared secret
+     */
+    fun getSharedSecretXChaCha(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
+        sha256(secp256k1.pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33))
 }
 
 fun Int.toByteArray(): ByteArray {

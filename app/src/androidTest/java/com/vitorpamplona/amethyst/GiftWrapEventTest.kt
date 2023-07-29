@@ -34,6 +34,18 @@ class GiftWrapEventTest {
             sender.privKey!!
         )
 
+        events.forEach {
+            if (it.recipientPubKey() == sender.pubKey.toHexKey()) {
+                println(sender.privKey!!.toHexKey())
+                println(it.toJson())
+            }
+
+            if (it.recipientPubKey() == receiver.pubKey.toHexKey()) {
+                println(receiver.privKey!!.toHexKey())
+                println(it.toJson())
+            }
+        }
+
         // Simulate Receiver
         val eventsReceiverGets = events.filter { it.isTaggedUser(receiver.pubKey.toHexKey()) }
         eventsReceiverGets.forEach {
@@ -220,6 +232,8 @@ class GiftWrapEventTest {
 
             assertEquals("Hi There!", unwrappedGossipToReceiverByReceiver?.content)
             assertEquals("Hi There!", unwrappedGossipToSenderBySender?.content)
+        } else {
+            fail()
         }
     }
 
@@ -386,6 +400,82 @@ class GiftWrapEventTest {
             assertEquals("Hi There!", unwrappedGossipToReceiverAByReceiverA?.content)
             assertEquals("Hi There!", unwrappedGossipToReceiverBByReceiverB?.content)
             assertEquals("Hi There!", unwrappedGossipToSenderBySender?.content)
+        } else {
+            fail()
+        }
+    }
+
+    @Test
+    fun testCaseFromAmethyst1() {
+        val json = """
+{
+    "content":"{\"ciphertext\":\"2kQ019KOsZ53G1nZEzYjmnqRNSSdkJfxpZIomM8NxNx+0v9W9ypQugUrimqgsTyhW91o03g/RO0+C64TgTARicPeBJx2qqPPCMUa1FAyLl7mB+G9JGTlZkLX5D0k/HGBKjRtQSmw+hHzPV2nHMU3JO9AFwzbcGkMRa+I6bnGn7C4fOWgdNuRZSHJ1k7LUUDE4TdCra2fh9eeguEgzEUmBlqyJASnGZjdbGjo62Fa0jZLGjVf+1Q8uO9YXnKbKrjIC5Eds+zRbRiLPRVeCdtEy9rvdCsgHNuhX0oWk21TzUy8QREUko3+VdaCm1twEBzBxBkCreWCH175vB5gfip9GVJoRqnDC3lCpqJJ1knB24m0sVbByRCIkQpznLsWbXspyEWmWA0WhaTn0OQWg6P9exQscAq8IBILp8otxlPPp4/UUhDEmhB8IFhlieMVSpBVHQka/uaHBy1oL/HzEkI/siza86LiJv95kcTfqG3LfJwJaIGoshFZTxuOF7JQcXobzEpodtP9RImbmZIfTcrL29BH3oCAH8o9P5CHeyC+RUK0iX5Uf0guAskrrVGy18BbBceGzAKP09so+kJ56RH3CKaPX0PVMqBiwDISdRAdSSwXkJIl9oCPYqB5O7rRlPhx53M2+Qej77hSwvvYLOlp0HirSRko1a8jrhhVT7npTdfO6QBWjC3Cm1nJUYymFqqqrnb6w2GmlcMW20rpcvUd/x3sQF9CPl22H6XDgcUxtfdgFLmoMUnKkbj5EZUKJXPF6eUOHu/C+YFf/7p/bKT2QloQY7so0Fw5+NTzNnrsuOuk7LJ2yMonpAyjHZ+KR9od/QLzB5QDCqtXisiJM6A1L8agyF6lkZVGEZX7fBhWtI/qMzukvFWBCLb8luPVC+sgCzuVTbgAvGIDagqIhxyVd+k9IduteVrB+2QI4LBsIALWcFhOjwegxkwSFGcTeU5aFfxyjJcLlW5DPuJeb5k3O6gUN1chlb+by5vrUmglE5wGrmcL8TDNay71S50/GKVXVg8/hb8lT2XYTV4h9wMRjbv330b90SZreNGxBJNIYA1UjyYlXAmI\",\"nonce\":\"K99zmxMrz3WaijlFY1KPfF1Z7yKmoTQa\",\"v\":1}",
+    "created_at":1690658663,
+    "id":"91fd8ea5741ec4bd6633b6500c1466551a4dcc823a32a670481ab35e6f1a3738",
+    "kind":1059,
+    "pubkey":"6dd4b660790805c77fafe3fabf6fb89e3f18b17246af1b74f1b005759add2776",
+    "sig":"93f4ae7782b03d17815d2c67e23cf6d4c0764bac865d0cbd74cf580882632581fc060395a86cad078bea0e33b78fe6dfcd3d04099fe6b51bc6e87c470f508374",
+    "tags":[
+       [
+          "p",
+          "4b99b998c76a47f7284e5158092fb4f0795ee05fb04136f8be8b727ad2e5357b"
+       ]
+    ]
+ }
+        """.trimIndent()
+
+        val privateKey = "15c4facfb7aafe31d2fb45183c830a95773f8cb37012e35ff5f306c9b97a8cfe".hexToByteArray()
+        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+
+        wrap.checkSignature()
+
+        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
+
+        val event = wrap.unwrap(privateKey)
+        assertNotNull(event)
+
+        if (event is SealedGossipEvent) {
+            val innerData = event.unseal(privateKey)
+            assertEquals("Hola, que tal?", innerData?.content)
+        } else {
+            fail("Inner event is not a Sealed Gossip")
+        }
+    }
+
+    @Test
+    fun testCaseFromAmethyst2() {
+        val json = """
+ {
+    "content":"{\"ciphertext\":\"Z9nuRGldDimFioFx0eoaiRjHWnMxWjgbvDFfn8S84sSrLr+/TZGT/HSlmU4LeisGsvdEps6c7nROQ43Jnri9eDtCwM9X/picSISdfI256wgh+17xHxBNQUY0+mUnttfrbt1IGPlMFAiRPH4CJavXL586ufoybRLFuI0bn9rnPKnqrpocUmYYXfwa5wbIdNeHN0MhQ+t63dwyk8v0zROfUM9UFVqA7Uj28T4jOyxSxi0vrlPPNhPrVqx1F8cTro3aeelkpVJOuEa483BrojqqougYt3bNDWzyHZBk8KMGT27/U8trzbsbiutG/JP0KpckuX/OOQnuC32HxduED9yElHP/thPgD5Tzk1KruexdX78zzGQxTz4288JPAlb0dHLiHCzGo7jcMMDc0W60yRmBIHupVjX677cPXNLb7CZZlBteuzMevcGpDpSAdvft/hzGgdAV3zn3Xsz9V0EYO35dqjburmw17akZ4Zg91bbnjEef15HR4UKHFRTLG5PZLAQSOmJPgpm8FTmL3MxFYRjtOMd+eyFJnhVJKtjqQGDDaiXMNRhubJePltq8oN1ITSfyzxPmpDDimEjySe4PV2kOeOBXEvCq8l/FXOJjtgBpDTWosKr/seSBLxg/VFxdbeJvvq2gUPmEg/vjGkAGKykCuHscTFfnAQRxbNOCtrnHt4ViVLUjDthWZraxfQSXi8bN9eOHPC4/22ehe+itNxfLla6d+qAnaIb22IOjg/stL77HAnv+1X0lvl1swg3dpa4iRWch07+vMZoO5xrNauyC1IaIud7Vd4Xmu/BIk/8n81PBbjd9xbU5Or0dvY3vFb5MoahJn/WdO+eGb2471I2Me+1wRXYBKZpJBJBD6lR6jW248RtKwY1+Tzf+lmw8tIjK26COeSbIFuPZy7y43pY/rYnLydvNNuwHm7RLCDamRxz5d4+mWpaur5Po3XI8BH5/o3Aa2I7G6cS6C6tMxTkqpNjU0hPFD4ngPED2E8PAm95Ut7ZckjXYMSGvj4jXqW61l3RbeG87/U9TtGyOhgE6mFLyitRpzr6qpBz3vatpSuWmqs7bsWGL\",\"nonce\":\"2BmW1spqvh+C63dj9SiW2GVpcPOl1/HQ\",\"v\":1}",
+    "created_at":1690658663,
+    "id":"6b37ccbd385668e0ef7d2bc2e666c77090c81a0abdf30b66d8af8cd71791679d",
+    "kind":1059,
+    "pubkey":"49af42b938061529473c68b3a19bb0247063adbd6752f5bd29e75cfa2f4dc80c",
+    "sig":"dacd327dabe19014a8e88e1e705a79ea0333cd4104b52ae7bcfd3fcf8cee68733a36cb38e1f9af225a836c2f38a8fcbf9faf07ca75d34419f037f1efbb2df52f",
+    "tags":[
+       [
+          "p",
+          "c98a847f6bff5c9917e9de5f641039ca21080d07dfa6434cb109b7587af64aad"
+       ]
+    ]
+ }
+        """.trimIndent()
+
+        val privateKey = "f2f8c4b9bba181c83c25eeea336fd214a088a383363dc302e622e1ae9851093e".hexToByteArray()
+        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+
+        wrap.checkSignature()
+
+        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
+
+        val event = wrap.unwrap(privateKey)
+        assertNotNull(event)
+
+        if (event is SealedGossipEvent) {
+            val innerData = event.unseal(privateKey)
+            assertEquals("Hola, que tal?", innerData?.content)
+        } else {
+            fail("Inner event is not a Sealed Gossip")
         }
     }
 
@@ -423,7 +513,7 @@ class GiftWrapEventTest {
 
         if (event is SealedGossipEvent) {
             val innerData = event.unseal(privateKey)
-            assertEquals("Hi", innerData?.content)
+            assertEquals(null, innerData?.content)
         } else {
             println(event?.toJson())
             fail()

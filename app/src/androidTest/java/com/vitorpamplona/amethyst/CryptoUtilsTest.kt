@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.KeyPair
@@ -10,13 +11,24 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class CryptoUtilsTest {
-    @Test()
+
+    @Test
+    fun testSharedSecretCompatibilityWithCoracle() {
+        val privateKey = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561"
+        val publicKey = "765cd7cf91d3ad07423d114d5a39c61d52b2cdbc18ba055ddbbeec71fbe2aa2f"
+
+        val key = CryptoUtils.getSharedSecretXChaCha(privateKey = privateKey.hexToByteArray(), pubKey = publicKey.hexToByteArray())
+
+        assertEquals("577c966f499dddd8e8dcc34e8f352e283cc177e53ae372794947e0b8ede7cfd8", key.toHexKey())
+    }
+
+    @Test
     fun testSharedSecret() {
         val sender = KeyPair()
         val receiver = KeyPair()
 
-        val sharedSecret1 = CryptoUtils.getSharedSecret(sender.privKey!!, receiver.pubKey)
-        val sharedSecret2 = CryptoUtils.getSharedSecret(receiver.privKey!!, sender.pubKey)
+        val sharedSecret1 = CryptoUtils.getSharedSecretXChaCha(sender.privKey!!, receiver.pubKey)
+        val sharedSecret2 = CryptoUtils.getSharedSecretXChaCha(receiver.privKey!!, sender.pubKey)
 
         assertEquals(sharedSecret1.toHexKey(), sharedSecret2.toHexKey())
 
@@ -73,7 +85,7 @@ class CryptoUtilsTest {
 
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
-        val sharedSecret = CryptoUtils.getSharedSecret(privateKey, publicKey)
+        val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privateKey, publicKey)
 
         val encrypted = CryptoUtils.encryptXChaCha(msg, sharedSecret)
         val decrypted = CryptoUtils.decryptXChaCha(encrypted, sharedSecret)

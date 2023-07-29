@@ -30,7 +30,7 @@ class GiftWrapEvent(
     }
 
     fun unwrap(privKey: ByteArray) = try {
-        plainContent(privKey)?.let { println("$it"); fromJson(it, Client.lenient) }
+        plainContent(privKey)?.let { fromJson(it, Client.lenient) }
     } catch (e: Exception) {
         Log.e("UnwrapError", "Couldn't Decrypt the content", e)
         null
@@ -40,16 +40,12 @@ class GiftWrapEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privKey, pubKey.hexToByteArray())
 
             val toDecrypt = gson.fromJson<EncryptedInfo>(
                 content,
                 EncryptedInfo::class.java
             )
-
-            println(toDecrypt.ciphertext)
-            println(toDecrypt.nonce)
-            println(toDecrypt.v)
 
             return CryptoUtils.decryptXChaCha(toDecrypt, sharedSecret)
         } catch (e: Exception) {
@@ -69,7 +65,7 @@ class GiftWrapEvent(
             createdAt: Long = TimeUtils.now()
         ): GiftWrapEvent {
             val privateKey = CryptoUtils.privkeyCreate() // GiftWrap is always a random key
-            val sharedSecret = CryptoUtils.getSharedSecret(privateKey, recipientPubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privateKey, recipientPubKey.hexToByteArray())
 
             val content = gson.toJson(
                 CryptoUtils.encryptXChaCha(

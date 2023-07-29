@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 
 fun String.isUTF16Char(pos: Int): Boolean {
-    println("Test $pos ${Character.charCount(this.codePointAt(pos))}")
     return Character.charCount(this.codePointAt(pos)) == 2
 }
 
