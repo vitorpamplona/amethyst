@@ -1110,6 +1110,40 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun consume(event: SealedGossipEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    private fun consume(event: GiftWrapEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     fun consume(event: LnZapPaymentRequestEvent) {
         // Does nothing without a response callback.
     }
@@ -1337,10 +1371,12 @@ object LocalCache {
                 is DeletionEvent -> consume(event)
                 is EmojiPackEvent -> consume(event)
                 is EmojiPackSelectionEvent -> consume(event)
+                is SealedGossipEvent -> consume(event, relay)
 
                 is FileHeaderEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)
+                is GiftWrapEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
