@@ -13,6 +13,13 @@ import org.junit.runner.RunWith
 class CryptoUtilsTest {
 
     @Test
+    fun testGetPublicFromPrivateKey() {
+        val privateKey = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
+        val publicKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+        assertEquals("7d4b8806f1fd713c287235411bf95aa81b7242ead892733ec84b3f2719845be6", publicKey)
+    }
+
+    @Test
     fun testSharedSecretCompatibilityWithCoracle() {
         val privateKey = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561"
         val publicKey = "765cd7cf91d3ad07423d114d5a39c61d52b2cdbc18ba055ddbbeec71fbe2aa2f"

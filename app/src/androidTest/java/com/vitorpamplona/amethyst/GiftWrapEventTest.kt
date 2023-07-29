@@ -408,23 +408,23 @@ class GiftWrapEventTest {
     @Test
     fun testCaseFromAmethyst1() {
         val json = """
-{
-    "content":"{\"ciphertext\":\"2kQ019KOsZ53G1nZEzYjmnqRNSSdkJfxpZIomM8NxNx+0v9W9ypQugUrimqgsTyhW91o03g/RO0+C64TgTARicPeBJx2qqPPCMUa1FAyLl7mB+G9JGTlZkLX5D0k/HGBKjRtQSmw+hHzPV2nHMU3JO9AFwzbcGkMRa+I6bnGn7C4fOWgdNuRZSHJ1k7LUUDE4TdCra2fh9eeguEgzEUmBlqyJASnGZjdbGjo62Fa0jZLGjVf+1Q8uO9YXnKbKrjIC5Eds+zRbRiLPRVeCdtEy9rvdCsgHNuhX0oWk21TzUy8QREUko3+VdaCm1twEBzBxBkCreWCH175vB5gfip9GVJoRqnDC3lCpqJJ1knB24m0sVbByRCIkQpznLsWbXspyEWmWA0WhaTn0OQWg6P9exQscAq8IBILp8otxlPPp4/UUhDEmhB8IFhlieMVSpBVHQka/uaHBy1oL/HzEkI/siza86LiJv95kcTfqG3LfJwJaIGoshFZTxuOF7JQcXobzEpodtP9RImbmZIfTcrL29BH3oCAH8o9P5CHeyC+RUK0iX5Uf0guAskrrVGy18BbBceGzAKP09so+kJ56RH3CKaPX0PVMqBiwDISdRAdSSwXkJIl9oCPYqB5O7rRlPhx53M2+Qej77hSwvvYLOlp0HirSRko1a8jrhhVT7npTdfO6QBWjC3Cm1nJUYymFqqqrnb6w2GmlcMW20rpcvUd/x3sQF9CPl22H6XDgcUxtfdgFLmoMUnKkbj5EZUKJXPF6eUOHu/C+YFf/7p/bKT2QloQY7so0Fw5+NTzNnrsuOuk7LJ2yMonpAyjHZ+KR9od/QLzB5QDCqtXisiJM6A1L8agyF6lkZVGEZX7fBhWtI/qMzukvFWBCLb8luPVC+sgCzuVTbgAvGIDagqIhxyVd+k9IduteVrB+2QI4LBsIALWcFhOjwegxkwSFGcTeU5aFfxyjJcLlW5DPuJeb5k3O6gUN1chlb+by5vrUmglE5wGrmcL8TDNay71S50/GKVXVg8/hb8lT2XYTV4h9wMRjbv330b90SZreNGxBJNIYA1UjyYlXAmI\",\"nonce\":\"K99zmxMrz3WaijlFY1KPfF1Z7yKmoTQa\",\"v\":1}",
-    "created_at":1690658663,
-    "id":"91fd8ea5741ec4bd6633b6500c1466551a4dcc823a32a670481ab35e6f1a3738",
+ {
+    "content":"{\"ciphertext\":\"AaTN5Mt7AOeMosjHeLfai89kmvW/qJ7W2VMttAwuh6hwRGV+ylJhpDbdVRhVmkCotbDjBgS6xioLrSDcdSngFOiVMHS5dTAP0MkQv09aZlBh/NgdmyfHHd24YlHPkDuF5Yb4Vmz7kq/vmjsNZvDrTen3TG2DcEoTV9GKexdMEqyBA4LsB2DLnWfpvOi0olDkGjPGSteTaU1nCdOtN8knoEKumrxwevvbygKphorvKX/j3ojMMb0AceJM6Cr6TRIvSsQnKGEv5V8qbC/uIrQoH3N108Fd/2SY2MWuyLKRnuak9F/w82MV13elq8ngyjcktLYM5yrPg5nrxZlyJsV8D7V/g/bvhoL+UmWe0XoCR5LXzy77SfIkgA1ePKEfGp5sD2CVIzXt9zHdFwGxAKZuyB4qwrRaAFrS2xx+Bw4nnEmF6V9NhfheSCmGzTILuTePx4ubvnYw/j8Hmqd6UvM3DBNnlJ3D6po0blirfWvMe/ea+Em4CMXfq8Iq+7r4gRx8azADygKeJ+C89GTBEvS9EvgrXCVfTMVTcFc44YAZhekOqYY1BOZgfxIV4gUiJfpMMd4B9MQv/tmnewrpTsq1reSQQcEW/mXT2cnMeCZbAIJSPg8usZ30QlrH+np+YSzFKWYDP1kThcV0ElEE2Ne8KaUUFIRE5KmhBQc/qtORefCpne5s7V7J5vLjT5rinsDzzENB1XVlmY1Icx42raP5tGAL1gOK5gRHLvtcgFQR3WcDRYaNqELiYxx41j9w9lz5e00Ttla255rZkb760KSLaBFBss6wYGiYCabVgtBNpkExpCFPPEd5eAZa5rNK2QrnojYsdxEnlicF6A+zSChLy/TbzxYwyQywDfoF9F8kBakPZkAhsciQViCii2KlieRq4OgJFZGndmnS82hyPqsoJIm22vWr1iqMvSBHo/9cLj/r+lfmGVOdgM62JHckPZjOLS0QWIb9gQiT+zXZG22+eZElMYbGXVpR1dyMaQtde8ivEVVLas6kMCVKaDTHEFglaCBXjJ3RNJv73HsG1kb0rMmOj8ltbBakjHpv7M59amavuu6SReYt\",\"nonce\":\"6anNjUdNwW6MNfoKzRZcz1R09N1h8G4L\",\"v\":1}",
+    "created_at":1690660515,
+    "id":"d90739741c2f5a8c1a03aab5dc219c0b708ed6b0566044495731cd0307cf19a5",
     "kind":1059,
-    "pubkey":"6dd4b660790805c77fafe3fabf6fb89e3f18b17246af1b74f1b005759add2776",
-    "sig":"93f4ae7782b03d17815d2c67e23cf6d4c0764bac865d0cbd74cf580882632581fc060395a86cad078bea0e33b78fe6dfcd3d04099fe6b51bc6e87c470f508374",
+    "pubkey":"a79b7162f8ebb9c9f7aa65a48977ab7f32aa097520bc543e4d625812154ff6af",
+    "sig":"9b012504e779632a2a1f55562fa9a85f8ae6245cbc149b83d25b2971249053abc77f65cc068e5d025b871d743678265fede70de4eaf5af642e675a5b6210077d",
     "tags":[
        [
           "p",
-          "4b99b998c76a47f7284e5158092fb4f0795ee05fb04136f8be8b727ad2e5357b"
+          "c55f0b0cb4dd180dd4395867b28dd4c208b709144a69fb7c31a46c369a5ad1c6"
        ]
     ]
  }
         """.trimIndent()
 
-        val privateKey = "15c4facfb7aafe31d2fb45183c830a95773f8cb37012e35ff5f306c9b97a8cfe".hexToByteArray()
+        val privateKey = "de6152a85a0dea3b09a08a6f8139a314d498a7b52f7e5c28858b64270abd4c70".hexToByteArray()
         val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
 
         wrap.checkSignature()
@@ -436,6 +436,7 @@ class GiftWrapEventTest {
 
         if (event is SealedGossipEvent) {
             val innerData = event.unseal(privateKey)
+            assertNotNull(innerData)
             assertEquals("Hola, que tal?", innerData?.content)
         } else {
             fail("Inner event is not a Sealed Gossip")
@@ -445,23 +446,23 @@ class GiftWrapEventTest {
     @Test
     fun testCaseFromAmethyst2() {
         val json = """
- {
-    "content":"{\"ciphertext\":\"Z9nuRGldDimFioFx0eoaiRjHWnMxWjgbvDFfn8S84sSrLr+/TZGT/HSlmU4LeisGsvdEps6c7nROQ43Jnri9eDtCwM9X/picSISdfI256wgh+17xHxBNQUY0+mUnttfrbt1IGPlMFAiRPH4CJavXL586ufoybRLFuI0bn9rnPKnqrpocUmYYXfwa5wbIdNeHN0MhQ+t63dwyk8v0zROfUM9UFVqA7Uj28T4jOyxSxi0vrlPPNhPrVqx1F8cTro3aeelkpVJOuEa483BrojqqougYt3bNDWzyHZBk8KMGT27/U8trzbsbiutG/JP0KpckuX/OOQnuC32HxduED9yElHP/thPgD5Tzk1KruexdX78zzGQxTz4288JPAlb0dHLiHCzGo7jcMMDc0W60yRmBIHupVjX677cPXNLb7CZZlBteuzMevcGpDpSAdvft/hzGgdAV3zn3Xsz9V0EYO35dqjburmw17akZ4Zg91bbnjEef15HR4UKHFRTLG5PZLAQSOmJPgpm8FTmL3MxFYRjtOMd+eyFJnhVJKtjqQGDDaiXMNRhubJePltq8oN1ITSfyzxPmpDDimEjySe4PV2kOeOBXEvCq8l/FXOJjtgBpDTWosKr/seSBLxg/VFxdbeJvvq2gUPmEg/vjGkAGKykCuHscTFfnAQRxbNOCtrnHt4ViVLUjDthWZraxfQSXi8bN9eOHPC4/22ehe+itNxfLla6d+qAnaIb22IOjg/stL77HAnv+1X0lvl1swg3dpa4iRWch07+vMZoO5xrNauyC1IaIud7Vd4Xmu/BIk/8n81PBbjd9xbU5Or0dvY3vFb5MoahJn/WdO+eGb2471I2Me+1wRXYBKZpJBJBD6lR6jW248RtKwY1+Tzf+lmw8tIjK26COeSbIFuPZy7y43pY/rYnLydvNNuwHm7RLCDamRxz5d4+mWpaur5Po3XI8BH5/o3Aa2I7G6cS6C6tMxTkqpNjU0hPFD4ngPED2E8PAm95Ut7ZckjXYMSGvj4jXqW61l3RbeG87/U9TtGyOhgE6mFLyitRpzr6qpBz3vatpSuWmqs7bsWGL\",\"nonce\":\"2BmW1spqvh+C63dj9SiW2GVpcPOl1/HQ\",\"v\":1}",
-    "created_at":1690658663,
-    "id":"6b37ccbd385668e0ef7d2bc2e666c77090c81a0abdf30b66d8af8cd71791679d",
+{
+    "content":"{\"ciphertext\":\"Zb0ZNYAcDG5y7BiCWgbxY/i7rN7TxPwr3Oaste6em4VcetuenaMu2SyH6OuCCxxmIa7kFennJD8ZCrev0086azsPNutl9I6OCoOfDQb2GoFaLoJAkE/FuW0uEoEJuN72KsKj05HEjOM6nqL2KiW0pxTCNmlGpweMwpXQdm2ItWkybNpq8+b4NJUDee2czBUd9Kr2ELbPISTYzA17z1IzPXGQw8c73NL+QX9I/QZjM/agqX2x5q11SU52xiRyVd9zHf7TMctZI4QEsqDB6xi54D1bAeZlMhVdcpQRpGDfqRz3KXFlhB3Bwdc8GLgY0aLTn6tJs4qrHP3mQkxFYk0mju0afoc0rloMEUHcBVtM18S9OrTPqfmSqFTQsjaT8g+PkmeiLBo1sXsMCS62w0abSZD9OzQtciMz70ZpcWoLjx5f8panjFClvg4tJ8czMURIHM/IFS1uKAUHBArGN8QpCw8MXQBblpyLDiEkFcSX334Zdps0OIw4z328JSdeejyRh4ks+NHDt9FcjC4iicEqfEh8OTkXuKqEAVkRyfAioNQxWQPnXDzMX0Q+BXvKzBA7NaEBDpbV36H/KnrpBBQwokV9/Byb6Seh3g6GSqRAWD3U6Nk2aBMXkD0xY8vnIqMckBeYHxn8BW7k1FdXFC9lE5xCxWZHkmksJ4f0NVaF37O6d8qOe6RK7bfUeF8/SouJEu+eEX1f4KCMboslwkdk8QA8bThGcRGn8GQBMrPKrpZwHYNyyH8jwt9pywigXJejRLDDnDp3FH/3dbZy5CfuNH6KGydf/O5xx1r316so1UPO1mL5LHJUFZVIaMaMMUsgq12gpI0lLEh5NJPpsi9e3ibkzEZGf7FlAJjJQURbQ8xacN7R+w3GWKbJNHiQbUZ2lXo6fwz33t0DrSqEW970yWPHlqxcpd27EI+qqb5IqfklQZ3RObZZBhzDvImaCPG+U7SmgLhPxnilpGjd5lw/ttiqJhPG9mYFMf1eJXSG+Q9VVkGzN7jxXYtx0q0WGjVq98ZGv5RSnF1d9+QVGCd1fiPS3rsaWdYWly8l0y2quYObJ6Mv3Wh3\",\"nonce\":\"/Q2UTTjVZthm/atcCuDjU1e4reF+ZSgZ\",\"v\":1}",
+    "created_at":1690660515,
+    "id":"087d9627d63135a5050758a69222e566c86702e930c9905f0b93ccd6bebeca3f",
     "kind":1059,
-    "pubkey":"49af42b938061529473c68b3a19bb0247063adbd6752f5bd29e75cfa2f4dc80c",
-    "sig":"dacd327dabe19014a8e88e1e705a79ea0333cd4104b52ae7bcfd3fcf8cee68733a36cb38e1f9af225a836c2f38a8fcbf9faf07ca75d34419f037f1efbb2df52f",
+    "pubkey":"e59c00796ae2aa9077fc8bcd57fe8d32c0fc363f7c8b93d055c70804ffff3772",
+    "sig":"807cb641c314ca6910aaeefadcf87d859137520be1039eb40e39832ed59d456fdd800c5f88bba09e1b395ee90c66d5330847bdd010b63be9919bf091adbc2c2a",
     "tags":[
        [
           "p",
-          "c98a847f6bff5c9917e9de5f641039ca21080d07dfa6434cb109b7587af64aad"
+          "f85f315c06aaf19c2b30a96ca80d9644720655ee8d3ec43b84657a7c98f36a23"
        ]
     ]
- }
+}
         """.trimIndent()
 
-        val privateKey = "f2f8c4b9bba181c83c25eeea336fd214a088a383363dc302e622e1ae9851093e".hexToByteArray()
+        val privateKey = "409ff7654141eaa16cd2161fe5bd127aeaef71f270c67587474b78998a8e3533".hexToByteArray()
         val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
 
         wrap.checkSignature()
@@ -473,6 +474,7 @@ class GiftWrapEventTest {
 
         if (event is SealedGossipEvent) {
             val innerData = event.unseal(privateKey)
+            assertNotNull(innerData)
             assertEquals("Hola, que tal?", innerData?.content)
         } else {
             fail("Inner event is not a Sealed Gossip")
@@ -513,7 +515,52 @@ class GiftWrapEventTest {
 
         if (event is SealedGossipEvent) {
             val innerData = event.unseal(privateKey)
-            assertEquals(null, innerData?.content)
+            assertNotNull(innerData)
+            assertEquals("test", innerData?.content)
+        } else {
+            println(event?.toJson())
+            fail()
+        }
+    }
+
+    @Test
+    fun testFromCoracle2() {
+        val json = """
+{
+  "content": "{\"ciphertext\":\"Hn/dHo/I8Qk6QWWAiKyo/SfKJqQfHdV0O5tMmgqMyfHrsFoDY6IhGQP2EgCJ/6HsNQyO/8EMAmLW8w0PbDKlBKYGKGpaMwCA6B1r0rLjvu+149RJZuggRNm9rd7tNVNkNs38iqt1KYD++bohePm52q+VhAQikbX2gTONV82ROwZylAg9vjvMnYkDt45g6N97s9FRB6V7YMiUEtJnneMixa6klucpUuenQ4569tyt5vnUMD2VNhKYCc2jit2hf7k0DIhvZrVC3OdopUvxIuYYWr3r7XpuEB3HJ6Ji3ajHPzgGeFcItBR7uKZ9s6XU34F3keyZbxrv3yWHFM5NrOctAdZexSGpqWRW93M0KZUAp9HgQh3YzMLl8xt0mcrVywCgjU6Kx8IwkI0bjPU+Am8acY3cItted6hZQ4Vy1xFITdKVfPWDl3Ab59iBg9+IkY5C31wqsKPgPVVycwQE6UpaGW74gy3qZshwyoo01owvEIbVvrSJWXH7EUVvndDPvUbo+f+EVa84IEwVjPmY2oR7VsxVfqRBdmPg23OSw/9rzVybmruqaQHd3xrTTEcnG0qBc/ugCXsiuILTeScOovEnqIlKKK3KB36jMtdScdJB+b4YrzJInY1AvqU7IAgqe0vmo1LdbMtj7kjuxkXJhhQsunAbTvPigTrsOfJ08P9l7r/95kpxudgagEaW7XAjYVfLphseJT3Iy1IuQEyG5sshQ+pl/CYvkGide7ykHwm9pjSBVkD9Mdcn5X6lSnLNJEcwY43pz43r6Kq3L09qneILY3DSKyQ16Zcu1MiAMAM5r6JGvpAHqcMmixi9ORuiryjteTmY4L0vI7b3W/0RSUblXxUrb8IpeysBrFmiKJBgCoU0r/D/8tgR+Eewyp1qxKI4SfKG5GFH40zZ2oVvKyoHAR4x1oVDp/MttcnxkzAsCFL6QuJC9A/vImjsumpmYB/EChcZCOAsfqkuzH4VSjZx\",\"nonce\":\"K537d+7m5tUcXZfkr3Qk2J2G86vdBMmY\",\"v\":1}",
+  "created_at": 1690655012,
+  "id": "c4f97c6332b0a63912c44c9e1f8c7b23581dc67a8489ec1522ec205fea7133db",
+  "kind": 1059,
+  "pubkey": "8def03a22b1039256a3883d46c7ccd5562f61743100db401344284547de7ec61",
+  "sig": "25dcf24bdda99c04abc72274d9f7a30538a4a00a70ac4b39db4082b73823979858df93cd649c25edfb759857eac46ed70bb9ad0598f2e011d733a5a382bc4def",
+  "tags": [
+    [
+      "p",
+      "e7764a227c12ac1ef2db79ae180392c90903b2cec1e37f5c1a4afed38117185e"
+    ]
+  ]
+}
+        """.trimIndent()
+
+        val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771".hexToByteArray()
+        val wrap = Event.fromJson(json, Client.lenient) as GiftWrapEvent
+
+        wrap.checkSignature()
+
+        assertEquals(CryptoUtils.pubkeyCreate(privateKey).toHexKey(), wrap.recipientPubKey())
+
+        val event = wrap.unwrap(privateKey)
+        assertNotNull(event)
+
+        if (event is SealedGossipEvent) {
+            val innerData = event.unseal(privateKey)
+            assertNotNull(innerData)
+            assertEquals("asdfasdfasdf", innerData?.content)
+            assertEquals(0L, innerData?.createdAt)
+            assertEquals("827ba09d32ab81d62c60f657b350198c8aaba84372dab9ad3f4f6b8b7274b707", innerData?.id)
+            assertEquals(14, innerData?.kind)
+            assertEquals("subject", innerData?.tags?.firstOrNull()?.get(0))
+            assertEquals("test", innerData?.tags?.firstOrNull()?.get(1))
         } else {
             println(event?.toJson())
             fail()

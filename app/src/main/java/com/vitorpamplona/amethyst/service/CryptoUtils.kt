@@ -93,12 +93,12 @@ object CryptoUtils {
         )
     }
 
-    fun decryptXChaCha(encryptedInfo: EncryptedInfo, privateKey: ByteArray, pubKey: ByteArray): String {
+    fun decryptXChaCha(encryptedInfo: EncryptedInfo, privateKey: ByteArray, pubKey: ByteArray): String? {
         val sharedSecret = getSharedSecretXChaCha(privateKey, pubKey)
         return decryptXChaCha(encryptedInfo, sharedSecret)
     }
 
-    fun decryptXChaCha(encryptedInfo: EncryptedInfo, sharedSecret: ByteArray): String {
+    fun decryptXChaCha(encryptedInfo: EncryptedInfo, sharedSecret: ByteArray): String? {
         val lazySodium = LazySodiumAndroid(SodiumAndroid(), Base64MessageEncoder())
 
         val key = Key.fromBytes(sharedSecret)
@@ -111,7 +111,7 @@ object CryptoUtils {
             key = key
         )
 
-        return cipher.decodeToString()
+        return cipher?.decodeToString()
     }
 
     fun verifySignature(
@@ -221,9 +221,9 @@ private fun LazySodium.cryptoStreamXChaCha20Xor(
     messageBytes: ByteArray,
     nonce: ByteArray,
     key: Key
-): ByteArray {
+): ByteArray? {
     val mLen = messageBytes.size
     val cipher = ByteArray(mLen)
-    cryptoStreamXChaCha20Xor(cipher, messageBytes, mLen.toLong(), nonce, key.asBytes)
-    return cipher
+    val sucessful = cryptoStreamXChaCha20Xor(cipher, messageBytes, mLen.toLong(), nonce, key.asBytes)
+    return if (sucessful) cipher else null
 }

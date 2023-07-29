@@ -32,7 +32,7 @@ class GiftWrapEvent(
     fun unwrap(privKey: ByteArray) = try {
         plainContent(privKey)?.let { fromJson(it, Client.lenient) }
     } catch (e: Exception) {
-        Log.e("UnwrapError", "Couldn't Decrypt the content", e)
+        // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
         null
     }
 

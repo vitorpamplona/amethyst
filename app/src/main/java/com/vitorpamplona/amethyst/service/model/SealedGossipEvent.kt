@@ -38,7 +38,7 @@ class SealedGossipEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecret(privKey, pubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privKey, pubKey.hexToByteArray())
 
             val toDecrypt = gson.fromJson<EncryptedInfo>(
                 content,
@@ -71,7 +71,7 @@ class SealedGossipEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): SealedGossipEvent {
-            val sharedSecret = CryptoUtils.getSharedSecret(privateKey, encryptTo.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretXChaCha(privateKey, encryptTo.hexToByteArray())
 
             val content = gson.toJson(
                 CryptoUtils.encryptXChaCha(
