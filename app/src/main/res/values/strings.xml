@@ -48,6 +48,8 @@
     <string name="and">" and "</string>
     <string name="in_channel">"in channel "</string>
     <string name="profile_banner">Profile Banner</string>
+    <string name="payment_successful">Payment Successful</string>
+    <string name="error_parsing_error_message">Error parsing error message</string>
     <string name="following">" Following"</string>
     <string name="followers">" Followers"</string>
     <string name="profile">Profile</string>
@@ -433,7 +435,7 @@
     <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats to goal</string>
     <string name="read_from_relay">Read from Relay</string>
     <string name="write_to_relay">Write to Relay</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">An error ocurred trying to get relay information from %1$s</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
     <string name="owner">Owner</string>
     <string name="version">Version</string>
     <string name="software">Software</string>
@@ -458,6 +460,8 @@
     <string name="payment">Payment</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Redeem</string>
+    <string name="no_lightning_address_set">No Lightning Address set</string>
+    <string name="copied_token_to_clipboard">Copied token to clipboard</string>
 
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
@@ -508,6 +512,7 @@
     <string name="nip05_checking">Checking Nostr address</string>
     <string name="select_deselect_all">Select/Deselect all</string>
     <string name="default_relays">Default</string>
+    <string name="select_a_relay_to_continue">Select a relay to continue</string>
 
     <string name="zap_forward_title">Forward Zaps to:</string>
     <string name="zap_forward_explainer">Supporting clients will forward zaps to the LNAddress or User Profile below instead of yours</string>

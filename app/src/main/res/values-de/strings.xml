@@ -47,6 +47,8 @@
     <string name="and">" und "</string>
     <string name="in_channel">"im Kanal "</string>
     <string name="profile_banner">Profilbanner</string>
+    <string name="payment_successful">Zahlung erfolgreich</string>
+    <string name="error_parsing_error_message">Fehler beim Parsen der Fehlermeldung</string>
     <string name="following">" Folgen"</string>
     <string name="followers">" Anhänger"</string>
     <string name="profile">Profil</string>
@@ -421,7 +423,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="sats_to_complete">Zapraiser bei %1$s. %2$s Sats bis zum Ziel</string>
     <string name="read_from_relay">Von Relay lesen</string>
     <string name="write_to_relay">In Relay schreiben</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">Ein Fehler ist beim Abrufen von Relay-Informationen von %1$s aufgetreten</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">Ein Fehler ist beim Abrufen von Relay-Informationen von %1$s aufgetreten</string>
     <string name="owner">Inhaber</string>
     <string name="version">Version</string>
     <string name="software">Software</string>
@@ -446,6 +448,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="payment">Zahlung</string>
     <string name="cashu">Cashu-Token</string>
     <string name="cashu_redeem">Einlösen</string>
+    <string name="no_lightning_address_set">Keine Lightning-Adresse festgelegt</string>
+    <string name="copied_token_to_clipboard">Token in die Zwischenablage kopiert</string>
 
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
@@ -472,6 +476,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="settings">Einstellungen</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
+    <string name="connectivity_type_never">Nie</string>
+
     <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>
@@ -492,4 +498,15 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nip05_verified">Nostr-Adresse verifiziert</string>
     <string name="nip05_failed">Nostr-Adresse konnte nicht verifiziert werden</string>
     <string name="nip05_checking">Nostr-Adresse wird überprüft</string>
+    <string name="select_deselect_all">Alle auswählen/abwählen</string>
+    <string name="default_relays">Standard</string>
+    <string name="select_a_relay_to_continue">Wählen Sie ein Relais aus, um fortzufahren</string>
+
+    <string name="zap_forward_title">Weiterleiten von Zaps an:</string>
+    <string name="zap_forward_explainer">Unterstützende Clients leiten Zaps an die LNAddress oder das Benutzerprofil unten weiter, anstatt an Ihre eigene Adresse</string>
+
+    <string name="geohash_title">Ort preisgeben als </string>
+    <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass Sie sich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
+
+    <string name="add_sensitive_content_explainer">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor Ihr Inhalt angezeigt wird. Dies ist ideal für NSFW-Inhalte (nicht sicher für die Arbeit) oder Inhalte, die manche Menschen als anstößig oder verstörend empfinden könnten</string>
 </resources>

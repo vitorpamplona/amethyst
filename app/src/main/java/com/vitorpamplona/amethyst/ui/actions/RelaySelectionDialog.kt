@@ -120,7 +120,7 @@ fun RelaySelectionDialog(
                             val selectedRelays = relays.filter { it.isSelected }
                             if (selectedRelays.isEmpty()) {
                                 scope.launch {
-                                    Toast.makeText(context, "Select a relay to continue", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.select_a_relay_to_continue), Toast.LENGTH_SHORT).show()
                                 }
                                 return@PostButton
                             }

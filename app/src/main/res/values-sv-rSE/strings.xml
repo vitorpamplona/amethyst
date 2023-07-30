@@ -46,6 +46,8 @@
     <string name="and">" och "</string>
     <string name="in_channel">"i kanalen "</string>
     <string name="profile_banner">Profil Banner</string>
+    <string name="payment_successful">Betalning lyckades</string>
+    <string name="error_parsing_error_message">Fel vid tolkning av felmeddelande</string>
     <string name="following">" Följer"</string>
     <string name="followers">" Följare"</string>
     <string name="profile">Profil</string>
@@ -107,7 +109,7 @@
     <string name="new_requests">Nya förfrågningar</string>
     <string name="blocked_users">Blockerade användare</string>
     <string name="new_threads">Nya trådar</string>
-    <string name="conversations">konversationer</string>
+    <string name="conversations">Konversationer</string>
     <string name="notes">Anteckningar</string>
     <string name="replies">Svar</string>
     <string name="follows">"Följer"</string>
@@ -313,7 +315,7 @@
 
 
     <string name="file_server">Fil Server</string>
-    <string name="zap_forward_lnAddress">LnAdress or @Användare</string>
+    <string name="zap_forward_lnAddress">LnAdress eller @Användare</string>
 
     <string name="upload_server_imgur">imgur.com - betrodd</string>
     <string name="upload_server_imgur_explainer">Imgur kan ändra filen</string>
@@ -386,7 +388,7 @@
 
     <string name="channel_list_join_conversation">Gå med i konversation</string>
     <string name="channel_list_user_or_group_id">Användare eller grupp ID</string>
-    <string name="channel_list_user_or_group_id_demo">npub, nevent or hex</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent eller hex</string>
     <string name="channel_list_create_channel">Skapa</string>
     <string name="channel_list_join_channel">Gå med</string>
     <string name="today">Idag</string>
@@ -409,7 +411,7 @@
     <string name="sats_to_complete">Zapraiser på %1$s. %2$s sats kvar till målet</string>
     <string name="read_from_relay">Läs från Relay</string>
     <string name="write_to_relay">Skriv till Relay</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">Ett fel inträffade vid försök att hämta information från Relay %1$s</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">Ett fel inträffade vid försök att hämta information från Relay %1$s</string>
     <string name="owner">Ägare</string>
     <string name="version">Version</string>
     <string name="software">Programvara</string>
@@ -434,6 +436,8 @@
     <string name="payment">Betalning</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Inlösen</string>
+    <string name="no_lightning_address_set">Ingen Lightning-adress angiven</string>
+    <string name="copied_token_to_clipboard">Kopierade token till urklipp</string>
 
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
@@ -460,6 +464,8 @@
     <string name="settings">Inställningar</string>
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
+    <string name="connectivity_type_never">Aldrig</string>
+
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
@@ -480,6 +486,17 @@
     <string name="nip05_verified">Nostr-adress verifierad</string>
     <string name="nip05_failed">Verifikation av Nostr-adress misslyckades</string>
     <string name="nip05_checking">Kontrollerar Nostr-adress</string>
+    <string name="select_deselect_all">Välj/Avmarkera alla</string>
+    <string name="default_relays">Standard</string>
+    <string name="select_a_relay_to_continue">Välj ett relä för att fortsätta</string>
+
+    <string name="zap_forward_title">Vidarebefordra Zaps till:</string>
+    <string name="zap_forward_explainer">Stödjande klienter kommer att vidarebefordra Zaps till LNAddress eller användarprofilen nedan istället för din egen</string>
+
+    <string name="geohash_title">Exponera plats som </string>
+    <string name="geohash_explainer">Lägger till en Geohash av din plats i inlägget. Allmänheten kommer att veta att du befinner dig inom 5 km från nuvarande plats</string>
+
+    <string name="add_sensitive_content_explainer">Lägger till en varning för känsligt innehåll innan ditt innehåll visas. Detta är idealiskt för NSFW-innehåll (inte säkert för arbete) eller innehåll som vissa personer kan uppleva som stötande eller störande</string>
 </resources>
 
 
