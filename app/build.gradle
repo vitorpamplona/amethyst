@@ -203,9 +203,6 @@ dependencies {
     // Image compression lib
     implementation 'id.zelory:compressor:3.0.1'
 
-    // Automatic memory leak detection
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
-
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.mockk:mockk:1.13.5'
     androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
