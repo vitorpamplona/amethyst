@@ -463,6 +463,8 @@
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
+    <string name="connectivity_type_never">Nikdy</string>
+
     <string name="system">Systém</string>
     <string name="light">Světlý</string>
     <string name="dark">Tmavý</string>
@@ -483,4 +485,14 @@
     <string name="nip05_verified">Adresa Nostr byla ověřena</string>
     <string name="nip05_failed">Ověření adresy Nostr se nezdařilo</string>
     <string name="nip05_checking">Kontrola adresy Nostr</string>
+    <string name="select_deselect_all">Vybrat/Zrušit vše</string>
+    <string name="default_relays">Výchozí</string>
+
+    <string name="zap_forward_title">Přeposílat Zapy na:</string>
+    <string name="zap_forward_explainer">Podporující klienti budou přeposílat Zapy na níže uvedenou LN adresu nebo uživatelský profil místo vaší</string>
+
+    <string name="geohash_title">Zveřejnit polohu jako </string>
+    <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
+
+    <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
 </resources>
