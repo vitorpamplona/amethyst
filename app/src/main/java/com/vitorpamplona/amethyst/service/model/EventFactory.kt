@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.toHexKey
+
 class EventFactory {
     companion object {
         fun create(
@@ -24,6 +26,14 @@ class EventFactory {
             ChannelMessageEvent.kind -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.kind -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.kind -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+            ChatMessageEvent.kind -> {
+                if (id.isBlank()) {
+                    val id = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
+                    ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+                } else {
+                    ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+                }
+            }
             ClassifiedsEvent.kind -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.kind -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.kind -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)

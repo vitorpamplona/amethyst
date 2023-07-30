@@ -1110,6 +1110,23 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun consume(event: ChatMessageEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     private fun consume(event: SealedGossipEvent, relay: Relay?) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1359,6 +1376,7 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is ChatMessageEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {

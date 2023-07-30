@@ -19,13 +19,14 @@ class GiftWrapEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    private var innerEvent: Event? = null
+    private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
-    fun cachedInnerEvent(privKey: ByteArray): Event? {
-        if (innerEvent != null) return innerEvent
+    fun cachedGossip(privKey: ByteArray): Event? {
+        val hex = privKey.toHexKey()
+        if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
 
         val myInnerEvent = unwrap(privKey = privKey)
-        innerEvent = myInnerEvent
+        cachedInnerEvent = cachedInnerEvent + Pair(hex, myInnerEvent)
         return myInnerEvent
     }
 

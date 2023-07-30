@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.EncryptedInfo
+import com.vitorpamplona.amethyst.service.relays.Client
 
 @Immutable
 class SealedGossipEvent(
@@ -18,14 +19,16 @@ class SealedGossipEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    private var innerEvent: Gossip? = null
+    private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
-    fun cachedGossip(privKey: ByteArray): Gossip? {
-        if (innerEvent != null) return innerEvent
+    fun cachedGossip(privKey: ByteArray): Event? {
+        val hex = privKey.toHexKey()
+        if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
 
-        val myInnerEvent = unseal(privKey = privKey)
-        innerEvent = myInnerEvent
-        return myInnerEvent
+        val gossip = unseal(privKey = privKey)
+        val event = gossip?.mergeWith(this)
+        cachedInnerEvent = cachedInnerEvent + Pair(hex, event)
+        return event
     }
 
     fun unseal(privKey: ByteArray): Gossip? = try {
@@ -88,14 +91,26 @@ class SealedGossipEvent(
     }
 }
 
-open class Gossip(
-    val id: HexKey,
-    val pubKey: HexKey,
-    val createdAt: Long,
-    val kind: Int,
-    val tags: List<List<String>>,
-    val content: String
+class Gossip(
+    val id: HexKey?,
+    val pubKey: HexKey?,
+    val createdAt: Long?,
+    val kind: Int?,
+    val tags: List<List<String>>?,
+    val content: String?
 ) {
+    fun mergeWith(event: SealedGossipEvent): Event {
+        val newPubKey = pubKey?.ifBlank { null } ?: event.pubKey
+        val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
+        val newKind = kind ?: 0
+        val newTags = (tags ?: emptyList()).plus(event.tags)
+        val newContent = content ?: ""
+        val newID = id?.ifBlank { null } ?: Event.generateId(newPubKey, newCreatedAt, newKind, newTags, newContent).toHexKey()
+        val sig = ""
+
+        return EventFactory.create(newID, newPubKey, newCreatedAt, newKind, newTags, newContent, sig, Client.lenient)
+    }
+
     companion object {
         fun create(event: Event): Gossip {
             return Gossip(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
