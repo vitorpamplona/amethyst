@@ -1236,13 +1236,12 @@ object LocalCache {
         }
 
         return notes.values.filter {
-            (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
-                (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
-                (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false) ||
+            it.event?.content()?.contains(text, true) ?: false ||
+                it.event?.matchTag1With(text) ?: false ||
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
         } + addressables.values.filter {
-            (it.event as? LongTextNoteEvent)?.content?.contains(text, true) ?: false ||
+            it.event?.content()?.contains(text, true) ?: false ||
                 it.event?.matchTag1With(text) ?: false ||
                 it.idHex.startsWith(text, true)
         }
