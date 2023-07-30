@@ -1,6 +1,10 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
+import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
+import com.vitorpamplona.amethyst.service.model.HighlightEvent
+import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.PollNoteEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
@@ -22,7 +26,7 @@ object NostrGeohashDataSource : NostrDataSource("SingleGeoHashFeed") {
                         hashToLoad
                     )
                 ),
-                kinds = listOf(TextNoteEvent.kind, ChannelMessageEvent.kind, LongTextNoteEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, ChannelMessageEvent.kind, LongTextNoteEvent.kind, PollNoteEvent.kind, LiveActivitiesChatMessageEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind),
                 limit = 200
             )
         )
