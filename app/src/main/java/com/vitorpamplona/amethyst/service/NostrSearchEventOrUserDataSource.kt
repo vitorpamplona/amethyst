@@ -9,7 +9,7 @@ import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import fr.acinq.secp256k1.Hex
 
-object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
+object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
     private var searchString: String? = null
 
     private fun createAnythingWithIDFilter(): List<TypedFilter>? {
@@ -54,6 +54,28 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SingleEventFeed") {
             TypedFilter(
                 types = setOf(FeedType.SEARCH),
                 filter = JsonFilter(
+                    kinds = listOf(
+                        TextNoteEvent.kind, LongTextNoteEvent.kind, BadgeDefinitionEvent.kind,
+                        PeopleListEvent.kind, BookmarkListEvent.kind, AudioTrackEvent.kind, PinListEvent.kind,
+                        PollNoteEvent.kind, ChannelCreateEvent.kind
+                    ),
+                    search = mySearchString,
+                    limit = 100
+                )
+            ),
+            TypedFilter(
+                types = setOf(FeedType.SEARCH),
+                filter = JsonFilter(
+                    kinds = listOf(
+                        ChannelMetadataEvent.kind,
+                        ClassifiedsEvent.kind,
+                        CommunityDefinitionEvent.kind,
+                        EmojiPackEvent.kind,
+                        HighlightEvent.kind,
+                        LiveActivitiesEvent.kind,
+                        PollNoteEvent.kind,
+                        NNSEvent.kind
+                    ),
                     search = mySearchString,
                     limit = 100
                 )
