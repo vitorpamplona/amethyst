@@ -372,7 +372,6 @@
     <string name="sats_to_complete">Arrecadação de Zaps em %1$s. %2$s sats para meta</string>
     <string name="read_from_relay">Ler do Relay</string>
     <string name="write_to_relay">Enviar para o Relay</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">Ocorreu um erro ao tentar obter informações do relay de %1$s</string>
     <string name="owner">Proprietário</string>
     <string name="version">Versão</string>
     <string name="software">Programa</string>
