@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jlleitschuh.gradle.ktlint' version "11.3.1"
+    id 'org.jlleitschuh.gradle.ktlint' version "11.5.0"
     id 'com.google.gms.google-services'
 }
 
@@ -20,7 +20,7 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
-        resConfigs("ar", "cs", "de", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW", "ja")
+        resourceConfigurations += ['ar', 'cs', 'de', 'eo', 'es', 'fa', 'fr', 'hu', 'night', 'nl', 'pt-rBR', 'ru', 'sv-rSE', 'ta', 'tr', 'uk', 'zh', 'sh-rHK', 'zh-rTW', 'ja']
     }
 
     buildTypes {
@@ -37,7 +37,7 @@ android {
         }
     }
 
-    flavorDimensions "channel"
+    flavorDimensions = ["channel"]
 
     productFlavors {
         play {
@@ -73,7 +73,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.4.7"
+        kotlinCompilerExtensionVersion "1.5.1"
     }
 
     packagingOptions {
@@ -96,7 +96,7 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:$fragment_version"
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation "androidx.navigation:navigation-compose:$nav_version"
 
     // Observe Live data as State
     implementation "androidx.compose.runtime:runtime-livedata:$compose_ui_version"
@@ -108,7 +108,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
-    implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
     implementation "net.engawapg.lib:zoomable:1.4.3"
 
@@ -153,7 +153,7 @@ dependencies {
     implementation "io.github.url-detector:url-detector:0.1.23"
 
     // For QR generation
-    implementation 'com.google.zxing:core:3.5.1'
+    implementation 'com.google.zxing:core:3.5.2'
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Markdown
