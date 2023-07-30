@@ -1015,7 +1015,7 @@ fun DisplayLNAddress(
                                     scope.launch {
                                         Toast.makeText(
                                             context,
-                                            "Payment Successful", // Turn this into a UI animation
+                                            context.getString(R.string.payment_successful), // Turn this into a UI animation
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
@@ -1025,7 +1025,7 @@ fun DisplayLNAddress(
                                             context,
                                             response.error?.message
                                                 ?: response.error?.code?.toString()
-                                                ?: "Error parsing error message",
+                                                ?: context.getString(R.string.error_parsing_error_message),
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
