@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
@@ -24,7 +25,7 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
             TypedFilter(
                 types = setOf(FeedType.PRIVATE_DMS),
                 filter = JsonFilter(
-                    kinds = listOf(PrivateDmEvent.kind),
+                    kinds = listOf(PrivateDmEvent.kind, GiftWrapEvent.kind),
                     authors = listOf(myPeer.pubkeyHex),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
                 )

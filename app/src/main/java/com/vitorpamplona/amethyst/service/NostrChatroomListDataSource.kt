@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
@@ -20,7 +21,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
     fun createMessagesToMeFilter() = TypedFilter(
         types = setOf(FeedType.PRIVATE_DMS),
         filter = JsonFilter(
-            kinds = listOf(PrivateDmEvent.kind),
+            kinds = listOf(PrivateDmEvent.kind, GiftWrapEvent.kind),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
             since = latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList
         )
