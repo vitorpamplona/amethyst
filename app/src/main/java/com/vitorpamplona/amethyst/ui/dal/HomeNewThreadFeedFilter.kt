@@ -25,17 +25,17 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     override fun feed(): List<Note> {
-        val notes = innerApplyFilter(LocalCache.notes.values)
-        val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
+        val notes = innerApplyFilter(LocalCache.notes.values, true)
+        val longFormNotes = innerApplyFilter(LocalCache.addressables.values, false)
 
         return sort(notes + longFormNotes)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
+        return innerApplyFilter(collection, false)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>, ignoreAddressables: Boolean): Set<Note> {
         val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
         val isHiddenList = showHiddenKey()
 
@@ -52,6 +52,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             .filter { it ->
                 val noteEvent = it.event
                 (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
+                    (!ignoreAddressables || noteEvent.kind() < 10000) &&
                     (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
