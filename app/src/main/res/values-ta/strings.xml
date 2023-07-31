@@ -2,7 +2,7 @@
 <resources>
     <string name="point_to_the_qr_code">QR குறியீட்டைச் சுட்டிக்காட்டவும்</string>
     <string name="show_qr">QR ஐக் காட்டவும்</string>
-    <string name="profile_image">சுயவிவரப் படம்</string>
+    <string name="profile_image">தன்விவரப் படம்</string>
     <string name="scan_qr">QR ஐ ஸ்கேன் செய்யவும்</string>
     <string name="show_anyway">பரவாயில்லை, காட்டவும்</string>
     <string name="post_was_flagged_as_inappropriate_by">குறிப்பு தகாதது என குறிக்கப்பட்டது. குறித்தவர்</string>
@@ -12,10 +12,10 @@
     <string name="could_not_decrypt_the_message">செய்தியை மறைகுறியாக்க முடியவில்லை</string>
     <string name="group_picture">குழுப் படம்</string>
     <string name="explicit_content">வெளிப்படையான உள்ளடக்கம்</string>
-    <string name="spam">ஸ்பேம்</string>
+    <string name="spam">எரிதம் (தேவையற்றவை)</string>
     <string name="impersonation">ஆள்மாறாட்டம்</string>
     <string name="illegal_behavior">சட்டவிரோத நடத்தை</string>
-    <string name="unknown">தெரியாத</string>
+    <string name="unknown">தெரியாதவை</string>
     <string name="relay_icon">ரிலே ஐகான்</string>
     <string name="unknown_author">எழுதியவர் தெரியவில்லை</string>
     <string name="copy_text">உரையை நகலெடுக்கவும்</string>
@@ -66,11 +66,11 @@
     <string name="description">தகவல்</string>
     <string name="about_us">"எங்களைப் பற்றி.. "</string>
     <string name="what_s_on_your_mind">உங்கள் மனதில் என்ன உள்ளது?</string>
-    <string name="post">குறிப்பு</string>
+    <string name="post">பதிவு</string>
     <string name="save">சேமி</string>
     <string name="create">உருவாக்கு</string>
     <string name="cancel">ரத்து</string>
-    <string name="failed_to_upload_the_image">படத்தை பதிவேற்றுதல் தோல்வி</string>
+    <string name="failed_to_upload_the_image">படத்தை பதிவேற்ற இயலவில்லை</string>
     <string name="relay_address">ரிலே முகவரி</string>
     <string name="posts">குறிப்புகள்</string>
     <string name="bytes">துணுக்குகள்</string>
@@ -83,11 +83,11 @@
     <string name="add_a_relay">ஒரு ரிலேவை சேர்</string>
     <string name="display_name">காட்சிப் பெயர்</string>
     <string name="my_display_name">எனது காட்சிப் பெயர்</string>
-    <string name="username">யூஸர் பெயர்</string>
-    <string name="my_username">எனது யூஸர் பெயர்</string>
+    <string name="username">பயனர் பெயர்</string>
+    <string name="my_username">எனது பயனர் பெயர்</string>
     <string name="about_me">என்னைப் பற்றி</string>
-    <string name="avatar_url">சுயவிவரப் படம் URL</string>
-    <string name="banner_url">பேனர் URL</string>
+    <string name="avatar_url">தன்விவரப் படச் சுட்டி</string>
+    <string name="banner_url">பேனர் சுட்டி</string>
     <string name="website_url">வலைதள முகவரி</string>
     <string name="ln_address">LN முகவரி </string>
     <string name="ln_url_outdated">LN URL (காலாவதியானது)</string>
@@ -118,7 +118,7 @@
     <string name="copy_private_key_to_the_clipboard">கிளிப்போர்டுக்கு ரகசிய சாவியை நகலெடுக்கவும்</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">பகிர்வுக்காக கிளிப்போர்டுக்கு பொதுசாவியை நகலெடுக்கிறது</string>
     <string name="copy_public_key_npub_to_the_clipboard">கிளிப்போர்டுக்கு பொதுசாவியை (NPUB) நகலெடுக்கவும்</string>
-    <string name="send_a_direct_message">நேரடிச் செய்தியை அனுப்பவும்</string>
+    <string name="send_a_direct_message">நேரடிச் செய்தியை அனுப்பு</string>
     <string name="edits_the_user_s_metadata">பயனரின் தகவலை திருத்துகிறது</string>
     <string name="follow">பின்தொடர்</string>
     <string name="follow_back">பதிலுக்கு பின்தொடரவும்</string>
@@ -136,11 +136,11 @@
     <string name="terms_of_use">பயன்பாட்டு விதிமுறைகளை</string>
     <string name="acceptance_of_terms_is_required">விதிமுறைகளை ஏற்பது கட்டாயம்</string>
     <string name="key_is_required">சாவி தேவை</string>
-    <string name="login">உள்நுழை</string>
-    <string name="generate_a_new_key">புதிய சாவியை உருவாக்குங்கள்</string>
+    <string name="login">உள்நுழைக</string>
+    <string name="generate_a_new_key">புதிய சாவியை உருவாக்குக</string>
     <string name="loading_feed">ஊட்டம் ஏற்றப்படுகிறது</string>
     <string name="error_loading_replies">"பதில்களை ஏற்றுவதில் பிழை: "</string>
-    <string name="try_again">மீண்டும் முயற்சி செய்</string>
+    <string name="try_again">மறுமுயற்சி செய்</string>
     <string name="feed_is_empty">ஊட்டம் காலியாக உள்ளது.</string>
     <string name="refresh">புதுப்பி</string>
     <string name="created">உருவாக்கப்பட்டது</string>
@@ -168,8 +168,8 @@
     <string name="m">m</string>
     <string name="d">d</string>
     <string name="nudity">பிறந்தமேனி</string>
-    <string name="profanity_hateful_speech">அவதூறு / வெறுக்கத்தக்க பேச்சு</string>
-    <string name="report_hateful_speech">வெறுக்கத்தக்க பேச்சைப் புகாரளிக்கவும்</string>
+    <string name="profanity_hateful_speech">அவதூறு / வெறுப்புப் பேச்சு</string>
+    <string name="report_hateful_speech">வெறுப்புப் பேச்சைப் புகாரளிக்கவும்</string>
     <string name="report_nudity_porn">பிறந்தமேனி / ஆபாசத்தைப் புகாரளிக்கவும்</string>
     <string name="others">பிற</string>
     <string name="mark_all_known_as_read">தெரிந்தவற்றைப் படித்ததாகக் குறி</string>
@@ -224,12 +224,12 @@
     <string name="report_dialog_spam">எரிதம் அல்லது மோசடிகள்</string>
     <string name="report_dialog_profanity">அவதூறு அல்லது வெறுக்கத்தக்க நடத்தை</string>
     <string name="report_dialog_impersonation">தீங்கிழைக்கும் ஆள்மாறாட்டம்</string>
-    <string name="report_dialog_nudity">பிறந்தமேனி அல்லது கிராஃபிக் உள்ளடக்கம்</string>
+    <string name="report_dialog_nudity">பிறந்தமேனி / தகாத உள்ளடக்கம்</string>
     <string name="report_dialog_illegal">சட்டப்புறம்பான நடத்தை</string>
-    <string name="report_dialog_blocking_a_user">ஒரு பயனரைத் தடுப்பது உங்கள் பயன்பாட்டில் அவர்களின் உள்ளடக்கத்தை மறைக்கும். நீங்கள் தடுக்கும் நபர்கள் உட்பட உங்கள் பதிவுகள் இன்னும் பகிரங்கமாகக் காணப்படுகின்றன. தடுக்கப்பட்டப் பயனர்கள், பாதுகாப்பு வடிப்பான்கள் திரையில் பட்டியலிடப்பட்டுள்ளனர்.</string>
+    <string name="report_dialog_blocking_a_user">ஒரு பயனரைத் தடுப்பது உங்கள் பயன்பாட்டில் அவர்களின் உள்ளடக்கத்தை மறைக்கும். நீங்கள் தடுக்கும் நபர்கள் உட்பட உங்கள் பதிவுகள் இன்னும் வெளிப்படையாகக் காணப்படுகின்றன. தடுக்கப்பட்டப் பயனர்கள், பாதுகாப்பு வடிப்பான்கள் திரையில் பட்டியலிடப்பட்டுள்ளனர்.</string>
     <string name="report_dialog_block_hide_user_btn">பயனரைத் தடுத்து மறை</string>
     <string name="report_dialog_report_btn">தகாதது எனக் குறி</string>
-    <string name="report_dialog_reminder_public">இடுகையிடப்பட்ட அனைத்து அறிக்கைகளும் பகிரங்கமாக தெரியும்.</string>
+    <string name="report_dialog_reminder_public">இடுகையிடப்பட்ட அனைத்து அறிக்கைகளும் வெளிப்படையாகத் தெரியும்.</string>
     <string name="report_dialog_additional_reason_placeholder">உங்கள் அறிக்கையைப் பற்றிய கூடுதல் சூழலை விருப்பமாக வழங்கவும்…</string>
     <string name="report_dialog_additional_reason_label">கூடுதல் சூழல்</string>
     <string name="report_dialog_select_reason_label">காரணம்</string>
@@ -257,7 +257,7 @@
     <string name="poll_zap_recipients">ஜாப் பெறுநர்கள்</string>
     <string name="poll_primary_description">முதன்மை வாக்கெடுப்பு விளக்கம்…</string>
     <string name="poll_option_index">விருப்பம் %s</string>
-    <string name="poll_option_description">வாக்கெடுப்பு விருப்ப விளக்கம்</string>
+    <string name="poll_option_description">(வாக்குத்) தெரிவின் விளக்கம்</string>
     <string name="poll_heading_optional">விருப்ப புலங்கள்:</string>
     <string name="poll_zap_value_min">குறைந்தளவு ஜாப்</string>
     <string name="poll_zap_value_max">அதிகளவு ஜாப்</string>
@@ -265,26 +265,26 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">நிறைவுறும் நேரம்</string>
     <string name="poll_closing_time_days">நாட்களில்</string>
-    <string name="poll_is_closed">புதிய வாக்குகளுக்கு வாக்கெடுப்பு நிறுத்திவைக்கப்பட்டு உள்ளது</string>
+    <string name="poll_is_closed">வாக்கெடுப்பு நிறுத்திவைக்கப்பட்டு உள்ளது</string>
     <string name="poll_zap_amount">ஜாப் தொகை</string>
-    <string name="one_vote_per_user_on_atomic_votes">இந்த வகை வாக்கெடுப்பில் ஒரு யூஸருக்கு ஒரு வாக்கு மட்டுமே அனுமதிக்கப்படுகிறது</string>
+    <string name="one_vote_per_user_on_atomic_votes">இந்த வகை வாக்கெடுப்பில் ஒரு பயனருக்கு ஒரு வாக்கு மட்டுமே அனுமதிக்கப்படுகிறது</string>
     <string name="looking_for_event">"நிகழ்வு %1$s ஐத் தேடி"</string>
     <string name="custom_zaps_add_a_message">ஒரு பொது செய்தியைச் சேர்க்கவும்</string>
     <string name="custom_zaps_add_a_message_private">ஒரு தனிப்பட்ட செய்தியைச் சேர்க்கவும்</string>
     <string name="custom_zaps_add_a_message_nonzap">விலைப்பட்டியல் செய்தியைச் சேர்க்கவும்</string>
-    <string name="custom_zaps_add_a_message_example">உங்கள் எல்லா வேலைகளுக்கும் நன்றி!</string>
-    <string name="lightning_create_and_add_invoice">உருவாக்கி சேர்க்கவும்</string>
-    <string name="poll_author_no_vote">வாக்கெடுப்பு ஆசிரியர்கள் தங்கள் சொந்த வாக்கெடுப்பில் வாக்களிக்க முடியாது.</string>
-    <string name="hash_verification_passed">குறிப்பு பதிவு செய்யப்பட்ட பின்னர் படம் மாற்றப்படவில்லை</string>
-    <string name="hash_verification_failed">படம் மாறிவிட்டது. மாற்றத்தை ஆசிரியர் பார்த்திருக்க மாட்டார்</string>
+    <string name="custom_zaps_add_a_message_example">தங்களின் அனைத்துப் பணிகளுக்கும் நன்றி!</string>
+    <string name="lightning_create_and_add_invoice">உருவாக்கிச் சேர்</string>
+    <string name="poll_author_no_vote">வாக்கெடுப்பை உருவாக்கியோர் தங்கள் சொந்த வாக்கெடுப்பில் வாக்களிக்க முடியாது.</string>
+    <string name="hash_verification_passed">பதிவு பதியப்பட்ட பின்னர் படம் மாற்றப்படவில்லை</string>
+    <string name="hash_verification_failed">படம் மாறிவிட்டது. மாற்றத்தை பயனர் பார்த்திருக்க மாட்டார்</string>
     <string name="content_description_add_image">படத்தைச் சேர்க்கவும்</string>
     <string name="content_description_add_video">காணொளியைச் சேர்க்கவும்</string>
     <string name="content_description_add_document">ஆவணத்தைச் சேர்க்கவும்</string>
     <string name="add_content">உருவாக்கி சேர்க்கவும்</string>
     <string name="content_description">உள்ளடக்க விளக்கம்</string>
     <string name="content_description_example">சூரியன் மறையும் வேளையில் வெள்ளை மண் நிறைந்த கடற்கரையில் ஒரு நீலப் படகு</string>
-    <string name="zap_type">ஜாப் டைப்</string>
-	<string name="zap_type_explainer">அனைத்து வகைகளுக்கான ஜாப் டைப்</string>
+    <string name="zap_type">ஜாப் வகை</string>
+	<string name="zap_type_explainer">அனைத்து வகைமைக்குமான ஜாப்</string>
 
 	<string name="zap_type_public">பொது</string>
 	<string name="zap_type_public_explainer">அனைவரும் ஜாப் பரிவர்த்தனையையும் செய்தியையும் பார்க்கமுடியும்</string>
@@ -299,39 +299,39 @@
 	<string name="zap_type_nonzap_explainer">நாஸ்டரில் எந்த சுவடும் இன்றி, லைட்நிங்கில் மட்டும் உள்ளது</string>
 
 
-	<string name="file_server">ஃபைல் சர்வர்</string>
-	<string name="zap_forward_lnAddress">LN முகவரி அல்லது @யூஸர்</string>
+	<string name="file_server">கோப்புச் சேவையகம்</string>
+	<string name="zap_forward_lnAddress">LN முகவரி அல்லது @பயனர்</string>
 
 	<string name="upload_server_imgur">imgur.com - நம்பகமானது</string>
-	<string name="upload_server_imgur_explainer">imgur ஃபைலை மாற்றமுடியும்</string>
+	<string name="upload_server_imgur_explainer">imgur கோப்பை மாற்றமுடியும்</string>
 
 	<string name="upload_server_nostrimg">nostrimg.com - நம்பகமானது</string>
-	<string name="upload_server_nostrimg_explainer">NostrImg ஃபைலை மாற்றமுடியும்</string>
+	<string name="upload_server_nostrimg_explainer">NostrImg கோப்பை மாற்றமுடியும்</string>
 
 	<string name="upload_server_nostrbuild">nostr.build - நம்பகமானது</string>
-	<string name="upload_server_nostrbuild_explainer">nostr.build ஃபைலை மாற்றமுடியும்</string>
+	<string name="upload_server_nostrbuild_explainer">nostr.build கோப்பை மாற்றமுடியும்</string>
 
 	<string name="upload_server_nostrfilesdev">nostrfiles.dev - நம்பகமானது</string>
-	<string name="upload_server_nostrfilesdev_explainer">nostrfiles.dev ஃபைலை மாற்றமுடியும்</string>
+	<string name="upload_server_nostrfilesdev_explainer">nostrfiles.dev கோப்பை மாற்றமுடியும்</string>
 
 	<string name="upload_server_nostrcheckme">nostrcheck.me - நம்பகமானது</string>
-	<string name="upload_server_nostrcheckme_explainer">nostrcheck.me ஃபைலை மாற்றமுடியும்</string>
+	<string name="upload_server_nostrcheckme_explainer">nostrcheck.me கோப்பை மாற்றமுடியும்</string>
 
 
 	<string name="upload_server_imgur_nip94">சரிபார்க்கக்கூடிய Imgur (NIP-94)</string>
-	<string name="upload_server_imgur_nip94_explainer">Imgur ஃபைலை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
+	<string name="upload_server_imgur_nip94_explainer">Imgur கோப்பை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
 
 	<string name="upload_server_nostrimg_nip94">சரிபார்க்கக்கூடிய NostrImg (NIP-94)</string>
-	<string name="upload_server_nostrimg_nip94_explainer">NostrImg ஃபைலை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
+	<string name="upload_server_nostrimg_nip94_explainer">NostrImg கோப்பை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
 
 	<string name="upload_server_nostrbuild_nip94">சரிபார்க்கக்கூடிய Nostr.build (NIP-94)</string>
-	<string name="upload_server_nostrbuild_nip94_explainer">Nostr.build ஃபைலை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
+	<string name="upload_server_nostrbuild_nip94_explainer">Nostr.build கோப்பை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
 
 	<string name="upload_server_nostrfilesdev_nip94">சரிபார்க்கக்கூடிய Nostrfiles.dev (NIP-94)</string>
-	<string name="upload_server_nostrfilesdev_nip94_explainer">Nostrfiles.dev ஃபைலை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
+	<string name="upload_server_nostrfilesdev_nip94_explainer">Nostrfiles.dev கோப்பை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
 
 	<string name="upload_server_nostrcheckme_nip94">சரிபார்க்கக்கூடிய Nostrcheck.me (NIP-94)</string>
-	<string name="upload_server_nostrcheckme_nip94_explainer">Nostrcheck.me ஃபைலை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
+	<string name="upload_server_nostrcheckme_nip94_explainer">Nostrcheck.me கோப்பை மாற்றியிருக்கிறதா என்று சரிபார்க்கப்படும். புதிய NIP: பிற கிளயண்ட்டுகளில் இதை பார்க்க முடியாமல் இருக்கலாம்.</string>
 
 
 
@@ -339,16 +339,16 @@
 	<string name="upload_server_relays_nip95">உங்கள் ரிலே (NIP-95)</string>
 	<string name="upload_server_relays_nip95_explainer">ஃபைல்ஸ் உங்கள் ரிலேக்களில் ஹோஸ்ட் செய்யப்படும். புதிய NIP: ரிலேயில் இச்சேவை உள்ளதா என சரிபார்க்கவும்</string>
 
-	<string name="connect_via_tor_short">Tor/Orbot அமைப்பு முறை</string>
+	<string name="connect_via_tor_short">Tor/Orbot இணைப்பு</string>
 	<string name="connect_via_tor">Orbot அமைப்பு மூலம் இணைக்கவும்</string>
 
-	<string name="do_you_really_want_to_disable_tor_title">Tor/Orbot இணைப்பை துண்டிக்கவும்?</string>
+	<string name="do_you_really_want_to_disable_tor_title">Tor/Orbot இணைப்பை துண்டிக்கவா?</string>
 	<string name="do_you_really_want_to_disable_tor_text">உங்கள் டேட்டா உடனே வழக்கமான நெட்வொர்க்கிற்கு மாற்றப்படும்</string>
 	<string name="yes">ஆம்</string>
 	<string name="no">இல்லை</string>
 
 
-	<string name="follow_list_selection">பின்பற்றப் படுவோர் பட்டியல்</string>
+	<string name="follow_list_selection">பின்பற்றப்படுவோர் பட்டியல்</string>
 	<string name="follow_list_kind3follows">எல்லா பின்பற்றப் படுவோர்</string>
 	<string name="follow_list_global">முழுதளாவிய</string>
 	<string name="connect_through_your_orbot_setup_markdown">
@@ -377,7 +377,7 @@
 	<string name="reply_notify">தெரிவிக்க</string>
 
 	<string name="channel_list_join_conversation">உரையாடலில் இணைக</string>
-	<string name="channel_list_user_or_group_id">யூஸர் அல்லது குழுவின் ID</string>
+	<string name="channel_list_user_or_group_id">பயனர் அல்லது குழுவின் ID</string>
 	<string name="channel_list_user_or_group_id_demo">npub, nevent அல்லது hex</string>
 	<string name="channel_list_create_channel">உருவாக்குக</string>
 	<string name="channel_list_join_channel">இணைக</string>
@@ -410,35 +410,35 @@
 	<string name="software">மென்பொருள்</string>
 	<string name="contact">தொடர்புக்கு</string>
 	<string name="supports">ஆதரிக்கப்படும் NIPகள்</string>
-	<string name="admission_fees">அனுமதி கட்டணம்</string>
+	<string name="admission_fees">நுழைவுக் கட்டணம்</string>
 	<string name="payments_url">கட்டண URL</string>
 	<string name="limitations">வரம்புகள்</string>
 	<string name="countries">நாடுகள்</string>
 	<string name="languages">மொழிகள்</string>
-	<string name="tags">டாகுகள்</string>
-	<string name="posting_policy">போஸ்ட் செய்வதற்கான கொள்கை</string>
+	<string name="tags">சிட்டைகள்</string>
+	<string name="posting_policy">பதிவுக் கொள்கை</string>
 	<string name="message_length">குறிப்பு நீளம்</string>
 	<string name="subscriptions">சப்ஸ்க்ரிப்ஷன்கள்</string>
 	<string name="filters">வடிப்பான்கள்</string>
 	<string name="subscription_id_length">சப்ஸ்க்ரிப்ஷன் ID நீளம்</string>
-	<string name="minimum_prefix">குறைந்தபட்ச முன்னீடு</string>
-	<string name="maximum_event_tags">அதிகபட்ச நிகழ்வு டாகுகள்</string>
+	<string name="minimum_prefix">குறைந்தளவு முன்னீடு</string>
+	<string name="maximum_event_tags">அதிகளவு நிகழ்வு சிட்டைகள்</string>
 	<string name="content_length">உள்ளடக்க நீளம்</string>
-	<string name="minimum_pow">குறைந்தபட்ச PoW</string>
+	<string name="minimum_pow">குறைந்தளவு PoW</string>
 	<string name="auth">சான்றளிப்பு</string>
 	<string name="payment">கட்டணம்</string>
-	<string name="cashu">Cashu டோக்கன்</string>
+	<string name="cashu">Cashu வில்லை</string>
 	<string name="cashu_redeem">மீட்க</string>
 
 	<string name="live_stream_live_tag">நேரலை</string>
-	<string name="live_stream_offline_tag">ஆஃப்லைன்</string>
-	<string name="live_stream_ended_tag">முடிந்தது</string>
+	<string name="live_stream_offline_tag">இணைப்பிலா நிலை</string>
+	<string name="live_stream_ended_tag">நிறைவுற்றது</string>
 	<string name="live_stream_planned_tag">வரவிருக்கிறது</string>
 
-	<string name="live_stream_is_offline">லைவ்ஸ்ட்ரீம் ஆஃப்லைனில் உள்ளது</string>
-	<string name="live_stream_has_ended">லைவ்ஸ்ட்ரீம் முடிந்துவிட்டது</string>
-	<string name="are_you_sure_you_want_to_log_out">வெளியேறு உங்கள் அனைத்து லோக்கல் விவரங்களையும் நீக்கிவிடும். வெளியேறும் முன் உங்கள் அக்கவுண்ட் தொலையாமல் இருக்க ரகசியசாவியை பத்திரமாக பிரதி செய்து சேமிக்கப்பட்டுள்ளதா என்று சரிபார்க்கவும். வெளியேற்றம் தொடர வேண்டுமா?</string>
-	<string name="followed_tags">பின்பற்றப்படும் டாகுகள்</string>
+	<string name="live_stream_is_offline">நேரலை இணைப்பிலாமல் உள்ளது</string>
+	<string name="live_stream_has_ended">நேரலை நிறைவுற்றது</string>
+	<string name="are_you_sure_you_want_to_log_out">வெளியேறுவதல் உங்கள் அனைத்து விவரங்களையும் நீக்கிவிடும். வெளியேறும் முன் உங்கள் கணக்கைத் தொலையாமல் இருக்க ரகசியசாவியை பத்திரமாக பிரதி செய்து சேமிக்கப்பட்டுள்ளதா என்று சரிபார்க்கவும். வெளியேற வேண்டுமா?</string>
+	<string name="followed_tags">பின்பற்றப்படும் சிட்டைகள்</string>
 
 	<string name="relay_setup">ரிலேகள்</string>
 
