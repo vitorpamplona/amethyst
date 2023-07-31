@@ -158,6 +158,35 @@ open class Note(val idHex: String) {
         boosts = boosts - note
         liveSet?.boosts?.invalidateData()
     }
+
+    fun removeAllChildNotes(): Set<Note> {
+        val toBeRemoved = replies +
+            reactions.values.flatten() +
+            boosts +
+            reports.values.flatten() +
+            zaps.keys +
+            zaps.values.filterNotNull() +
+            zapPayments.keys +
+            zapPayments.values.filterNotNull()
+
+        replies = setOf<Note>()
+        reactions = mapOf<String, Set<Note>>()
+        boosts = setOf<Note>()
+        reports = mapOf<User, Set<Note>>()
+        zaps = mapOf<Note, Note?>()
+        zapPayments = mapOf<Note, Note?>()
+        relays = setOf<String>()
+        lastReactionsDownloadTime = emptyMap()
+
+        liveSet?.replies?.invalidateData()
+        liveSet?.reactions?.invalidateData()
+        liveSet?.boosts?.invalidateData()
+        liveSet?.reports?.invalidateData()
+        liveSet?.zaps?.invalidateData()
+
+        return toBeRemoved
+    }
+
     fun removeReaction(note: Note) {
         val tags = note.event?.tags() ?: emptyList()
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
@@ -552,6 +581,10 @@ open class Note(val idHex: String) {
         boosts = emptySet()
         reports = emptyMap()
         zaps = emptyMap()
+    }
+
+    fun clearEOSE() {
+        lastReactionsDownloadTime = emptyMap()
     }
 
     var liveSet: NoteLiveSet? = null
