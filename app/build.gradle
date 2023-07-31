@@ -196,7 +196,7 @@ dependencies {
 
     // LibSodium for XChaCha encryption
     implementation "com.goterl:lazysodium-android:5.1.0@aar"
-    implementation "net.java.dev.jna:jna:5.12.1@aar"
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
 
     // Video compression lib
     implementation 'com.github.AbedElazizShe:LightCompressor:1.3.1'
