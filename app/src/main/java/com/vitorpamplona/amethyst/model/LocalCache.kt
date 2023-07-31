@@ -1339,12 +1339,14 @@ object LocalCache {
         val user = account.userProfile()
 
         val toBeRemoved = notes.filter {
-            ( (it.value.event is TextNoteEvent && !it.value.isNewThread())
-            || it.value.event is ReactionEvent || it.value.event is LnZapEvent || it.value.event is LnZapRequestEvent
-            || it.value.event is ReportEvent || it.value.event is GenericRepostEvent)
-            && it.value.liveSet?.isInUse() != true // don't delete if observing.
-            && it.value.author != user   // don't delete if it is the logged in account
-            && it.value.event?.isTaggedUser(user.pubkeyHex) != true // don't delete if it's a notification to the logged in user
+            (
+                (it.value.event is TextNoteEvent && !it.value.isNewThread()) ||
+                    it.value.event is ReactionEvent || it.value.event is LnZapEvent || it.value.event is LnZapRequestEvent ||
+                    it.value.event is ReportEvent || it.value.event is GenericRepostEvent
+                ) &&
+                it.value.liveSet?.isInUse() != true && // don't delete if observing.
+                it.value.author != user && // don't delete if it is the logged in account
+                it.value.event?.isTaggedUser(user.pubkeyHex) != true // don't delete if it's a notification to the logged in user
         }.values
 
         val childrenToBeRemoved = mutableListOf<Note>()
