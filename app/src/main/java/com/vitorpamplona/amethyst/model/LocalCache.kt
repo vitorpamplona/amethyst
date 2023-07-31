@@ -1110,6 +1110,23 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    private fun consume(event: ChatMessageEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     private fun consume(event: SealedGossipEvent, relay: Relay?) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1219,13 +1236,12 @@ object LocalCache {
         }
 
         return notes.values.filter {
-            (it.event is TextNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
-                (it.event is PollNoteEvent && it.event?.content()?.contains(text, true) ?: false) ||
-                (it.event is ChannelMessageEvent && it.event?.content()?.contains(text, true) ?: false) ||
+            it.event?.content()?.contains(text, true) ?: false ||
+                it.event?.matchTag1With(text) ?: false ||
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
         } + addressables.values.filter {
-            (it.event as? LongTextNoteEvent)?.content?.contains(text, true) ?: false ||
+            it.event?.content()?.contains(text, true) ?: false ||
                 it.event?.matchTag1With(text) ?: false ||
                 it.idHex.startsWith(text, true)
         }
@@ -1256,6 +1272,10 @@ object LocalCache {
             it.value.clearLive()
         }
 
+        addressables.forEach {
+            it.value.clearLive()
+        }
+
         users.forEach {
             it.value.clearLive()
         }
@@ -1267,6 +1287,8 @@ object LocalCache {
         channels.forEach { it ->
             val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
 
+            val childrenToBeRemoved = mutableListOf<Note>()
+
             toBeRemoved.forEach {
                 notes.remove(it.idHex)
                 // Doesn't need to clean up the replies and mentions.. Too small to matter.
@@ -1275,16 +1297,83 @@ object LocalCache {
                 it.replyTo?.forEach { _ ->
                     it.removeReply(it)
                 }
+
+                childrenToBeRemoved.addAll(it.removeAllChildNotes())
             }
+
+            removeChildrenOf(childrenToBeRemoved)
 
             if (toBeRemoved.size > 100 || it.value.notes.size > 100) {
                 println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
             }
         }
+
+        users.forEach { userPair ->
+            userPair.value.privateChatrooms.values.map {
+                val toBeRemoved = it.pruneMessagesToTheLatestOnly()
+
+                val childrenToBeRemoved = mutableListOf<Note>()
+
+                toBeRemoved.forEach {
+                    notes.remove(it.idHex)
+
+                    // Counts the replies
+                    it.replyTo?.forEach { _ ->
+                        it.removeReply(it)
+                    }
+
+                    childrenToBeRemoved.addAll(it.removeAllChildNotes())
+                }
+
+                removeChildrenOf(childrenToBeRemoved)
+
+                if (toBeRemoved.size > 1) {
+                    println("PRUNE: ${toBeRemoved.size} private messages with ${userPair.value.toBestDisplayName()} removed. ${it.roomMessages.size} kept")
+                }
+            }
+        }
+    }
+
+    fun pruneRepliesAndReactions(account: Account) {
+        checkNotInMainThread()
+        val user = account.userProfile()
+
+        val toBeRemoved = notes.filter {
+            (
+                (it.value.event is TextNoteEvent && !it.value.isNewThread()) ||
+                    it.value.event is ReactionEvent || it.value.event is LnZapEvent || it.value.event is LnZapRequestEvent ||
+                    it.value.event is ReportEvent || it.value.event is GenericRepostEvent
+                ) &&
+                it.value.liveSet?.isInUse() != true && // don't delete if observing.
+                it.value.author != user && // don't delete if it is the logged in account
+                it.value.event?.isTaggedUser(user.pubkeyHex) != true // don't delete if it's a notification to the logged in user
+        }.values
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        toBeRemoved.forEach {
+            notes.remove(it.idHex)
+
+            it.replyTo?.forEach { masterNote ->
+                masterNote.removeReply(it)
+                masterNote.removeBoost(it)
+                masterNote.removeReaction(it)
+                masterNote.removeZap(it)
+                it.clearEOSE() // allows reloading of these events
+            }
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        if (toBeRemoved.size > 1) {
+            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
+        }
     }
 
     fun pruneHiddenMessages(account: Account) {
         checkNotInMainThread()
+
+        val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved = account.hiddenUsers.map { userHex ->
             (
@@ -1307,9 +1396,28 @@ object LocalCache {
             }
 
             notes.remove(it.idHex)
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
+        removeChildrenOf(childrenToBeRemoved)
+
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
+    }
+
+    fun removeChildrenOf(nextToBeRemoved: List<Note>) {
+        nextToBeRemoved.forEach { note ->
+            if (note.event is LnZapEvent) {
+                (note.event as LnZapEvent).zappedAuthor().mapNotNull { getUserIfExists(it)?.removeZap(note) }
+            }
+            if (note.event is LnZapRequestEvent) {
+                (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull { getUserIfExists(it)?.removeZap(note) }
+            }
+            if (note.event is ReportEvent) {
+                (note.event as ReportEvent).reportedAuthor().mapNotNull { getUserIfExists(it.key)?.removeZap(note) }
+            }
+            notes.remove(note.idHex)
+        }
     }
 
     fun pruneContactLists(userAccount: Account) {
@@ -1359,6 +1467,7 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is ChatMessageEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {

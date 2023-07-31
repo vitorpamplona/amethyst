@@ -137,6 +137,16 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    fun removeZap(zapRequestOrZapEvent: Note) {
+        if (zapRequestOrZapEvent in zaps.keys) {
+            zaps = zaps.minus(zapRequestOrZapEvent)
+            liveSet?.zaps?.invalidateData()
+        } else if (zapRequestOrZapEvent in zaps.values) {
+            zaps = zaps.filter { it.value != zapRequestOrZapEvent }
+            liveSet?.zaps?.invalidateData()
+        }
+    }
+
     fun zappedAmount(): BigDecimal {
         return zaps.mapNotNull { it.value?.event }
             .filterIsInstance<LnZapEvent>()
@@ -382,6 +392,22 @@ class Chatroom() {
         if (msg !in roomMessages) {
             roomMessages = roomMessages + msg
         }
+    }
+
+    fun pruneMessagesToTheLatestOnly(): Set<Note> {
+        val sorted = roomMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+
+        val toKeep = if ((sorted.firstOrNull()?.createdAt() ?: 0) > TimeUtils.oneWeekAgo()) {
+            // Recent messages, keep last 100
+            sorted.take(100).toSet()
+        } else {
+            // Old messages, keep the last one.
+            sorted.take(1).toSet()
+        } + sorted.filter { it.liveSet?.isInUse() ?: false }
+
+        val toRemove = roomMessages.minus(toKeep)
+        roomMessages = toKeep
+        return toRemove
     }
 }
 

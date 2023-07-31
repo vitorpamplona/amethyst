@@ -404,7 +404,6 @@
 	<string name="sats_to_complete">ஜாப்-திரட்டுதல் %1$s. இலக்கை அடைய %2$s</string>
 	<string name="read_from_relay">படிப்பதற்கான ரிலே</string>
 	<string name="write_to_relay">போஸ்ட் செய்வதற்கான ரிலே</string>
-	<string name="an_error_ocurred_trying_to_get_relay_information">%1$s ரிலே விவரங்கள் பெறுகையில் பிழை</string>
 	<string name="owner">உரிமையாளர்</string>
 	<string name="version">பதிப்பு</string>
 	<string name="software">மென்பொருள்</string>

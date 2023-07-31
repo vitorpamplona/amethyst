@@ -323,7 +323,7 @@ fun loadRelayInfo(
                                         Toast
                                             .makeText(
                                                 context,
-                                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                                                context.getString(R.string.an_error_occurred_trying_to_get_relay_information, dirtyUrl),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                     }
@@ -334,7 +334,7 @@ fun loadRelayInfo(
                                     Toast
                                         .makeText(
                                             context,
-                                            context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                                            context.getString(R.string.an_error_occurred_trying_to_get_relay_information, dirtyUrl),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                 }
@@ -348,7 +348,7 @@ fun loadRelayInfo(
                             Toast
                                 .makeText(
                                     context,
-                                    context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                                    context.getString(R.string.an_error_occurred_trying_to_get_relay_information, dirtyUrl),
                                     Toast.LENGTH_SHORT
                                 ).show()
                         }
@@ -361,7 +361,7 @@ fun loadRelayInfo(
             Toast
                 .makeText(
                     context,
-                    context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
+                    context.getString(R.string.an_error_occurred_trying_to_get_relay_information, dirtyUrl),
                     Toast.LENGTH_SHORT
                 ).show()
         }

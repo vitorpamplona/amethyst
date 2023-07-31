@@ -1,8 +1,38 @@
 package com.vitorpamplona.amethyst.service.model
 
+import com.vitorpamplona.amethyst.model.toHexKey
+
 class EventFactory {
     companion object {
         fun create(
+            id: String,
+            pubKey: String,
+            createdAt: Long,
+            kind: Int,
+            tags: List<List<String>>,
+            content: String,
+            sig: String,
+            lenient: Boolean
+        ): Event {
+            val internedTags = tags.map {
+                it.map {
+                    it.intern()
+                }
+            }
+
+            return internedCreate(
+                id = id.intern(),
+                pubKey = pubKey.intern(),
+                createdAt = createdAt,
+                kind = kind,
+                tags = internedTags,
+                content = content,
+                sig = sig,
+                lenient = lenient
+            )
+        }
+
+        fun internedCreate(
             id: String,
             pubKey: String,
             createdAt: Long,
@@ -24,6 +54,14 @@ class EventFactory {
             ChannelMessageEvent.kind -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.kind -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.kind -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+            ChatMessageEvent.kind -> {
+                if (id.isBlank()) {
+                    val id = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
+                    ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+                } else {
+                    ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+                }
+            }
             ClassifiedsEvent.kind -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.kind -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.kind -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)

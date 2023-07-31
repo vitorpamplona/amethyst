@@ -511,7 +511,13 @@ fun debugState(context: Context) {
     Log.d("STATE DUMP", "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB")
 
     Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
+    Log.d("STATE DUMP", "Addressables: " + LocalCache.addressables.filter { it.value.event != null }.size + "/" + LocalCache.addressables.size)
     Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
 
-    Log.d("STATE DUMP", "Notes: " + LocalCache.notes.filter { it.value.event != null }.size + "/" + LocalCache.notes.size)
+    LocalCache.notes.values.groupBy { it.event?.kind() }.forEach {
+        Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ")
+    }
+    LocalCache.addressables.values.groupBy { it.event?.kind() }.forEach {
+        Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ")
+    }
 }

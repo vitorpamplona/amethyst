@@ -1,13 +1,15 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 buildscript {
     ext {
-        fragment_version = "1.6.0"
+        fragment_version = "1.6.1"
         lifecycle_version = '2.6.1'
         compose_ui_version = '1.4.3'
         nav_version = "2.6.0"
         room_version = "2.4.3"
         accompanist_version = '0.30.1'
         coil_version = '2.4.0'
-        vico_version = '1.7.1'
+        vico_version = '1.7.3'
         exoplayer_version = '1.1.0'
     }
     dependencies {
@@ -15,13 +17,13 @@ buildscript {
     }
 }// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
-    id 'com.android.application' version '8.0.2' apply false
-    id 'com.android.library' version '8.0.2' apply false
-    id 'org.jetbrains.kotlin.android' version '1.8.21' apply false
-    id 'org.jetbrains.kotlin.jvm' version '1.8.21' apply false
+    id 'com.android.application' version '8.1.0' apply false
+    id 'com.android.library' version '8.1.0' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.9.0' apply false
 }
 
-task installGitHook(type: Copy) {
+tasks.register('installGitHook', Copy) {
     from new File(rootProject.rootDir, 'git-hooks/pre-commit')
     from new File(rootProject.rootDir, 'git-hooks/pre-push')
     into { new File(rootProject.rootDir, '.git/hooks') }
@@ -30,7 +32,7 @@ task installGitHook(type: Copy) {
 tasks.getByPath(':app:preBuild').dependsOn installGitHook
 
 subprojects {
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    tasks.withType(KotlinCompile).configureEach {
         kotlinOptions {
             if (project.findProperty("composeCompilerReports") == "true") {
                 freeCompilerArgs += [

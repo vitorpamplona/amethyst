@@ -6,7 +6,6 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Bundle
 import android.os.HandlerThread
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -51,9 +50,6 @@ class LocationUtil(context: Context) {
     private fun locationListener() = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             locationStateFlow.value = location
-        }
-
-        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         }
 
         override fun onProviderEnabled(provider: String) {

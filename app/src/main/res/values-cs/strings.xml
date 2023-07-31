@@ -47,6 +47,8 @@
     <string name="and">" a "</string>
     <string name="in_channel">"v kanálu "</string>
     <string name="profile_banner">Banner profilu</string>
+    <string name="payment_successful">Platba úspěšná</string>
+    <string name="error_parsing_error_message">Chyba při zpracování chybové zprávy</string>
     <string name="following">" Sleduje"</string>
     <string name="followers">" Sledující"</string>
     <string name="profile">Profil</string>
@@ -412,7 +414,7 @@
     <string name="sats_to_complete">Zapraiser na %1$s. Do cíle zbývá %2$s sats</string>
     <string name="read_from_relay">Číst z Relay</string>
     <string name="write_to_relay">Zapisovat do Relay</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">Při pokusu o získání informací z Relay se vyskytla chyba z %1$s</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">Při pokusu o získání informací z Relay se vyskytla chyba z %1$s</string>
     <string name="owner">Vlastník</string>
     <string name="version">Verze</string>
     <string name="software">Software</string>
@@ -437,6 +439,8 @@
     <string name="payment">Platba</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Vyměnit</string>
+    <string name="no_lightning_address_set">Není nastavena žádná Lightning adresa</string>
+    <string name="copied_token_to_clipboard">Token zkopírován do schránky</string>
 
     <string name="live_stream_live_tag">ŽIVĚ</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
@@ -463,6 +467,8 @@
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
+    <string name="connectivity_type_never">Nikdy</string>
+
     <string name="system">Systém</string>
     <string name="light">Světlý</string>
     <string name="dark">Tmavý</string>
@@ -483,4 +489,15 @@
     <string name="nip05_verified">Adresa Nostr byla ověřena</string>
     <string name="nip05_failed">Ověření adresy Nostr se nezdařilo</string>
     <string name="nip05_checking">Kontrola adresy Nostr</string>
+    <string name="select_deselect_all">Vybrat/Zrušit vše</string>
+    <string name="default_relays">Výchozí</string>
+    <string name="select_a_relay_to_continue">Vyberte relé pro pokračování</string>
+
+    <string name="zap_forward_title">Přeposílat Zapy na:</string>
+    <string name="zap_forward_explainer">Podporující klienti budou přeposílat Zapy na níže uvedenou LN adresu nebo uživatelský profil místo vaší</string>
+
+    <string name="geohash_title">Zveřejnit polohu jako </string>
+    <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
+
+    <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
 </resources>

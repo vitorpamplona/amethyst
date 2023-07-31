@@ -414,7 +414,6 @@
     <string name="sats_to_complete">Zapraiser op %1$s. %2$s sats tot doel</string>
     <string name="read_from_relay">Lees van relay</string>
     <string name="write_to_relay">Schrijf naar relay</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">Er is een fout opgetreden bij het ophalen van de relay-informatie van %1$s</string>
     <string name="owner">Eigenaar</string>
     <string name="version">Versie</string>
     <string name="software">Software</string>

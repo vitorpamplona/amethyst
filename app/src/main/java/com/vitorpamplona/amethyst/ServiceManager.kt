@@ -117,7 +117,7 @@ object ServiceManager {
             LocalCache.pruneOldAndHiddenMessages(it)
             LocalCache.pruneHiddenMessages(it)
             LocalCache.pruneContactLists(it)
-            // LocalCache.pruneNonFollows(it)
+            LocalCache.pruneRepliesAndReactions(it)
         }
     }
 }

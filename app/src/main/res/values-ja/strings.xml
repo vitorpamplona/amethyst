@@ -411,7 +411,6 @@
     <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats to goal</string>
     <string name="read_from_relay">リレーから読み込み</string>
     <string name="write_to_relay">リレーに書き込み</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">%1$sからリレー情報を取得する際にエラーが発生しました</string>
     <string name="owner">管理者</string>
     <string name="version">バージョン</string>
     <string name="software">ソフトウェア</string>
