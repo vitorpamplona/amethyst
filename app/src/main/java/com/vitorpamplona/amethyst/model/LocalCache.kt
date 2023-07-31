@@ -1359,7 +1359,7 @@ object LocalCache {
                 masterNote.removeBoost(it)
                 masterNote.removeReaction(it)
                 masterNote.removeZap(it)
-                it.clearEOSE() // allows reloading of these events
+                masterNote.clearEOSE() // allows reloading of these events
             }
 
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
