@@ -1,12 +1,22 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.util.Consumer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
@@ -36,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
+import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -54,6 +65,7 @@ fun AppNavigation(
 
     navController: NavHostController,
     accountViewModel: AccountViewModel,
+    startingPage: String? = null,
     themeViewModel: ThemeViewModel
 ) {
     val scope = rememberCoroutineScope()
@@ -237,4 +249,58 @@ fun AppNavigation(
             })
         }
     }
+
+    var actionableNextPage by remember { mutableStateOf(startingPage) }
+    actionableNextPage?.let {
+        LaunchedEffect(it) {
+            navController.navigate(it) {
+                popUpTo(Route.Home.route)
+                launchSingleTop = true
+            }
+        }
+        actionableNextPage = null
+    }
+
+    val activity = LocalContext.current.getActivity()
+    DisposableEffect(navController) {
+        val consumer = Consumer<Intent> { intent ->
+            val uri = intent?.data?.toString()
+            val newPage = uriToRoute(uri)
+
+            newPage?.let { route ->
+                val currentRoute = getRouteWithArguments(navController)
+                if (!isSameRoute(currentRoute, route)) {
+                    navController.navigate(route) {
+                        popUpTo(Route.Home.route)
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+        activity.addOnNewIntentListener(consumer)
+        onDispose {
+            activity.removeOnNewIntentListener(consumer)
+        }
+    }
+}
+
+fun Context.getActivity(): MainActivity {
+    if (this is MainActivity) return this
+    return if (this is ContextWrapper) baseContext.getActivity() else getActivity()
+}
+
+private fun isSameRoute(currentRoute: String?, newRoute: String): Boolean {
+    if (currentRoute == null) return false
+
+    if (currentRoute == newRoute) {
+        return true
+    }
+
+    if (newRoute.startsWith("Event/") && currentRoute.contains("/")) {
+        if (newRoute.split("/")[1] == currentRoute.split("/")[1]) {
+            return true
+        }
+    }
+
+    return false
 }

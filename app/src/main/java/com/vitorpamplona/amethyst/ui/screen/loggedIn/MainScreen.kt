@@ -24,11 +24,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -60,8 +61,7 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
-    themeViewModel: ThemeViewModel,
-    navController: NavHostController
+    themeViewModel: ThemeViewModel
 ) {
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
@@ -71,6 +71,7 @@ fun MainScreen(
         skipHalfExpanded = true
     )
 
+    val navController = rememberNavController()
     val navState = navController.currentBackStackEntryAsState()
 
     val nav = remember(navController) {
