@@ -224,6 +224,7 @@ object NotificationUtils {
                     .setSummaryText("$numberOfDMs messages from $numberOfUsers users")
             )
             .setGroup(DM_GROUP_KEY)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setGroupSummary(true)
             .build()
 
