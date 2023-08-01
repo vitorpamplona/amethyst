@@ -269,12 +269,12 @@ object NotificationUtils {
         messageBody: String
     ): NotificationCompat.Builder {
         if (condition) {
-            val senderBuilder = Person.Builder()
-            senderBuilder.setName(messageTitle)
+            val senderInfoBuilder = Person.Builder()
+            senderInfoBuilder.setName(messageTitle)
             if (userPicture != null) {
-                senderBuilder.setIcon(IconCompat.createWithBitmap(userPicture))
+                senderInfoBuilder.setIcon(IconCompat.createWithBitmap(userPicture))
             }
-            val sender = senderBuilder.build()
+            val sender = senderInfoBuilder.build()
             return setStyle(
                 NotificationCompat.MessagingStyle(Person.Builder().setName("Me").build())
                     .addMessage(
