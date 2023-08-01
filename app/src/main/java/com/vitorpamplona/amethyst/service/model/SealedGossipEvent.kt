@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.google.gson.annotations.SerializedName
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.hexToByteArray
@@ -93,7 +94,9 @@ class SealedGossipEvent(
 
 class Gossip(
     val id: HexKey?,
+    @SerializedName("pubkey")
     val pubKey: HexKey?,
+    @SerializedName("created_at")
     val createdAt: Long?,
     val kind: Int?,
     val tags: List<List<String>>?,

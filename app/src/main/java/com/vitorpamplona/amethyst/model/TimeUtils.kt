@@ -1,13 +1,17 @@
 package com.vitorpamplona.amethyst.model
 
 object TimeUtils {
-    const val fiveMinutes = 60 * 5
-    const val oneHour = 60 * 60
-    const val oneDay = 24 * 60 * 60
+    const val oneMinute = 60
+    const val fiveMinutes = 5 * oneMinute
+    const val oneHour = 60 * oneMinute
+    const val eightHours = 8 * oneHour
+    const val oneDay = 24 * oneHour
+    const val oneWeek = 7 * oneDay
 
     fun now() = System.currentTimeMillis() / 1000
     fun fiveMinutesAgo() = now() - fiveMinutes
     fun oneHourAgo() = now() - oneHour
     fun oneDayAgo() = now() - oneDay
-    fun eightHoursAgo() = now() - (oneHour * 8)
+    fun eightHoursAgo() = now() - eightHours
+    fun oneWeekAgo() = now() - oneWeek
 }
