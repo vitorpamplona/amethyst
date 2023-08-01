@@ -210,9 +210,13 @@ object NotificationUtils {
             .setAutoCancel(true)
 
         // For getting the notifications grouped by user.
-        val userNotifications = notifications.groupBy { it.notification.extras.getString("android.title") }
+        val userNotifications = notifications.groupBy { activeNotification ->
+            activeNotification.notification.extras.getString("android.title")
+        }
         val numberOfUsers = userNotifications.keys.filterNotNull().size
-        val numberOfDMs = userNotifications.values.sumOf { it.size }
+        val numberOfDMs = userNotifications.values.sumOf { notificationsPerUser ->
+            notificationsPerUser.size
+        }
 
         // Builds the group(summary) notification
         val summaryNotification = NotificationCompat.Builder(applicationContext, channelId)
