@@ -65,7 +65,6 @@ fun AppNavigation(
 
     navController: NavHostController,
     accountViewModel: AccountViewModel,
-    startingPage: String? = null,
     themeViewModel: ThemeViewModel
 ) {
     val scope = rememberCoroutineScope()
@@ -250,7 +249,10 @@ fun AppNavigation(
         }
     }
 
-    var actionableNextPage by remember { mutableStateOf(startingPage) }
+    val activity = LocalContext.current.getActivity()
+    var actionableNextPage by remember {
+        mutableStateOf(uriToRoute(activity.intent?.data?.toString()?.ifBlank { null }))
+    }
     actionableNextPage?.let {
         LaunchedEffect(it) {
             navController.navigate(it) {
@@ -261,7 +263,6 @@ fun AppNavigation(
         actionableNextPage = null
     }
 
-    val activity = LocalContext.current.getActivity()
     DisposableEffect(navController) {
         val consumer = Consumer<Intent> { intent ->
             val uri = intent?.data?.toString()
