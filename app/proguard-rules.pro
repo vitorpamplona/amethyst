@@ -33,6 +33,7 @@
 # GSON parsing
 -keep class com.vitorpamplona.amethyst.service.model.** { *; }
 -keep class com.vitorpamplona.amethyst.model.** { *; }
+-keep class com.vitorpamplona.amethyst.service.** { *; }
 
 # Prevent proguard from stripping interface information from TypeAdapter, TypeAdapterFactory,
 # JsonSerializer, JsonDeserializer instances (so they can be used in @JsonAdapter)
