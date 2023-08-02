@@ -6,6 +6,8 @@ import java.math.BigDecimal
 
 @Immutable
 interface EventInterface {
+    fun countMemory(): Long
+
     fun id(): HexKey
 
     fun pubKey(): HexKey

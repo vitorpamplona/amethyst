@@ -514,6 +514,8 @@ fun debugState(context: Context) {
     Log.d("STATE DUMP", "Addressables: " + LocalCache.addressables.filter { it.value.event != null }.size + "/" + LocalCache.addressables.size)
     Log.d("STATE DUMP", "Users: " + LocalCache.users.filter { it.value.info?.latestMetadata != null }.size + "/" + LocalCache.users.size)
 
+    Log.d("STATE DUMP", "Memory used by Events: " + LocalCache.notes.values.sumOf { it.event?.countMemory() ?: 0 } / (1024 * 1024) + " MB")
+
     LocalCache.notes.values.groupBy { it.event?.kind() }.forEach {
         Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ")
     }
