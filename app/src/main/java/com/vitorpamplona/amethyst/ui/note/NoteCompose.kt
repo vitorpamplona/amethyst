@@ -2427,12 +2427,21 @@ fun SecondUserInfoRow(
 @Composable
 fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
     val context = LocalContext.current
-    val cityName = remember(geohash) {
-        ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)
+    var cityName by remember(geohash) {
+        mutableStateOf<String>(geohash)
+    }
+
+    LaunchedEffect(key1 = geohash) {
+        launch(Dispatchers.IO) {
+            val newCityName = ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank { null }
+            if (newCityName != null && newCityName != cityName) {
+                cityName = newCityName
+            }
+        }
     }
 
     ClickableText(
-        text = AnnotatedString(cityName ?: geohash),
+        text = AnnotatedString(cityName),
         onClick = { nav("Geohash/$geohash") },
         style = LocalTextStyle.current.copy(
             color = MaterialTheme.colors.primary.copy(

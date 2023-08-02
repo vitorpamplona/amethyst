@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -124,16 +125,7 @@ fun GeoHashHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = 
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val context = LocalContext.current
-                        val cityName = remember(tag) {
-                            ReverseGeoLocationUtil().execute(tag.toGeoHash().toLocation(), context)
-                        }
-
-                        Text(
-                            "$cityName ($tag)",
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                        )
+                        DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
 
                         HashtagActionOptions(tag, account)
                     }
@@ -146,6 +138,30 @@ fun GeoHashHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = 
             thickness = 0.25.dp
         )
     }
+}
+
+@Composable
+fun DislayGeoTagHeader(geohash: String, modifier: Modifier) {
+    val context = LocalContext.current
+
+    var cityName by remember(geohash) {
+        mutableStateOf<String>(geohash)
+    }
+
+    LaunchedEffect(key1 = geohash) {
+        launch(Dispatchers.IO) {
+            val newCityName = ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank { null }
+            if (newCityName != null && newCityName != cityName) {
+                cityName = "$newCityName ($geohash)"
+            }
+        }
+    }
+
+    Text(
+        cityName,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier
+    )
 }
 
 @Composable

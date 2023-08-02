@@ -329,6 +329,11 @@ fun NoteMaster(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) })
 
+                        val geo = remember { noteEvent.getGeoHash() }
+                        if (geo != null) {
+                            DisplayLocation(geo, nav)
+                        }
+
                         val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
                         if (baseReward != null) {
                             DisplayReward(baseReward, baseNote, accountViewModel, nav)

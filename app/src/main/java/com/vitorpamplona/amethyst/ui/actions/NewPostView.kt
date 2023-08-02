@@ -76,6 +76,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
@@ -94,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -736,16 +738,32 @@ fun DisplayLocationObserver(geoLocation: Flow<String>) {
 @Composable
 fun DisplayLocationInTitle(geohash: String) {
     val context = LocalContext.current
-    val cityName = remember(geohash) {
-        ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)
+
+    var cityName by remember(geohash) {
+        mutableStateOf<String>(geohash)
     }
 
-    Text(
-        text = cityName ?: geohash,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.W500,
-        modifier = Modifier.padding(start = Size5dp)
-    )
+    LaunchedEffect(key1 = geohash) {
+        launch(Dispatchers.IO) {
+            val newCityName = ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank { null }
+
+            if (newCityName != null && newCityName != cityName) {
+                cityName = newCityName
+            }
+        }
+    }
+
+    if (geohash != "s0000") {
+        Text(
+            text = cityName,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.W500,
+            modifier = Modifier.padding(start = Size5dp)
+        )
+    } else {
+        Spacer(modifier = StdHorzSpacer)
+        LoadingAnimation()
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

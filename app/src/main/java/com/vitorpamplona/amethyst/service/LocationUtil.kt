@@ -63,7 +63,7 @@ class LocationUtil(context: Context) {
 }
 
 class ReverseGeoLocationUtil {
-    fun execute(
+    suspend fun execute(
         location: Location,
         context: Context
     ): String? {
