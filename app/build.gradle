@@ -25,9 +25,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Make sure all of JSON parsers work when activating these.
-            //minifyEnabled true
-            //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
+            minifyEnabled true
             resValue "string", "app_name", "@string/app_name_release"
         }
         debug {

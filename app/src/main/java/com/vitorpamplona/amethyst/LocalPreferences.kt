@@ -10,7 +10,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
+import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.parseConnectivityType
@@ -22,8 +24,6 @@ import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.toNpub
-import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
-import com.vitorpamplona.amethyst.ui.note.Nip47URI
 import fr.acinq.secp256k1.Hex
 import java.io.File
 import java.util.Locale

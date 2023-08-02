@@ -8,6 +8,7 @@ import androidx.core.net.toFile
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.service.HttpClient
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
