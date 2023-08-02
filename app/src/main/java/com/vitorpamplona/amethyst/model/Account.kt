@@ -1514,9 +1514,9 @@ class Account(
 
     private fun isAcceptableDirect(note: Note): Boolean {
         if (!warnAboutPostsWithReports) {
-            return note.reportsBy(userProfile()).isEmpty()
+            return !note.hasReportsBy(userProfile())
         }
-        return note.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
+        return !note.hasReportsBy(userProfile()) && // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }
 
