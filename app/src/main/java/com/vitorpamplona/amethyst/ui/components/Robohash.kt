@@ -13,6 +13,7 @@ import coil.fetch.Fetcher
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
+import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import okio.Buffer
@@ -36,7 +37,7 @@ private fun svgString(msg: String): String {
     checkNotInMainThread()
 
     val hash = CryptoUtils.sha256(msg.toByteArray())
-    val hashHex = hash.joinToString(separator = "") { b -> "%02x".format(b) }
+    val hashHex = hash.toHexKey()
     val bgColor = bytesToRGB(hash[0], hash[1], hash[2])
     val fgColor = bytesToRGB(hash[3], hash[4], hash[5])
     val bodyIndex = byteMod10(hash[6])
