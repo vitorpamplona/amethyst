@@ -138,12 +138,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-
-        println("AAA -OnNew Intent")
-    }
-
     @OptIn(DelicateCoroutinesApi::class)
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         // network is available for use
