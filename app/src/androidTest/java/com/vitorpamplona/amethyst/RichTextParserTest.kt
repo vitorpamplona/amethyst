@@ -668,7 +668,7 @@ class RichTextParserTest {
     fun testTextToParse() {
         val state = RichTextParser().parseText(textToParse, ImmutableListOfLists())
         Assert.assertEquals(
-            "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, ⚡41.7M, Nostr-Check.com, MR.Rabbit, Ancap.su, ⚡️satscoinsv@getalby.com, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
+            "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, zapper.lol, smies.me, baller.hodl",
             state.urlSet.joinToString(", ")
         )
 
@@ -806,123 +806,93 @@ class RichTextParserTest {
             "HashTag(#bitcoin,)",
             "RegularText(1.7K,)",
             "RegularText(109)",
-            "RegularText()",
             "HashTag(#concussion,)",
             "RegularText(1.1K,)",
             "RegularText(25)",
-            "RegularText()",
             "HashTag(#press,)",
             "RegularText(0.9K,)",
             "RegularText(65)",
-            "RegularText()",
             "HashTag(#france,)",
             "RegularText(492,)",
             "RegularText(46)",
-            "RegularText()",
             "HashTag(#presse,)",
             "RegularText(480,)",
             "RegularText(42)",
-            "RegularText()",
             "HashTag(#covid19,)",
             "RegularText(465,)",
             "RegularText(65)",
-            "RegularText()",
             "HashTag(#nostr,)",
             "RegularText(414,)",
             "RegularText(109)",
-            "RegularText()",
             "HashTag(#zapathon,)",
             "RegularText(386,)",
             "RegularText(76)",
-            "RegularText()",
             "HashTag(#rssfeed,)",
             "RegularText(309,)",
             "RegularText(53)",
-            "RegularText()",
             "HashTag(#btc,)",
             "RegularText(299,)",
             "RegularText(109)",
-            "RegularText()",
             "HashTag(#news,)",
             "RegularText(294,)",
             "RegularText(91)",
-            "RegularText()",
             "HashTag(#zap,)",
             "RegularText(283,)",
             "RegularText(109)",
-            "RegularText()",
             "HashTag(#linux,)",
             "RegularText(253,)",
             "RegularText(88)",
-            "RegularText()",
             "HashTag(#respond,)",
             "RegularText(246,)",
             "RegularText(90)",
-            "RegularText()",
             "HashTag(#kompost,)",
             "RegularText(240,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#plebchain,)",
             "RegularText(236,)",
             "RegularText(109)",
-            "RegularText()",
             "HashTag(#gardenaward,)",
             "RegularText(236,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#start,)",
             "RegularText(236,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#unicef,)",
             "RegularText(233,)",
             "RegularText(32)",
-            "RegularText()",
             "HashTag(#coronavirus,)",
             "RegularText(233,)",
             "RegularText(33)",
-            "RegularText()",
             "HashTag(#bew,)",
             "RegularText(229,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#balkon,)",
             "RegularText(229,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#terrasse,)",
             "RegularText(229,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#braininjuryawareness,)",
             "RegularText(229,)",
             "RegularText(24)",
-            "RegularText()",
             "HashTag(#garten,)",
             "RegularText(220,)",
             "RegularText(21)",
-            "RegularText()",
             "HashTag(#smart,)",
             "RegularText(220,)",
             "RegularText(21)",
-            "RegularText()",
             "HashTag(#nsfw,)",
             "RegularText(211,)",
             "RegularText(85)",
-            "RegularText()",
             "HashTag(#protoncalendar,)",
             "RegularText(206,)",
             "RegularText(31)",
-            "RegularText()",
             "HashTag(#stacksats,)",
             "RegularText(195,)",
             "RegularText(99)",
-            "RegularText()",
             "HashTag(#nokyc,)",
             "RegularText(179,)",
             "RegularText(98)",
-            "RegularText()",
             "RegularText()",
             "RegularText(Emoji sentiment today)",
             "RegularText()",
@@ -930,10 +900,7 @@ class RichTextParserTest {
             "RegularText()",
             "RegularText(Zap economy)",
             "RegularText()",
-            "Link(⚡41.7M)",
-            "RegularText(sats)",
-            "RegularText((₿0.417))",
-            "RegularText()",
+            "RegularText(⚡41.7M sats (₿0.417) )",
             "RegularText(1,816 zappers & 920 zapped (unique pubkeys))",
             "RegularText(🌩️ 33,248 zaps, 1,253 sats per zap (avg))",
             "RegularText()",
@@ -2248,7 +2215,7 @@ class RichTextParserTest {
             "HashTag(#214)",
             "RegularText(2%)",
             "RegularText(Satscoinsv,)",
-            "Link(⚡️satscoinsv@getalby.com)",
+            "RegularText(⚡️satscoinsv@getalby.com)",
             "RegularText(-)",
             "RegularText(80db64657ea0358c5332c5cca01565eeddd4b8799688b1c46d3cb2d7c966671f)",
             "HashTag(#215)",
@@ -2458,7 +2425,7 @@ class RichTextParserTest {
             "HashTag(#249)",
             "RegularText(2%)",
             "RegularText(micmad,)",
-            "Link(miceliomad@miceliomad.github.io/nostr/)",
+            "RegularText(miceliomad@miceliomad.github.io/nostr/)",
             "RegularText(-)",
             "RegularText(cd806edcf8ff40ea94fa574ea9cd97da16e5beb2b85aac6e1d648b8388504343)",
             "HashTag(#250)",
@@ -3805,7 +3772,7 @@ class RichTextParserTest {
             "HashTag(#471)",
             "RegularText(1%)",
             "RegularText(leonwankum,)",
-            "SchemelessUrl(@leonawankum@BitcoinNostr.com)",
+            "RegularText(@leonawankum@BitcoinNostr.com)",
             "RegularText()",
             "RegularText(-)",
             "RegularText(652d58acafa105af8475c0fe8029a52e7ddbc337b2bd9c98bb17a111dc4cde60)",
@@ -4098,8 +4065,58 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
             "RegularText(here:)",
             "Link(https://lnshort.it/live-stream-embeds/)",
             "RegularText()",
-            "RegularText()",
             "Image(https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg)"
+        )
+
+        state.paragraphs.map { it.words }.flatten().forEachIndexed { index, seg ->
+            Assert.assertEquals(
+                expectedResult[index],
+                "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})"
+            )
+        }
+    }
+
+    @Test
+    fun testNewLineAfterImage() {
+        val text = "That’s it ! That’s the #note https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg "
+
+        val state = RichTextParser().parseText(text, ImmutableListOfLists())
+
+        printStateForDebug(state)
+
+        val expectedResult = listOf<String>(
+            "RegularText(That’s)",
+            "RegularText(it)",
+            "RegularText(!)",
+            "RegularText(That’s)",
+            "RegularText(the)",
+            "HashTag(#note)",
+            "Image(https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg)"
+        )
+
+        state.paragraphs.map { it.words }.flatten().forEachIndexed { index, seg ->
+            Assert.assertEquals(
+                expectedResult[index],
+                "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})"
+            )
+        }
+    }
+
+    @Test
+    fun testSapceAfterImage() {
+        val text = "That’s it! https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg That’s the #note"
+
+        val state = RichTextParser().parseText(text, ImmutableListOfLists())
+
+        printStateForDebug(state)
+
+        val expectedResult = listOf<String>(
+            "RegularText(That’s)",
+            "RegularText(it!)",
+            "Image(https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg)",
+            "RegularText(That’s)",
+            "RegularText(the)",
+            "HashTag(#note)"
         )
 
         state.paragraphs.map { it.words }.flatten().forEachIndexed { index, seg ->

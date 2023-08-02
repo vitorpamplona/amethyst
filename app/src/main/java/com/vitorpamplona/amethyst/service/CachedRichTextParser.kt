@@ -54,7 +54,7 @@ object CachedRichTextParser {
 
 // Android9 seems to have an issue starting this regex.
 val noProtocolUrlValidator = try {
-    Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]*[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
+    Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
 } catch (e: Exception) {
     Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
 }
@@ -119,7 +119,7 @@ class RichTextParser() {
 
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.split(' ')
+            val wordList = paragraph.trimEnd().split(' ')
             wordList.forEach { word ->
                 val wordSegment = wordIdentifier(word, images, urls, emojis, tags)
                 if (wordSegment !is RegularTextSegment) {
@@ -182,8 +182,8 @@ class RichTextParser() {
         } else if (schemelessMatcher.find()) {
             val url = schemelessMatcher.group(1) // url
             val additionalChars = schemelessMatcher.group(4) // additional chars
-            val pattern = "^([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
-            if (pattern.matches(word)) {
+            val pattern = "^([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
+            if (pattern.find(word) != null) {
                 SchemelessUrlSegment(word, url, additionalChars)
             } else {
                 RegularTextSegment(word)
