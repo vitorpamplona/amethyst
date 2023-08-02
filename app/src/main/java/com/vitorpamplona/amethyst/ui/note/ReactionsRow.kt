@@ -429,8 +429,8 @@ private fun ReactionDetailGallery(
     if (hasReactions) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp, top = 5.dp)) {
             Column() {
-                // WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
-                // WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
             }
         }
