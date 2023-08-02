@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormat
 import kotlin.math.roundToInt
 
 @Composable
@@ -243,14 +244,19 @@ class AmountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.End>
     }
 }
 
+var dfG: DecimalFormat = DecimalFormat("#G")
+var dfM: DecimalFormat = DecimalFormat("#M")
+var dfK: DecimalFormat = DecimalFormat("#k")
+var dfN: DecimalFormat = DecimalFormat("#")
+
 fun showAmountAxis(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> "%.0fG".format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> "%.0fM".format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneKilo -> "%.0fk".format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> "%.0f".format(amount)
+        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        else -> dfN.format(amount)
     }
 }

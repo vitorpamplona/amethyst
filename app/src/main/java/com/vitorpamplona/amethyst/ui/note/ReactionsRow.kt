@@ -112,6 +112,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormat
 import kotlin.math.roundToInt
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
@@ -1456,14 +1457,19 @@ val OneGiga = BigDecimal(1000000000)
 val OneMega = BigDecimal(1000000)
 val OneKilo = BigDecimal(1000)
 
+var dfG: DecimalFormat = DecimalFormat("#.0G")
+var dfM: DecimalFormat = DecimalFormat("#.0M")
+var dfK: DecimalFormat = DecimalFormat("#.0k")
+var dfN: DecimalFormat = DecimalFormat("#.0")
+
 fun showAmount(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> "%.1fG".format(amount.div(OneGiga).setScale(1, RoundingMode.HALF_UP))
-        amount >= OneMega -> "%.1fM".format(amount.div(OneMega).setScale(1, RoundingMode.HALF_UP))
-        amount >= OneKilo -> "%.1fk".format(amount.div(OneKilo).setScale(1, RoundingMode.HALF_UP))
-        else -> "%.0f".format(amount)
+        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(1, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(1, RoundingMode.HALF_UP))
+        amount >= OneKilo -> dfK.format(amount.div(OneKilo).setScale(1, RoundingMode.HALF_UP))
+        else -> dfN.format(amount)
     }
 }
