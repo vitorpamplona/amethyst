@@ -281,7 +281,6 @@
 
     <string name="lightning_create_and_add_invoice">Créer et Ajouter</string>
     <string name="poll_author_no_vote">Les auteurs du sondage ne peuvent pas voter dans leurs propres sondages.</string>
-    <string name="poll_hashtag" translatable="false">#zappoll</string>
 
     <string name="hash_verification_passed">Ce contenu est le même depuis le message</string>
     <string name="hash_verification_failed">Ce contenu a changé. L'auteur n'a peut-être pas vu ou approuvé le changement</string>
