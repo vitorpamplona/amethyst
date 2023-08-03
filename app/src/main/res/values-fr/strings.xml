@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">Pointer vers le QR code</string>
     <string name="show_qr">Montrer le QR code</string>
     <string name="profile_image">Image de profil</string>
@@ -92,7 +92,7 @@
     <string name="image_saved_to_the_gallery">Image enregistrée dans la galerie</string>
     <string name="failed_to_save_the_image">Échec de l\'enregistrement de l\'image</string>
     <string name="upload_image">Charger une image</string>
-    <string name="uploading">Chargement...</string>
+    <string name="uploading">Chargement…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">L\'utilisateur n\'a pas configuré d\'adresse Lightning pour recevoir des sats</string>
     <string name="reply_here">"Répondre ici.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copie l\'ID de note dans le presse-papiers pour le partage</string>
@@ -182,7 +182,7 @@
     </string>
     <string name="secret_key_copied_to_clipboard">Clé secrète (nsec) copiée dans le presse-papiers</string>
     <string name="copy_my_secret_key">Copier ma clé secrète</string>
-    <string name="biometric_authentication_failed">Échec de l'authentification</string>
+    <string name="biometric_authentication_failed">Échec de l\'authentification</string>
     <string name="biometric_error">Erreur</string>
     <string name="badge_created_by">"Créé par %1$s"</string>
     <string name="badge_award_image_for">"Image de badge pour %1$s"</string>
@@ -190,7 +190,7 @@
     <string name="award_granted_to">Le Badge a été décerné à</string>
     <string name="copied_note_text_to_clipboard">Copie du contenu de la note dans le presse-papiers</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copie du @npub utilisateur dans le presse-papiers</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copie de l'ID de la note (@note1) dans le presse-papiers</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copie de l\'ID de la note (@note1) dans le presse-papiers</string>
     <string name="select_text_dialog_top">Sélectionner le Texte</string>
 
     <string name="private_conversation_notification">"&lt;Impossible de déchiffrer le message privé&gt;\n\nVous avez été cité dans une conversation privée/cryptée entre %1$s et %2$s."</string>
@@ -212,7 +212,7 @@
     <string name="quick_action_unfollow">Ne plus suivre</string>
     <string name="quick_action_follow">Suivre</string>
     <string name="quick_action_request_deletion_alert_title">Demande de Suppression</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d'autres relais où elle peut être stockée.</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n\'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d'autres relais où elle peut être stockée.</string>
     <string name="quick_action_block_dialog_btn">Bloquer</string>
     <string name="quick_action_delete_dialog_btn">Supprimer</string>
     <string name="quick_action_block">Bloquer</string>
@@ -221,17 +221,17 @@
     <string name="quick_action_dont_show_again_button">Ne plus montrer</string>
     <string name="report_dialog_spam">Spam ou arnaque</string>
     <string name="report_dialog_profanity">Grossièreté ou contenu haineux</string>
-    <string name="report_dialog_impersonation">Usurpation d'identité</string>
+    <string name="report_dialog_impersonation">Usurpation d\'identité</string>
     <string name="report_dialog_nudity">Nudité ou contenu graphique</string>
     <string name="report_dialog_illegal">Comportement illégal</string>
-    <string name="report_dialog_blocking_a_user">Bloquer un utilisateur cachera son contenu dans votre application. Vos notes sont toujours visibles publiquement, y compris pour les personnes que vous bloquez. Les utilisateurs bloqués sont listés sur l'écran Filtres de Sécurité.</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[Bloquer et Masquer l'Utilisateur]]></string>
+    <string name="report_dialog_blocking_a_user">Bloquer un utilisateur cachera son contenu dans votre application. Vos notes sont toujours visibles publiquement, y compris pour les personnes que vous bloquez. Les utilisateurs bloqués sont listés sur l\'écran Filtres de Sécurité.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Bloquer et Masquer l\'Utilisateur]]></string>
     <string name="report_dialog_report_btn">Signaler un Abus</string>
     <string name="report_dialog_reminder_public">Tous les rapports publiés seront visibles publiquement.</string>
-    <string name="report_dialog_additional_reason_placeholder">Fournir un contexte optionnel supplémentaire sur votre signalement...</string>
+    <string name="report_dialog_additional_reason_placeholder">Fournir un contexte optionnel supplémentaire sur votre signalement…</string>
     <string name="report_dialog_additional_reason_label">Contexte additionnel</string>
     <string name="report_dialog_select_reason_label">Raison</string>
-    <string name="report_dialog_select_reason_placeholder">Sélectionner une raison...</string>
+    <string name="report_dialog_select_reason_placeholder">Sélectionner une raison…</string>
     <string name="report_dialog_post_report_btn">Publier le signalement</string>
     <string name="report_dialog_title">Bloquer et Signaler</string>
     <string name="block_only">Bloquer</string>
@@ -246,7 +246,7 @@
     <string name="remove_from_public_bookmarks">Supprimer des Favoris Publics</string>
 
     <string name="wallet_connect_service">Service Wallet Connect</string>
-    <string name="wallet_connect_service_explainer">Autorise un Nostr Secret à payer des zaps sans quitter l'application. Gardez le secret en toute sécurité et utilisez un relais privé si possible</string>
+    <string name="wallet_connect_service_explainer">Autorise un Nostr Secret à payer des zaps sans quitter l\'application. Gardez le secret en toute sécurité et utilisez un relais privé si possible</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
     <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
@@ -257,9 +257,9 @@
     <string name="post_poll">Message Sondage</string>
     <string name="poll_heading_required">Champs requis:</string>
     <string name="poll_zap_recipients">Bénéficiaires du Zap</string>
-    <string name="poll_primary_description">Description du sondage primaire...</string>
+    <string name="poll_primary_description">Description du sondage primaire…</string>
     <string name="poll_option_index">Option %s</string>
-    <string name="poll_option_description">Description de l'option du Sondage</string>
+    <string name="poll_option_description">Description de l\'option du Sondage</string>
     <string name="poll_heading_optional">Champs optionels:</string>
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
@@ -283,7 +283,7 @@
     <string name="poll_author_no_vote">Les auteurs du sondage ne peuvent pas voter dans leurs propres sondages.</string>
 
     <string name="hash_verification_passed">Ce contenu est le même depuis le message</string>
-    <string name="hash_verification_failed">Ce contenu a changé. L'auteur n'a peut-être pas vu ou approuvé le changement</string>
+    <string name="hash_verification_failed">Ce contenu a changé. L\'auteur n\'a peut-être pas vu ou approuvé le changement</string>
 
     <string name="content_description_add_image">Ajouter une Image</string>
     <string name="content_description_add_video">Ajouter une Vidéo</string>
@@ -301,7 +301,7 @@
     <string name="zap_type_public_explainer">Tout le monde peut voir la transaction et le message</string>
 
     <string name="zap_type_private">Privé</string>
-    <string name="zap_type_private_explainer">L'expéditeur et le receveur peuvent se voir et lire le message</string>
+    <string name="zap_type_private_explainer">L\'expéditeur et le receveur peuvent se voir et lire le message</string>
 
     <string name="zap_type_anonymous">Anonyme</string>
     <string name="zap_type_anonymous_explainer">Le receveur et le public ne savent pas qui a envoyé le paiement</string>
@@ -345,7 +345,7 @@
     <string name="upload_server_nostrcheckme_nip94_explainer">Vérifie si Nostrcheck.me a modifié le fichier. Nouveau NIP: certains clients pourraient ne pas le voir</string>
 
     <string name="upload_server_relays_nip95">Vos relais (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">Les fichiers sont hébergés par vos relais. Nouveau NIP: vérifiez s'ils sont supportés</string>
+    <string name="upload_server_relays_nip95_explainer">Les fichiers sont hébergés par vos relais. Nouveau NIP: vérifiez s\'ils sont supportés</string>
 
     <string name="connect_via_tor_short">Configuration Tor/Orbot</string>
     <string name="connect_via_tor">Se connecter à travers la configuration Orbot</string>
@@ -374,10 +374,10 @@
     <string name="disconnect_from_your_orbot_setup">Déconnecter Tor/Orbot</string>
 
     <string name="app_notification_dms_channel_name">Messages privés</string>
-    <string name="app_notification_dms_channel_description">Vous notifie lorsqu'un message privé est reçu</string>
+    <string name="app_notification_dms_channel_description">Vous notifie lorsqu\'un message privé est reçu</string>
 
     <string name="app_notification_zaps_channel_name">Zaps reçus</string>
-    <string name="app_notification_zaps_channel_description">Vous notifie lorsque quelqu'un vous zap</string>
+    <string name="app_notification_zaps_channel_description">Vous notifie lorsque quelqu\'un vous zap</string>
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">pour %1$s</string>
@@ -391,7 +391,7 @@
     <string name="channel_list_create_channel">Créer</string>
     <string name="channel_list_join_channel">Rejoindre</string>
 
-    <string name="today">Aujourd'hui</string>
+    <string name="today">Aujourd\'hui</string>
 
     <string name="content_warning">Avertissement de contenu</string>
     <string name="content_warning_explanation">Ce message contient du contenu sensible que certaines personnes peuvent trouver offensant ou dérangeant</string>
@@ -413,13 +413,13 @@
     <string name="sats_to_complete">Zapraiser à %1$s. %2$s sats pour objectif</string>
     <string name="read_from_relay">Lire depuis le Relay</string>
     <string name="write_to_relay">Écrire sur le Relay</string>
-    <string name="an_error_occurred_trying_to_get_relay_information">Une erreur s'est produite en récupérant les informations du relay depuis %1$s</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">Une erreur s\'est produite en récupérant les informations du relay depuis %1$s</string>
     <string name="owner">Propriétaire</string>
     <string name="version">Version</string>
     <string name="software">Logiciel</string>
     <string name="contact">Contact</string>
     <string name="supports">NIPs supportés</string>
-    <string name="admission_fees">Frais d'admission</string>
+    <string name="admission_fees">Frais d\'admission</string>
     <string name="payments_url">URL de payments</string>
     <string name="limitations">Limitations</string>
     <string name="countries">Pays</string>
@@ -429,9 +429,9 @@
     <string name="message_length">Longueur du message</string>
     <string name="subscriptions">Abonnements</string>
     <string name="filters">Filtres</string>
-    <string name="subscription_id_length">Longueur de l'id de souscription</string>
+    <string name="subscription_id_length">Longueur de l\'id de souscription</string>
     <string name="minimum_prefix">Préfixe minimum</string>
-    <string name="maximum_event_tags">Tags d'événement maximum</string>
+    <string name="maximum_event_tags">Tags d\'événement maximum</string>
     <string name="content_length">Longueur du contenu</string>
     <string name="minimum_pow">PoW minimum</string>
     <string name="auth">Authentification</string>
@@ -448,7 +448,7 @@
 
     <string name="live_stream_is_offline">Livestream est déconnecté</string>
     <string name="live_stream_has_ended">Livestream terminé</string>
-    <string name="are_you_sure_you_want_to_log_out">Se déconnecter supprime toutes vos informations locales. Assurez-vous d'avoir vos clés privées sauvegardées pour éviter de perdre votre compte. Voulez-vous continuer ?</string>
+    <string name="are_you_sure_you_want_to_log_out">Se déconnecter supprime toutes vos informations locales. Assurez-vous d\'avoir vos clés privées sauvegardées pour éviter de perdre votre compte. Voulez-vous continuer ?</string>
     <string name="followed_tags">Tags suivis</string>
 
     <string name="relay_setup">Relays</string>
@@ -458,8 +458,8 @@
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Messages approuvés</string>
 
-    <string name="groups_no_descriptor">Ce groupe n'a pas de description ou de règles. Parlez au propriétaire pour en ajouter une</string>
-    <string name="community_no_descriptor">Cette communauté n'a pas de description. Parlez au propriétaire pour en ajouter une</string>
+    <string name="groups_no_descriptor">Ce groupe n\'a pas de description ou de règles. Parlez au propriétaire pour en ajouter une</string>
+    <string name="community_no_descriptor">Cette communauté n\'a pas de description. Parlez au propriétaire pour en ajouter une</string>
 
     <string name="add_sensitive_content_label">Contenu sensible</string>
     <string name="add_sensitive_content_description">Ajouter un avertissement de contenu sensible avant de montrer ce contenu</string>
@@ -471,32 +471,32 @@
     <string name="system">Système</string>
     <string name="light">Clair</string>
     <string name="dark">Sombre</string>
-    <string name="application_preferences">Préférences de l'application</string>
+    <string name="application_preferences">Préférences de l\'application</string>
     <string name="language">Langage</string>
     <string name="theme">Thème</string>
     <string name="automatically_load_images_gifs">Chargement automatique des images/gifs</string>
     <string name="automatically_play_videos">Démarrage automatique des vidéos</string>
     <string name="automatically_show_url_preview">Prévisualisation automatique des liens</string>
-    <string name="load_image">Charger l'image</string>
+    <string name="load_image">Charger l\'image</string>
 
     <string name="spamming_users">Spammeurs</string>
 
     <string name="muted_button">Silencieux. Cliquer pour réactiver le son</string>
     <string name="mute_button">Son activé. Cliquer pour mettre en silencieux</string>
-    <string name="search_button">Recherche d'enregistrements locaux et distants</string>
+    <string name="search_button">Recherche d\'enregistrements locaux et distants</string>
 
-    <string name="nip05_verified">L'adresse Nostr a été vérfiée</string>
-    <string name="nip05_failed">La vérification de l'adresse Nostr a échouée</string>
-    <string name="nip05_checking">Vérification de l'adresse Nostr</string>
+    <string name="nip05_verified">L\'adresse Nostr a été vérfiée</string>
+    <string name="nip05_failed">La vérification de l\'adresse Nostr a échouée</string>
+    <string name="nip05_checking">Vérification de l\'adresse Nostr</string>
     <string name="select_deselect_all">Tout sélectionner/désélectionner</string>
     <string name="default_relays">Défaut</string>
     <string name="select_a_relay_to_continue">Sélectionner un relay pour continuer</string>
 
     <string name="zap_forward_title">Transférer les Zaps à:</string>
-    <string name="zap_forward_explainer">Les clients compatibles transmettront des zaps sur l'adresse LN ou le profil Utilisateur ci-dessous au lieu du vôtre.</string>
+    <string name="zap_forward_explainer">Les clients compatibles transmettront des zaps sur l\'adresse LN ou le profil Utilisateur ci-dessous au lieu du vôtre.</string>
 
     <string name="geohash_title">Révéler la localisation comme </string>
-    <string name="geohash_explainer">Ajoute un Geohash de votre emplacement au message. Le public saura que vous êtes à moins de 5km de l'emplacement actuel</string>
+    <string name="geohash_explainer">Ajoute un Geohash de votre emplacement au message. Le public saura que vous êtes à moins de 5km de l\'emplacement actuel</string>
 
-    <string name="add_sensitive_content_explainer">Ajoute un avertissement de contenu sensible avant de montrer votre contenu. C'est idéal pour tout contenu NSFW ou contenu que certaines personnes peuvent trouver offensant ou dérangeant</string>
+    <string name="add_sensitive_content_explainer">Ajoute un avertissement de contenu sensible avant de montrer votre contenu. C\'est idéal pour tout contenu NSFW ou contenu que certaines personnes peuvent trouver offensant ou dérangeant</string>
 </resources>
