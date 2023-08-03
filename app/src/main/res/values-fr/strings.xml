@@ -169,7 +169,11 @@
     <string name="report_hateful_speech">Signaler Discours haineux</string>
     <string name="report_nudity_porn">Signaler Nudité / Porno</string>
     <string name="others">autres</string>
-    <string name="account_backup_tips_md">
+    <string name="mark_all_known_as_read">Marquer tous les Connus comme lu</string>
+    <string name="mark_all_new_as_read">Marquer tous les Nouveaux comme lu</string>
+    <string name="mark_all_as_read">Tout marqué comme lu</string>
+    <string name="backup_keys">Clés de sauvegarde</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">
         ## Sauvegarde des clés et conseils de sécurité
         \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue chaîne aléatoire commençant par **nsec1**. Toute personne ayant accès à votre clé secrète peut publier du contenu en utilisant votre identité.
         \n\n- Ne communiquez **jamais** votre clé secrète à un site Web ou un logiciel auquel vous ne faites pas confiance.
@@ -177,7 +181,172 @@
         \n- **Conservez** une sauvegarde sécurisée de votre clé secrète pour la récupération de compte. Nous vous recommandons d\'utiliser un gestionnaire de mots de passe.
     </string>
     <string name="secret_key_copied_to_clipboard">Clé secrète (nsec) copiée dans le presse-papiers</string>
-    <string name="backup_keys">Clés de sauvegarde</string>
+    <string name="copy_my_secret_key">Copier ma clé secrète</string>
+    <string name="biometric_authentication_failed">Échec de l'authentification</string>
+    <string name="biometric_error">Erreur</string>
+    <string name="badge_created_by">"Créé par %1$s"</string>
+    <string name="badge_award_image_for">"Image de badge pour %1$s"</string>
+    <string name="new_badge_award_notif">Vous avez reçu un nouveau Badge</string>
+    <string name="award_granted_to">Le Badge a été décerné à</string>
+    <string name="copied_note_text_to_clipboard">Copie du contenu de la note dans le presse-papiers</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copie du @npub utilisateur dans le presse-papiers</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copie de l'ID de la note (@note1) dans le presse-papiers</string>
+    <string name="select_text_dialog_top">Sélectionner le Texte</string>
+
+    <string name="private_conversation_notification">"&lt;Impossible de déchiffrer le message privé&gt;\n\nVous avez été cité dans une conversation privée/cryptée entre %1$s et %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">Ajouter un Nouveau Compte</string>
+    <string name="drawer_accounts">Comptes</string>
+    <string name="account_switch_select_account">Sélectionner un compte</string>
+    <string name="account_switch_add_account_btn">Ajouter un Nouveau Compte</string>
+    <string name="account_switch_active_account">Compte actif</string>
+    <string name="account_switch_has_private_key">Avec une clé privée</string>
+    <string name="account_switch_pubkey_only">Lecture seule, pas de clé privée</string>
+    <string name="back">Retour</string>
+    <string name="quick_action_select">Sélectionner</string>
+    <string name="quick_action_share_browser_link">Partager le Lien Navigateur</string>
+    <string name="quick_action_share">Partager</string>
+    <string name="quick_action_copy_user_id">ID Author</string>
+    <string name="quick_action_copy_note_id">ID Note</string>
+    <string name="quick_action_copy_text">Copier le Texte</string>
+    <string name="quick_action_delete">Supprimer</string>
+    <string name="quick_action_unfollow">Ne plus suivre</string>
+    <string name="quick_action_follow">Suivre</string>
+    <string name="quick_action_request_deletion_alert_title">Demande de Suppression</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d'autres relais où elle peut être stockée.</string>
+    <string name="quick_action_block_dialog_btn">Bloquer</string>
+    <string name="quick_action_delete_dialog_btn">Supprimer</string>
+    <string name="quick_action_block">Bloquer</string>
+    <string name="quick_action_report">Signaler</string>
+    <string name="quick_action_delete_button">Supprimer</string>
+    <string name="quick_action_dont_show_again_button">Ne plus montrer</string>
+    <string name="report_dialog_spam">Spam ou arnaque</string>
+    <string name="report_dialog_profanity">Grossièreté ou contenu haineux</string>
+    <string name="report_dialog_impersonation">Usurpation d'identité</string>
+    <string name="report_dialog_nudity">Nudité ou contenu graphique</string>
+    <string name="report_dialog_illegal">Comportement illégal</string>
+    <string name="report_dialog_blocking_a_user">Bloquer un utilisateur cachera son contenu dans votre application. Vos notes sont toujours visibles publiquement, y compris pour les personnes que vous bloquez. Les utilisateurs bloqués sont listés sur l'écran Filtres de Sécurité.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Bloquer & Masquer l'Utilisateur]]></string>
+    <string name="report_dialog_report_btn">Signaler un Abus</string>
+    <string name="report_dialog_reminder_public">Tous les rapports publiés seront visibles publiquement.</string>
+    <string name="report_dialog_additional_reason_placeholder">Fournir un contexte optionnel supplémentaire sur votre signalement...</string>
+    <string name="report_dialog_additional_reason_label">Contexte additionnel</string>
+    <string name="report_dialog_select_reason_label">Raison</string>
+    <string name="report_dialog_select_reason_placeholder">Sélectionner une raison...</string>
+    <string name="report_dialog_post_report_btn">Publier le signalement</string>
+    <string name="report_dialog_title">Bloquer et Signaler</string>
+    <string name="block_only">Bloquer</string>
+
+
+    <string name="bookmarks">Favoris</string>
+    <string name="private_bookmarks">Favoris Privés</string>
+    <string name="public_bookmarks">Favoris Publics</string>
+    <string name="add_to_private_bookmarks">Ajouter aux Favoris Privés</string>
+    <string name="add_to_public_bookmarks">Ajouter aux Favoris Publics</string>
+    <string name="remove_from_private_bookmarks">Supprimer des Favoris Privés</string>
+    <string name="remove_from_public_bookmarks">Supprimer des Favoris Publics</string>
+
+    <string name="wallet_connect_service">Service Wallet Connect</string>
+    <string name="wallet_connect_service_explainer">Autorise un Nostr Secret à payer des zaps sans quitter l'application. Gardez le secret en toute sécurité et utilisez un relais privé si possible</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
+    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
+    <string name="wallet_connect_service_show_secret">Montrer la clé secrète</string>
+    <string name="wallet_connect_service_secret_placeholder">Clé privée nsec / hex</string>
+
+    <string name="pledge_amount_in_sats">Montant engagé en Sats</string>
+    <string name="post_poll">Message Sondage</string>
+    <string name="poll_heading_required">Champs requis:</string>
+    <string name="poll_zap_recipients">Bénéficiaires du Zap</string>
+    <string name="poll_primary_description">Description du sondage primaire...</string>
+    <string name="poll_option_index">Option %s</string>
+    <string name="poll_option_description">Description de l'option du Sondage</string>
+    <string name="poll_heading_optional">Champs optionels:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Consensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Clôturer après</string>
+    <string name="poll_closing_time_days">jours</string>
+    <string name="poll_is_closed">Le Sondage est fermé aux nouveaux votes</string>
+    <string name="poll_zap_amount">Montant des Zap</string>
+    <string name="one_vote_per_user_on_atomic_votes">Un seul vote par utilisateur est autorisé sur ce type de sondage</string>
+
+    <string name="looking_for_event">"Recherche de l'Evénement %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Ajouter un message public</string>
+    <string name="custom_zaps_add_a_message_private">Ajouter un message privé</string>
+    <string name="custom_zaps_add_a_message_nonzap">Ajouter un message facture</string>
+
+    <string name="custom_zaps_add_a_message_example">Merci pour tout votre travail !</string>
+
+    <string name="lightning_create_and_add_invoice">Créer et Ajouter</string>
+    <string name="poll_author_no_vote">Les auteurs du sondage ne peuvent pas voter dans leurs propres sondages.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
+
+    <string name="hash_verification_passed">Ce contenu est le même depuis le message</string>
+    <string name="hash_verification_failed">Ce contenu a changé. L'auteur n'a peut-être pas vu ou approuvé le changement</string>
+
+    <string name="content_description_add_image">Ajouter une Image</string>
+    <string name="content_description_add_video">Ajouter une Vidéo</string>
+    <string name="content_description_add_document">Ajouter un Document</string>
+
+    <string name="add_content">Ajouter au Message</string>
+    <string name="content_description">Description des contenus</string>
+    <string name="content_description_example">Un bateau bleu sur une plage de sable blanc au coucher du soleil</string>
+
+
+    <string name="zap_type">Type de Zap</string>
+    <string name="zap_type_explainer">Zap Type pour toutes les options</string>
+
+    <string name="zap_type_public">Public</string>
+    <string name="zap_type_public_explainer">Tout le monde peut voir la transaction et le message</string>
+
+    <string name="zap_type_private">Privé</string>
+    <string name="zap_type_private_explainer">L'expéditeur et le receveur peuvent se voir et lire le message</string>
+
+    <string name="zap_type_anonymous">Anonyme</string>
+    <string name="zap_type_anonymous_explainer">Le receveur et le public ne savent pas qui a envoyé le paiement</string>
+
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap_explainer">Aucune trace sur Nostr, seulement sur le Lightning</string>
+
+
+    <string name="file_server">Serveur fichier</string>
+    <string name="zap_forward_lnAddress">Adresse LN ou @Utilisateur</string>
+
+    <string name="upload_server_imgur">imgur.com - de confiance</string>
+    <string name="upload_server_imgur_explainer">Imgur peut modifier le fichier</string>
+
+    <string name="upload_server_nostrimg">nostrimg.com - de confiance</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg peut modifier le fichier</string>
+
+    <string name="upload_server_nostrbuild">nostr.build - de confiance</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build peut modifier le fichier</string>
+
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev - de confiance</string>
+    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev peut modifier le fichier</string>
+
+    <string name="upload_server_nostrcheckme">nostrcheck.me - de confiance</string>
+    <string name="upload_server_nostrcheckme_explainer">nostrcheck.me peut modifier le fichier</string>
+
+
+    <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Vérifie si Imgur a modifié le fichier. Nouveau NIP: certains clients pourraient ne pas le voir</string>
+
+    <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Vérifie si NostrImg a modifié le fichier. Nouveau NIP: certains clients pourraient ne pas le voir</string>
+
+    <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Vérifie si Nostr.build a modifié le fichier. Nouveau NIP: certains clients pourraient ne pas le voir</string>
+
+    <string name="upload_server_nostrfilesdev_nip94">Verifiable Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Vérifie si Nostrfiles.dev a modifié le fichier. Nouveau NIP: certains clients pourraient ne pas le voir</string>
+
+    <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Vérifie si Nostrcheck.me a modifié le fichier. Nouveau NIP: certains clients pourraient ne pas le voir</string>
+
+    <string name="upload_server_relays_nip95">Vos relais (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Les fichiers sont hébergés par vos relais. Nouveau NIP: vérifiez s'ils sont supportés</string>
 
     <string name="connect_via_tor_short">Configuration Tor/Orbot</string>
     <string name="connect_via_tor">Se connecter à travers la configuration Orbot</string>
