@@ -85,8 +85,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: app/build/outputs/apk/play/release/app-play-universal-release-unsigned-signed.apk
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/play/release/app-play-universal-release-signed.apk
           asset_name: amethyst-googleplay-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -97,7 +97,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-x86-release-unsigned-signed.apk
+          asset_path: app/build/outputs/apk/play/release/app-play-x86-release-signed.apk
           asset_name: amethyst-googleplay-x86-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -108,7 +108,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-x86_64-release-unsigned-signed.apk
+          asset_path: app/build/outputs/apk/play/release/app-play-x86_64-release-signed.apk
           asset_name: amethyst-googleplay-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -120,7 +120,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-universal-release-unsigned-signed.apk
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-universal-release-signed.apk
           asset_name: amethyst-fdroid-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -131,7 +131,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-unsigned-signed.apk
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-signed.apk
           asset_name: amethyst-fdroid-x86-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -142,7 +142,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned-signed.apk
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-signed.apk
           asset_name: amethyst-fdroid-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
