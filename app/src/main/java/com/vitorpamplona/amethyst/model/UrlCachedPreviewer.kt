@@ -2,33 +2,35 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.LruCache
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.previews.BahaUrlPreview
 import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Stable
 object UrlCachedPreviewer {
     var cache = LruCache<String, UrlPreviewState>(100)
         private set
 
-    fun previewInfo(url: String, onReady: (UrlPreviewState) -> Unit) {
-        checkNotInMainThread()
-
+    suspend fun previewInfo(
+        url: String,
+        onReady: suspend (UrlPreviewState) -> Unit
+    ) = withContext(Dispatchers.IO) {
         cache[url]?.let {
             onReady(it)
-            return
+            return@withContext
         }
 
         BahaUrlPreview(
             url,
             object : IUrlPreviewCallback {
-                override fun onComplete(urlInfo: UrlInfoItem) {
+                override suspend fun onComplete(urlInfo: UrlInfoItem) = withContext(Dispatchers.IO) {
                     cache[url]?.let {
                         if (it is UrlPreviewState.Loaded || it is UrlPreviewState.Empty) {
                             onReady(it)
-                            return
+                            return@withContext
                         }
                     }
 
@@ -42,10 +44,10 @@ object UrlCachedPreviewer {
                     onReady(state)
                 }
 
-                override fun onFailed(throwable: Throwable) {
+                override suspend fun onFailed(throwable: Throwable) = withContext(Dispatchers.IO) {
                     cache[url]?.let {
                         onReady(it)
-                        return
+                        return@withContext
                     }
 
                     val state = UrlPreviewState.Error(throwable.message ?: "Error Loading url preview")

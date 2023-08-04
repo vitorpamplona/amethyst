@@ -1,25 +1,21 @@
 package com.vitorpamplona.amethyst.service.previews
 
 import android.net.Uri
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.*
 import java.util.*
 
 class BahaUrlPreview(val url: String, var callback: IUrlPreviewCallback?) {
-    val scope = CoroutineScope(Job() + Dispatchers.IO)
     private val imageExtensionArray = arrayOf(".gif", ".png", ".jpg", ".jpeg", ".bmp", ".webp")
 
-    fun fetchUrlPreview(timeOut: Int = 30000) {
-        val exceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
-            callback?.onFailed(throwable)
-        }
-        scope.launch(exceptionHandler) {
+    suspend fun fetchUrlPreview(timeOut: Int = 30000) = withContext(Dispatchers.IO) {
+        try {
             fetch(timeOut)
+        } catch (t: Throwable) {
+            callback?.onFailed(t)
         }
     }
 
     private suspend fun fetch(timeOut: Int = 30000) {
-        checkNotInMainThread()
         lateinit var urlInfoItem: UrlInfoItem
         if (checkIsImageUrl()) {
             urlInfoItem = UrlInfoItem(url = url, image = url)
@@ -43,7 +39,6 @@ class BahaUrlPreview(val url: String, var callback: IUrlPreviewCallback?) {
     }
 
     fun cleanUp() {
-        scope.cancel()
         callback = null
     }
 }

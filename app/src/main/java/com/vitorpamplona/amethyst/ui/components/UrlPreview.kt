@@ -30,7 +30,7 @@ fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel)
     } else {
         var urlPreviewState by remember(url) {
             mutableStateOf(
-                UrlCachedPreviewer.cache.get(url)?.let { it } ?: UrlPreviewState.Loading
+                UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading
             )
         }
 
@@ -39,9 +39,7 @@ fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel)
             LaunchedEffect(url) {
                 launch(Dispatchers.IO) {
                     UrlCachedPreviewer.previewInfo(url) {
-                        launch(Dispatchers.Main) {
-                            urlPreviewState = it
-                        }
+                        urlPreviewState = it
                     }
                 }
             }
