@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.amethyst.service.relays.bytesUsedInMemory
 import fr.acinq.secp256k1.Hex
 import java.lang.reflect.Type
 import java.math.BigDecimal
@@ -24,6 +25,16 @@ open class Event(
     val content: String,
     val sig: HexKey
 ) : EventInterface {
+
+    override fun countMemory(): Long {
+        return 12L +
+            id.bytesUsedInMemory() +
+            pubKey.bytesUsedInMemory() +
+            tags.sumOf { it.sumOf { it.bytesUsedInMemory() } } +
+            content.bytesUsedInMemory() +
+            sig.bytesUsedInMemory()
+    }
+
     override fun id(): HexKey = id
 
     override fun pubKey(): HexKey = pubKey

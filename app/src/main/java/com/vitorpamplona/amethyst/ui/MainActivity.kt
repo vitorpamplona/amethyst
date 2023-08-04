@@ -56,9 +56,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val uri = intent?.data?.toString()
-        val startingPage = uriToRoute(uri)
-
         LocalPreferences.migrateSingleUserPrefs()
         val language = LocalPreferences.getPreferredLanguage()
         if (language.isNotBlank()) {

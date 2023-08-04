@@ -51,20 +51,20 @@ open class Note(val idHex: String) {
     var replyTo: List<Note>? = null
 
     // These fields are updated every time an event related to this note is received.
-    var replies = setOf<Note>()
+    var replies = listOf<Note>()
         private set
-    var reactions = mapOf<String, Set<Note>>()
+    var reactions = mapOf<String, List<Note>>()
         private set
-    var boosts = setOf<Note>()
+    var boosts = listOf<Note>()
         private set
-    var reports = mapOf<User, Set<Note>>()
+    var reports = mapOf<User, List<Note>>()
         private set
     var zaps = mapOf<Note, Note?>()
         private set
     var zapPayments = mapOf<Note, Note?>()
         private set
 
-    var relays = setOf<String>()
+    var relays = listOf<String>()
         private set
 
     var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
@@ -151,15 +151,20 @@ open class Note(val idHex: String) {
     }
 
     fun removeReply(note: Note) {
-        replies = replies - note
-        liveSet?.replies?.invalidateData()
-    }
-    fun removeBoost(note: Note) {
-        boosts = boosts - note
-        liveSet?.boosts?.invalidateData()
+        if (note in replies) {
+            replies = replies - note
+            liveSet?.replies?.invalidateData()
+        }
     }
 
-    fun removeAllChildNotes(): Set<Note> {
+    fun removeBoost(note: Note) {
+        if (note in boosts) {
+            boosts = boosts - note
+            liveSet?.boosts?.invalidateData()
+        }
+    }
+
+    fun removeAllChildNotes(): List<Note> {
         val toBeRemoved = replies +
             reactions.values.flatten() +
             boosts +
@@ -169,13 +174,13 @@ open class Note(val idHex: String) {
             zapPayments.keys +
             zapPayments.values.filterNotNull()
 
-        replies = setOf<Note>()
-        reactions = mapOf<String, Set<Note>>()
-        boosts = setOf<Note>()
-        reports = mapOf<User, Set<Note>>()
+        replies = listOf<Note>()
+        reactions = mapOf<String, List<Note>>()
+        boosts = listOf<Note>()
+        reports = mapOf<User, List<Note>>()
         zaps = mapOf<Note, Note?>()
         zapPayments = mapOf<Note, Note?>()
-        relays = setOf<String>()
+        relays = listOf<String>()
         lastReactionsDownloadTime = emptyMap()
 
         liveSet?.replies?.invalidateData()
@@ -193,14 +198,16 @@ open class Note(val idHex: String) {
 
         if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
             reactions[reaction]?.let {
-                val newList = it.minus(note)
-                if (newList.isEmpty()) {
-                    reactions = reactions.minus(reaction)
-                } else {
-                    reactions = reactions + Pair(reaction, newList)
-                }
+                if (note in it) {
+                    val newList = it.minus(note)
+                    if (newList.isEmpty()) {
+                        reactions = reactions.minus(reaction)
+                    } else {
+                        reactions = reactions + Pair(reaction, newList)
+                    }
 
-                liveSet?.reactions?.invalidateData()
+                    liveSet?.reactions?.invalidateData()
+                }
             }
         }
     }
@@ -306,7 +313,7 @@ open class Note(val idHex: String) {
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction !in reactions.keys) {
-            reactions = reactions + Pair(reaction, setOf(note))
+            reactions = reactions + Pair(reaction, listOf(note))
             liveSet?.reactions?.invalidateData()
         } else if (reactions[reaction]?.contains(note) == false) {
             reactions = reactions + Pair(reaction, (reactions[reaction] ?: emptySet()) + note)
@@ -318,7 +325,7 @@ open class Note(val idHex: String) {
         val author = note.author ?: return
 
         if (author !in reports.keys) {
-            reports = reports + Pair(author, setOf(note))
+            reports = reports + Pair(author, listOf(note))
             liveSet?.reports?.invalidateData()
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
@@ -411,8 +418,8 @@ open class Note(val idHex: String) {
         return boosts.any { it.author?.pubkeyHex == user.pubkeyHex }
     }
 
-    fun reportsBy(user: User): Set<Note> {
-        return reports[user] ?: emptySet()
+    fun hasReportsBy(user: User): Boolean {
+        return reports[user]?.isNotEmpty() ?: false
     }
 
     fun reportAuthorsBy(users: Set<HexKey>): List<User> {
@@ -576,9 +583,9 @@ open class Note(val idHex: String) {
         }
 
         replyTo = null
-        replies = emptySet()
+        replies = emptyList()
         reactions = emptyMap()
-        boosts = emptySet()
+        boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
     }

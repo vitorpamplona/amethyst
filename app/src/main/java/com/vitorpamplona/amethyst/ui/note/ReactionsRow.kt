@@ -412,62 +412,94 @@ private fun ReactionDetailGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val boostsState by baseNote.live().boosts.observeAsState()
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
     val defaultBackgroundColor = MaterialTheme.colors.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    val hasReactions by remember(zapsState, boostsState, reactionsState) {
-        derivedStateOf {
-            baseNote.zaps.isNotEmpty() ||
-                baseNote.boosts.isNotEmpty() ||
-                baseNote.reactions.isNotEmpty()
-        }
-    }
+    val hasReactions by baseNote.live().zaps.combineWith(
+        baseNote.live().boosts,
+        baseNote.live().reactions
+    ) { zapState, boostState, reactionState ->
+        zapState?.note?.zaps?.isNotEmpty() ?: false ||
+            boostState?.note?.boosts?.isNotEmpty() ?: false ||
+            reactionState?.note?.reactions?.isNotEmpty() ?: false
+    }.distinctUntilChanged().observeAsState(
+        baseNote.zaps.isNotEmpty() || baseNote.boosts.isNotEmpty() || baseNote.reactions.isNotEmpty()
+    )
 
     if (hasReactions) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp, top = 5.dp)) {
             Column() {
-                val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() } }
-                val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
-                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableMap() } }
-
-                val hasZapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.isNotEmpty() } }
-                val hasBoostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.isNotEmpty() } }
-                val hasLikeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.isNotEmpty() } }
-
-                if (hasZapEvents) {
-                    RenderZapGallery(
-                        zapEvents,
-                        backgroundColor,
-                        nav,
-                        accountViewModel
-                    )
-                }
-
-                if (hasBoostEvents) {
-                    RenderBoostGallery(
-                        boostEvents,
-                        nav,
-                        accountViewModel
-                    )
-                }
-
-                if (hasLikeEvents) {
-                    likeEvents.forEach {
-                        val reactions = remember(it.value) { it.value.toImmutableList() }
-                        RenderLikeGallery(
-                            it.key,
-                            reactions,
-                            nav,
-                            accountViewModel
-                        )
-                    }
-                }
+                WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
             }
         }
+    }
+}
+
+@Composable
+private fun WatchBoostsAndRenderGallery(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val boostsState by baseNote.live().boosts.observeAsState()
+    val boostsEvents by remember(boostsState) {
+        derivedStateOf { baseNote.boosts.toImmutableList() }
+    }
+
+    if (boostsEvents.isNotEmpty()) {
+        RenderBoostGallery(
+            boostsEvents,
+            nav,
+            accountViewModel
+        )
+    }
+}
+
+@Composable
+private fun WatchReactionsAndRenderGallery(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val reactionsState by baseNote.live().reactions.observeAsState()
+    val reactionEvents by remember(reactionsState) {
+        derivedStateOf { baseNote.reactions.toImmutableMap() }
+    }
+
+    if (reactionEvents.isNotEmpty()) {
+        reactionEvents.forEach {
+            val reactions = remember(it.value) { it.value.toImmutableList() }
+            RenderLikeGallery(
+                it.key,
+                reactions,
+                nav,
+                accountViewModel
+            )
+        }
+    }
+}
+
+@Composable
+private fun WatchZapAndRenderGallery(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapEvents by remember(zapsState) {
+        derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() }
+    }
+
+    if (zapEvents.isNotEmpty()) {
+        RenderZapGallery(
+            zapEvents,
+            backgroundColor,
+            nav,
+            accountViewModel
+        )
     }
 }
 
