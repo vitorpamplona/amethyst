@@ -172,6 +172,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -3514,6 +3515,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
 
     Row(
         modifier = Modifier
+            .padding(top = Size5dp)
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
