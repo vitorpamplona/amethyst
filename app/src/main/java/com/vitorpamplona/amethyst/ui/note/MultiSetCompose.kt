@@ -162,7 +162,6 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun Galeries(
     multiSetCard: MultiSetCard,
@@ -259,7 +258,9 @@ fun RenderZapGallery(
         ) {
             ZappedIcon(
                 modifier = remember {
-                    Modifier.size(Size25dp).align(Alignment.TopEnd)
+                    Modifier
+                        .size(Size25dp)
+                        .align(Alignment.TopEnd)
                 }
             )
         }
@@ -281,7 +282,11 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size19dp).align(Alignment.TopEnd) }
+                modifier = remember {
+                    Modifier
+                        .size(Size19dp)
+                        .align(Alignment.TopEnd)
+                }
             )
         }
 
@@ -344,25 +349,42 @@ private fun ParseAuthorCommentAndAmount(
 
     LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
         launch(Dispatchers.IO) {
-            (zapRequest.event as? LnZapRequestEvent)?.let {
-                val decryptedContent = accountViewModel.decryptZap(zapRequest)
-                val amount = (zapEvent?.event as? LnZapEvent)?.amount
-                if (decryptedContent != null) {
-                    val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    val newState = ZapAmountCommentNotification(newAuthor, decryptedContent.content.ifBlank { null }, showAmountAxis(amount))
-
-                    launch(Dispatchers.Main) { content.value = newState }
-                } else {
-                    if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                        val newState = ZapAmountCommentNotification(zapRequest.author, zapRequest.event?.content()?.ifBlank { null }, showAmountAxis(amount))
-                        launch(Dispatchers.Main) { content.value = newState }
-                    }
-                }
+            val newState = loadAmountState(zapRequest, zapEvent, accountViewModel)
+            if (newState != null) {
+                content.value = newState
             }
         }
     }
 
     onReady(content)
+}
+
+private suspend fun loadAmountState(
+    zapRequest: Note,
+    zapEvent: Note?,
+    accountViewModel: AccountViewModel
+): ZapAmountCommentNotification? {
+    (zapRequest.event as? LnZapRequestEvent)?.let {
+        val decryptedContent = accountViewModel.decryptZap(zapRequest)
+        val amount = (zapEvent?.event as? LnZapEvent)?.amount
+        if (decryptedContent != null) {
+            val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+            return ZapAmountCommentNotification(
+                newAuthor,
+                decryptedContent.content.ifBlank { null },
+                showAmountAxis(amount)
+            )
+        } else {
+            if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
+                return ZapAmountCommentNotification(
+                    zapRequest.author,
+                    zapRequest.event?.content()?.ifBlank { null },
+                    showAmountAxis(amount)
+                )
+            }
+        }
+    }
+    return null
 }
 
 @Composable
