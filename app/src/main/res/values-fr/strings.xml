@@ -212,7 +212,7 @@
     <string name="quick_action_unfollow">Ne plus suivre</string>
     <string name="quick_action_follow">Suivre</string>
     <string name="quick_action_request_deletion_alert_title">Demande de Suppression</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n\'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d'autres relais où elle peut être stockée.</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n\'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d\'autres relais où elle peut être stockée.</string>
     <string name="quick_action_block_dialog_btn">Bloquer</string>
     <string name="quick_action_delete_dialog_btn">Supprimer</string>
     <string name="quick_action_block">Bloquer</string>
