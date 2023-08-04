@@ -8,6 +8,7 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
+import java.io.File
 
 @UnstableApi object VideoCache {
 
@@ -25,7 +26,7 @@ import okhttp3.OkHttpClient
         exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
         simpleCache = SimpleCache(
-            context.cacheDir,
+            File(context.cacheDir, "exoplayer"),
             leastRecentlyUsedCacheEvictor,
             exoDatabaseProvider
         )
