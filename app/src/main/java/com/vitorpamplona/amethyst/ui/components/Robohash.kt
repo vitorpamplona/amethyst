@@ -95,6 +95,7 @@ object Robohash {
             .Builder(context)
             .data("robohash:$message")
             .fetcherFactory(HashImageFetcher.Factory)
+            .addHeader("Cache-Control", "max-age=31536000")
             .build()
     }
 }
