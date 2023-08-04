@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
@@ -44,7 +46,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
     ) {
         Surface() {
             Column(
-                modifier = Modifier.padding(10.dp)
+                modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())
             ) {
                 Row(
                     modifier = Modifier
