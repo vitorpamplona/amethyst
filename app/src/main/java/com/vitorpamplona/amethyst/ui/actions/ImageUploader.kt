@@ -190,17 +190,20 @@ class ImgurServer : FileServer() {
 }
 
 class NostrBuildServer : FileServer() {
-    override fun postUrl(contentType: String?) = "https://nostr.build/api/upload/android.php"
+    override fun postUrl(contentType: String?) = "https://nostr.build/api/v2/upload/files"
     override fun parseUrlFromSuccess(body: String): String? {
-        val url = jacksonObjectMapper().readTree(body) // return url.toString()
+        val tree = jacksonObjectMapper().readTree(body)
+        val data = tree?.get("data")
+        val data0 = data?.get(0)
+        val url = data0?.get("url")
         return url.toString().replace("\"", "")
     }
 
     override fun inputParameterName(contentType: String?): String {
-        return "fileToUpload"
+        return "file"
     }
 
-    override fun clientID(info: String) = null
+    override fun clientID(info: String) = ImageUploader.NIP98Header("https://nostr.build/api/v2/upload/files", "POST", info)
 }
 
 class NostrFilesDevServer : FileServer() {
