@@ -16,7 +16,6 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,8 +29,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: PublicChatChannel? = null) {
@@ -59,14 +56,10 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                         onClose()
                     })
 
-                    val scope = rememberCoroutineScope()
-
                     PostButton(
                         onPost = {
-                            scope.launch(Dispatchers.IO) {
-                                postViewModel.create()
-                                onClose()
-                            }
+                            postViewModel.create()
+                            onClose()
                         },
                         postViewModel.channelName.value.text.isNotBlank()
                     )

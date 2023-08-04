@@ -3,8 +3,11 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class NewChannelViewModel : ViewModel() {
     private var account: Account? = null
@@ -25,24 +28,26 @@ class NewChannelViewModel : ViewModel() {
     }
 
     fun create() {
-        this.account?.let { account ->
-            if (originalChannel == null) {
-                account.sendCreateNewChannel(
-                    channelName.value.text,
-                    channelDescription.value.text,
-                    channelPicture.value.text
-                )
-            } else {
-                account.sendChangeChannel(
-                    channelName.value.text,
-                    channelDescription.value.text,
-                    channelPicture.value.text,
-                    originalChannel!!
-                )
+        viewModelScope.launch(Dispatchers.IO) {
+            account?.let { account ->
+                if (originalChannel == null) {
+                    account.sendCreateNewChannel(
+                        channelName.value.text,
+                        channelDescription.value.text,
+                        channelPicture.value.text
+                    )
+                } else {
+                    account.sendChangeChannel(
+                        channelName.value.text,
+                        channelDescription.value.text,
+                        channelPicture.value.text,
+                        originalChannel!!
+                    )
+                }
             }
-        }
 
-        clear()
+            clear()
+        }
     }
 
     fun clear() {
