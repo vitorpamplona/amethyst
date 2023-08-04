@@ -8,6 +8,8 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.disk.DiskCache
+import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.HttpClient
@@ -29,6 +31,7 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
+import java.io.File
 
 object ServiceManager {
     private var account: Account? = null
@@ -55,7 +58,8 @@ object ServiceManager {
                     add(GifDecoder.Factory())
                 }
                 add(SvgDecoder.Factory())
-            } // .logger(DebugLogger())
+            }.logger(DebugLogger())
+                .diskCache { SingletonDiskCache.get(context.applicationContext) }
                 .okHttpClient { HttpClient.getHttpClient() }
                 .respectCacheHeaders(false)
                 .build()
@@ -121,3 +125,28 @@ object ServiceManager {
         }
     }
 }
+
+object SingletonDiskCache {
+
+    private const val DIRECTORY = "image_cache"
+    private var instance: DiskCache? = null
+
+    @Synchronized
+    fun get(context: Context): DiskCache {
+        return instance ?: run {
+            // Create the singleton disk cache instance.
+            DiskCache.Builder()
+                .directory(context.safeCacheDir.resolve(DIRECTORY))
+                .maxSizePercent(0.2)
+                .maximumMaxSizeBytes(500L * 1024 * 1024) // 250MB
+                .build()
+                .also { instance = it }
+        }
+    }
+}
+
+internal val Context.safeCacheDir: File
+    get() {
+        val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
+        return cacheDir.apply { mkdirs() }
+    }
