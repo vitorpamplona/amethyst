@@ -1492,7 +1492,7 @@ val OneKilo = BigDecimal(1000)
 var dfG: DecimalFormat = DecimalFormat("#.0G")
 var dfM: DecimalFormat = DecimalFormat("#.0M")
 var dfK: DecimalFormat = DecimalFormat("#.0k")
-var dfN: DecimalFormat = DecimalFormat("#.0")
+var dfN: DecimalFormat = DecimalFormat("#")
 
 fun showAmount(amount: BigDecimal?): String {
     if (amount == null) return ""
