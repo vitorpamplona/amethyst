@@ -48,6 +48,7 @@ val HalfDoubleVertSpacer = Modifier.height(7.dp)
 val Size0dp = 0.dp
 val Size5dp = 5.dp
 val Size10dp = 10.dp
+val Size12dp = 12.dp
 val Size13dp = 13.dp
 val Size15dp = 15.dp
 val Size16dp = 16.dp
@@ -59,6 +60,7 @@ val Size22dp = 22.dp
 val Size24dp = 24.dp
 val Size25dp = 25.dp
 val Size30dp = 30.dp
+val Size34dp = 34.dp
 val Size35dp = 35.dp
 val Size55dp = 55.dp
 val Size75dp = 75.dp
@@ -105,6 +107,7 @@ val UserNameMaxRowHeight = Modifier.fillMaxWidth()
 val Height4dpModifier = Modifier.height(4.dp)
 
 val AccountPictureModifier = Modifier.width(55.dp).height(55.dp).clip(shape = CircleShape)
+val HeaderPictureModifier = Modifier.width(34.dp).height(34.dp).clip(shape = CircleShape)
 
 val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
 val ShowMoreRelaysButtonIconModifier = Modifier.size(15.dp)

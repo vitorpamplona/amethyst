@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -127,7 +126,9 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldLeadingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -229,14 +230,6 @@ fun ChannelScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        ChannelHeader(
-            baseChannel = channel,
-            showVideo = true,
-            showBottomDiviser = true,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
         Column(
@@ -571,6 +564,7 @@ fun ChannelHeader(
         val expanded = remember { mutableStateOf(false) }
 
         Column(
+            verticalArrangement = Arrangement.Center,
             modifier = modifier.clickable {
                 if (sendToChannel) {
                     nav(routeFor(baseChannel))
@@ -670,7 +664,7 @@ private fun ShortChannelHeader(
             channel.creator?.let {
                 UserPicture(
                     user = it,
-                    size = Size35dp,
+                    size = Size34dp,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )
@@ -682,11 +676,7 @@ private fun ShortChannelHeader(
                     model = it,
                     contentDescription = stringResource(R.string.profile_image),
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .width(Size35dp)
-                        .height(Size35dp)
-                        .clip(shape = CircleShape)
+                    modifier = HeaderPictureModifier
                 )
             }
         }

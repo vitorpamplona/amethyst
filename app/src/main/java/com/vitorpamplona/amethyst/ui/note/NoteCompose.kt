@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
@@ -512,28 +513,31 @@ fun CommunityHeader(
 ) {
     val expanded = remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.clickable {
-            if (sendToCommunity) {
-                routeFor(baseNote, accountViewModel.userProfile())?.let {
-                    nav(it)
+    Column(Modifier.fillMaxWidth()) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = modifier.clickable {
+                if (sendToCommunity) {
+                    routeFor(baseNote, accountViewModel.userProfile())?.let {
+                        nav(it)
+                    }
+                } else {
+                    expanded.value = !expanded.value
                 }
-            } else {
-                expanded.value = !expanded.value
+            }
+        ) {
+            ShortCommunityHeader(baseNote, expanded, accountViewModel, nav)
+
+            if (expanded.value) {
+                LongCommunityHeader(baseNote, accountViewModel, nav)
             }
         }
-    ) {
-        ShortCommunityHeader(baseNote, expanded, accountViewModel, nav)
 
-        if (expanded.value) {
-            LongCommunityHeader(baseNote, accountViewModel, nav)
+        if (showBottomDiviser) {
+            Divider(
+                thickness = 0.25.dp
+            )
         }
-    }
-
-    if (showBottomDiviser) {
-        Divider(
-            thickness = 0.25.dp
-        )
     }
 }
 
@@ -691,11 +695,7 @@ fun ShortCommunityHeader(baseNote: AddressableNote, expanded: MutableState<Boole
                 model = it,
                 contentDescription = stringResource(R.string.profile_image),
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .padding(start = 10.dp)
-                    .width(Size35dp)
-                    .height(Size35dp)
-                    .clip(shape = CircleShape)
+                modifier = HeaderPictureModifier
             )
         }
 
@@ -1951,6 +1951,26 @@ fun RenderPostApproval(
 }
 
 @Composable
+fun LoadAddressableNote(aTagHex: String, content: @Composable (AddressableNote?) -> Unit) {
+    var note by remember(aTagHex) {
+        mutableStateOf<AddressableNote?>(LocalCache.getAddressableNoteIfExists(aTagHex))
+    }
+
+    if (note == null) {
+        LaunchedEffect(key1 = aTagHex) {
+            launch(Dispatchers.IO) {
+                val newNote = LocalCache.checkGetOrCreateAddressableNote(aTagHex)
+                if (newNote != note) {
+                    note = newNote
+                }
+            }
+        }
+    }
+
+    content(note)
+}
+
+@Composable
 fun LoadAddressableNote(aTag: ATag, content: @Composable (AddressableNote?) -> Unit) {
     var note by remember(aTag) {
         mutableStateOf<AddressableNote?>(LocalCache.getAddressableNoteIfExists(aTag.toTag()))
@@ -1959,7 +1979,10 @@ fun LoadAddressableNote(aTag: ATag, content: @Composable (AddressableNote?) -> U
     if (note == null) {
         LaunchedEffect(key1 = aTag) {
             launch(Dispatchers.IO) {
-                note = LocalCache.getOrCreateAddressableNote(aTag)
+                val newNote = LocalCache.getOrCreateAddressableNote(aTag)
+                if (newNote != note) {
+                    note = newNote
+                }
             }
         }
     }

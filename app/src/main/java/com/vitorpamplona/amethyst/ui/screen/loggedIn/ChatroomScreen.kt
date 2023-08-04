@@ -2,10 +2,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
@@ -36,7 +38,8 @@ import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -129,10 +132,7 @@ fun ChatroomScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        ChatroomHeader(baseUser, accountViewModel, nav = nav)
-
         val replyTo = remember { mutableStateOf<Note?>(null) }
-
         Column(
             modifier = Modifier
                 .fillMaxHeight()
@@ -179,34 +179,36 @@ fun ChatroomScreen(
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ChatroomHeader(
+    baseUser: User,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     Column(
-        modifier = Modifier.clickable(
+        modifier = Modifier.fillMaxWidth().clickable(
             onClick = { nav("User/${baseUser.pubkeyHex}") }
         )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = modifier
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ClickableUserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
-                    size = Size35dp
+                    size = Size34dp
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        UsernameDisplay(baseUser)
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseUser)
-                    }
+                    UsernameDisplay(baseUser)
+                    ObserveDisplayNip05Status(baseUser)
                 }
             }
         }
 
         Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
     }

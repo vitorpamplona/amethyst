@@ -11,11 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -39,7 +36,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -78,11 +74,20 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.note.CommunityHeader
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
@@ -109,29 +114,77 @@ fun AppTopBar(
         }
     }
 
-    RenderTopRouteBar(currentRoute, followLists, scaffoldState, accountViewModel, nav)
+    val id by remember(navEntryState.value) {
+        derivedStateOf {
+            navEntryState.value?.arguments?.getString("id")
+        }
+    }
+
+    RenderTopRouteBar(currentRoute, id, followLists, scaffoldState, accountViewModel, nav)
 }
 
 @Composable
 private fun RenderTopRouteBar(
     currentRoute: String?,
+    id: String?,
     followLists: FollowListViewModel,
     scaffoldState: ScaffoldState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     when (currentRoute) {
-        Route.Channel.base -> NoTopBar()
-        Route.Room.base -> NoTopBar()
-        Route.Community.base -> NoTopBar()
-        Route.Hashtag.base -> NoTopBar()
-        Route.Geohash.base -> NoTopBar()
         // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Discover.base -> DiscoveryTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel, nav)
-        else -> MainTopBar(scaffoldState, accountViewModel, nav)
+        else -> {
+            if (id != null) {
+                when (currentRoute) {
+                    Route.Channel.base -> LoadChannel(baseChannelHex = id) {
+                        ChannelHeader(
+                            baseChannel = it,
+                            showVideo = true,
+                            showBottomDiviser = true,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
+                    }
+                    Route.Room.base -> LoadUser(baseUserHex = id) {
+                        if (it != null) {
+                            ChatroomHeader(
+                                baseUser = it,
+                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 10.dp),
+                                accountViewModel = accountViewModel,
+                                nav = nav
+                            )
+                        } else {
+                            Spacer(BottomTopHeight)
+                        }
+                    }
+                    Route.Community.base -> LoadAddressableNote(aTagHex = id) {
+                        if (it != null) {
+                            CommunityHeader(
+                                baseNote = it,
+                                showBottomDiviser = true,
+                                sendToCommunity = false,
+                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
+                                accountViewModel = accountViewModel,
+                                nav = nav
+                            )
+                        } else {
+                            Spacer(BottomTopHeight)
+                        }
+                    }
+                    Route.Hashtag.base -> HashtagHeader(id, Modifier.padding(vertical = 0.dp, horizontal = 10.dp), accountViewModel)
+                    Route.Geohash.base -> GeoHashHeader(id, Modifier.padding(vertical = 0.dp, horizontal = 10.dp), accountViewModel)
+                    else -> MainTopBar(scaffoldState, accountViewModel, nav)
+                }
+            } else {
+                MainTopBar(scaffoldState, accountViewModel, nav)
+            }
+        }
     }
 }
 
@@ -279,17 +332,13 @@ private fun LoggedInUserPictureDrawer(
     val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
 
     IconButton(
-        onClick = onClick,
-        modifier = Modifier
+        onClick = onClick
     ) {
         RobohashAsyncImageProxy(
             robot = pubkeyHex,
             model = profilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = Modifier
-                .width(34.dp)
-                .height(34.dp)
-                .clip(shape = CircleShape)
+            modifier = HeaderPictureModifier
         )
     }
 }

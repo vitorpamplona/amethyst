@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -97,7 +97,6 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            GeoHashHeader(tag, accountViewModel)
             RefresheableFeedView(
                 feedViewModel,
                 null,
@@ -109,32 +108,22 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
 }
 
 @Composable
-fun GeoHashHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
+fun GeoHashHeader(tag: String, modifier: Modifier = StdPadding, account: AccountViewModel, onClick: () -> Unit = { }) {
     Column(
-        Modifier.clickable { onClick() }
+        Modifier.fillMaxWidth().clickable { onClick() }
     ) {
-        Column(modifier = HalfPadding) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
+        Column(modifier = modifier) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
 
-                        HashtagActionOptions(tag, account)
-                    }
-                }
+                HashtagActionOptions(tag, account)
             }
         }
 
         Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
     }
