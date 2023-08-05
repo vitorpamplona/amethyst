@@ -475,6 +475,7 @@ class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     fun invalidateData() {
+        if (!hasObservers()) return
         checkNotInMainThread()
 
         bundler.invalidate() {
