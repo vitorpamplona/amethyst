@@ -197,7 +197,7 @@ fun ChannelScreen(
 
     LaunchedEffect(Unit) {
         NostrChannelDataSource.start()
-        feedViewModel.invalidateData()
+        feedViewModel.invalidateData(true)
 
         launch(Dispatchers.IO) {
             newPostModel.imageUploadingError.collect { error ->
@@ -213,7 +213,7 @@ fun ChannelScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Channel Start")
                 NostrChannelDataSource.start()
-                feedViewModel.invalidateData()
+                feedViewModel.invalidateData(true)
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Channel Stop")
