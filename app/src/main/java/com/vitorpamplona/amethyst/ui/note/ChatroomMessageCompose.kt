@@ -254,9 +254,11 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            val createdAt = note.createdAt()
-            if (createdAt != null) {
-                accountViewModel.account.markAsRead(routeForLastRead, createdAt)
+            launch(Dispatchers.IO) {
+                val createdAt = note.createdAt()
+                if (createdAt != null) {
+                    accountViewModel.account.markAsRead(routeForLastRead, createdAt)
+                }
             }
         }
     }
