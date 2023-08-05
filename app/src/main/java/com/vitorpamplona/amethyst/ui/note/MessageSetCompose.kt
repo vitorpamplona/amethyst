@@ -50,7 +50,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
     val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
     LaunchedEffect(key1 = messageSetCard) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val isNew = messageSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
 
             accountViewModel.account.markAsRead(routeForLastRead, messageSetCard.createdAt())
