@@ -27,7 +27,7 @@ fun timeAgo(mills: Long?, context: Context): String {
         .replace("Yesterday", "1" + context.getString(R.string.d))
 }
 
-fun timeAgoShort(mills: Long?, context: Context): String {
+fun timeAgoShort(mills: Long?, stringForNow: String): String {
     if (mills == null) return " "
 
     var humanReadable = DateUtils.getRelativeTimeSpanString(
@@ -37,7 +37,7 @@ fun timeAgoShort(mills: Long?, context: Context): String {
         DateUtils.FORMAT_ABBREV_ALL
     ).toString()
     if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
-        humanReadable = context.getString(R.string.now)
+        humanReadable = stringForNow
     }
 
     return humanReadable

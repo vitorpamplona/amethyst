@@ -33,12 +33,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -58,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -68,6 +67,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -575,18 +576,18 @@ private fun StatusRow(
 
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
-    val context = LocalContext.current
+    val nowStr = stringResource(id = R.string.now)
 
-    val timeStr by remember(baseNote) {
+    val time by remember(baseNote) {
         derivedStateOf {
-            timeAgoShort(baseNote.createdAt() ?: 0, context = context)
+            timeAgoShort(baseNote.createdAt() ?: 0, nowStr)
         }
     }
 
     Text(
-        text = timeStr,
+        text = time,
         color = MaterialTheme.colors.placeholderText,
-        fontSize = 12.sp,
+        fontSize = Font12SP,
         maxLines = 1
     )
 }

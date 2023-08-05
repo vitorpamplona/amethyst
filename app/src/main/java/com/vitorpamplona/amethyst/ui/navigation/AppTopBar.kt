@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -146,7 +147,7 @@ private fun RenderTopRouteBar(
                             baseChannel = it,
                             showVideo = true,
                             showBottomDiviser = true,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 11.dp),
                             accountViewModel = accountViewModel,
                             nav = nav
                         )
@@ -155,7 +156,7 @@ private fun RenderTopRouteBar(
                         if (it != null) {
                             ChatroomHeader(
                                 baseUser = it,
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 10.dp),
+                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 11.dp),
                                 accountViewModel = accountViewModel,
                                 nav = nav
                             )
@@ -338,7 +339,8 @@ private fun LoggedInUserPictureDrawer(
             robot = pubkeyHex,
             model = profilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = HeaderPictureModifier
+            modifier = HeaderPictureModifier,
+            contentScale = ContentScale.Crop
         )
     }
 }
