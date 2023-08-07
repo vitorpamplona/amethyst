@@ -536,4 +536,5 @@
     <string name="messages_group_descriptor">Members of this group</string>
     <string name="messages_new_subject_message">Explanation to members</string>
     <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
+    <string name="paste_from_clipboard">Paste from clipboard</string>
 </resources>
