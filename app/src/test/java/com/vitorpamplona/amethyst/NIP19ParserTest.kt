@@ -116,6 +116,15 @@ class NIP19ParserTest {
     }
 
     @Test
+    fun nEventParser3() {
+        val result = Nip19.uriToRoute("nostr:nevent1qqsg6gechd3dhzx38n4z8a2lylzgsmmgeamhmtzz72m9ummsnf0xjfspsdmhxue69uhkummn9ekx7mpvwaehxw309ahx7um5wghx77r5wghxgetk93mhxue69uhhyetvv9ujumn0wd68ytnzvuk8wumn8ghj7mn0wd68ytn9d9h82mny0fmkzmn6d9njuumsv93k2trhwden5te0wfjkccte9ehx7um5wghxyctwvsk8wumn8ghj7un9d3shjtnyv9kh2uewd9hs3kqsdn")
+
+        assertEquals(Nip19.Type.EVENT, result?.type)
+        assertEquals("8d2338bb62db88d13cea23f55f27c4886f68cf777dac42f2b65e6f709a5e6926", result?.hex)
+        assertEquals("wss://nos.lol,wss://nostr.oxtr.dev,wss://relay.nostr.bg,wss://nostr.einundzwanzig.space,wss://relay.nostr.band,wss://relay.damus.io", result?.relay)
+    }
+
+    @Test
     fun nEventParserInvalidChecksum() {
         val result = Nip19.uriToRoute("nostr:nevent1qqsyxq8v0730nz38dupnjzp5jegkyz4gu2ptwcps4v32hjnrap0q0espz3mhxue69uhhyetvv9ujuerpd46hxtnfdupzq3svyhng9ld8sv44950j957j9vchdktj7cxumsep9mvvjthc2pjuqvzqqqqqqyn3t9gj")
 

@@ -21,7 +21,7 @@ object Tlv {
         var rest = data
         while (rest.isNotEmpty()) {
             val t = rest[0]
-            val l = rest[1]
+            val l = rest[1].toUByte().toInt()
             val v = rest.sliceArray(IntRange(2, (2 + l) - 1))
             rest = rest.sliceArray(IntRange(2 + l, rest.size - 1))
             if (v.size < l) continue
