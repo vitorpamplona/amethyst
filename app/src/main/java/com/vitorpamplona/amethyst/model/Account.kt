@@ -460,7 +460,11 @@ class Account(
         if (followingCommunities.isNotEmpty()) {
             followingCommunities.forEach {
                 ATag.parse(it, null)?.let {
-                    returningContactList = ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.privKey!!)
+                    returningContactList = if (keyPair.privKey == null) {
+                        ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.pubKey.toHexKey())
+                    } else {
+                        ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.privKey)
+                    }
                 }
             }
             followingCommunities = emptySet()
@@ -468,7 +472,11 @@ class Account(
 
         if (followingChannels.isNotEmpty()) {
             followingChannels.forEach {
-                returningContactList = ContactListEvent.followEvent(returningContactList, it, keyPair.privKey!!)
+                returningContactList = if (keyPair.privKey == null) {
+                    ContactListEvent.followEvent(returningContactList, it, keyPair.pubKey.toHexKey())
+                } else {
+                    ContactListEvent.followEvent(returningContactList, it, keyPair.privKey)
+                }
             }
             followingChannels = emptySet()
         }
@@ -476,13 +484,17 @@ class Account(
         return returningContactList
     }
 
-    fun follow(user: User) {
-        if (!isWriteable()) return
+    fun follow(user: User, signEvent: Boolean = true): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair.privKey!!)
+            if (signEvent) {
+                ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair.privKey!!)
+            } else {
+                ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair.pubKey.toHexKey())
+            }
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = listOf(Contact(user.pubkeyHex, null)),
@@ -491,12 +503,18 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey!!
+                privateKey = keyPair.privKey!!,
+                publicKey = keyPair.pubKey
             )
+        }
+
+        if (!signEvent) {
+            return event
         }
 
         Client.send(event)
         LocalCache.consume(event)
+        return null
     }
 
     fun follow(channel: Channel) {

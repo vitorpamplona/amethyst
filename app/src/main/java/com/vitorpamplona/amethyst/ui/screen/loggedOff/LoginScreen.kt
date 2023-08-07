@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
@@ -229,7 +229,7 @@ fun LoginPage(
                 }
             }
 
-            if (isPackageInstalled(context, "org.torproject.android")) {
+            if (PackageUtils.isPackageInstalled(context, "org.torproject.android")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = useProxy.value,
@@ -314,8 +314,4 @@ fun LoginPage(
             )
         )
     }
-}
-
-fun isPackageInstalled(context: Context, target: String): Boolean {
-    return context.packageManager.getInstalledApplications(0).find { info -> info.packageName == target } != null
 }

@@ -98,7 +98,8 @@ class ContactListEvent(
             followEvents: List<String>,
             relayUse: Map<String, ReadWrite>?,
             privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
+            createdAt: Long = TimeUtils.now(),
+            publicKey: ByteArray? = null
         ): ContactListEvent {
             val content = if (relayUse != null) {
                 gson.toJson(relayUse)
@@ -126,10 +127,29 @@ class ContactListEvent(
                 listOf("g", it)
             }
 
+            if (publicKey == null) {
+                return create(
+                    content = content,
+                    tags = tags,
+                    privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            }
             return create(
                 content = content,
                 tags = tags,
-                privateKey = privateKey,
+                pubKey = publicKey.toHexKey(),
+                createdAt = createdAt
+            )
+        }
+
+        fun followUser(earlierVersion: ContactListEvent, pubKeyHex: String, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("p", pubKeyHex)),
+                pubKey = pubKey,
                 createdAt = createdAt
             )
         }
@@ -211,6 +231,17 @@ class ContactListEvent(
             )
         }
 
+        fun followEvent(earlierVersion: ContactListEvent, idHex: String, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedEvent(idHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("e", idHex)),
+                pubKey = pubKey,
+                createdAt = createdAt
+            )
+        }
+
         fun unfollowEvent(earlierVersion: ContactListEvent, idHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (!earlierVersion.isTaggedEvent(idHex)) return earlierVersion
 
@@ -229,6 +260,17 @@ class ContactListEvent(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.plus(element = listOfNotNull("a", aTag.toTag(), aTag.relay)),
                 privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun followAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedAddressableNote(aTag.toTag())) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOfNotNull("a", aTag.toTag(), aTag.relay)),
+                pubKey = pubKey,
                 createdAt = createdAt
             )
         }
@@ -257,6 +299,11 @@ class ContactListEvent(
                 privateKey = privateKey,
                 createdAt = createdAt
             )
+        }
+
+        fun create(content: String, tags: List<List<String>>, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return ContactListEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
         }
 
         fun create(content: String, tags: List<List<String>>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {

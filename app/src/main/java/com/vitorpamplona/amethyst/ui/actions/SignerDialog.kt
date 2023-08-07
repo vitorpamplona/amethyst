@@ -59,7 +59,7 @@ fun openAmber(
 @Composable
 fun SignerDialog(
     onClose: () -> Unit,
-    onPost: () -> Unit,
+    onPost: (signedEvent: Event) -> Unit,
     event: Event
 ) {
     var signature by remember { mutableStateOf("") }
@@ -120,7 +120,26 @@ fun SignerDialog(
 
                     PostButton(
                         onPost = {
-                            onPost()
+                            val signedEvent = Event(
+                                event.id,
+                                event.pubKey,
+                                event.createdAt,
+                                event.kind,
+                                event.tags,
+                                event.content,
+                                signature
+                            )
+                            if (!signedEvent.hasValidSignature()) {
+                                scope.launch {
+                                    Toast.makeText(
+                                        context,
+                                        "Invalid signature",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                return@PostButton
+                            }
+                            onPost(signedEvent)
                         },
                         isActive = true
                     )
