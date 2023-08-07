@@ -1,8 +1,13 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
+import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,34 +24,36 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import kotlinx.coroutines.launch
 
-fun OpenAmber(event: Event, context: Context) {
+fun openAmber(
+    event: Event,
+    intentResult: ManagedActivityResultLauncher<Intent, ActivityResult>
+) {
     val json = event.toJson()
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$json;name=Amethyst"))
-    intent.`package` = "com.greenart7c3.nostrsigner"
-    context.startActivity(intent)
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$json"))
+    intent.`package` = "com.greenart7c3.nostrsigner.debug"
+    intentResult.launch(intent)
 }
 
 @Composable
@@ -56,25 +63,28 @@ fun SignerDialog(
     event: Event
 ) {
     var signature by remember { mutableStateOf("") }
-    val lifeCycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    DisposableEffect(Unit) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("SignerDialog Start")
+    val intentResult = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != RESULT_OK) {
+                scope.launch {
+                    Toast.makeText(
+                        context,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
             }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("SignerDialog Stop")
-            }
-        }
 
-        OpenAmber(event, context)
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
+            signature = it.data?.getStringExtra("signature") ?: ""
         }
+    )
+
+    LaunchedEffect(Unit) {
+        openAmber(event, intentResult)
     }
 
     Dialog(
@@ -140,7 +150,7 @@ fun SignerDialog(
                 )
                 Button(
                     shape = ButtonBorder,
-                    onClick = { OpenAmber(event, context) }
+                    onClick = { openAmber(event, intentResult) }
                 ) {
                     Text("Open Amber")
                 }
