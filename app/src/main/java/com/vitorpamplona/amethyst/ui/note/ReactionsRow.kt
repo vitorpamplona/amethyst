@@ -75,8 +75,13 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
@@ -758,6 +763,23 @@ fun LikeReaction(
 
     var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
     var wantsToReact by remember { mutableStateOf(false) }
+    var event by remember { mutableStateOf<Event?>(null) }
+
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     Box(
         contentAlignment = Center,
@@ -773,6 +795,18 @@ fun LikeReaction(
                     context,
                     onMultipleChoices = {
                         wantsToReact = true
+                    },
+                    onWantsToSignReaction = {
+                        if (accountViewModel.account.reactionChoices.size == 1) {
+                            val reaction = accountViewModel.account.reactionChoices.first()
+                            if (accountViewModel.hasReactedTo(baseNote, reaction)) {
+                                event = accountViewModel.deleteReactionTo(baseNote, reaction, false)
+                            } else {
+                                event = accountViewModel.reactTo(baseNote, reaction, false)
+                            }
+                        } else if (accountViewModel.account.reactionChoices.size > 1) {
+                            wantsToReact = true
+                        }
                     }
                 )
             },
@@ -917,7 +951,8 @@ private fun likeClick(
     accountViewModel: AccountViewModel,
     scope: CoroutineScope,
     context: Context,
-    onMultipleChoices: () -> Unit
+    onMultipleChoices: () -> Unit,
+    onWantsToSignReaction: () -> Unit
 ) {
     if (accountViewModel.account.reactionChoices.isEmpty()) {
         scope.launch {
@@ -930,14 +965,18 @@ private fun likeClick(
                 .show()
         }
     } else if (!accountViewModel.isWriteable()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.login_with_a_private_key_to_like_posts),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
+        if (PackageUtils.isAmberInstalled(context)) {
+            onWantsToSignReaction()
+        } else {
+            scope.launch {
+                Toast
+                    .makeText(
+                        context,
+                        context.getString(R.string.login_with_a_private_key_to_like_posts),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
+            }
         }
     } else if (accountViewModel.account.reactionChoices.size == 1) {
         scope.launch(Dispatchers.IO) {
@@ -1313,16 +1352,39 @@ private fun ActionableReactionButton(
     toRemove: Set<String>
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+                onDismiss()
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                    onDismiss()
+                }
+            },
+            event = event!!
+        )
+    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
+            val isAmberInstalled = PackageUtils.isAmberInstalled(context)
             scope.launch(Dispatchers.IO) {
-                accountViewModel.reactToOrDelete(
+                event = accountViewModel.reactToOrDelete(
                     baseNote,
-                    reactionType
+                    reactionType,
+                    !isAmberInstalled
                 )
-                onDismiss()
+                if (!isAmberInstalled) {
+                    onDismiss()
+                }
             }
         },
         shape = ButtonBorder,
@@ -1334,12 +1396,16 @@ private fun ActionableReactionButton(
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
                 onClick = {
+                    val isAmberInstalled = PackageUtils.isAmberInstalled(context)
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.reactToOrDelete(
+                        event = accountViewModel.reactToOrDelete(
                             baseNote,
-                            reactionType
+                            reactionType,
+                            !isAmberInstalled
                         )
-                        onDismiss()
+                        if (!isAmberInstalled) {
+                            onDismiss()
+                        }
                     }
                 },
                 onLongClick = {

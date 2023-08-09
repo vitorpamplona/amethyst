@@ -212,12 +212,12 @@ class Account(
         return note.hasReacted(userProfile(), reaction)
     }
 
-    fun reactTo(note: Note, reaction: String) {
-        if (!isWriteable()) return
+    fun reactTo(note: Note, reaction: String, signEvent: Boolean = true): ReactionEvent? {
+        if (!isWriteable() && signEvent) return null
 
         if (hasReacted(note, reaction)) {
             // has already liked this note
-            return
+            return null
         }
 
         if (note.event is ChatMessageEvent) {
@@ -272,6 +272,7 @@ class Account(
                 LocalCache.consume(event)
             }
         }
+        return null
     }
 
     fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
@@ -407,16 +408,21 @@ class Account(
         delete(listOf(note))
     }
 
-    fun delete(notes: List<Note>) {
-        if (!isWriteable()) return
+    fun delete(notes: List<Note>, signEvent: Boolean = true): DeletionEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
+            if (!signEvent) {
+                return DeletionEvent.create(myNotes, keyPair.pubKey.toHexKey())
+            }
+
             val event = DeletionEvent.create(myNotes, keyPair.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }
+        return null
     }
 
     fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {

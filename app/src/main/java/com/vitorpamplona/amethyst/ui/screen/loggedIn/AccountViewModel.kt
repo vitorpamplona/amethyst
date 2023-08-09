@@ -21,10 +21,12 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.model.DeletionEvent
 import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
+import com.vitorpamplona.amethyst.service.model.ReactionEvent
 import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.model.SealedGossipEvent
 import kotlinx.collections.immutable.ImmutableSet
@@ -87,16 +89,16 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.userProfile()
     }
 
-    fun reactTo(note: Note, reaction: String) {
-        account.reactTo(note, reaction)
+    fun reactTo(note: Note, reaction: String, signEvent: Boolean = true): ReactionEvent? {
+        return account.reactTo(note, reaction, signEvent)
     }
 
-    fun reactToOrDelete(note: Note, reaction: String) {
+    fun reactToOrDelete(note: Note, reaction: String, signEvent: Boolean = true): Event? {
         val currentReactions = account.reactionTo(note, reaction)
         if (currentReactions.isNotEmpty()) {
-            account.delete(currentReactions)
+            return account.delete(currentReactions, signEvent)
         } else {
-            account.reactTo(note, reaction)
+            return account.reactTo(note, reaction, signEvent)
         }
     }
 
@@ -109,8 +111,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.hasReacted(baseNote, reaction)
     }
 
-    fun deleteReactionTo(note: Note, reaction: String) {
-        account.delete(account.reactionTo(note, reaction))
+    fun deleteReactionTo(note: Note, reaction: String, signEvent: Boolean = true): DeletionEvent? {
+        return account.delete(account.reactionTo(note, reaction), signEvent)
     }
 
     fun hasBoosted(baseNote: Note): Boolean {

@@ -20,6 +20,13 @@ class DeletionEvent(
     companion object {
         const val kind = 5
 
+        fun create(deleteEvents: List<String>, pubKey: HexKey, createdAt: Long = TimeUtils.now()): DeletionEvent {
+            val content = ""
+            val tags = deleteEvents.map { listOf("e", it) }
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return DeletionEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
         fun create(deleteEvents: List<String>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): DeletionEvent {
             val content = ""
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()

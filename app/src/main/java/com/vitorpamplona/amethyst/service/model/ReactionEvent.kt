@@ -43,6 +43,33 @@ class ReactionEvent(
             return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
+        fun create(content: String, originalNote: EventInterface, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ReactionEvent {
+            var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
+            if (originalNote is AddressableEvent) {
+                tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+            }
+
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
+        fun create(emojiUrl: EmojiUrl, originalNote: EventInterface, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ReactionEvent {
+            val content = ":${emojiUrl.code}:"
+
+            var tags = listOf(
+                listOf("e", originalNote.id()),
+                listOf("p", originalNote.pubKey()),
+                listOf("emoji", emojiUrl.code, emojiUrl.url)
+            )
+
+            if (originalNote is AddressableEvent) {
+                tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+            }
+
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
         fun create(emojiUrl: EmojiUrl, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
             val content = ":${emojiUrl.code}:"
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
