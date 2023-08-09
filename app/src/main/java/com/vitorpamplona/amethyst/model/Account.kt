@@ -618,12 +618,20 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun unfollow(user: User) {
-        if (!isWriteable()) return
+    fun unfollow(user: User, signEvent: Boolean = true): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
+            if (!signEvent) {
+                return ContactListEvent.unfollowUser(
+                    contactList,
+                    user.pubkeyHex,
+                    keyPair.pubKey.toHexKey()
+                )
+            }
+
             val event = ContactListEvent.unfollowUser(
                 contactList,
                 user.pubkeyHex,
@@ -633,6 +641,8 @@ class Account(
             Client.send(event)
             LocalCache.consume(event)
         }
+
+        return null
     }
 
     fun unfollowHashtag(tag: String) {

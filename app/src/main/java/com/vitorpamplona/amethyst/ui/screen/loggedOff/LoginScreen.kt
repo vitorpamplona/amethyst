@@ -229,7 +229,7 @@ fun LoginPage(
                 }
             }
 
-            if (PackageUtils.isPackageInstalled(context, "org.torproject.android")) {
+            if (PackageUtils.isOrbotInstalled(context)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = useProxy.value,

@@ -768,14 +768,18 @@ private fun DisplayFollowUnfollowButton(
     if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (PackageUtils.isAmberInstalled(context)) {
+                    event = accountViewModel.account.unfollow(baseUser, false)
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -787,14 +791,18 @@ private fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                    if (PackageUtils.isAmberInstalled(context)) {
+                        event = accountViewModel.account.follow(baseUser, false)
+                    } else {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
@@ -805,7 +813,7 @@ private fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
-                    if (PackageUtils.isPackageInstalled(context, "com.greenart7c3.nostrsigner")) {
+                    if (PackageUtils.isAmberInstalled(context)) {
                         event = accountViewModel.account.follow(baseUser, false)
                     } else {
                         scope.launch {

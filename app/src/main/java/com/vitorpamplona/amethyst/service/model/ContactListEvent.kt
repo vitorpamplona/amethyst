@@ -165,6 +165,17 @@ class ContactListEvent(
             )
         }
 
+        fun unfollowUser(earlierVersion: ContactListEvent, pubKeyHex: String, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                pubKey = pubKey,
+                createdAt = createdAt
+            )
+        }
+
         fun unfollowUser(earlierVersion: ContactListEvent, pubKeyHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (!earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
 
