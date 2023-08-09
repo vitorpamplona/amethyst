@@ -1478,6 +1478,12 @@ class Account(
         }.toTypedArray()
     }
 
+    fun convertGlobalRelays(): Array<String> {
+        return localRelays.filter { it.feedTypes.contains(FeedType.GLOBAL) }
+            .map { it.url }
+            .toTypedArray()
+    }
+
     fun reconnectIfRelaysHaveChanged() {
         val newRelaySet = activeRelays() ?: convertLocalRelays()
         if (!Client.isSameRelaySetConfig(newRelaySet)) {
