@@ -431,25 +431,35 @@ class Account(
         return HTTPAuthorizationEvent.create(url, method, body, keyPair.privKey!!)
     }
 
-    fun boost(note: Note) {
-        if (!isWriteable()) return
+    fun boost(note: Note, signEvent: Boolean = true): Event? {
+        if (!isWriteable() && signEvent) return null
 
         if (note.hasBoostedInTheLast5Minutes(userProfile())) {
             // has already bosted in the past 5mins
-            return
+            return null
         }
 
         note.event?.let {
             if (it.kind() == 1) {
+                if (!signEvent) {
+                    return RepostEvent.create(it, keyPair.pubKey.toHexKey())
+                }
+
                 val event = RepostEvent.create(it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
+                return null
             } else {
+                if (!signEvent) {
+                    return GenericRepostEvent.create(it, keyPair.pubKey.toHexKey())
+                }
                 val event = GenericRepostEvent.create(it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
+                return null
             }
         }
+        return null
     }
 
     fun broadcast(note: Note) {

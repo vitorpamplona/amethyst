@@ -29,6 +29,24 @@ class GenericRepostEvent(
     companion object {
         const val kind = 16
 
+        fun create(boostedPost: EventInterface, pubKey: HexKey, createdAt: Long = TimeUtils.now()): GenericRepostEvent {
+            val content = boostedPost.toJson()
+
+            val replyToPost = listOf("e", boostedPost.id())
+            val replyToAuthor = listOf("p", boostedPost.pubKey())
+
+            var tags: List<List<String>> = listOf(replyToPost, replyToAuthor)
+
+            if (boostedPost is AddressableEvent) {
+                tags = tags + listOf(listOf("a", boostedPost.address().toTag()))
+            }
+
+            tags = tags + listOf(listOf("k", "${boostedPost.kind()}"))
+
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return GenericRepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
         fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): GenericRepostEvent {
             val content = boostedPost.toJson()
 

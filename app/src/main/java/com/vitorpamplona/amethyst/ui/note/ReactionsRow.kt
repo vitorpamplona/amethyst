@@ -678,6 +678,25 @@ fun BoostReaction(
     val iconButtonModifier = remember {
         Modifier.size(iconSize)
     }
+    var event by remember {
+        mutableStateOf<Event?>(null)
+    }
+
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     IconButton(
         modifier = iconButtonModifier,
@@ -691,12 +710,22 @@ fun BoostReaction(
                     wantsToBoost = true
                 }
             } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (PackageUtils.isAmberInstalled(context)) {
+                    if (accountViewModel.hasBoosted(baseNote)) {
+                        scope.launch(Dispatchers.IO) {
+                            event = accountViewModel.deleteBoostsTo(baseNote, false)
+                        }
+                    } else {
+                        wantsToBoost = true
+                    }
+                } else {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -714,6 +743,11 @@ fun BoostReaction(
             onQuote = {
                 wantsToBoost = false
                 onQuotePress()
+            },
+            onRepost = {
+                scope.launch(Dispatchers.IO) {
+                    event = accountViewModel.boost(baseNote, false)
+                }
             }
         )
     }
@@ -1266,7 +1300,7 @@ private fun DrawViewCount(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
+private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit, onRepost: () -> Unit) {
     Popup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, -50),
@@ -1277,8 +1311,13 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.boost(baseNote)
+                    if (accountViewModel.isWriteable()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.boost(baseNote)
+                            onDismiss()
+                        }
+                    } else {
+                        onRepost()
                         onDismiss()
                     }
                 },

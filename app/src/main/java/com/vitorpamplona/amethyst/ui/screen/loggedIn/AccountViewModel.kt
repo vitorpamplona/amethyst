@@ -119,8 +119,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.hasBoosted(baseNote)
     }
 
-    fun deleteBoostsTo(note: Note) {
-        account.delete(account.boostsTo(note))
+    fun deleteBoostsTo(note: Note, signEvent: Boolean = true): DeletionEvent? {
+        return account.delete(account.boostsTo(note), signEvent)
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
@@ -211,8 +211,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    fun boost(note: Note) {
-        account.boost(note)
+    fun boost(note: Note, signEvent: Boolean = true): Event? {
+        return account.boost(note, signEvent)
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {

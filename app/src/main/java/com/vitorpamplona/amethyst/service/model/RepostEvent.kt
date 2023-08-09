@@ -29,6 +29,22 @@ class RepostEvent(
     companion object {
         const val kind = 6
 
+        fun create(boostedPost: EventInterface, pubKey: HexKey, createdAt: Long = TimeUtils.now()): RepostEvent {
+            val content = boostedPost.toJson()
+
+            val replyToPost = listOf("e", boostedPost.id())
+            val replyToAuthor = listOf("p", boostedPost.pubKey())
+
+            var tags: List<List<String>> = listOf(replyToPost, replyToAuthor)
+
+            if (boostedPost is AddressableEvent) {
+                tags = tags + listOf(listOf("a", boostedPost.address().toTag()))
+            }
+
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return RepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
         fun create(boostedPost: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RepostEvent {
             val content = boostedPost.toJson()
 
