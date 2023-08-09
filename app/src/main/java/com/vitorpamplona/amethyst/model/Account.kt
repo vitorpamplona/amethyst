@@ -503,8 +503,8 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey!!,
-                publicKey = keyPair.pubKey
+                privateKey = keyPair.privKey,
+                publicKey = if (signEvent) null else keyPair.pubKey
             )
         }
 
@@ -564,17 +564,25 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun followHashtag(tag: String) {
-        if (!isWriteable()) return
+    fun followHashtag(tag: String, signEvent: Boolean = true): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followHashtag(
-                contactList,
-                tag,
-                keyPair.privKey!!
-            )
+            if (signEvent) {
+                ContactListEvent.followHashtag(
+                    contactList,
+                    tag,
+                    keyPair.privKey!!
+                )
+            } else {
+                ContactListEvent.followHashtag(
+                    contactList,
+                    tag,
+                    keyPair.pubKey.toHexKey()
+                )
+            }
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
@@ -583,12 +591,18 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey!!
+                privateKey = keyPair.privKey,
+                publicKey = if (signEvent) null else keyPair.pubKey
             )
+        }
+
+        if (!signEvent) {
+            return event
         }
 
         Client.send(event)
         LocalCache.consume(event)
+        return null
     }
 
     fun followGeohash(geohash: String) {
@@ -645,12 +659,20 @@ class Account(
         return null
     }
 
-    fun unfollowHashtag(tag: String) {
-        if (!isWriteable()) return
+    fun unfollowHashtag(tag: String, signEvent: Boolean = true): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
+            if (!signEvent) {
+                return ContactListEvent.unfollowHashtag(
+                    contactList,
+                    tag,
+                    keyPair.pubKey.toHexKey()
+                )
+            }
+
             val event = ContactListEvent.unfollowHashtag(
                 contactList,
                 tag,
@@ -659,7 +681,11 @@ class Account(
 
             Client.send(event)
             LocalCache.consume(event)
+
+            return null
         }
+
+        return null
     }
 
     fun unfollowGeohash(geohash: String) {

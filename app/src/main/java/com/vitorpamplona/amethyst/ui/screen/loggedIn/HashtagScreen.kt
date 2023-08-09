@@ -16,8 +16,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +30,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -143,18 +150,39 @@ private fun HashtagActionOptions(
             userState?.user?.isFollowingHashtagCached(tag) ?: false
         }
     }
+    var event by remember { mutableStateOf<Event?>(null) }
+
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (PackageUtils.isAmberInstalled(context)) {
+                    event = accountViewModel.account.unfollowHashtag(tag, false)
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -165,14 +193,18 @@ private fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (PackageUtils.isAmberInstalled(context)) {
+                    event = accountViewModel.account.followHashtag(tag, false)
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {

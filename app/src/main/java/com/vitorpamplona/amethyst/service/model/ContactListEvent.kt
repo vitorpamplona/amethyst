@@ -97,7 +97,7 @@ class ContactListEvent(
             followCommunities: List<ATag>,
             followEvents: List<String>,
             relayUse: Map<String, ReadWrite>?,
-            privateKey: ByteArray,
+            privateKey: ByteArray?,
             createdAt: Long = TimeUtils.now(),
             publicKey: ByteArray? = null
         ): ContactListEvent {
@@ -131,7 +131,7 @@ class ContactListEvent(
                 return create(
                     content = content,
                     tags = tags,
-                    privateKey = privateKey,
+                    privateKey = privateKey!!,
                     createdAt = createdAt
                 )
             }
@@ -198,6 +198,17 @@ class ContactListEvent(
             )
         }
 
+        fun followHashtag(earlierVersion: ContactListEvent, hashtag: String, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (earlierVersion.isTaggedHash(hashtag)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.plus(element = listOf("t", hashtag)),
+                pubKey = pubKey,
+                createdAt = createdAt
+            )
+        }
+
         fun unfollowHashtag(earlierVersion: ContactListEvent, hashtag: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (!earlierVersion.isTaggedHash(hashtag)) return earlierVersion
 
@@ -205,6 +216,17 @@ class ContactListEvent(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag },
                 privateKey = privateKey,
+                createdAt = createdAt
+            )
+        }
+
+        fun unfollowHashtag(earlierVersion: ContactListEvent, hashtag: String, pubKey: HexKey, createdAt: Long = TimeUtils.now()): ContactListEvent {
+            if (!earlierVersion.isTaggedHash(hashtag)) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag },
+                pubKey = pubKey,
                 createdAt = createdAt
             )
         }
