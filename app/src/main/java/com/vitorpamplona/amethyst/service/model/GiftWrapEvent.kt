@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.EncryptedInfo
+import com.vitorpamplona.amethyst.service.Nip44Version
 import com.vitorpamplona.amethyst.service.relays.Client
 
 @Immutable
@@ -19,9 +20,10 @@ class GiftWrapEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+    @Transient
     private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
-    fun cachedGossip(privKey: ByteArray): Event? {
+    fun cachedGift(privKey: ByteArray): Event? {
         val hex = privKey.toHexKey()
         if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
 
@@ -41,14 +43,13 @@ class GiftWrapEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP24(privKey, pubKey.hexToByteArray())
+            val toDecrypt = gson.fromJson(content, EncryptedInfo::class.java)
 
-            val toDecrypt = gson.fromJson<EncryptedInfo>(
-                content,
-                EncryptedInfo::class.java
-            )
-
-            return CryptoUtils.decryptNIP24(toDecrypt, sharedSecret)
+            return when (toDecrypt.v) {
+                Nip44Version.NIP04.versionCode -> CryptoUtils.decryptNIP04(toDecrypt, privKey, pubKey.hexToByteArray())
+                Nip44Version.NIP24.versionCode -> CryptoUtils.decryptNIP24(toDecrypt, privKey, pubKey.hexToByteArray())
+                else -> null
+            }
         } catch (e: Exception) {
             Log.w("GeneralList", "Error decrypting the message ${e.message}")
             null
@@ -63,7 +64,7 @@ class GiftWrapEvent(
         fun create(
             event: Event,
             recipientPubKey: HexKey,
-            createdAt: Long = TimeUtils.now()
+            createdAt: Long = TimeUtils.randomWithinAWeek()
         ): GiftWrapEvent {
             val privateKey = CryptoUtils.privkeyCreate() // GiftWrap is always a random key
             val sharedSecret = CryptoUtils.getSharedSecretNIP24(privateKey, recipientPubKey.hexToByteArray())

@@ -88,10 +88,12 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -110,16 +112,20 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = null, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun NewPostView(
+    onClose: () -> Unit,
+    baseReplyTo: Note? = null,
+    quote: Note? = null,
+    enableMessageInterface: Boolean = false,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val account = remember(accountViewModel) { accountViewModel.account }
 
     val postViewModel: NewPostViewModel = viewModel()
+    postViewModel.wantsDirectMessage = enableMessageInterface
 
     val context = LocalContext.current
-
-    // initialize focus reference to be able to request focus programmatically
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -136,8 +142,6 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
-        delay(100)
-        focusRequester.requestFocus()
 
         launch(Dispatchers.IO) {
             postViewModel.imageUploadingError.collect { error ->
@@ -254,74 +258,23 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
                                 postViewModel.removeFromReplyList(it)
                             }
 
-                            OutlinedTextField(
-                                value = postViewModel.message,
-                                onValueChange = {
-                                    postViewModel.updateMessage(it)
-                                },
-                                keyboardOptions = KeyboardOptions.Default.copy(
-                                    capitalization = KeyboardCapitalization.Sentences
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .border(
-                                        width = 1.dp,
-                                        color = MaterialTheme.colors.surface,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .focusRequester(focusRequester)
-                                    .onFocusChanged {
-                                        if (it.isFocused) {
-                                            keyboardController?.show()
-                                        }
-                                    },
-                                placeholder = {
-                                    Text(
-                                        text = stringResource(R.string.what_s_on_your_mind),
-                                        color = MaterialTheme.colors.placeholderText
-                                    )
-                                },
-                                colors = TextFieldDefaults
-                                    .outlinedTextFieldColors(
-                                        unfocusedBorderColor = Color.Transparent,
-                                        focusedBorderColor = Color.Transparent
-                                    ),
-                                visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
-                                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                            )
+                            if (enableMessageInterface) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)
+                                ) {
+                                    SendDirectMessageTo(postViewModel = postViewModel)
+                                }
+                            }
+
+                            MessageField(postViewModel)
 
                             if (postViewModel.wantsPoll) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        postViewModel.pollOptions.values.forEachIndexed { index, _ ->
-                                            NewPollOption(postViewModel, index)
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                postViewModel.pollOptions[postViewModel.pollOptions.size] =
-                                                    ""
-                                            },
-                                            border = BorderStroke(
-                                                1.dp,
-                                                MaterialTheme.colors.placeholderText
-                                            ),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                contentColor = MaterialTheme.colors.placeholderText
-                                            )
-                                        ) {
-                                            Image(
-                                                painterResource(id = android.R.drawable.ic_input_add),
-                                                contentDescription = "Add poll option button",
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
+                                    PollField(postViewModel)
                                 }
                             }
 
@@ -530,6 +483,89 @@ fun NewPostView(onClose: () -> Unit, baseReplyTo: Note? = null, quote: Note? = n
 }
 
 @Composable
+private fun PollField(postViewModel: NewPostViewModel) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        postViewModel.pollOptions.values.forEachIndexed { index, _ ->
+            NewPollOption(postViewModel, index)
+        }
+
+        Button(
+            onClick = {
+                postViewModel.pollOptions[postViewModel.pollOptions.size] =
+                    ""
+            },
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colors.placeholderText
+            ),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colors.placeholderText
+            )
+        ) {
+            Image(
+                painterResource(id = android.R.drawable.ic_input_add),
+                contentDescription = "Add poll option button",
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun MessageField(
+    postViewModel: NewPostViewModel
+) {
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        launch {
+            delay(200)
+            focusRequester.requestFocus()
+        }
+    }
+
+    OutlinedTextField(
+        value = postViewModel.message,
+        onValueChange = {
+            postViewModel.updateMessage(it)
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+            capitalization = KeyboardCapitalization.Sentences
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colors.surface,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                if (it.isFocused) {
+                    keyboardController?.show()
+                }
+            },
+        placeholder = {
+            Text(
+                text = stringResource(R.string.what_s_on_your_mind),
+                color = MaterialTheme.colors.placeholderText
+            )
+        },
+        colors = TextFieldDefaults
+            .outlinedTextFieldColors(
+                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent
+            ),
+        visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+    )
+}
+
+@Composable
 fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -578,6 +614,86 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
             color = MaterialTheme.colors.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp)
         )
+    }
+}
+
+@Composable
+fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.messages_new_message_to),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            MyTextField(
+                value = postViewModel.toUsers,
+                onValueChange = {
+                    postViewModel.updateToUsers(it)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.messages_new_message_to_caption),
+                        color = MaterialTheme.colors.placeholderText
+                    )
+                },
+                visualTransformation = UrlUserTagTransformation(
+                    MaterialTheme.colors.primary
+                ),
+                colors = TextFieldDefaults
+                    .outlinedTextFieldColors(
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = Color.Transparent
+                    ),
+                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
+
+        Divider()
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.messages_new_message_subject),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            MyTextField(
+                value = postViewModel.subject,
+                onValueChange = {
+                    postViewModel.updateSubject(it)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.messages_new_message_subject_caption),
+                        color = MaterialTheme.colors.placeholderText
+                    )
+                },
+                visualTransformation = UrlUserTagTransformation(
+                    MaterialTheme.colors.primary
+                ),
+                colors = TextFieldDefaults
+                    .outlinedTextFieldColors(
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = Color.Transparent
+                    ),
+                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+            )
+        }
+
+        Divider()
     }
 }
 

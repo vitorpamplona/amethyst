@@ -33,9 +33,17 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 
+enum class UserSuggestionAnchor {
+    MAIN_MESSAGE,
+    FORWARD_ZAPS,
+    TO_USERS
+}
+
 @Stable
 open class NewPostViewModel() : ViewModel() {
     var account: Account? = null
+    var requiresNIP24: Boolean = false
+
     var originalNote: Note? = null
 
     var mentions by mutableStateOf<List<User>?>(null)
@@ -48,7 +56,12 @@ open class NewPostViewModel() : ViewModel() {
 
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
-    var userSuggestionsMainMessage: Boolean? = null
+    var userSuggestionsMainMessage: UserSuggestionAnchor? = null
+
+    // DMs
+    var wantsDirectMessage by mutableStateOf(false)
+    var toUsers by mutableStateOf(TextFieldValue(""))
+    var subject by mutableStateOf(TextFieldValue(""))
 
     // Images and Videos
     var contentToAddUrl by mutableStateOf<Uri?>(null)
@@ -90,6 +103,9 @@ open class NewPostViewModel() : ViewModel() {
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
     var zapRaiserAmount by mutableStateOf<Long?>(null)
+
+    // NIP24 Wrapped DMs / Group messages
+    var nip24 by mutableStateOf(false)
 
     open fun load(account: Account, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
@@ -143,6 +159,10 @@ open class NewPostViewModel() : ViewModel() {
         val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
         tagger.run()
 
+        val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null)
+        toUsersTagger.run()
+        val dmUsers = toUsersTagger.mentions
+
         val zapReceiver = if (wantsForwardZapTo) {
             if (forwardZapTo != null) {
                 forwardZapTo?.info?.lud16 ?: forwardZapTo?.info?.lud06
@@ -162,23 +182,7 @@ open class NewPostViewModel() : ViewModel() {
 
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
-        if (wantsPoll) {
-            account?.sendPoll(
-                tagger.message,
-                tagger.replyTos,
-                tagger.mentions,
-                pollOptions,
-                valueMaximum,
-                valueMinimum,
-                consensusThreshold,
-                closedAt,
-                zapReceiver,
-                wantsToMarkAsSensitive,
-                localZapRaiserAmount,
-                relayList,
-                geoHash
-            )
-        } else if (originalNote?.channelHex() != null) {
+        if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
                 account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
             } else {
@@ -186,28 +190,71 @@ open class NewPostViewModel() : ViewModel() {
             }
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+        } else if (!dmUsers.isNullOrEmpty()) {
+            if (nip24 || dmUsers.size > 1) {
+                account?.sendNIP24PrivateMessage(
+                    message = tagger.message,
+                    toUsers = dmUsers.map { it.pubkeyHex },
+                    subject = subject.text.ifBlank { null },
+                    replyingTo = tagger.replyTos?.firstOrNull(),
+                    mentions = tagger.mentions,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapReceiver = zapReceiver,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash
+                )
+            } else {
+                account?.sendPrivateMessage(
+                    message = tagger.message,
+                    toUser = dmUsers.first().pubkeyHex,
+                    replyingTo = originalNote,
+                    mentions = tagger.mentions,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapReceiver = zapReceiver,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash
+                )
+            }
         } else {
-            // adds markers
-            val rootId =
-                (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
-                    ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
-                    ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
-            val replyId = originalNote?.idHex
+            if (wantsPoll) {
+                account?.sendPoll(
+                    tagger.message,
+                    tagger.replyTos,
+                    tagger.mentions,
+                    pollOptions,
+                    valueMaximum,
+                    valueMinimum,
+                    consensusThreshold,
+                    closedAt,
+                    zapReceiver,
+                    wantsToMarkAsSensitive,
+                    localZapRaiserAmount,
+                    relayList,
+                    geoHash
+                )
+            } else {
+                // adds markers
+                val rootId =
+                    (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
+                        ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
+                        ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+                val replyId = originalNote?.idHex
 
-            account?.sendPost(
-                message = tagger.message,
-                replyTo = tagger.replyTos,
-                mentions = tagger.mentions,
-                tags = null,
-                zapReceiver = zapReceiver,
-                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                zapRaiserAmount = localZapRaiserAmount,
-                replyingTo = replyId,
-                root = rootId,
-                directMentions = tagger.directMentions,
-                relayList = relayList,
-                geohash = geoHash
-            )
+                account?.sendPost(
+                    message = tagger.message,
+                    replyTo = tagger.replyTos,
+                    mentions = tagger.mentions,
+                    tags = null,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    replyingTo = replyId,
+                    root = rootId,
+                    directMentions = tagger.directMentions,
+                    relayList = relayList,
+                    geohash = geoHash
+                )
+            }
         }
 
         cancel()
@@ -267,10 +314,15 @@ open class NewPostViewModel() : ViewModel() {
 
     open fun cancel() {
         message = TextFieldValue("")
+        toUsers = TextFieldValue("")
+        subject = TextFieldValue("")
+
         contentToAddUrl = null
         urlPreview = null
         isUploadingImage = false
         mentions = null
+
+        wantsDirectMessage = false
 
         wantsPoll = false
         zapRecipients = mutableStateListOf<HexKey>()
@@ -316,7 +368,7 @@ open class NewPostViewModel() : ViewModel() {
         if (it.selection.collapsed) {
             val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
             userSuggestionAnchor = it.selection
-            userSuggestionsMainMessage = true
+            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
@@ -331,12 +383,37 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
+    open fun updateToUsers(it: TextFieldValue) {
+        toUsers = it
+
+        if (it.selection.collapsed) {
+            val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+            userSuggestionAnchor = it.selection
+            userSuggestionsMainMessage = UserSuggestionAnchor.TO_USERS
+            if (lastWord.startsWith("@") && lastWord.length > 2) {
+                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
+                viewModelScope.launch(Dispatchers.IO) {
+                    userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }))
+                        .reversed()
+                }
+            } else {
+                NostrSearchEventOrUserDataSource.clear()
+                userSuggestions = emptyList()
+            }
+        }
+    }
+
+    open fun updateSubject(it: TextFieldValue) {
+        subject = it
+    }
+
     open fun updateZapForwardTo(it: TextFieldValue) {
         forwardZapToEditting = it
         if (it.selection.collapsed) {
             val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
             userSuggestionAnchor = it.selection
-            userSuggestionsMainMessage = false
+            userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
@@ -357,7 +434,7 @@ open class NewPostViewModel() : ViewModel() {
 
     open fun autocompleteWithUser(item: User) {
         userSuggestionAnchor?.let {
-            if (userSuggestionsMainMessage == true) {
+            if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
                 val wordToInsert = "@${item.pubkeyNpub()}"
@@ -366,7 +443,7 @@ open class NewPostViewModel() : ViewModel() {
                     message.text.replaceRange(lastWordStart, it.end, wordToInsert),
                     TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
                 )
-            } else {
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 val lastWord = forwardZapToEditting.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
                 val wordToInsert = "@${item.pubkeyNpub()}"
@@ -374,6 +451,15 @@ open class NewPostViewModel() : ViewModel() {
 
                 forwardZapToEditting = TextFieldValue(
                     forwardZapToEditting.text.replaceRange(lastWordStart, it.end, wordToInsert),
+                    TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+                )
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
+                val lastWord = toUsers.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+                val lastWordStart = it.end - lastWord.length
+                val wordToInsert = "@${item.pubkeyNpub()}"
+
+                toUsers = TextFieldValue(
+                    toUsers.text.replaceRange(lastWordStart, it.end, wordToInsert),
                     TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
                 )
             }
@@ -389,7 +475,11 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun canPost(): Boolean {
-        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && (!wantsZapraiser || zapRaiserAmount != null) && (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) && contentToAddUrl == null
+        return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
+            (!wantsZapraiser || zapRaiserAmount != null) &&
+            (!wantsDirectMessage || !toUsers.text.isNullOrBlank()) &&
+            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) &&
+            contentToAddUrl == null
     }
 
     fun includePollHashtagInMessage(include: Boolean, hashtag: String) {
@@ -497,6 +587,14 @@ open class NewPostViewModel() : ViewModel() {
         }
         location = null
         locUtil = null
+    }
+
+    fun toggleNIP04And24() {
+        if (requiresNIP24) {
+            nip24 = true
+        } else {
+            nip24 = !nip24
+        }
     }
 }
 

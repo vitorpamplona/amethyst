@@ -5,32 +5,94 @@ import android.content.Context
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.SealedGossipEvent
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class EventNotificationConsumer(private val applicationContext: Context) {
-    fun consume(event: Event) {
+    fun unwrapAndConsume(event: Event) {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             if (LocalCache.notes[event.id] == null) {
-                // adds to database
-                LocalCache.verifyAndConsume(event, null)
+                if (LocalCache.justVerify(event)) {
+                    LocalCache.justConsume(event, null)
 
-                val manager = notificationManager()
-                if (manager.areNotificationsEnabled()) {
-                    when (event) {
-                        is PrivateDmEvent -> notify(event)
-                        is LnZapEvent -> notify(event)
+                    val manager = notificationManager()
+                    if (manager.areNotificationsEnabled()) {
+                        when (event) {
+                            is PrivateDmEvent -> notify(event)
+                            is LnZapEvent -> notify(event)
+                            is GiftWrapEvent -> unwrapAndNotify(event)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun unwrapAndConsume(event: Event, account: Account): Event? {
+        if (account.keyPair.privKey == null) return null
+
+        return when (event) {
+            is GiftWrapEvent -> {
+                event.cachedGift(account.keyPair.privKey)?.let {
+                    unwrapAndConsume(it, account)
+                }
+            }
+            is SealedGossipEvent -> {
+                event.cachedGossip(account.keyPair.privKey)?.let {
+                    unwrapAndConsume(it, account)
+                }
+            }
+            else -> {
+                LocalCache.justConsume(event, null)
+                event
+            }
+        }
+    }
+
+    private fun unwrapAndNotify(giftWrap: GiftWrapEvent) {
+        val giftWrapNote = LocalCache.notes[giftWrap.id] ?: return
+
+        LocalPreferences.allSavedAccounts().forEach {
+            val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
+
+            if (acc != null && acc.userProfile().pubkeyHex == giftWrap.recipientPubKey()) {
+                val event = unwrapAndConsume(giftWrap, account = acc)
+
+                if (event is ChatMessageEvent && acc.keyPair.privKey != null) {
+                    val chatNote = LocalCache.notes[giftWrap.id] ?: return
+                    val chatRoom = event.chatroomKey(acc.keyPair.privKey.toHexKey())
+
+                    val followingKeySet = acc.followingKeySet()
+
+                    val isKnownRoom = (
+                        acc.userProfile().privateChatrooms[chatRoom]?.senderIntersects(followingKeySet) == true ||
+                            acc.userProfile().hasSentMessagesTo(chatRoom)
+                        ) && !acc.isAllHidden(chatRoom.users)
+
+                    if (isKnownRoom) {
+                        val content = chatNote.event?.content() ?: ""
+                        val user = chatNote.author?.toBestDisplayName() ?: ""
+                        val userPicture = chatNote.author?.profilePicture()
+                        val noteUri = chatNote.toNEvent()
+                        notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
                     }
                 }
             }
@@ -46,19 +108,21 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             if (acc != null && acc.userProfile().pubkeyHex == event.verifiedRecipientPubKey()) {
                 val followingKeySet = acc.followingKeySet()
 
-                val messagingWith = acc.userProfile().privateChatrooms.keys.filter {
+                val knownChatrooms = acc.userProfile().privateChatrooms.keys.filter {
                     (
-                        it.pubkeyHex in followingKeySet || acc.userProfile()
-                            .hasSentMessagesTo(it)
-                        ) && !acc.isHidden(it)
+                        acc.userProfile().privateChatrooms[it]?.senderIntersects(followingKeySet) == true ||
+                            acc.userProfile().hasSentMessagesTo(it)
+                        ) && !acc.isAllHidden(it.users)
                 }.toSet()
 
-                if (note.author in messagingWith) {
-                    val content = acc.decryptContent(note) ?: ""
-                    val user = note.author?.toBestDisplayName() ?: ""
-                    val userPicture = note.author?.profilePicture()
-                    val noteUri = note.toNEvent()
-                    notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
+                note.author?.let {
+                    if (ChatroomKey(persistentSetOf(it.pubkeyHex)) in knownChatrooms) {
+                        val content = acc.decryptContent(note) ?: ""
+                        val user = note.author?.toBestDisplayName() ?: ""
+                        val userPicture = note.author?.profilePicture()
+                        val noteUri = note.toNEvent()
+                        notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
+                    }
                 }
             }
         }

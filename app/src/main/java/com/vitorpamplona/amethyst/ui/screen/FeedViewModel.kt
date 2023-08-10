@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -55,8 +56,8 @@ class NostrChannelFeedViewModel(val channel: Channel, val account: Account) : Fe
         }
     }
 }
-class NostrChatroomFeedViewModel(val user: User, val account: Account) : FeedViewModel(ChatroomFeedFilter(user, account)) {
-    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+class NostrChatroomFeedViewModel(val user: ChatroomKey, val account: Account) : FeedViewModel(ChatroomFeedFilter(user, account)) {
+    class Factory(val user: ChatroomKey, val account: Account) : ViewModelProvider.Factory {
         override fun <NostrChatRoomFeedViewModel : ViewModel> create(modelClass: Class<NostrChatRoomFeedViewModel>): NostrChatRoomFeedViewModel {
             return NostrChatroomFeedViewModel(user, account) as NostrChatRoomFeedViewModel
         }

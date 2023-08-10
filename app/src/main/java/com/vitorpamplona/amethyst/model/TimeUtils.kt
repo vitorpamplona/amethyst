@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.service.CryptoUtils
+
 object TimeUtils {
     const val oneMinute = 60
     const val fiveMinutes = 5 * oneMinute
@@ -14,4 +16,6 @@ object TimeUtils {
     fun oneDayAgo() = now() - oneDay
     fun eightHoursAgo() = now() - eightHours
     fun oneWeekAgo() = now() - oneWeek
+
+    fun randomWithinAWeek() = System.currentTimeMillis() / 1000 - CryptoUtils.randomInt(oneWeek)
 }

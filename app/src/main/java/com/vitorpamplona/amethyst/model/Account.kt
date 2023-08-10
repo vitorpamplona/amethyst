@@ -72,6 +72,7 @@ class Account(
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
+    var hideNIP24WarningDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy?,
     var proxyPort: Int,
@@ -219,23 +220,57 @@ class Account(
             return
         }
 
-        if (reaction.startsWith(":")) {
-            val emojiUrl = EmojiUrl.decode(reaction)
-            if (emojiUrl != null) {
-                note.event?.let {
-                    val event = ReactionEvent.create(emojiUrl, it, keyPair.privKey!!)
-                    Client.send(event)
-                    LocalCache.consume(event)
+        if (note.event is ChatMessageEvent) {
+            val event = note.event as ChatMessageEvent
+            val users = event.recipientsPubKey().plus(event.pubKey).toSet().toList()
+
+            if (reaction.startsWith(":")) {
+                val emojiUrl = EmojiUrl.decode(reaction)
+                if (emojiUrl != null) {
+                    note.event?.let {
+                        val giftWraps = NIP24Factory().createReactionWithinGroup(
+                            emojiUrl = emojiUrl,
+                            originalNote = it,
+                            to = users,
+                            from = keyPair.privKey!!
+                        )
+
+                        broadcastPrivately(giftWraps)
+                    }
+
+                    return
                 }
-
-                return
             }
-        }
 
-        note.event?.let {
-            val event = ReactionEvent.create(reaction, it, keyPair.privKey!!)
-            Client.send(event)
-            LocalCache.consume(event)
+            note.event?.let {
+                val giftWraps = NIP24Factory().createReactionWithinGroup(
+                    content = reaction,
+                    originalNote = it,
+                    to = users,
+                    from = keyPair.privKey!!
+                )
+
+                broadcastPrivately(giftWraps)
+            }
+        } else {
+            if (reaction.startsWith(":")) {
+                val emojiUrl = EmojiUrl.decode(reaction)
+                if (emojiUrl != null) {
+                    note.event?.let {
+                        val event = ReactionEvent.create(emojiUrl, it, keyPair.privKey!!)
+                        Client.send(event)
+                        LocalCache.consume(event)
+                    }
+
+                    return
+                }
+            }
+
+            note.event?.let {
+                val event = ReactionEvent.create(reaction, it, keyPair.privKey!!)
+                Client.send(event)
+                LocalCache.consume(event)
+            }
         }
     }
 
@@ -834,14 +869,18 @@ class Account(
     }
 
     fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+        sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash)
+    }
+
+    fun sendPrivateMessage(message: String, toUser: HexKey, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         val signedEvent = PrivateDmEvent.create(
-            recipientPubKey = toUser.pubkey(),
-            publishedRecipientPubKey = toUser.pubkey(),
+            recipientPubKey = toUser.hexToByteArray(),
+            publishedRecipientPubKey = toUser.hexToByteArray(),
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
@@ -854,6 +893,59 @@ class Account(
         )
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
+    }
+
+    fun sendNIP24PrivateMessage(
+        message: String,
+        toUsers: List<HexKey>,
+        subject: String? = null,
+        replyingTo: Note? = null,
+        mentions: List<User>?,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        geohash: String? = null
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+
+        val signedEvents = NIP24Factory().createMsgNIP24(
+            msg = message,
+            to = toUsers,
+            subject = subject,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            geohash = geohash,
+            from = keyPair.privKey!!
+        )
+
+        broadcastPrivately(signedEvents)
+    }
+
+    fun broadcastPrivately(signedEvents: List<GiftWrapEvent>) {
+        signedEvents.forEach {
+            Client.send(it)
+
+            // Only keep in cache the GiftWrap for the account.
+            if (it.recipientPubKey() == keyPair.pubKey.toHexKey()) {
+                it.cachedGift(keyPair.privKey!!)?.let {
+                    if (it is SealedGossipEvent) {
+                        it.cachedGossip(keyPair.privKey!!)?.let {
+                            LocalCache.justConsume(it, null)
+                        }
+                    } else {
+                        LocalCache.justConsume(it, null)
+                    }
+                }
+
+                LocalCache.consume(it, null)
+            }
+        }
     }
 
     fun sendCreateNewChannel(name: String, about: String, picture: String) {
@@ -1343,11 +1435,22 @@ class Account(
         follow(channel)
     }
 
+    fun unwrap(event: GiftWrapEvent): Event? {
+        if (!isWriteable()) return null
+        return event.cachedGift(keyPair.privKey!!)
+    }
+
+    fun unseal(event: SealedGossipEvent): Event? {
+        if (!isWriteable()) return null
+        return event.cachedGossip(keyPair.privKey!!)
+    }
+
     fun decryptContent(note: Note): String? {
+        val privKey = keyPair.privKey
         val event = note.event
-        return if (event is PrivateDmEvent && keyPair.privKey != null) {
-            event.plainContent(keyPair.privKey!!, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
-        } else if (event is LnZapRequestEvent && keyPair.privKey != null) {
+        return if (event is PrivateDmEvent && privKey != null) {
+            event.plainContent(privKey, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
+        } else if (event is LnZapRequestEvent && privKey != null) {
             decryptZapContentAuthor(note)?.content()
         } else {
             event?.content()
@@ -1487,7 +1590,12 @@ class Account(
         }
     }
 
+    fun isAllHidden(users: Set<HexKey>): Boolean {
+        return users.all { isHidden(it) }
+    }
+
     fun isHidden(user: User) = isHidden(user.pubkeyHex)
+
     fun isHidden(userHex: String): Boolean {
         val blockList = getBlockList()
 
@@ -1563,6 +1671,11 @@ class Account(
 
     fun setHideDeleteRequestDialog() {
         hideDeleteRequestDialog = true
+        saveable.invalidateData()
+    }
+
+    fun setHideNIP24WarningDialog() {
+        hideNIP24WarningDialog = true
         saveable.invalidateData()
     }
 

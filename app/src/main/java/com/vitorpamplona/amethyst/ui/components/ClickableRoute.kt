@@ -169,7 +169,11 @@ private fun DisplayNoteLink(
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
-            route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
+            route = remember(noteState) {
+                (note.author?.pubkeyHex ?: nip19.hex).let {
+                    "RoomByAuthor/$it"
+                }
+            },
             nav = nav
         )
     } else if (channelHex != null) {

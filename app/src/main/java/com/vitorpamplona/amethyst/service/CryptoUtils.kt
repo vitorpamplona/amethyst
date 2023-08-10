@@ -13,7 +13,12 @@ import javax.crypto.spec.SecretKeySpec
 
 object CryptoUtils {
     private val secp256k1 = Secp256k1.get()
+    private val libSodium = SodiumAndroid()
     private val random = SecureRandom()
+
+    fun randomInt(bound: Int): Int {
+        return random.nextInt(bound)
+    }
 
     /**
      * Provides a 32B "private key" aka random number
@@ -50,11 +55,15 @@ object CryptoUtils {
         secp256k1.pubKeyTweakMul(Hex.decode("02") + pubKey, privateKey).copyOfRange(1, 33)
 
     fun encryptNIP04(msg: String, privateKey: ByteArray, pubKey: ByteArray): String {
-        val sharedSecret = getSharedSecretNIP04(privateKey, pubKey)
-        return encryptNIP04(msg, sharedSecret)
+        val encryptionInfo = encryptNIP04(msg, getSharedSecretNIP04(privateKey, pubKey))
+        return "${encryptionInfo.ciphertext}?iv=${encryptionInfo.nonce}"
     }
 
-    fun encryptNIP04(msg: String, sharedSecret: ByteArray): String {
+    fun encryptNIP04Json(msg: String, privateKey: ByteArray, pubKey: ByteArray): EncryptedInfo {
+        return encryptNIP04(msg, getSharedSecretNIP04(privateKey, pubKey))
+    }
+
+    fun encryptNIP04(msg: String, sharedSecret: ByteArray): EncryptedInfo {
         val iv = ByteArray(16)
         random.nextBytes(iv)
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
@@ -62,7 +71,7 @@ object CryptoUtils {
         val ivBase64 = Base64.getEncoder().encodeToString(iv)
         val encryptedMsg = cipher.doFinal(msg.toByteArray())
         val encryptedMsgBase64 = Base64.getEncoder().encodeToString(encryptedMsg)
-        return "$encryptedMsgBase64?iv=$ivBase64"
+        return EncryptedInfo(encryptedMsgBase64, ivBase64, Nip44Version.NIP04.versionCode)
     }
 
     fun decryptNIP04(msg: String, privateKey: ByteArray, pubKey: ByteArray): String {
@@ -70,10 +79,19 @@ object CryptoUtils {
         return decryptNIP04(msg, sharedSecret)
     }
 
+    fun decryptNIP04(encryptedInfo: EncryptedInfo, privateKey: ByteArray, pubKey: ByteArray): String {
+        val sharedSecret = getSharedSecretNIP04(privateKey, pubKey)
+        return decryptNIP04(encryptedInfo.ciphertext, encryptedInfo.nonce, sharedSecret)
+    }
+
     fun decryptNIP04(msg: String, sharedSecret: ByteArray): String {
         val parts = msg.split("?iv=")
-        val iv = parts[1].run { Base64.getDecoder().decode(this) }
-        val encryptedMsg = parts.first().run { Base64.getDecoder().decode(this) }
+        return decryptNIP04(parts[0], parts[1], sharedSecret)
+    }
+
+    private fun decryptNIP04(cipher: String, nonce: String, sharedSecret: ByteArray): String {
+        val iv = Base64.getDecoder().decode(nonce)
+        val encryptedMsg = Base64.getDecoder().decode(cipher)
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(iv))
         return String(cipher.doFinal(encryptedMsg))
@@ -88,7 +106,8 @@ object CryptoUtils {
         val nonce = ByteArray(24)
         random.nextBytes(nonce)
 
-        val cipher = SodiumAndroid().cryptoStreamXChaCha20Xor(
+        val cipher = cryptoStreamXChaCha20Xor(
+            libSodium = libSodium,
             messageBytes = msg.toByteArray(),
             nonce = nonce,
             key = Key.fromBytes(sharedSecret)
@@ -100,7 +119,7 @@ object CryptoUtils {
         return EncryptedInfo(
             ciphertext = cipherBase64,
             nonce = nonceBase64,
-            v = Nip44Version.XChaCha20.versionCode
+            v = Nip44Version.NIP24.versionCode
         )
     }
 
@@ -110,7 +129,8 @@ object CryptoUtils {
     }
 
     fun decryptNIP24(encryptedInfo: EncryptedInfo, sharedSecret: ByteArray): String? {
-        return SodiumAndroid().cryptoStreamXChaCha20Xor(
+        return cryptoStreamXChaCha20Xor(
+            libSodium = libSodium,
             messageBytes = Base64.getDecoder().decode(encryptedInfo.ciphertext),
             nonce = Base64.getDecoder().decode(encryptedInfo.nonce),
             key = Key.fromBytes(sharedSecret)
@@ -127,6 +147,6 @@ object CryptoUtils {
 data class EncryptedInfo(val ciphertext: String, val nonce: String, val v: Int)
 
 enum class Nip44Version(val versionCode: Int) {
-    Reserved(0),
-    XChaCha20(1)
+    NIP04(0),
+    NIP24(1)
 }

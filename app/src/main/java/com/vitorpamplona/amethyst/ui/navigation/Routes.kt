@@ -16,8 +16,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.model.ChatroomKeyable
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveNowFeedFilter
@@ -121,6 +121,12 @@ sealed class Route(
 
     object Room : Route(
         route = "Room/{id}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
+    )
+
+    object RoomByAuthor : Route(
+        route = "RoomByAuthor/{id}",
         icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
@@ -271,9 +277,9 @@ object MessagesLatestItem : LatestItem() {
         if (it == null) return false
 
         val currentUser = account.userProfile().pubkeyHex
-        val room = (it.event as? PrivateDmEvent)?.talkingWith(currentUser)
+        val room = (it.event as? ChatroomKeyable)?.chatroomKey(currentUser)
         return if (room != null) {
-            val lastRead = account.loadLastRead("Room/$room")
+            val lastRead = account.loadLastRead("Room/${room.hashCode()}")
             (it.createdAt() ?: 0) > lastRead
         } else {
             false

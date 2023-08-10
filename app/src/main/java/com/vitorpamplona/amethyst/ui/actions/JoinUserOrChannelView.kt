@@ -54,6 +54,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -300,6 +302,7 @@ private fun RenderSearchResults(
     if (searchBarViewModel.isSearching) {
         val users by searchBarViewModel.searchResultsUsers.collectAsState()
         val channels by searchBarViewModel.searchResultsChannels.collectAsState()
+        val scope = rememberCoroutineScope()
 
         Row(
             modifier = Modifier
@@ -320,7 +323,12 @@ private fun RenderSearchResults(
                     key = { _, item -> "u" + item.pubkeyHex }
                 ) { _, item ->
                     UserComposeForChat(item, accountViewModel) {
-                        nav("Room/${item.pubkeyHex}")
+                        scope.launch(Dispatchers.IO) {
+                            val withKey = ChatroomKey(persistentSetOf(item.pubkeyHex))
+                            accountViewModel.userProfile().createChatroom(withKey)
+                            nav("Room/${withKey.hashCode()}")
+                        }
+
                         searchBarViewModel.clear()
                     }
                 }

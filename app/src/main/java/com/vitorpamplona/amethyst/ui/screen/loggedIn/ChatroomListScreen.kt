@@ -135,7 +135,11 @@ fun ChatroomListScreen(
                     }
                 }
 
-                HorizontalPager(pageCount = 2, state = pagerState) { page ->
+                HorizontalPager(
+                    pageCount = 2,
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
                     ChatroomListFeedView(
                         viewModel = tabs[page].viewModel,
                         accountViewModel = accountViewModel,

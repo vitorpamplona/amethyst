@@ -426,11 +426,11 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
+        NewPostView(onClose = { wantsToReplyTo = null }, baseReplyTo = wantsToReplyTo, quote = null, accountViewModel = accountViewModel, nav = nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
+        NewPostView(onClose = { wantsToQuote = null }, baseReplyTo = null, quote = wantsToQuote, accountViewModel = accountViewModel, nav = nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))

@@ -39,7 +39,7 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
-                LocalCache.verifyAndConsume(event, relay)
+                consume(event, relay)
             }
         }
 
@@ -162,6 +162,10 @@ abstract class NostrDataSource(val debugName: String) {
                 }
             }
         }
+    }
+
+    open fun consume(event: Event, relay: Relay) {
+        LocalCache.verifyAndConsume(event, relay)
     }
 
     abstract fun updateChannelFilters()

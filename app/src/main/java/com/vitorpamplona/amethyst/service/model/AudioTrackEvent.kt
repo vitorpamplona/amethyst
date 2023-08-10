@@ -23,7 +23,8 @@ class AudioTrackEvent(
     fun type() = tags.firstOrNull { it.size > 1 && it[0] == TYPE }?.get(1)
     fun price() = tags.firstOrNull { it.size > 1 && it[0] == PRICE }?.get(1)
     fun cover() = tags.firstOrNull { it.size > 1 && it[0] == COVER }?.get(1)
-    fun subject() = tags.firstOrNull { it.size > 1 && it[0] == SUBJECT }?.get(1)
+
+    // fun subject() = tags.firstOrNull { it.size > 1 && it[0] == SUBJECT }?.get(1)
     fun media() = tags.firstOrNull { it.size > 1 && it[0] == MEDIA }?.get(1)
 
     companion object {

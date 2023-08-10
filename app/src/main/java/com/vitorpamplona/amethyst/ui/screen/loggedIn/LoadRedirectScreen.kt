@@ -23,13 +23,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.ChatroomKeyable
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun LoadRedirectScreen(eventId: String?, navController: NavController) {
+fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     if (eventId == null) return
 
     var noteBase by remember { mutableStateOf<Note?>(null) }
@@ -60,13 +61,14 @@ fun LoadRedirectScreen(eventId: String?, navController: NavController) {
     noteBase?.let {
         LoadRedirectScreen(
             baseNote = it,
+            accountViewModel = accountViewModel,
             nav = nav
         )
     }
 }
 
 @Composable
-fun LoadRedirectScreen(baseNote: Note, nav: (String) -> Unit) {
+fun LoadRedirectScreen(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
 
     val scope = rememberCoroutineScope()
@@ -81,8 +83,17 @@ fun LoadRedirectScreen(baseNote: Note, nav: (String) -> Unit) {
                 // stay here, loading
             } else if (event is ChannelCreateEvent) {
                 nav("Channel/${note.idHex}")
-            } else if (event is PrivateDmEvent) {
-                nav("Room/${note.author?.pubkeyHex}")
+            } else if (event is ChatroomKeyable) {
+                note.author?.let {
+                    val withKey = (note.event as ChatroomKeyable)
+                        .chatroomKey(accountViewModel.userProfile().pubkeyHex)
+
+                    withContext(Dispatchers.IO) {
+                        accountViewModel.userProfile().createChatroom(withKey)
+                    }
+
+                    nav("Room/${withKey.hashCode()}")
+                }
             } else if (channelHex != null) {
                 nav("Channel/$channelHex")
             } else {

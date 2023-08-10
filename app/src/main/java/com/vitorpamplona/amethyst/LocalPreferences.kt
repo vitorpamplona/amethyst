@@ -64,6 +64,7 @@ private object PrefKeys {
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
+    const val HIDE_NIP_24_WARNING_DIALOG = "hide_nip24_warning_dialog"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
@@ -231,6 +232,7 @@ object LocalPreferences {
             putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
+            putBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, account.hideNIP24WarningDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
@@ -365,6 +367,7 @@ object LocalPreferences {
 
             val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
+            val hideNIP24WarningDialog = getBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, false)
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
             val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
@@ -431,6 +434,7 @@ object LocalPreferences {
                 zapPaymentRequest = zapPaymentRequestServer,
                 hideDeleteRequestDialog = hideDeleteRequestDialog,
                 hideBlockAlertDialog = hideBlockAlertDialog,
+                hideNIP24WarningDialog = hideNIP24WarningDialog,
                 backupContactList = latestContactList,
                 proxy = proxy,
                 proxyPort = proxyPort,

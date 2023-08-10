@@ -10,6 +10,8 @@ import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import fr.acinq.secp256k1.Hex
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -1122,7 +1124,29 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event, author, emptyList())
+        val recipientsHex = event.recipientsPubKey().plus(event.pubKey).toSet()
+        val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+        // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
+
+        val repliesTo = event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, repliesTo)
+
+        if (recipients.isNotEmpty()) {
+            recipients.forEach {
+                val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                val authorGroup = if (groupMinusRecipient.isEmpty()) {
+                    // note to self
+                    ChatroomKey(persistentSetOf(it.pubkeyHex))
+                } else {
+                    ChatroomKey(groupMinusRecipient.toImmutableSet())
+                }
+
+                it.addMessage(authorGroup, note)
+            }
+        }
 
         refreshObservers(note)
     }
@@ -1144,7 +1168,7 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    private fun consume(event: GiftWrapEvent, relay: Relay?) {
+    fun consume(event: GiftWrapEvent, relay: Relay?) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
@@ -1448,16 +1472,28 @@ object LocalCache {
     }
 
     fun verifyAndConsume(event: Event, relay: Relay?) {
+        if (justVerify(event)) {
+            justConsume(event, relay)
+        }
+    }
+
+    fun justVerify(event: Event): Boolean {
         checkNotInMainThread()
 
-        if (!event.hasValidSignature()) {
+        return if (!event.hasValidSignature()) {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
                 Log.w("Event failed retest ${event.kind}", e.message ?: "")
             }
-            return
+            false
+        } else {
+            true
         }
+    }
+
+    fun justConsume(event: Event, relay: Relay?) {
+        checkNotInMainThread()
 
         try {
             when (event) {

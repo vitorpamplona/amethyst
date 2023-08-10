@@ -1,15 +1,19 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.SealedGossipEvent
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
+import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 
 object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
@@ -91,6 +95,32 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
 
     val chatroomListChannel = requestNewChannel { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), chatRoomList, relayUrl, time)
+    }
+
+    override fun consume(event: Event, relay: Relay) {
+        if (LocalCache.justVerify(event)) {
+            if (event is GiftWrapEvent) {
+                val privateKey = account.keyPair.privKey
+                if (privateKey != null) {
+                    event.cachedGift(privateKey)?.let {
+                        this.consume(it, relay)
+                    }
+                }
+            }
+
+            if (event is SealedGossipEvent) {
+                val privateKey = account.keyPair.privKey
+                if (privateKey != null) {
+                    event.cachedGossip(privateKey)?.let {
+                        LocalCache.justConsume(it, relay)
+                    }
+                }
+
+                // Don't store sealed gossips to avoid rebroadcasting by mistake.
+            } else {
+                LocalCache.justConsume(event, relay)
+            }
+        }
     }
 
     override fun updateChannelFilters() {

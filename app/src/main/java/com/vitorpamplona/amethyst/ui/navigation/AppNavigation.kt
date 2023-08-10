@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreenByAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
@@ -213,7 +214,17 @@ fun AppNavigation(
         Route.Room.let { route ->
             composable(route.route, route.arguments, content = {
                 ChatroomScreen(
-                    userId = it.arguments?.getString("id"),
+                    roomId = it.arguments?.getString("id"),
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            })
+        }
+
+        Route.RoomByAuthor.let { route ->
+            composable(route.route, route.arguments, content = {
+                ChatroomScreenByAuthor(
+                    authorPubKeyHex = it.arguments?.getString("id"),
                     accountViewModel = accountViewModel,
                     nav = nav
                 )
@@ -234,6 +245,7 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 LoadRedirectScreen(
                     eventId = it.arguments?.getString("id"),
+                    accountViewModel = accountViewModel,
                     navController = navController
                 )
             })

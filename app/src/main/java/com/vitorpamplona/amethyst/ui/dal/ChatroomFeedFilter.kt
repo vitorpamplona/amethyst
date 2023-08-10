@@ -1,13 +1,13 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 
-class ChatroomFeedFilter(val withUser: User, val account: Account) : AdditiveFeedFilter<Note>() {
+class ChatroomFeedFilter(val withUser: ChatroomKey, val account: Account) : AdditiveFeedFilter<Note>() {
     // returns the last Note of each user.
     override fun feedKey(): String {
-        return withUser.pubkeyHex
+        return withUser.hashCode().toString()
     }
 
     override fun feed(): List<Note> {

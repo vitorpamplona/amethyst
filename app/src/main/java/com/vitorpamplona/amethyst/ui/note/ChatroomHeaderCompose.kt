@@ -42,16 +42,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
+import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.model.ChatroomKeyable
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
@@ -99,32 +103,32 @@ fun ChatroomComposeChannelOrUser(
     if (channelHex != null) {
         ChatroomChannel(channelHex, baseNote, accountViewModel, nav)
     } else {
-        ChatroomDirectMessage(baseNote, accountViewModel, nav)
+        ChatroomPrivateMessages(baseNote, accountViewModel, nav)
     }
 }
 
 @Composable
-private fun ChatroomDirectMessage(
+private fun ChatroomPrivateMessages(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val userRoomHex by remember(baseNote) {
+    val userRoom by remember(baseNote) {
         derivedStateOf {
-            (baseNote.event as? PrivateDmEvent)?.talkingWith(accountViewModel.userProfile().pubkeyHex)
+            (baseNote.event as? ChatroomKeyable)?.chatroomKey(accountViewModel.userProfile().pubkeyHex)
         }
     }
 
-    userRoomHex?.let {
-        LoadUser(it) { baseUser ->
-            Crossfade(baseUser) { user ->
-                if (user != null) {
-                    UserRoomCompose(baseNote, user, accountViewModel, nav)
-                } else {
-                    Box(Modifier.height(Size75dp).fillMaxWidth()) {
-                        // Makes sure just a max amount of objects are loaded.
-                    }
-                }
+    Crossfade(userRoom) { room ->
+        if (room != null) {
+            UserRoomCompose(baseNote, room, accountViewModel, nav)
+        } else {
+            Box(
+                Modifier
+                    .height(Size75dp)
+                    .fillMaxWidth()
+            ) {
+                // Makes sure just a max amount of objects are loaded.
             }
         }
     }
@@ -239,14 +243,14 @@ private fun ChannelTitleWithBoostInfo(channelName: String, modifier: Modifier) {
 @Composable
 private fun UserRoomCompose(
     note: Note,
-    user: User,
+    room: ChatroomKey,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
-    val route = remember(user) {
-        "Room/${user.pubkeyHex}"
+    val route = remember(room) {
+        "Room/${room.hashCode()}"
     }
 
     val createAt by remember(note) {
@@ -269,18 +273,130 @@ private fun UserRoomCompose(
 
     ChannelName(
         channelPicture = {
-            NonClickableUserPicture(
-                baseUser = user,
+            NonClickableUserPictures(
+                users = room.users,
                 accountViewModel = accountViewModel,
                 size = Size55dp
             )
         },
-        channelTitle = { UsernameDisplay(user, it) },
+        channelTitle = {
+            RoomNameDisplay(room, it, accountViewModel.userProfile())
+        },
         channelLastTime = createAt,
         channelLastContent = content,
         hasNewMessages = hasNewMessages,
         onClick = { nav(route) }
     )
+}
+
+@Composable
+fun RoomNameDisplay(room: ChatroomKey, modifier: Modifier, loggedInUser: User) {
+    val roomSubject by loggedInUser.live().messages.map {
+        it.user.privateChatrooms[room]?.subject
+    }.distinctUntilChanged().observeAsState(loggedInUser.privateChatrooms[room]?.subject)
+
+    Crossfade(targetState = roomSubject, modifier) {
+        if (it != null && it.isNotBlank()) {
+            if (room.users.size > 1) {
+                DisplayRoomSubject(it)
+            } else {
+                DisplayUserAndSubject(room.users.first(), it)
+            }
+        } else {
+            DisplayUserSetAsSubject(room)
+        }
+    }
+}
+
+@Composable
+private fun DisplayUserAndSubject(
+    user: HexKey,
+    subject: String
+) {
+    Row() {
+        Text(
+            text = subject,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = " - ",
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        LoadUser(baseUserHex = user) {
+            it?.let {
+                UsernameDisplay(it, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayUserSetAsSubject(
+    room: ChatroomKey,
+    fontWeight: FontWeight = FontWeight.Bold
+) {
+    val userList = remember(room) {
+        room.users.toList()
+    }
+
+    if (userList.size == 1) {
+        // Regular Design
+        Row() {
+            LoadUser(baseUserHex = userList[0]) {
+                it?.let {
+                    UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight)
+                }
+            }
+        }
+    } else {
+        Row() {
+            userList.take(4).forEachIndexedExtended { index, isFirst, isLast, value ->
+                LoadUser(baseUserHex = value) {
+                    it?.let {
+                        ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight)
+                    }
+                }
+
+                if (!isLast) {
+                    Text(
+                        text = ", ",
+                        fontWeight = fontWeight,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayRoomSubject(roomSubject: String, fontWeight: FontWeight = FontWeight.Bold) {
+    Row() {
+        Text(
+            text = roomSubject,
+            fontWeight = fontWeight,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun ShortUsernameDisplay(baseUser: User, weight: Modifier = Modifier, fontWeight: FontWeight = FontWeight.Bold) {
+    val userName by baseUser.live().metadata.map {
+        it.user.toBestShortFirstName()
+    }.distinctUntilChanged().observeAsState(baseUser.toBestShortFirstName())
+
+    Crossfade(targetState = userName, modifier = weight) {
+        CreateTextWithEmoji(
+            text = it,
+            tags = baseUser.info?.tags,
+            fontWeight = fontWeight,
+            maxLines = 1
+        )
+    }
 }
 
 @Composable

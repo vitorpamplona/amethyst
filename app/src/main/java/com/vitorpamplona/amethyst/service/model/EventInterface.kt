@@ -56,6 +56,7 @@ interface EventInterface {
 
     fun zapAddress(): String?
     fun isSensitive(): Boolean
+    fun subject(): String?
     fun zapraiserAmount(): Long?
 
     fun taggedAddresses(): List<ATag>

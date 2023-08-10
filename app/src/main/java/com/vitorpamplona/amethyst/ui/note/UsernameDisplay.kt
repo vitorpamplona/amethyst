@@ -44,7 +44,7 @@ fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayBut
 }
 
 @Composable
-fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true) {
+fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true, fontWeight: FontWeight = FontWeight.Bold) {
     val npubDisplay by remember {
         derivedStateOf {
             baseUser.pubkeyDisplayHex()
@@ -57,9 +57,9 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton:
 
     Crossfade(targetState = userMetadata, modifier = weight) {
         if (it != null) {
-            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton)
+            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton, fontWeight)
         } else {
-            NPubDisplay(npubDisplay, weight)
+            NPubDisplay(npubDisplay, weight, fontWeight)
         }
     }
 }
@@ -71,27 +71,28 @@ private fun UserNameDisplay(
     npubDisplay: String,
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
-    showPlayButton: Boolean = true
+    showPlayButton: Boolean = true,
+    fontWeight: FontWeight = FontWeight.Bold
 ) {
     if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
-        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier, showPlayButton)
+        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier, showPlayButton, fontWeight)
     } else if (bestDisplayName != null) {
-        UserDisplay(bestDisplayName, tags, modifier, showPlayButton)
+        UserDisplay(bestDisplayName, tags, modifier, showPlayButton, fontWeight)
     } else if (bestUserName != null) {
-        UserDisplay(bestUserName, tags, modifier, showPlayButton)
+        UserDisplay(bestUserName, tags, modifier, showPlayButton, fontWeight)
     } else {
-        NPubDisplay(npubDisplay, modifier)
+        NPubDisplay(npubDisplay, modifier, fontWeight)
     }
 }
 
 @Composable
-fun NPubDisplay(npubDisplay: String, modifier: Modifier) {
+fun NPubDisplay(npubDisplay: String, modifier: Modifier, fontWeight: FontWeight = FontWeight.Bold) {
     Text(
         text = npubDisplay,
-        fontWeight = FontWeight.Bold,
+        fontWeight = fontWeight,
+        modifier = modifier,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
+        overflow = TextOverflow.Ellipsis
     )
 }
 
@@ -100,13 +101,14 @@ private fun UserDisplay(
     bestDisplayName: String,
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
-    showPlayButton: Boolean = true
+    showPlayButton: Boolean = true,
+    fontWeight: FontWeight = FontWeight.Bold
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
-            fontWeight = FontWeight.Bold,
+            fontWeight = fontWeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
@@ -124,13 +126,14 @@ private fun UserAndUsernameDisplay(
     tags: ImmutableListOfLists<String>?,
     bestUserName: String,
     modifier: Modifier,
-    showPlayButton: Boolean = true
+    showPlayButton: Boolean = true,
+    fontWeight: FontWeight = FontWeight.Bold
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
-            fontWeight = FontWeight.Bold,
+            fontWeight = fontWeight,
             maxLines = 1
         )
         CreateTextWithEmoji(

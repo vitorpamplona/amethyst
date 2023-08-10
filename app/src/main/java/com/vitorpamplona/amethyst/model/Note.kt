@@ -104,11 +104,13 @@ open class Note(val idHex: String) {
     open fun createdAt() = event?.createdAt()
 
     fun loadEvent(event: Event, author: User, replyTo: List<Note>) {
-        this.event = event
-        this.author = author
-        this.replyTo = replyTo
+        if (this.event?.id() != event.id()) {
+            this.event = event
+            this.author = author
+            this.replyTo = replyTo
 
-        liveSet?.metadata?.invalidateData()
+            liveSet?.metadata?.invalidateData()
+        }
     }
 
     fun formattedDateTime(timestamp: Long): String {

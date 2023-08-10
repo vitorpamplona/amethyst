@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ChatroomKeyable
 import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
@@ -1180,8 +1181,10 @@ fun routeFor(note: Note, loggedIn: User): String? {
         note.channelHex()?.let {
             return "Channel/$it"
         }
-    } else if (noteEvent is PrivateDmEvent) {
-        return "Room/${noteEvent.talkingWith(loggedIn.pubkeyHex)}"
+    } else if (noteEvent is ChatroomKeyable) {
+        val room = noteEvent.chatroomKey(loggedIn.pubkeyHex)
+        loggedIn.createChatroom(room)
+        return "Room/${room.hashCode()}"
     } else if (noteEvent is CommunityDefinitionEvent) {
         return "Community/${note.idHex}"
     } else {

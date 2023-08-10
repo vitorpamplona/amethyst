@@ -66,6 +66,8 @@ open class Event(
             (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
     }
 
+    override fun subject() = tags.firstOrNull() { it.size > 1 && it[0] == "subject" }?.get(1)
+
     override fun zapraiserAmount() = tags.firstOrNull() {
         (it.size > 1 && it[0] == "zapraiser")
     }?.get(1)?.toLongOrNull()
@@ -210,15 +212,35 @@ open class Event(
         ): Event {
             val jsonObject = json.asJsonObject
             return Event(
-                id = jsonObject.get("id").asString,
-                pubKey = jsonObject.get("pubkey").asString,
+                id = jsonObject.get("id").asString.intern(),
+                pubKey = jsonObject.get("pubkey").asString.intern(),
                 createdAt = jsonObject.get("created_at").asLong,
                 kind = jsonObject.get("kind").asInt,
                 tags = jsonObject.get("tags").asJsonArray.map {
-                    it.asJsonArray.mapNotNull { s -> if (s.isJsonNull) null else s.asString }
+                    it.asJsonArray.mapNotNull { s -> if (s.isJsonNull) null else s.asString.intern() }
                 },
                 content = jsonObject.get("content").asString,
                 sig = jsonObject.get("sig").asString
+            )
+        }
+    }
+
+    private class GossipDeserializer : JsonDeserializer<Gossip> {
+        override fun deserialize(
+            json: JsonElement,
+            typeOfT: Type?,
+            context: JsonDeserializationContext?
+        ): Gossip {
+            val jsonObject = json.asJsonObject
+            return Gossip(
+                id = jsonObject.get("id")?.asString?.intern(),
+                pubKey = jsonObject.get("pubkey")?.asString?.intern(),
+                createdAt = jsonObject.get("created_at")?.asLong,
+                kind = jsonObject.get("kind")?.asInt,
+                tags = jsonObject.get("tags")?.asJsonArray?.mapNotNull {
+                    it?.asJsonArray?.mapNotNull { s -> if (s?.isJsonNull != false) null else s.asString.intern() }
+                },
+                content = jsonObject.get("content")?.asString
             )
         }
     }
@@ -254,6 +276,38 @@ open class Event(
         }
     }
 
+    private class GossipSerializer : JsonSerializer<Gossip> {
+        override fun serialize(
+            src: Gossip,
+            typeOfSrc: Type?,
+            context: JsonSerializationContext?
+        ): JsonElement {
+            return JsonObject().apply {
+                src.id?.let { addProperty("id", it) }
+                src.pubKey?.let { addProperty("pubkey", it) }
+                src.createdAt?.let { addProperty("created_at", it) }
+                src.kind?.let { addProperty("kind", it) }
+                src.tags?.let {
+                    add(
+                        "tags",
+                        JsonArray().also { jsonTags ->
+                            it.forEach { tag ->
+                                jsonTags.add(
+                                    JsonArray().also { jsonTagElement ->
+                                        tag.forEach { tagElement ->
+                                            jsonTagElement.add(tagElement)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+                src.content?.let { addProperty("content", it) }
+            }
+        }
+    }
+
     private class ByteArrayDeserializer : JsonDeserializer<ByteArray> {
         override fun deserialize(
             json: JsonElement,
@@ -275,6 +329,8 @@ open class Event(
             .disableHtmlEscaping()
             .registerTypeAdapter(Event::class.java, EventSerializer())
             .registerTypeAdapter(Event::class.java, EventDeserializer())
+            .registerTypeAdapter(Gossip::class.java, GossipSerializer())
+            .registerTypeAdapter(Gossip::class.java, GossipDeserializer())
             .registerTypeAdapter(ByteArray::class.java, ByteArraySerializer())
             .registerTypeAdapter(ByteArray::class.java, ByteArrayDeserializer())
             .registerTypeAdapter(Response::class.java, ResponseDeserializer())

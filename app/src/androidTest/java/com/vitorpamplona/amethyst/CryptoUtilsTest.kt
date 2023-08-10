@@ -60,6 +60,19 @@ class CryptoUtilsTest {
     }
 
     @Test
+    fun encryptDecryptNIP4WithJsonSchemaTest() {
+        val msg = "Hi"
+
+        val privateKey = CryptoUtils.privkeyCreate()
+        val publicKey = CryptoUtils.pubkeyCreate(privateKey)
+
+        val encrypted = CryptoUtils.encryptNIP04Json(msg, privateKey, publicKey)
+        val decrypted = CryptoUtils.decryptNIP04(encrypted, privateKey, publicKey)
+
+        assertEquals(msg, decrypted)
+    }
+
+    @Test
     fun encryptDecryptNIP24Test() {
         val msg = "Hi"
 
@@ -78,10 +91,9 @@ class CryptoUtilsTest {
 
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
-        val sharedSecret = CryptoUtils.getSharedSecretNIP04(privateKey, publicKey)
 
-        val encrypted = CryptoUtils.encryptNIP04(msg, sharedSecret)
-        val decrypted = CryptoUtils.decryptNIP04(encrypted, sharedSecret)
+        val encrypted = CryptoUtils.encryptNIP04(msg, privateKey, publicKey)
+        val decrypted = CryptoUtils.decryptNIP04(encrypted, privateKey, publicKey)
 
         assertEquals(msg, decrypted)
     }

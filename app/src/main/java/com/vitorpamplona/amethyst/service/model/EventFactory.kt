@@ -13,34 +13,6 @@ class EventFactory {
             content: String,
             sig: String,
             lenient: Boolean
-        ): Event {
-            val internedTags = tags.map {
-                it.map {
-                    it.intern()
-                }
-            }
-
-            return internedCreate(
-                id = id.intern(),
-                pubKey = pubKey.intern(),
-                createdAt = createdAt,
-                kind = kind,
-                tags = internedTags,
-                content = content,
-                sig = sig,
-                lenient = lenient
-            )
-        }
-
-        fun internedCreate(
-            id: String,
-            pubKey: String,
-            createdAt: Long,
-            kind: Int,
-            tags: List<List<String>>,
-            content: String,
-            sig: String,
-            lenient: Boolean
         ) = when (kind) {
             AppDefinitionEvent.kind -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             AppRecommendationEvent.kind -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)

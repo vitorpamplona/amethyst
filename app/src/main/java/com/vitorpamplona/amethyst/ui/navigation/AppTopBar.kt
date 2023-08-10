@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.CommunityHeader
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
-import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -86,6 +85,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRoom
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRoomByAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
@@ -152,10 +153,22 @@ private fun RenderTopRouteBar(
                             nav = nav
                         )
                     }
-                    Route.Room.base -> LoadUser(baseUserHex = id) {
+                    Route.RoomByAuthor.base -> LoadRoomByAuthor(authorPubKeyHex = id, accountViewModel) {
                         if (it != null) {
                             ChatroomHeader(
-                                baseUser = it,
+                                room = it,
+                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 11.dp),
+                                accountViewModel = accountViewModel,
+                                nav = nav
+                            )
+                        } else {
+                            Spacer(BottomTopHeight)
+                        }
+                    }
+                    Route.Room.base -> LoadRoom(roomId = id, accountViewModel) {
+                        if (it != null) {
+                            ChatroomHeader(
+                                room = it,
                                 modifier = Modifier.padding(vertical = 4.dp, horizontal = 11.dp),
                                 accountViewModel = accountViewModel,
                                 nav = nav

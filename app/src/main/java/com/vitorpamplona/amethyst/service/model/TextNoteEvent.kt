@@ -19,8 +19,6 @@ class TextNoteEvent(
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
-    fun subject() = tags.firstOrNull() { it.size > 1 && it[0] == "subject" }?.get(1)
-
     fun root() = tags.firstOrNull() { it.size > 3 && it[3] == "root" }?.get(1)
 
     companion object {

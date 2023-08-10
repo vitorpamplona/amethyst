@@ -12,7 +12,7 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
         remoteMessage.data.let {
             val eventStr = remoteMessage.data["event"] ?: return
             val event = Event.fromJson(eventStr, true)
-            EventNotificationConsumer(applicationContext).consume(event)
+            EventNotificationConsumer(applicationContext).unwrapAndConsume(event)
         }
     }
 

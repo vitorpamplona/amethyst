@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Stable
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
@@ -9,6 +10,7 @@ import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import java.lang.reflect.Type
 
+@Stable
 class RelayInformation(
     val name: String?,
     val description: String?,
@@ -39,6 +41,7 @@ class RelayInformation(
     }
 }
 
+@Stable
 class RelayInformationFee(
     val amount: Int?,
     val unit: String?,

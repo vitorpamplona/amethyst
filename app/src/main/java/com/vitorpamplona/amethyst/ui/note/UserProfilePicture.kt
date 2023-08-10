@@ -41,12 +41,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -176,18 +178,79 @@ fun ClickableUserPicture(
 }
 
 @Composable
-fun NonClickableUserPicture(
-    baseUser: User,
+fun NonClickableUserPictures(
+    users: ImmutableSet<HexKey>,
     size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier }
+    accountViewModel: AccountViewModel
 ) {
     val myBoxModifier = remember {
         Modifier.size(size)
     }
 
     Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-        BaseUserPicture(baseUser, size, accountViewModel, modifier)
+        val userList = remember(users) {
+            users.toList()
+        }
+
+        when (userList.size) {
+            0 -> {}
+            1 -> LoadUser(baseUserHex = userList[0]) {
+                it?.let {
+                    BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier)
+                }
+            }
+            2 -> {
+                LoadUser(baseUserHex = userList[0]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.5f), accountViewModel, outerModifier = Modifier.align(Alignment.CenterStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[1]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.5f), accountViewModel, outerModifier = Modifier.align(Alignment.CenterEnd))
+                    }
+                }
+            }
+            3 -> {
+                LoadUser(baseUserHex = userList[0]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[1]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.TopCenter))
+                    }
+                }
+                LoadUser(baseUserHex = userList[2]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomEnd))
+                    }
+                }
+            }
+            else -> {
+                LoadUser(baseUserHex = userList[0]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[1]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.TopStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[2]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomEnd))
+                    }
+                }
+                LoadUser(baseUserHex = userList[3]) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.TopEnd))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -196,14 +259,11 @@ fun BaseUserPicture(
     baseUser: User,
     size: Dp,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier }
+    innerModifier: Modifier = remember { Modifier },
+    outerModifier: Modifier = remember { Modifier.size(size) }
 ) {
-    val myBoxModifier = remember {
-        Modifier.size(size)
-    }
-
-    Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-        InnerBaseUserPicture(baseUser, size, accountViewModel, modifier)
+    Box(outerModifier, contentAlignment = Alignment.TopEnd) {
+        InnerBaseUserPicture(baseUser, size, accountViewModel, innerModifier)
     }
 }
 

@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
@@ -429,10 +430,66 @@ private fun BlockAlertDialog(note: Note, accountViewModel: AccountViewModel, onD
     )
 
 @Composable
-private fun QuickActionAlertDialog(
+fun QuickActionAlertDialog(
     title: String,
     textContent: String,
     buttonIcon: ImageVector,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onClickDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    QuickActionAlertDialog(
+        title = title,
+        textContent = textContent,
+        icon = {
+            Icon(
+                imageVector = buttonIcon,
+                contentDescription = null
+            )
+        },
+        buttonText = buttonText,
+        buttonColors = buttonColors,
+        onClickDoOnce = onClickDoOnce,
+        onClickDontShowAgain = onClickDontShowAgain,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+fun QuickActionAlertDialog(
+    title: String,
+    textContent: String,
+    buttonIconResource: Int,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onClickDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    QuickActionAlertDialog(
+        title = title,
+        textContent = textContent,
+        icon = {
+            Icon(
+                painter = painterResource(buttonIconResource),
+                contentDescription = null
+            )
+        },
+        buttonText = buttonText,
+        buttonColors = buttonColors,
+        onClickDoOnce = onClickDoOnce,
+        onClickDontShowAgain = onClickDontShowAgain,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+fun QuickActionAlertDialog(
+    title: String,
+    textContent: String,
+    icon: @Composable () -> Unit,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -461,10 +518,7 @@ private fun QuickActionAlertDialog(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = buttonIcon,
-                            contentDescription = null
-                        )
+                        icon()
                         Spacer(Modifier.width(8.dp))
                         Text(buttonText)
                     }

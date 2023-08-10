@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.EncryptedInfo
+import com.vitorpamplona.amethyst.service.Nip44Version
 import com.vitorpamplona.amethyst.service.relays.Client
 
 @Immutable
@@ -20,6 +21,7 @@ class SealedGossipEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+    @Transient
     private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
     fun cachedGossip(privKey: ByteArray): Event? {
@@ -35,6 +37,7 @@ class SealedGossipEvent(
     fun unseal(privKey: ByteArray): Gossip? = try {
         plainContent(privKey)?.let { gson.fromJson(it, Gossip::class.java) }
     } catch (e: Exception) {
+        Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
         null
     }
 
@@ -42,16 +45,15 @@ class SealedGossipEvent(
         if (content.isBlank()) return null
 
         return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP24(privKey, pubKey.hexToByteArray())
+            val toDecrypt = gson.fromJson(content, EncryptedInfo::class.java)
 
-            val toDecrypt = gson.fromJson<EncryptedInfo>(
-                content,
-                EncryptedInfo::class.java
-            )
-
-            return CryptoUtils.decryptNIP24(toDecrypt, sharedSecret)
+            return when (toDecrypt.v) {
+                Nip44Version.NIP04.versionCode -> CryptoUtils.decryptNIP04(toDecrypt, privKey, pubKey.hexToByteArray())
+                Nip44Version.NIP24.versionCode -> CryptoUtils.decryptNIP24(toDecrypt, privKey, pubKey.hexToByteArray())
+                else -> null
+            }
         } catch (e: Exception) {
-            Log.w("GeneralList", "Error decrypting the message ${e.message}")
+            Log.w("GossipEvent", "Error decrypting the message ${e.message}")
             null
         }
     }
@@ -73,7 +75,7 @@ class SealedGossipEvent(
             gossip: Gossip,
             encryptTo: HexKey,
             privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
+            createdAt: Long = TimeUtils.randomWithinAWeek()
         ): SealedGossipEvent {
             val sharedSecret = CryptoUtils.getSharedSecretNIP24(privateKey, encryptTo.hexToByteArray())
 
@@ -105,7 +107,7 @@ class Gossip(
     fun mergeWith(event: SealedGossipEvent): Event {
         val newPubKey = pubKey?.ifBlank { null } ?: event.pubKey
         val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
-        val newKind = kind ?: 0
+        val newKind = kind ?: -1
         val newTags = (tags ?: emptyList()).plus(event.tags)
         val newContent = content ?: ""
         val newID = id?.ifBlank { null } ?: Event.generateId(newPubKey, newCreatedAt, newKind, newTags, newContent).toHexKey()

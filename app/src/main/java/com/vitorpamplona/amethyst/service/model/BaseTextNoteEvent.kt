@@ -20,7 +20,10 @@ open class BaseTextNoteEvent(
     fun mentions() = taggedUsers()
     open fun replyTos() = taggedEvents()
 
+    @Transient
     private var citedUsersCache: Set<HexKey>? = null
+
+    @Transient
     private var citedNotesCache: Set<HexKey>? = null
 
     fun citedUsers(): Set<HexKey> {

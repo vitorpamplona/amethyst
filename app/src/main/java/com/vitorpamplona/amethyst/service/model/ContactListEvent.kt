@@ -24,6 +24,8 @@ class ContactListEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     // This function is only used by the user logged in
     // But it is used all the time.
+
+    @delegate:Transient
     val verifiedFollowKeySet: Set<HexKey> by lazy {
         tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
             try {
@@ -35,18 +37,22 @@ class ContactListEvent(
         }.toSet()
     }
 
+    @delegate:Transient
     val verifiedFollowTagSet: Set<String> by lazy {
         unverifiedFollowTagSet().map { it.lowercase() }.toSet()
     }
 
+    @delegate:Transient
     val verifiedFollowGeohashSet: Set<String> by lazy {
         unverifiedFollowGeohashSet().map { it.lowercase() }.toSet()
     }
 
+    @delegate:Transient
     val verifiedFollowCommunitySet: Set<String> by lazy {
         unverifiedFollowAddressSet().toSet()
     }
 
+    @delegate:Transient
     val verifiedFollowKeySetAndMe: Set<HexKey> by lazy {
         verifiedFollowKeySet + pubKey
     }

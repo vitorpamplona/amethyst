@@ -20,9 +20,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.model.SealedGossipEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -280,6 +282,13 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.setHideDeleteRequestDialog()
     }
 
+    val hideNIP24WarningDialog: Boolean
+        get() = account.hideNIP24WarningDialog
+
+    fun dontShowNIP24WarningDialog() {
+        account.setHideNIP24WarningDialog()
+    }
+
     val hideBlockAlertDialog: Boolean
         get() = account.hideBlockAlertDialog
 
@@ -324,6 +333,13 @@ class AccountViewModel(val account: Account) : ViewModel() {
                 onReady(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
             }
         }
+    }
+
+    fun unwrap(event: GiftWrapEvent): Event? {
+        return account.unwrap(event)
+    }
+    fun unseal(event: SealedGossipEvent): Event? {
+        return account.unseal(event)
     }
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -103,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -1540,11 +1542,19 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> U
 
 @Composable
 private fun MessageButton(user: User, nav: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { nav("Room/${user.pubkeyHex}") },
+        onClick = {
+            scope.launch(Dispatchers.IO) {
+                val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
+                user.createChatroom(withKey)
+                nav("Room/${withKey.hashCode()}")
+            }
+        },
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(

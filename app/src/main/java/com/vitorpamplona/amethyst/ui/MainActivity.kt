@@ -202,7 +202,9 @@ fun uriToRoute(uri: String?): String? {
                 Nip19.Type.NOTE -> "Note/${nip19.hex}"
                 Nip19.Type.EVENT -> {
                     if (nip19.kind == PrivateDmEvent.kind) {
-                        "Room/${nip19.author}"
+                        nip19.author?.let {
+                            "RoomByPubkey/$it"
+                        }
                     } else if (nip19.kind == ChannelMessageEvent.kind || nip19.kind == ChannelCreateEvent.kind || nip19.kind == ChannelMetadataEvent.kind) {
                         "Channel/${nip19.hex}"
                     } else {

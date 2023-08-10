@@ -19,11 +19,18 @@ import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import fr.acinq.secp256k1.Hex
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
 import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
+
+@Stable
+data class ChatroomKey(
+    val users: ImmutableSet<HexKey>
+)
 
 @Stable
 class User(val pubkeyHex: String) {
@@ -43,7 +50,7 @@ class User(val pubkeyHex: String) {
     var relaysBeingUsed = mapOf<String, RelayInfo>()
         private set
 
-    var privateChatrooms = mapOf<User, Chatroom>()
+    var privateChatrooms = mapOf<ChatroomKey, Chatroom>()
         private set
 
     fun pubkey() = Hex.decode(pubkeyHex)
@@ -54,6 +61,21 @@ class User(val pubkeyHex: String) {
     fun toNostrUri() = "nostr:${pubkeyNpub()}"
 
     override fun toString(): String = pubkeyHex
+
+    fun toBestShortFirstName(): String {
+        val fullName = bestDisplayName() ?: bestUsername() ?: return pubkeyDisplayHex()
+
+        val names = fullName.split(' ')
+
+        val firstName = if (names[0].length <= 3) {
+            // too short. Remove Dr.
+            "${names[0]} ${names.getOrNull(1) ?: ""}"
+        } else {
+            names[0]
+        }
+
+        return firstName
+    }
 
     fun toBestDisplayName(): String {
         return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex()
@@ -174,18 +196,31 @@ class User(val pubkeyHex: String) {
     }
 
     @Synchronized
-    private fun getOrCreatePrivateChatroomSync(user: User): Chatroom {
+    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom {
         checkNotInMainThread()
 
-        return privateChatrooms[user] ?: run {
+        return privateChatrooms[key] ?: run {
             val privateChatroom = Chatroom()
-            privateChatrooms = privateChatrooms + Pair(user, privateChatroom)
+            privateChatrooms = privateChatrooms + Pair(key, privateChatroom)
             privateChatroom
         }
     }
 
     private fun getOrCreatePrivateChatroom(user: User): Chatroom {
-        return privateChatrooms[user] ?: getOrCreatePrivateChatroomSync(user)
+        val key = ChatroomKey(persistentSetOf(user.pubkeyHex))
+        return getOrCreatePrivateChatroom(key)
+    }
+
+    private fun getOrCreatePrivateChatroom(key: ChatroomKey): Chatroom {
+        return privateChatrooms[key] ?: getOrCreatePrivateChatroomSync(key)
+    }
+
+    fun addMessage(room: ChatroomKey, msg: Note) {
+        val privateChatroom = getOrCreatePrivateChatroom(room)
+        if (msg !in privateChatroom.roomMessages) {
+            privateChatroom.addMessageSync(msg)
+            liveSet?.messages?.invalidateData()
+        }
     }
 
     fun addMessage(user: User, msg: Note) {
@@ -194,6 +229,10 @@ class User(val pubkeyHex: String) {
             privateChatroom.addMessageSync(msg)
             liveSet?.messages?.invalidateData()
         }
+    }
+
+    fun createChatroom(withKey: ChatroomKey) {
+        getOrCreatePrivateChatroom(withKey)
     }
 
     fun removeMessage(user: User, msg: Note) {
@@ -309,8 +348,8 @@ class User(val pubkeyHex: String) {
         return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
-    fun hasSentMessagesTo(user: User?): Boolean {
-        val messagesToUser = privateChatrooms[user] ?: return false
+    fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
+        val messagesToUser = privateChatrooms[key] ?: return false
 
         return messagesToUser.roomMessages.any { this.pubkeyHex == it.author?.pubkeyHex }
     }
@@ -373,8 +412,11 @@ data class RelayInfo(
     var counter: Long
 )
 
+@Stable
 class Chatroom() {
     var roomMessages: Set<Note> = setOf()
+    var subject: String? = null
+    var subjectCreatedAt: Long? = null
 
     @Synchronized
     fun addMessageSync(msg: Note) {
@@ -382,6 +424,13 @@ class Chatroom() {
 
         if (msg !in roomMessages) {
             roomMessages = roomMessages + msg
+
+            val newSubject = msg.event?.subject()
+
+            if (newSubject != null && (msg.createdAt() ?: 0) > (subjectCreatedAt ?: 0)) {
+                subject = newSubject
+                subjectCreatedAt = msg.createdAt()
+            }
         }
     }
 
@@ -391,7 +440,16 @@ class Chatroom() {
 
         if (msg !in roomMessages) {
             roomMessages = roomMessages + msg
+
+            roomMessages.filter { it.event?.subject() != null }.sortedBy { it.createdAt() }.lastOrNull()?.let {
+                subject = it.event?.subject()
+                subjectCreatedAt = it.createdAt()
+            }
         }
+    }
+
+    fun senderIntersects(keySet: Set<HexKey>): Boolean {
+        return roomMessages.any { it.author?.pubkeyHex in keySet }
     }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {

@@ -2,12 +2,14 @@ package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.HexValidator
 import fr.acinq.secp256k1.Hex
+import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
 class PrivateDmEvent(
@@ -17,7 +19,7 @@ class PrivateDmEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
     /**
      * This may or may not be the actual recipient's pub key. The event is intended to look like a
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used
@@ -38,6 +40,10 @@ class PrivateDmEvent(
 
     fun talkingWith(oneSideHex: String): HexKey {
         return if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
+    }
+
+    override fun chatroomKey(toRemove: String): ChatroomKey {
+        return ChatroomKey(persistentSetOf(talkingWith(toRemove)))
     }
 
     /**
