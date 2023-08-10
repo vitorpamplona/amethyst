@@ -54,7 +54,7 @@ fun HomeScreen(
     nav: (String) -> Unit,
     nip47: String? = null
 ) {
-    var wantsToAddNip47 by remember { mutableStateOf(nip47) }
+    var wantsToAddNip47 by remember(nip47) { mutableStateOf(nip47) }
 
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN)
 

@@ -218,7 +218,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
     val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
     val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(accountViewModel, nip47uri) {
         postViewModel.load()
         if (nip47uri != null) {
             try {
@@ -384,6 +384,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                             )
 
                             IconButton(onClick = {
+                                onClose()
                                 runCatching { uri.openUri("https://nwc.getalby.com/apps/new?c=Amethyst") }
                             }) {
                                 Icon(
