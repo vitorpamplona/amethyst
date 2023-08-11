@@ -28,10 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -243,11 +245,14 @@ fun FloatingButtons(
     nav: (String) -> Unit
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
+    val context = LocalContext.current
 
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
             is AccountState.LoggedInViewOnly -> {
-                // Does nothing.
+                if (PackageUtils.isAmberInstalled(context)) {
+                    WritePermissionButtons(navEntryState, accountViewModel, nav)
+                }
             }
             is AccountState.LoggedOff -> {
                 // Does nothing.
