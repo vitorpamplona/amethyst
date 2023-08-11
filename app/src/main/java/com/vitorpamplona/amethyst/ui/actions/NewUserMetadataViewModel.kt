@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.model.GitHubIdentity
 import com.vitorpamplona.amethyst.service.model.MastodonIdentity
+import com.vitorpamplona.amethyst.service.model.MetadataEvent
 import com.vitorpamplona.amethyst.service.model.TwitterIdentity
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import id.zelory.compressor.Compressor.compress
@@ -73,7 +74,7 @@ class NewUserMetadataViewModel : ViewModel() {
         }
     }
 
-    fun create() {
+    fun create(signEvent: Boolean): MetadataEvent? {
         // Tries to not delete any existing attribute that we do not work with.
         val latest = account.userProfile().info?.latestMetadata
         val currentJson = if (latest != null) {
@@ -122,11 +123,16 @@ class NewUserMetadataViewModel : ViewModel() {
         val writer = StringWriter()
         ObjectMapper().writeValue(writer, currentJson)
 
-        viewModelScope.launch(Dispatchers.IO) {
-            account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
+        if (signEvent) {
+            viewModelScope.launch(Dispatchers.IO) {
+                account.sendNewUserMetadata(writer.buffer.toString(), newClaims, signEvent)
+            }
+            clear()
+        } else {
+            return account.sendNewUserMetadata(writer.buffer.toString(), newClaims, signEvent)
         }
 
-        clear()
+        return null
     }
 
     fun clear() {

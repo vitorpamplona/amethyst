@@ -186,14 +186,17 @@ class Account(
         }
     }
 
-    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
-        if (!isWriteable()) return
+    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>, signEvent: Boolean = true): MetadataEvent? {
+        if (!isWriteable() && signEvent) return null
 
-        keyPair.privKey?.let {
-            val event = MetadataEvent.create(toString, identities, keyPair.privKey!!)
-            Client.send(event)
-            LocalCache.consume(event)
+        val event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
+        if (!signEvent) {
+            return event
         }
+        Client.send(event)
+        LocalCache.consume(event)
+
+        return null
     }
 
     fun reactionTo(note: Note, reaction: String): List<Note> {

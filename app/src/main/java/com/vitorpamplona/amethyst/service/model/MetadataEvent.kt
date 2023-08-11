@@ -171,8 +171,7 @@ class MetadataEvent(
                 .readerFor(UserMetadata::class.java)
         }
 
-        fun create(contactMetaData: String, identities: List<IdentityClaim>, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): MetadataEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+        fun create(contactMetaData: String, identities: List<IdentityClaim>, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): MetadataEvent {
             val tags = mutableListOf<List<String>>()
 
             identities.forEach {
@@ -180,8 +179,8 @@ class MetadataEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, contactMetaData)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, contactMetaData, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, contactMetaData, sig?.toHexKey() ?: "")
         }
     }
 }

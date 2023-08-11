@@ -17,6 +17,11 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +33,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,6 +46,7 @@ import kotlinx.coroutines.withContext
 fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account)
@@ -61,6 +71,25 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
             Column(
                 modifier = Modifier.padding(10.dp)
             ) {
+                var event by remember { mutableStateOf<Event?>(null) }
+                if (event != null) {
+                    SignerDialog(
+                        onClose = {
+                            event = null
+                        },
+                        onPost = {
+                            scope.launch(Dispatchers.IO) {
+                                Client.send(it)
+                                LocalCache.verifyAndConsume(it, null)
+                                event = null
+                                postViewModel.clear()
+                                onClose()
+                            }
+                        },
+                        event = event!!
+                    )
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth(),
@@ -74,15 +103,22 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
 
                     PostButton(
                         onPost = {
-                            postViewModel.create()
-                            onClose()
+                            if (PackageUtils.isAmberInstalled(context)) {
+                                event = postViewModel.create(false)
+                                println(event)
+                            } else {
+                                postViewModel.create(true)
+                                onClose()
+                            }
                         },
                         true
                     )
                 }
 
                 Column(
-                    modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(1f),
