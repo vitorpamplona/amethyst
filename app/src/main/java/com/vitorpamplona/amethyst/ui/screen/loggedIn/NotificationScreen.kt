@@ -93,6 +93,7 @@ fun NotificationScreen(
             SummaryBar(
                 model = userReactionsStatsModel
             )
+
             RefresheableCardView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
@@ -104,6 +105,9 @@ fun NotificationScreen(
     }
 }
 
+// TODO: Turn this into an Account flag
+var hasAlreadyAskedNotificationPermissions = false
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CheckifItNeedsToRequestNotificationPermission() {
@@ -112,7 +116,10 @@ fun CheckifItNeedsToRequestNotificationPermission() {
             Manifest.permission.POST_NOTIFICATIONS
         )
 
-        if (!notificationPermissionState.status.isGranted) {
+        if (!notificationPermissionState.status.isGranted && !hasAlreadyAskedNotificationPermissions) {
+            hasAlreadyAskedNotificationPermissions = true
+
+            // This will pause the APP, including the connection with relays.
             LaunchedEffect(notificationPermissionState) {
                 notificationPermissionState.launchPermissionRequest()
             }
