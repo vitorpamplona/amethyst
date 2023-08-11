@@ -29,16 +29,18 @@ class ChatMessageEvent(
     fun talkingWith(oneSideHex: String): Set<HexKey> {
         val listedPubKeys = recipientsPubKey()
 
-        return if (pubKey == oneSideHex) {
-            if (listedPubKeys.isEmpty()) {
-                // talking to myself
-                return setOf(pubKey)
-            } else {
-                listedPubKeys.minus(oneSideHex).toSet()
-            }
+        val result = if (pubKey == oneSideHex) {
+            listedPubKeys.minus(oneSideHex).toSet()
         } else {
             listedPubKeys.plus(pubKey).minus(oneSideHex).toSet()
         }
+
+        if (result.isEmpty()) {
+            // talking to myself
+            return setOf(pubKey)
+        }
+
+        return result
     }
 
     override fun chatroomKey(toRemove: String): ChatroomKey {
