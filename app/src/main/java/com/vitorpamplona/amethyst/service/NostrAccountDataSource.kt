@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
 import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
@@ -111,8 +112,42 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     )
 
+    fun createGiftWrapsToMeFilter() = TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter = JsonFilter(
+            kinds = listOf(GiftWrapEvent.kind),
+            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+        )
+    )
+
     val accountChannel = requestNewChannel { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
+    }
+
+    override fun consume(event: Event, relay: Relay) {
+        if (LocalCache.justVerify(event)) {
+            if (event is GiftWrapEvent) {
+                val privateKey = NostrChatroomListDataSource.account.keyPair.privKey
+                if (privateKey != null) {
+                    event.cachedGift(privateKey)?.let {
+                        this.consume(it, relay)
+                    }
+                }
+            }
+
+            if (event is SealedGossipEvent) {
+                val privateKey = NostrChatroomListDataSource.account.keyPair.privKey
+                if (privateKey != null) {
+                    event.cachedGossip(privateKey)?.let {
+                        LocalCache.justConsume(it, relay)
+                    }
+                }
+
+                // Don't store sealed gossips to avoid rebroadcasting by mistake.
+            } else {
+                LocalCache.justConsume(event, relay)
+            }
+        }
     }
 
     override fun updateChannelFilters() {
@@ -121,6 +156,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             createAccountMetadataFilter(),
             createAccountContactListFilter(),
             createNotificationFilter(),
+            createGiftWrapsToMeFilter(),
             createAccountReportsFilter(),
             createAccountAcceptedAwardsFilter(),
             createAccountBookmarkListFilter(),
