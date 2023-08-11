@@ -20,6 +20,7 @@ import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.model.AddressableEvent
 import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
+import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
@@ -190,6 +191,20 @@ open class NewPostViewModel() : ViewModel() {
             }
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+        } else if (originalNote?.event is ChatMessageEvent) {
+            val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
+
+            account?.sendNIP24PrivateMessage(
+                message = tagger.message,
+                toUsers = receivers,
+                subject = subject.text.ifBlank { null },
+                replyingTo = originalNote!!,
+                mentions = tagger.mentions,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapReceiver = zapReceiver,
+                zapRaiserAmount = localZapRaiserAmount,
+                geohash = geoHash
+            )
         } else if (!dmUsers.isNullOrEmpty()) {
             if (nip24 || dmUsers.size > 1) {
                 account?.sendNIP24PrivateMessage(
