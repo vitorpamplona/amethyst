@@ -238,7 +238,7 @@ class Account(
                         broadcastPrivately(giftWraps)
                     }
 
-                    return
+                    return null
                 }
             }
 
@@ -252,21 +252,30 @@ class Account(
 
                 broadcastPrivately(giftWraps)
             }
+            return null
         } else {
             if (reaction.startsWith(":")) {
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
+                        if (!signEvent) {
+                            return ReactionEvent.create(emojiUrl, it, keyPair.pubKey.toHexKey())
+                        }
+
                         val event = ReactionEvent.create(emojiUrl, it, keyPair.privKey!!)
                         Client.send(event)
                         LocalCache.consume(event)
                     }
 
-                    return
+                    return null
                 }
             }
 
             note.event?.let {
+                if (!signEvent) {
+                    return ReactionEvent.create(reaction, it, keyPair.pubKey.toHexKey())
+                }
+
                 val event = ReactionEvent.create(reaction, it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
