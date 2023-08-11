@@ -37,6 +37,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
 
     private fun innerApplyFilter(collection: Collection<Note>, ignoreAddressables: Boolean): Set<Note> {
         val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
+        val gRelays = account.convertGlobalRelays()
         val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
@@ -51,9 +52,10 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             .asSequence()
             .filter { it ->
                 val noteEvent = it.event
+                val isGlobalRelay = it.relays?.any { gRelays.contains(it) } ?: false
                 (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
                     (!ignoreAddressables || noteEvent.kind() < 10000) &&
-                    (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
+                    ((isGlobal && isGlobalRelay) || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
                     ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&
