@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
+import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
@@ -548,6 +552,8 @@ private fun StatusRow(
 ) {
     Column(modifier = ReactionRowHeightChat) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
+            IncognitoBadge(baseNote)
+            Spacer(modifier = StdHorzSpacer)
             ChatTimeAgo(baseNote)
             RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
@@ -571,6 +577,29 @@ private fun StatusRow(
             }
             Spacer(modifier = StdHorzSpacer)
         }
+    }
+}
+
+@Composable
+fun IncognitoBadge(baseNote: Note) {
+    if (baseNote.event is ChatMessageEvent) {
+        Icon(
+            painter = painterResource(id = R.drawable.incognito),
+            null,
+            modifier = Modifier
+                .padding(top = 1.dp)
+                .size(14.dp),
+            tint = MaterialTheme.colors.placeholderText
+        )
+    } else if (baseNote.event is PrivateDmEvent) {
+        Icon(
+            painter = painterResource(id = R.drawable.incognito_off),
+            null,
+            modifier = Modifier
+                .padding(top = 1.dp)
+                .size(14.dp),
+            tint = MaterialTheme.colors.placeholderText
+        )
     }
 }
 
