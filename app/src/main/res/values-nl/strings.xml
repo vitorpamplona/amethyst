@@ -23,6 +23,8 @@
     <string name="copy_user_pubkey">Kopieer auteur ID</string>
     <string name="copy_note_id">Kopieer note ID</string>
     <string name="broadcast">Verzenden</string>
+    <string name="request_deletion">Verwijdering aanvragen</string>
+    <string name="block_report">Blokkeren / Rapporteren</string>
     <string name="block_hide_user"><![CDATA[Blokkeer en verberg gebruiker]]></string>
     <string name="report_spam_scam">Meld spam / scam</string>
     <string name="report_impersonation">Meld imitatie</string>
@@ -33,6 +35,8 @@
     <string name="login_with_a_private_key_to_like_posts">Login met een privésleutel om berichten te liken</string>
     <string name="no_zap_amount_setup_long_press_to_change">Geen Zap bedrag. Houdt ingedrukt om te veranderen</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Login met een privésleutel om Zaps te versturen</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Login met een privésleutel om te volgen</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Login met een privésleutel om te ontvolgen</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Aantal keer bekeken</string>
     <string name="boost">Boost</string>
@@ -44,6 +48,8 @@
     <string name="and">" en "</string>
     <string name="in_channel">"in kanaal "</string>
     <string name="profile_banner">Profielbanner</string>
+    <string name="payment_successful">Betaling gelukt</string>
+    <string name="error_parsing_error_message">Fout bij het parsen van foutberichten</string>
     <string name="following">" Volgend"</string>
     <string name="followers">" Volgers"</string>
     <string name="profile">Profiel</string>
@@ -73,6 +79,7 @@
     <string name="failed_to_upload_the_image">Uploaden afbeelding mislukt</string>
     <string name="relay_address">Relay adres</string>
     <string name="posts">Berichten</string>
+    <string name="bytes">Bytes</string>
     <string name="errors">Errors</string>
     <string name="home_feed">Startpagina</string>
     <string name="private_message_feed">Privéberichten</string>
@@ -120,6 +127,7 @@
     <string name="send_a_direct_message">Stuur een privébericht</string>
     <string name="edits_the_user_s_metadata">Bewerkt de metadata van de gebruiker</string>
     <string name="follow">Volgen</string>
+    <string name="follow_back">Terugvolgen</string>
     <string name="unblock">Deblokkeren</string>
     <string name="copy_user_id">Kopieer gebruiker ID</string>
     <string name="unblock_user">Deblokkeer gebruiker</string>
@@ -216,6 +224,10 @@
     <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
     <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
     <string name="private_conversation_notification">"&lt;Kan privébericht niet ontsleutelen&gt;\n\nJe werd genoemd in een privégesprek tussen %1$s en %2$s."</string>
+    <string name="quick_action_block_dialog_btn">Blokkeren</string>
+    <string name="quick_action_delete_dialog_btn">Verwijderen</string>
+    <string name="quick_action_block">Blokkeren</string>
+    <string name="quick_action_report">Rapporteren</string>
     <string name="quick_action_delete_button">Verwijderen</string>
     <string name="quick_action_dont_show_again_button">Niet meer laten zien</string>
     <string name="account_switch_add_account_dialog_title">Nieuw account toevoegen</string>
@@ -322,14 +334,16 @@
     <string name="upload_server_imgur_explainer">Imgur kan het bestand aanpassen</string>
 
     <string name="upload_server_nostrimg">nostrimg.com - vertrouwd</string>
-    <string name="upload_server_nostrimg_explainer">NostrImg  kan het bestand aanpassen</string>
+    <string name="upload_server_nostrimg_explainer">NostrImg kan het bestand aanpassen</string>
 	
     <string name="upload_server_nostrbuild">nostr.build - vertrouwd</string>
-    <string name="upload_server_nostrbuild_explainer">Nostr.build  kan het bestand aanpassen</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build kan het bestand aanpassen</string>
 
     <string name="upload_server_nostrfilesdev">nostrfiles.dev - vertrouwd</string>
-    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev  kan het bestand aanpassen</string>
+    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev kan het bestand aanpassen</string>
 
+    <string name="upload_server_nostrcheckme">nostrcheck.me - vertrouwd</string>
+    <string name="upload_server_nostrcheckme_explainer">nostrcheck.me kan het bestand aanpassen</string>
     <string name="upload_server_imgur_nip94">Verifieerbare Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Checkt of Imgur het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
 
@@ -342,6 +356,8 @@
     <string name="upload_server_nostrfilesdev_nip94">Verifieerbare Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">Checkt of Nostrfiles.dev het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
 
+    <string name="upload_server_nostrcheckme_nip94">Verifieerbare nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Checkt of nostrcheck.me het bestand heeft aangepast. Dit is een nieuwe NIP: andere clients zien het misschien niet.</string>
     <string name="upload_server_relays_nip95">Uw relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Bestanden worden geüpload naar en gehost door relays. Ze zijn vrij van een vaste url (afhankelijkheid van derden). Zorg ervoor dat u een NIP-95 relay in uw lijst met relays hebt.</string>
 
@@ -414,6 +430,7 @@
     <string name="sats_to_complete">Zapraiser op %1$s. %2$s sats tot doel</string>
     <string name="read_from_relay">Lees van relay</string>
     <string name="write_to_relay">Schrijf naar relay</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">Er is een fout opgetreden bij het ophalen van de relay-informatie van %1$s</string>
     <string name="owner">Eigenaar</string>
     <string name="version">Versie</string>
     <string name="software">Software</string>
@@ -437,6 +454,10 @@
     <string name="auth">Auth</string>
     <string name="payment">Betaling</string>
 
+    <string name="cashu">Cashu token</string>
+    <string name="cashu_redeem">Inwisselen</string>
+    <string name="no_lightning_address_set">Geen Lightning-adres ingesteld</string>
+    <string name="copied_token_to_clipboard">Token gekopieerd naar klembord</string>
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">GEËINDIGD</string>
@@ -444,5 +465,45 @@
 
     <string name="live_stream_is_offline">Livestream is offline</string>
     <string name="live_stream_has_ended">Livestream is geëindigd</string>
-	
+    <string name="are_you_sure_you_want_to_log_out">Uitloggen verwijdert al je lokale informatie. Zorg ervoor dat je een back-up hebt van je privésleutels om te voorkomen dat je je account kwijtraakt. Wilt u doorgaan?</string>
+    <string name="followed_tags">Gevolgde tags</string>
+    <string name="relay_setup">Relays</string>
+    <string name="discover_live">Live</string>
+    <string name="discover_community">Community</string>
+    <string name="discover_chat">Chats</string>
+    <string name="community_approved_posts">Goedgekeurde berichten</string>
+    <string name="groups_no_descriptor">Deze groep heeft geen beschrijving of regels. Praat met de eigenaar om er een toe te voegen</string>
+    <string name="community_no_descriptor">Deze community heeft geen beschrijving. Praat met de eigenaar om er een toe te voegen</string>
+    <string name="add_sensitive_content_label">Gevoelige content</string>
+    <string name="add_sensitive_content_description">Voegt waarschuwing voor gevoelige content toe voordat deze content wordt weergegeven</string>
+    <string name="settings">Instellingen</string>
+    <string name="connectivity_type_always">Altijd</string>
+    <string name="connectivity_type_wifi_only">Alleen wifi</string>
+    <string name="connectivity_type_never">Nooit</string>
+    <string name="system">Systeem</string>
+    <string name="light">Licht</string>
+    <string name="dark">Donker</string>
+    <string name="application_preferences">Application preferences</string>
+    <string name="language">Taal</string>
+    <string name="theme">Thema</string>
+    <string name="automatically_load_images_gifs">Automatisch afbeeldingen/gifs laden</string>
+    <string name="automatically_play_videos">Automatisch video\'s afspelen</string>
+    <string name="automatically_show_url_preview">Automatisch URL preview tonen</string>
+    <string name="load_image">Afbeelding laden</string>
+    <string name="spamming_users">Spammers</string>
+    <string name="muted_button">Geen geluid. Klik om voor geluid</string>
+    <string name="mute_button">Geluid. Klik voor geen geluid</string>
+    <string name="search_button">Lokale en externe records doorzoeken</string>
+    <string name="nip05_verified">Nostr-adres is geverifieerd</string>
+    <string name="nip05_failed">Verificatie van Nostr-adres mislukt</string>
+    <string name="nip05_checking">Nostr-adres checken</string>
+    <string name="select_deselect_all">Alles selecteren/deselecteren</string>
+    <string name="default_relays">Standaard</string>
+    <string name="select_a_relay_to_continue">Selecteer een relay om verder te gaan</string>
+    <string name="zap_forward_title">Stuur Zaps door naar:</string>
+    <string name="zap_forward_explainer">Ondersteunende clients sturen zaps door naar het onderstaande LN-adres of gebruikersprofiel in plaats van naar het jouwe</string>
+    <string name="geohash_title">Locatie weergeven als</string>
+    <string name="geohash_explainer">Voegt een Geohash van je locatie toe aan het bericht. Het publiek weet dat je binnen 5 km (3mi) van de huidige locatie bent.</string>
+    <string name="add_sensitive_content_explainer">Voegt een waarschuwing voor gevoelige inhoud toe voordat je inhoud wordt weergegeven. Dit is ideaal voor NSFW-inhoud of inhoud die sommige mensen beledigend of verontrustend vinden.</string>
+
 </resources>
