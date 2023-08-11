@@ -33,14 +33,14 @@ class ChannelMessageEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: String?,
-            privateKey: ByteArray,
+            pubKey: HexKey,
+            privateKey: ByteArray?,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): ChannelMessageEvent {
             val content = message
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf(
                 listOf("e", channel, "", "root")
             )
@@ -64,8 +64,8 @@ class ChannelMessageEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
     }
 }

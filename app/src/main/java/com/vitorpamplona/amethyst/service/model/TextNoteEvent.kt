@@ -37,11 +37,10 @@ class TextNoteEvent(
             root: String?,
             directMentions: Set<HexKey>,
             geohash: String? = null,
-
-            privateKey: ByteArray,
+            pubKey: HexKey,
+            privateKey: ByteArray?,
             createdAt: Long = TimeUtils.now()
         ): TextNoteEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 if (it == replyingTo) {
@@ -97,8 +96,8 @@ class TextNoteEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
         }
     }
 }

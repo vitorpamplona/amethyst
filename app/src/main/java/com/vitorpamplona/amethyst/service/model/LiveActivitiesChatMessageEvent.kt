@@ -48,14 +48,14 @@ class LiveActivitiesChatMessageEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: String?,
-            privateKey: ByteArray,
+            pubKey: HexKey,
+            privateKey: ByteArray?,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): LiveActivitiesChatMessageEvent {
             val content = message
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf(
                 listOf("a", activity.toTag(), "", "root")
             )
@@ -79,8 +79,8 @@ class LiveActivitiesChatMessageEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return LiveActivitiesChatMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return LiveActivitiesChatMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
     }
 }

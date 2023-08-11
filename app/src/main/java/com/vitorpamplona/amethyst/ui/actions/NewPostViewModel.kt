@@ -22,6 +22,7 @@ import com.vitorpamplona.amethyst.service.model.AddressableEvent
 import com.vitorpamplona.amethyst.service.model.BaseTextNoteEvent
 import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
@@ -156,7 +157,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = account
     }
 
-    fun sendPost(relayList: List<Relay>? = null) {
+    fun sendPost(relayList: List<Relay>? = null, signEvent: Boolean = true): Event? {
         val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
         tagger.run()
 

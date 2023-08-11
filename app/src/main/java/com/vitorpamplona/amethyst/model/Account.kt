@@ -833,9 +833,10 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         relayList: List<Relay>? = null,
-        geohash: String? = null
-    ) {
-        if (!isWriteable()) return
+        geohash: String? = null,
+        signEvent: Boolean = true
+    ): TextNoteEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -854,11 +855,17 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            privateKey = keyPair.privKey!!
+            pubKey = keyPair.pubKey.toHexKey(),
+            privateKey = keyPair.privKey
         )
+
+        if (!signEvent) {
+            return signedEvent
+        }
 
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
+        return null
     }
 
     fun sendPoll(
@@ -874,9 +881,10 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
-        geohash: String? = null
-    ) {
-        if (!isWriteable()) return
+        geohash: String? = null,
+        signEvent: Boolean = true
+    ): PollNoteEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -887,7 +895,8 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             addresses = addresses,
-            privateKey = keyPair.privKey!!,
+            pubKey = keyPair.pubKey.toHexKey(),
+            privateKey = keyPair.privKey,
             pollOptions = pollOptions,
             valueMaximum = valueMaximum,
             valueMinimum = valueMinimum,
@@ -899,12 +908,28 @@ class Account(
             geohash = geohash
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
+
+        if (!signEvent) {
+            return signedEvent
+        }
+
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
+        return null
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable()) return
+    fun sendChannelMessage(
+        message: String,
+        toChannel: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        geohash: String? = null,
+        signEvent: Boolean = true
+    ): ChannelMessageEvent? {
+        if (!isWriteable() && signEvent) return null
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -919,14 +944,31 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            privateKey = keyPair.privKey!!
+            pubKey = keyPair.pubKey.toHexKey(),
+            privateKey = keyPair.privKey
         )
+
+        if (!signEvent) {
+            return signedEvent
+        }
+
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
+        return null
     }
 
-    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable()) return
+    fun sendLiveMessage(
+        message: String,
+        toChannel: ATag,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        geohash: String? = null,
+        signEvent: Boolean = true
+    ): LiveActivitiesChatMessageEvent? {
+        if (!isWriteable() && signEvent) return null
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -941,18 +983,35 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            privateKey = keyPair.privKey!!
+            pubKey = keyPair.pubKey.toHexKey(),
+            privateKey = keyPair.privKey
         )
+
+        if (!signEvent) {
+            return signedEvent
+        }
+
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
+        return null
     }
 
-    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash)
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null): PrivateDmEvent? {
+        return sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash)
     }
 
-    fun sendPrivateMessage(message: String, toUser: HexKey, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable()) return
+    fun sendPrivateMessage(
+        message: String,
+        toUser: HexKey,
+        replyingTo: Note? = null,
+        mentions: List<User>?,
+        zapReceiver: String? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        geohash: String? = null,
+        signEvent: Boolean = true
+    ): PrivateDmEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -970,8 +1029,14 @@ class Account(
             privateKey = keyPair.privKey!!,
             advertiseNip18 = false
         )
+
+        if (!signEvent) {
+            return signedEvent
+        }
+
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
+        return null
     }
 
     fun sendNIP24PrivateMessage(
@@ -983,9 +1048,10 @@ class Account(
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        geohash: String? = null
-    ) {
-        if (!isWriteable()) return
+        geohash: String? = null,
+        signEvent: Boolean = true
+    ): List<GiftWrapEvent>? {
+        if (!isWriteable() && signEvent) return null
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -1003,7 +1069,12 @@ class Account(
             from = keyPair.privKey!!
         )
 
+        if (!signEvent) {
+            return signedEvents
+        }
+
         broadcastPrivately(signedEvents)
+        return null
     }
 
     fun broadcastPrivately(signedEvents: List<GiftWrapEvent>) {

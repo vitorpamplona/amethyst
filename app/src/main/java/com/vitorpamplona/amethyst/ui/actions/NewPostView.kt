@@ -75,12 +75,15 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
+import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -158,6 +161,24 @@ fun NewPostView(
         }
     }
 
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it, relayList = relayList)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                    onClose()
+                }
+            },
+            event = event!!
+        )
+    }
+
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
@@ -224,8 +245,10 @@ fun NewPostView(
                         PostButton(
                             onPost = {
                                 scope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPost(relayList = relayList)
-                                    onClose()
+                                    event = postViewModel.sendPost(relayList = relayList, signEvent = account.keyPair.privKey != null)
+                                    if (event == null) {
+                                        onClose()
+                                    }
                                 }
                             },
                             isActive = postViewModel.canPost()
