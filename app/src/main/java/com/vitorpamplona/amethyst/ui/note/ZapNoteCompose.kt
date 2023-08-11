@@ -29,8 +29,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.model.ContactListEvent
 import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
+import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
@@ -206,17 +210,39 @@ fun ShowFollowingOrUnfollowingButton(
         }
     }
 
+    var event by remember { mutableStateOf<ContactListEvent?>(null) }
+
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
+
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (PackageUtils.isAmberInstalled(context)) {
+                    event = accountViewModel.account.unfollow(baseAuthor, false)
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -227,14 +253,18 @@ fun ShowFollowingOrUnfollowingButton(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (PackageUtils.isAmberInstalled(context)) {
+                    event = accountViewModel.account.follow(baseAuthor, false)
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
