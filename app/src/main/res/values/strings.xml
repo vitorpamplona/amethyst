@@ -532,4 +532,6 @@
     <string name="messages_new_message_subject">Subject</string>
     <string name="messages_new_message_subject_caption">Topic of the conversation</string>
     <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
+
+    <string name="messages_group_descriptor">Members of this group</string>
 </resources>

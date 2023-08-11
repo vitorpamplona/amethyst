@@ -5,6 +5,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -12,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -40,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -62,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.note.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
@@ -73,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -490,12 +497,16 @@ fun GroupChatroomHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val expanded = remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
-            modifier = modifier
+            modifier = modifier.clickable {
+                expanded.value = !expanded.value
+            }
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NonClickableUserPictures(
@@ -509,11 +520,47 @@ fun GroupChatroomHeader(
                     DisplayUserSetAsSubject(room, FontWeight.Normal)
                 }
             }
+
+            if (expanded.value) {
+                LongRoomHeader(room, accountViewModel, nav)
+            }
         }
 
         Divider(
             thickness = 0.25.dp
         )
+    }
+}
+
+@Composable
+fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val list = remember(room) {
+        room.users.toPersistentList()
+    }
+
+    Row(modifier = Modifier.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        Text(
+            text = stringResource(id = R.string.messages_group_descriptor),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight(),
+        contentPadding = PaddingValues(
+            bottom = 10.dp
+        ),
+        state = rememberLazyListState()
+    ) {
+        itemsIndexed(list, key = { _, item -> item }) { _, item ->
+            LoadUser(baseUserHex = item) {
+                if (it != null) {
+                    UserCompose(baseUser = it, accountViewModel = accountViewModel, nav = nav)
+                }
+            }
+        }
     }
 }
 
