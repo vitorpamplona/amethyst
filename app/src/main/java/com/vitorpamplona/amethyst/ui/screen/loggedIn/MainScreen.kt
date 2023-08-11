@@ -77,8 +77,9 @@ fun MainScreen(
     val navState = navController.currentBackStackEntryAsState()
 
     val orientation = LocalConfiguration.current.orientation
+    val currentDrawerState = scaffoldState.drawerState.currentValue
     LaunchedEffect(key1 = orientation) {
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE && currentDrawerState == DrawerValue.Closed) {
             scaffoldState.drawerState.close()
         }
     }
