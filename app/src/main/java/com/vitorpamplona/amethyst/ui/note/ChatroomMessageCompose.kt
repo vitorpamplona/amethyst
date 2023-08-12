@@ -227,7 +227,17 @@ fun NormalChatNote(
 ) {
     val drawAuthorInfo by remember {
         derivedStateOf {
-            note.event !is PrivateDmEvent && (innerQuote || !accountViewModel.isLoggedUser(note.author))
+            val noteEvent = note.event
+            if (accountViewModel.isLoggedUser(note.author)) {
+                false // never shows the user's pictures
+            } else if (noteEvent is PrivateDmEvent) {
+                false // one-on-one, never shows it.
+            } else if (noteEvent is ChatMessageEvent) {
+                // only shows in a group chat.
+                noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex).users.size > 1
+            } else {
+                true
+            }
         }
     }
 
