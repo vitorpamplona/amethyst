@@ -21,7 +21,7 @@ object NotificationUtils {
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
 
-    private fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
+    fun NotificationManager.getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
 
         dmChannel = NotificationChannel(
@@ -41,7 +41,7 @@ object NotificationUtils {
         return dmChannel!!
     }
 
-    private fun getOrCreateZapChannel(applicationContext: Context): NotificationChannel {
+    fun NotificationManager.getOrCreateZapChannel(applicationContext: Context): NotificationChannel {
         if (zapChannel != null) return zapChannel!!
 
         zapChannel = NotificationChannel(
