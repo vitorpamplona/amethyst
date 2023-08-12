@@ -400,7 +400,7 @@ fun PrivateMessageEditFieldRow(
                                 modifier = Modifier
                                     .padding(top = 2.dp)
                                     .size(18.dp),
-                                tint = Color.Green
+                                tint = MaterialTheme.colors.primary
                             )
                         } else {
                             Icon(
