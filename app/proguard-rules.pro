@@ -30,6 +30,28 @@
 # preserve access to native classses
 -keep class fr.acinq.secp256k1.** { *; }
 
+# JNA For Libsodium
+-keep class com.goterl.lazysodium.** { *; }
+
+# JNA also requires AWT, which Android does not have. So the classes are broken down to filter AWT out
+-keep class com.sun.jna.ToNativeConverter { *; }
+-keep class com.sun.jna.NativeMapped { *; }
+-keep class com.sun.jna.CallbackReference { *; }
+-keep class com.sun.jna.ptr.IntByReference { *; }
+-keep class com.sun.jna.NativeLong { *; }
+-keep class com.sun.jna.Structure { *; }
+-keep class com.sun.jna.Structure$* { *; }
+-keep class com.sun.jna.Native$ffi_callback { *; }
+-keep class * implements com.sun.jna.Structure$* { *; }
+-keep class * implements com.sun.jna.Native$* { *; }
+-keep class com.sun.jna.Native {
+    private static com.sun.jna.NativeMapped fromNative(java.lang.Class, java.lang.Object);
+    private static com.sun.jna.NativeMapped fromNative(java.lang.reflect.Method, java.lang.Object);
+    private static java.lang.Class nativeType(java.lang.Class);
+    private static java.lang.Object toNative(com.sun.jna.ToNativeConverter, java.lang.Object);
+    private static java.lang.Object fromNative(com.sun.jna.FromNativeConverter, java.lang.Object, java.lang.reflect.Method);
+}
+
 # GSON parsing
 -keep class com.vitorpamplona.amethyst.service.model.** { *; }
 -keep class com.vitorpamplona.amethyst.model.** { *; }
