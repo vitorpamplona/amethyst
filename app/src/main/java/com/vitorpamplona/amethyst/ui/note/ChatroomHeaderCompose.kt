@@ -198,7 +198,7 @@ private fun ChannelRoomCompose(
         channelIdHex = chanHex,
         channelPicture = channelPicture,
         channelTitle = { modifier ->
-            ChannelTitleWithBoostInfo(channelName, modifier)
+            ChannelTitleWithLabelInfo(channelName, modifier)
         },
         channelLastTime = remember(note) { note.createdAt() },
         channelLastContent = remember(note) { "$authorName: $description" },
@@ -208,10 +208,10 @@ private fun ChannelRoomCompose(
 }
 
 @Composable
-private fun ChannelTitleWithBoostInfo(channelName: String, modifier: Modifier) {
-    val boosted = stringResource(id = R.string.public_chat)
+private fun ChannelTitleWithLabelInfo(channelName: String, modifier: Modifier) {
+    val label = stringResource(id = R.string.public_chat)
     val placeHolderColor = MaterialTheme.colors.placeholderText
-    val channelNameAndBoostInfo = remember {
+    val channelNameAndBoostInfo = remember(channelName) {
         buildAnnotatedString {
             withStyle(
                 SpanStyle(
@@ -227,7 +227,7 @@ private fun ChannelTitleWithBoostInfo(channelName: String, modifier: Modifier) {
                     fontWeight = FontWeight.Normal
                 )
             ) {
-                append(" $boosted")
+                append(" $label")
             }
         }
     }
