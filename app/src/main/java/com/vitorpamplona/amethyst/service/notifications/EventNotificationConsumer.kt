@@ -26,7 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class EventNotificationConsumer(private val applicationContext: Context) {
-    fun unwrapAndConsume(event: Event) {
+    fun consume(event: Event) {
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             if (LocalCache.notes[event.id] == null) {
@@ -48,6 +48,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
     fun unwrapAndConsume(event: Event, account: Account): Event? {
         if (account.keyPair.privKey == null) return null
+        if (!LocalCache.justVerify(event)) return null
 
         return when (event) {
             is GiftWrapEvent -> {
@@ -57,7 +58,9 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             }
             is SealedGossipEvent -> {
                 event.cachedGossip(account.keyPair.privKey)?.let {
-                    unwrapAndConsume(it, account)
+                    // this is not verifiable
+                    LocalCache.justConsume(it, null)
+                    it
                 }
             }
             else -> {
@@ -74,11 +77,11 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
 
             if (acc != null && acc.userProfile().pubkeyHex == giftWrap.recipientPubKey()) {
-                val event = unwrapAndConsume(giftWrap, account = acc)
+                val chatEvent = unwrapAndConsume(giftWrap, account = acc)
 
-                if (event is ChatMessageEvent && acc.keyPair.privKey != null) {
-                    val chatNote = LocalCache.notes[giftWrap.id] ?: return
-                    val chatRoom = event.chatroomKey(acc.keyPair.privKey.toHexKey())
+                if (chatEvent is ChatMessageEvent && acc.keyPair.privKey != null) {
+                    val chatNote = LocalCache.notes[chatEvent.id] ?: return
+                    val chatRoom = chatEvent.chatroomKey(acc.keyPair.pubKey.toHexKey())
 
                     val followingKeySet = acc.followingKeySet()
 
@@ -92,7 +95,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                         val user = chatNote.author?.toBestDisplayName() ?: ""
                         val userPicture = chatNote.author?.profilePicture()
                         val noteUri = chatNote.toNEvent()
-                        notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
+                        notificationManager().sendDMNotification(chatEvent.id, content, user, userPicture, noteUri, applicationContext)
                     }
                 }
             }
@@ -170,7 +173,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         }
     }
 
-    private fun notificationManager(): NotificationManager {
+    fun notificationManager(): NotificationManager {
         return ContextCompat.getSystemService(applicationContext, NotificationManager::class.java) as NotificationManager
     }
 }
