@@ -534,4 +534,6 @@
     <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
 
     <string name="messages_group_descriptor">Members of this group</string>
+    <string name="messages_new_subject_message">Explanation to members</string>
+    <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
 </resources>

@@ -13,17 +13,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,9 +52,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.distinctUntilChanged
@@ -58,6 +70,7 @@ import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
+import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
@@ -72,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
@@ -501,13 +515,13 @@ fun GroupChatroomHeader(
     val expanded = remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable {
+            expanded.value = !expanded.value
+        }
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
-            modifier = modifier.clickable {
-                expanded.value = !expanded.value
-            }
+            modifier = modifier
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NonClickableUserPictures(
@@ -534,18 +548,152 @@ fun GroupChatroomHeader(
 }
 
 @Composable
+private fun EditRoomSubjectButton(room: ChatroomKey, accountViewModel: AccountViewModel) {
+    var wantsToPost by remember {
+        mutableStateOf(false)
+    }
+
+    if (wantsToPost) {
+        NewSubjectView({ wantsToPost = false }, accountViewModel, room)
+    }
+
+    Button(
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
+        onClick = { wantsToPost = true },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            )
+    ) {
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.EditNote,
+            contentDescription = stringResource(R.string.edits_the_channel_metadata)
+        )
+    }
+}
+
+@Composable
+fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room: ChatroomKey) {
+    Dialog(
+        onDismissRequest = { onClose() },
+        properties = DialogProperties(
+            dismissOnClickOutside = false
+        )
+    ) {
+        Surface {
+            val groupName = remember {
+                mutableStateOf<String>(accountViewModel.userProfile().privateChatrooms[room]?.subject ?: "")
+            }
+            val message = remember {
+                mutableStateOf<String>("")
+            }
+            val scope = rememberCoroutineScope()
+
+            Column(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CloseButton(onCancel = {
+                        onClose()
+                    })
+
+                    PostButton(
+                        onPost = {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.account.sendNIP24PrivateMessage(
+                                    message = message.value,
+                                    toUsers = room.users.toList(),
+                                    subject = groupName.value.ifBlank { null },
+                                    replyingTo = null,
+                                    mentions = null,
+                                    wantsToMarkAsSensitive = false
+                                )
+                            }
+
+                            onClose()
+                        },
+                        true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.messages_new_message_subject)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = groupName.value,
+                    onValueChange = { groupName.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.messages_new_message_subject_caption),
+                            color = MaterialTheme.colors.placeholderText
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.messages_new_subject_message)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    value = message.value,
+                    onValueChange = { message.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.messages_new_subject_message_placeholder),
+                            color = MaterialTheme.colors.placeholderText
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    maxLines = 10
+
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val list = remember(room) {
         room.users.toPersistentList()
     }
 
-    Row(modifier = Modifier.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+    Row(
+        modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             text = stringResource(id = R.string.messages_group_descriptor),
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center
         )
+
+        EditRoomSubjectButton(room, accountViewModel)
     }
 
     LazyColumn(
