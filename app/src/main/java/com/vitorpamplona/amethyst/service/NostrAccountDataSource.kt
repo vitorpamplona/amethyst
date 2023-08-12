@@ -127,7 +127,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     override fun consume(event: Event, relay: Relay) {
         if (LocalCache.justVerify(event)) {
             if (event is GiftWrapEvent) {
-                val privateKey = NostrChatroomListDataSource.account.keyPair.privKey
+                val privateKey = account.keyPair.privKey
                 if (privateKey != null) {
                     event.cachedGift(privateKey)?.let {
                         this.consume(it, relay)
@@ -136,7 +136,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             }
 
             if (event is SealedGossipEvent) {
-                val privateKey = NostrChatroomListDataSource.account.keyPair.privKey
+                val privateKey = account.keyPair.privKey
                 if (privateKey != null) {
                     event.cachedGossip(privateKey)?.let {
                         LocalCache.justConsume(it, relay)
