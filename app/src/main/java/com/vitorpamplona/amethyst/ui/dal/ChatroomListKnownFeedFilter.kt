@@ -68,24 +68,34 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             var myNewList = oldList
 
             newRelevantPublicMessages.forEach { newNotePair ->
+                var hasUpdated = false
                 oldList.forEach { oldNote ->
-                    if (
-                        (newNotePair.key == oldNote.channelHex()) && (newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)
-                    ) {
-                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    if (newNotePair.key == oldNote.channelHex()) {
+                        hasUpdated = true
+                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                            myNewList = myNewList.updated(oldNote, newNotePair.value)
+                        }
                     }
+                }
+                if (!hasUpdated) {
+                    myNewList = myNewList.plus(newNotePair.value)
                 }
             }
 
             newRelevantPrivateMessages.forEach { newNotePair ->
+                var hasUpdated = false
                 oldList.forEach { oldNote ->
                     val oldRoom = (oldNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
 
-                    if (
-                        (newNotePair.key == oldRoom) && (newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)
-                    ) {
-                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    if (newNotePair.key == oldRoom) {
+                        hasUpdated = true
+                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                            myNewList = myNewList.updated(oldNote, newNotePair.value)
+                        }
                     }
+                }
+                if (!hasUpdated) {
+                    myNewList = myNewList.plus(newNotePair.value)
                 }
             }
 

@@ -53,14 +53,19 @@ class ChatroomListNewFeedFilter(val account: Account) : AdditiveFeedFilter<Note>
             var myNewList = oldList
 
             newRelevantPrivateMessages.forEach { newNotePair ->
+                var hasUpdated = false
                 oldList.forEach { oldNote ->
                     val oldRoom = (oldNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
 
-                    if (
-                        (newNotePair.key == oldRoom) && (newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)
-                    ) {
-                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    if (newNotePair.key == oldRoom) {
+                        hasUpdated = true
+                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                            myNewList = myNewList.updated(oldNote, newNotePair.value)
+                        }
                     }
+                }
+                if (!hasUpdated) {
+                    myNewList = myNewList.plus(newNotePair.value)
                 }
             }
 
