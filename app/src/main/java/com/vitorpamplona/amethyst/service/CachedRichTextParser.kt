@@ -179,7 +179,7 @@ class RichTextParser() {
             BechSegment(word)
         } else if (word.startsWith("#")) {
             parseHash(word, tags)
-        } else if (schemelessMatcher.find()) {
+        } else if (word.contains(".") && schemelessMatcher.find()) {
             val url = schemelessMatcher.group(1) // url
             val additionalChars = schemelessMatcher.group(4) // additional chars
             val pattern = "^([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
