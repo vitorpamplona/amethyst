@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -172,24 +173,14 @@ fun UserActionOptions(
     baseAuthor: User,
     accountViewModel: AccountViewModel
 ) {
-    val scope = rememberCoroutineScope()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
-
-    val isHidden by remember(accountState, blockList) {
-        derivedStateOf {
-            accountState?.account?.isHidden(baseAuthor) ?: false
-        }
-    }
-
-    if (isHidden) {
-        ShowUserButton {
-            scope.launch(Dispatchers.IO) {
+    WatchIsHiddenUser(baseAuthor, accountViewModel) { isHidden ->
+        if (isHidden) {
+            ShowUserButton {
                 accountViewModel.show(baseAuthor)
             }
+        } else {
+            ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
         }
-    } else {
-        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
     }
 }
 

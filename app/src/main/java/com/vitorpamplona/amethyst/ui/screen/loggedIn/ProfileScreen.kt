@@ -717,11 +717,8 @@ private fun ProfileActions(
 
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
         if (isHidden) {
-            val scope = rememberCoroutineScope()
             ShowUserButton {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.showUser(baseUser.pubkeyHex)
-                }
+                accountViewModel.showUser(baseUser.pubkeyHex)
             }
         } else {
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
@@ -805,7 +802,7 @@ private fun DisplayFollowUnfollowButton(
 }
 
 @Composable
-private fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
+fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
     val isHidden by accountViewModel.account.liveHiddenUsers.map {
         it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
     }.observeAsState(accountViewModel.account.isHidden(baseUser))
@@ -1654,79 +1651,56 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         onDismissRequest = onDismiss
     ) {
         val clipboardManager = LocalClipboardManager.current
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-        val account = accountState?.account!!
-        val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
-
         val scope = rememberCoroutineScope()
 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
             Text(stringResource(R.string.copy_user_id))
         }
 
-        if (account.userProfile() != user) {
+        if (accountViewModel.userProfile() != user) {
             Divider()
-            if (account.isHidden(user)) {
+            if (accountViewModel.account.isHidden(user)) {
                 DropdownMenuItem(onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.show(user)
-                        onDismiss()
-                    }
+                    accountViewModel.show(user)
+                    onDismiss()
                 }) {
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
                 DropdownMenuItem(onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.hide(user)
-                        onDismiss()
-                    }
+                    accountViewModel.hide(user)
+                    onDismiss()
                 }) {
                     Text(stringResource(id = R.string.block_hide_user))
                 }
             }
             Divider()
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.SPAM)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.SPAM)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_illegal_behaviour))

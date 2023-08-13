@@ -252,14 +252,6 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.decryptZapContentAuthor(note)
     }
 
-    fun hide(user: User) {
-        account.hideUser(user.pubkeyHex)
-    }
-
-    fun show(user: User) {
-        account.showUser(user.pubkeyHex)
-    }
-
     fun translateTo(lang: Locale) {
         account.updateTranslateTo(lang.language)
     }
@@ -358,6 +350,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
     fun unseal(event: SealedGossipEvent): Event? {
         return account.unseal(event)
+    }
+
+    fun show(user: User) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.showUser(user.pubkeyHex)
+        }
+    }
+
+    fun hide(user: User) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.hideUser(user.pubkeyHex)
+        }
+    }
+
+    fun showUser(pubkeyHex: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.showUser(pubkeyHex)
+        }
     }
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

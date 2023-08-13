@@ -253,10 +253,8 @@ private fun RenderMainPopup(
                             stringResource(R.string.quick_action_block)
                         ) {
                             if (accountViewModel.hideBlockAlertDialog) {
-                                scope.launch(Dispatchers.IO) {
-                                    note.author?.let { accountViewModel.hide(it) }
-                                    onDismiss()
-                                }
+                                note.author?.let { accountViewModel.hide(it) }
+                                onDismiss()
                             } else {
                                 showBlockAlertDialog.value = true
                             }
