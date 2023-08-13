@@ -125,15 +125,9 @@ fun CheckHiddenChatMessage(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-
-    val isHidden by remember(accountState) {
-        derivedStateOf {
-            val isSensitive = baseNote.event?.isSensitive() ?: false
-
-            accountState?.account?.isHidden(baseNote.author!!) == true || (isSensitive && accountState?.account?.showSensitiveContent == false)
-        }
-    }
+    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+        baseNote.isHiddenFor(it)
+    }.observeAsState(accountViewModel.isNoteHidden(baseNote))
 
     if (!isHidden) {
         LoadedChatMessageCompose(
