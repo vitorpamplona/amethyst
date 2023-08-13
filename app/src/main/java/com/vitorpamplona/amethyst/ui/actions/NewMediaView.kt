@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val account = accountViewModel.accountLiveData.value?.account ?: return
+    val account = accountViewModel.account
     val resolver = LocalContext.current.contentResolver
     val context = LocalContext.current
 
