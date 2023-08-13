@@ -679,7 +679,7 @@ private fun ProfileHeader(
                         .height(Size35dp)
                         .padding(bottom = 3.dp)
                 ) {
-                    MessageButton(baseUser, nav)
+                    MessageButton(baseUser, accountViewModel, nav)
 
                     // No need for this button anymore
                     // NPubCopyButton(baseUser)
@@ -1538,7 +1538,7 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> U
 }
 
 @Composable
-private fun MessageButton(user: User, nav: (String) -> Unit) {
+private fun MessageButton(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
 
     Button(
@@ -1548,7 +1548,7 @@ private fun MessageButton(user: User, nav: (String) -> Unit) {
         onClick = {
             scope.launch(Dispatchers.IO) {
                 val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
-                user.createChatroom(withKey)
+                accountViewModel.account.userProfile().createChatroom(withKey)
                 nav("Room/${withKey.hashCode()}")
             }
         },
