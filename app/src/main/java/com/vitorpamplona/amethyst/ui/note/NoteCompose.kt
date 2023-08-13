@@ -2876,12 +2876,12 @@ fun DisplayFollowingHashtagsInPost(
 ) {
     val noteEvent = remember { baseNote.event } ?: return
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val userFollowState by accountViewModel.userFollows.observeAsState()
     var firstTag by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = accountState) {
+    LaunchedEffect(key1 = userFollowState) {
         launch(Dispatchers.Default) {
-            val followingTags = accountState?.account?.followingTagSet() ?: emptySet()
+            val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
             val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
 
             if (firstTag != newFirstTag) {
