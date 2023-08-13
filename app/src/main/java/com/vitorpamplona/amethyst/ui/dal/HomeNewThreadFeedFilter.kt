@@ -52,7 +52,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             .asSequence()
             .filter { it ->
                 val noteEvent = it.event
-                val isGlobalRelay = it.relays?.any { gRelays.contains(it) } ?: false
+                val isGlobalRelay = it.relays.any { gRelays.contains(it) }
                 (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
                     (!ignoreAddressables || noteEvent.kind() < 10000) &&
                     ((isGlobal && isGlobalRelay) || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
