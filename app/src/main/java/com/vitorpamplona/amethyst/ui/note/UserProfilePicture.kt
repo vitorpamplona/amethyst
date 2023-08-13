@@ -508,9 +508,11 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
 fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewModel, onNew: (DropDownParams) -> Unit) {
     val followState by accountViewModel.userProfile().live().follows.observeAsState()
     val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val showSensitiveContent by accountViewModel.accountLiveData.map {
+        it.account.showSensitiveContent
+    }.distinctUntilChanged().observeAsState(accountViewModel.account.showSensitiveContent)
 
-    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = accountState) {
+    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
         launch(Dispatchers.IO) {
             val newState = DropDownParams(
                 isFollowingAuthor = accountViewModel.isFollowing(note.author),
@@ -518,7 +520,7 @@ fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewMod
                 isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitive() ?: false,
-                showSensitiveContent = accountState?.account?.showSensitiveContent
+                showSensitiveContent = showSensitiveContent
             )
 
             launch(Dispatchers.Main) {
