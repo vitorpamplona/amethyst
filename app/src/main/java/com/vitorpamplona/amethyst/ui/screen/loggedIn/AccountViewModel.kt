@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
@@ -42,6 +44,22 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
+
+    val discoveryListLiveData = accountLiveData.map {
+        it.account.defaultDiscoveryFollowList
+    }.distinctUntilChanged()
+
+    val homeListLiveData = accountLiveData.map {
+        it.account.defaultHomeFollowList
+    }.distinctUntilChanged()
+
+    val notificationListLiveData = accountLiveData.map {
+        it.account.defaultNotificationFollowList
+    }.distinctUntilChanged()
+
+    val storiesListLiveData = accountLiveData.map {
+        it.account.defaultStoriesFollowList
+    }.distinctUntilChanged()
 
     fun updateAutomaticallyStartPlayback(
         automaticallyStartPlayback: ConnectivityType
