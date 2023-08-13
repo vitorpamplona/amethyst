@@ -59,6 +59,8 @@ val noProtocolUrlValidator = try {
     Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
 }
 
+val HTTPRegex = "^((http|https)://)?([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
+
 class RichTextParser() {
     fun parseText(
         content: String,
@@ -75,8 +77,7 @@ class RichTextParser() {
             } else if (it.originalUrl.contains("。")) {
                 null
             } else {
-                val pattern = "^((http|https)://)?([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
-                if (pattern.matches(it.originalUrl)) {
+                if (HTTPRegex.matches(it.originalUrl)) {
                     it.originalUrl
                 } else {
                     null
