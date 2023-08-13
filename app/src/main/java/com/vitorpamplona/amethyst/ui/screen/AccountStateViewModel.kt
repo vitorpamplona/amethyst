@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 
+val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
+
 @Stable
 class AccountStateViewModel(val context: Context) : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
@@ -46,7 +48,6 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
     }
 
     fun startUI(key: String, useProxy: Boolean, proxyPort: Int) {
-        val pattern = Pattern.compile(".+@.+\\.[a-z]+")
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
@@ -56,7 +57,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
                 Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
             } else if (pubKeyParsed != null) {
                 Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
-            } else if (pattern.matcher(key).matches()) {
+            } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 // Evaluate NIP-5
                 Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
             } else {
