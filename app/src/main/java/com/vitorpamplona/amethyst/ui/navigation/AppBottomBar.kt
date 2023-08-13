@@ -163,13 +163,11 @@ fun WatchPossibleNotificationChanges(
     onChange: (Boolean) -> Unit
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
-
     val notifState by accountViewModel.accountLastReadLiveData.observeAsState()
 
     LaunchedEffect(key1 = notifState, key2 = accountState) {
         launch(Dispatchers.IO) {
-            onChange(route.hasNewItems(account, emptySet()))
+            onChange(route.hasNewItems(accountViewModel.account, emptySet()))
         }
     }
 
@@ -177,7 +175,7 @@ fun WatchPossibleNotificationChanges(
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 launch(Dispatchers.IO) {
-                    onChange(route.hasNewItems(account, it))
+                    onChange(route.hasNewItems(accountViewModel.account, it))
                 }
             }
         }
