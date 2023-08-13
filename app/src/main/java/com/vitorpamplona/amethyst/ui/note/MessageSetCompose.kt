@@ -14,7 +14,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,9 +33,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { messageSetCard.note }
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     val popupExpanded = remember { mutableStateOf(false) }
     val enablePopup = remember {
@@ -80,7 +76,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     scope.launch {
                         routeFor(
                             baseNote,
-                            loggedIn
+                            accountViewModel.userProfile()
                         )?.let { nav(it) }
                     }
                 },
