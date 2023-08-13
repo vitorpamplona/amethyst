@@ -130,6 +130,12 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
+        viewModelScope.launch(Dispatchers.IO) {
+            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType)
+        }
+    }
+
+    suspend fun innerZap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
         val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -197,7 +203,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun report(user: User, type: ReportEvent.ReportType) {
-        account.report(user, type)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.report(user, type)
+            account.hideUser(user.pubkeyHex)
+        }
     }
 
     fun boost(note: Note) {

@@ -341,29 +341,27 @@ fun ZapVote(
                 } else if (accountViewModel.account.zapAmountChoices.size == 1 &&
                     pollViewModel.isValidInputVoteAmount(accountViewModel.account.zapAmountChoices.first())
                 ) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.zap(
-                            baseNote,
-                            accountViewModel.account.zapAmountChoices.first() * 1000,
-                            poolOption.option,
-                            "",
-                            context,
-                            onError = {
-                                scope.launch {
-                                    zappingProgress = 0f
-                                    Toast
-                                        .makeText(context, it, Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                            },
-                            onProgress = {
-                                scope.launch(Dispatchers.Main) {
-                                    zappingProgress = it
-                                }
-                            },
-                            zapType = accountViewModel.account.defaultZapType
-                        )
-                    }
+                    accountViewModel.zap(
+                        baseNote,
+                        accountViewModel.account.zapAmountChoices.first() * 1000,
+                        poolOption.option,
+                        "",
+                        context,
+                        onError = {
+                            scope.launch {
+                                zappingProgress = 0f
+                                Toast
+                                    .makeText(context, it, Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        },
+                        onProgress = {
+                            scope.launch(Dispatchers.Main) {
+                                zappingProgress = it
+                            }
+                        },
+                        zapType = accountViewModel.account.defaultZapType
+                    )
                 } else {
                     wantsToZap = true
                 }
@@ -462,7 +460,6 @@ fun FilteredZapAmountChoicePopup(
     }
 
     val zapMessage = ""
-    val scope = rememberCoroutineScope()
 
     val sortedOptions = remember(accountState) {
         pollViewModel.createZapOptionsThatMatchThePollingParameters()
@@ -482,19 +479,17 @@ fun FilteredZapAmountChoicePopup(
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                amountInSats * 1000,
-                                pollOption,
-                                zapMessage,
-                                context,
-                                onError,
-                                onProgress,
-                                defaultZapType
-                            )
-                            onDismiss()
-                        }
+                        accountViewModel.zap(
+                            baseNote,
+                            amountInSats * 1000,
+                            pollOption,
+                            zapMessage,
+                            context,
+                            onError,
+                            onProgress,
+                            defaultZapType
+                        )
+                        onDismiss()
                     },
                     shape = ButtonBorder,
                     colors = ButtonDefaults
@@ -508,19 +503,17 @@ fun FilteredZapAmountChoicePopup(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.zap(
-                                        baseNote,
-                                        amountInSats * 1000,
-                                        pollOption,
-                                        zapMessage,
-                                        context,
-                                        onError,
-                                        onProgress,
-                                        defaultZapType
-                                    )
-                                    onDismiss()
-                                }
+                                accountViewModel.zap(
+                                    baseNote,
+                                    amountInSats * 1000,
+                                    pollOption,
+                                    zapMessage,
+                                    context,
+                                    onError,
+                                    onProgress,
+                                    defaultZapType
+                                )
+                                onDismiss()
                             },
                             onLongClick = {
                                 onChangeAmount()

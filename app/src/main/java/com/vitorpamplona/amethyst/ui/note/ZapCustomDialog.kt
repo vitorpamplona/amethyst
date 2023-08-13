@@ -102,28 +102,26 @@ fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, bas
                     ZapButton(
                         isActive = postViewModel.canSend()
                     ) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                postViewModel.value()!! * 1000L,
-                                null,
-                                postViewModel.customMessage.text,
-                                context,
-                                onError = {
-                                    zappingProgress = 0f
-                                    scope.launch {
-                                        Toast
-                                            .makeText(context, it, Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                onProgress = {
-                                    scope.launch(Dispatchers.Main) {
-                                        zappingProgress = it
-                                    }
-                                },
-                                zapType = selectedZapType
-                            )
-                        }
+                        accountViewModel.zap(
+                            baseNote,
+                            postViewModel.value()!! * 1000L,
+                            null,
+                            postViewModel.customMessage.text,
+                            context,
+                            onError = {
+                                zappingProgress = 0f
+                                scope.launch {
+                                    Toast
+                                        .makeText(context, it, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onProgress = {
+                                scope.launch(Dispatchers.Main) {
+                                    zappingProgress = it
+                                }
+                            },
+                            zapType = selectedZapType
+                        )
                         onClose()
                     }
                 }

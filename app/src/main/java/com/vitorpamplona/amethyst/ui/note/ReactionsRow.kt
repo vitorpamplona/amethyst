@@ -1088,29 +1088,27 @@ private fun zapClick(
                 .show()
         }
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
-        scope.launch(Dispatchers.IO) {
-            accountViewModel.zap(
-                baseNote,
-                accountViewModel.account.zapAmountChoices.first() * 1000,
-                null,
-                "",
-                context,
-                onError = {
-                    scope.launch {
-                        onZappingProgress(0f)
-                        Toast
-                            .makeText(context, it, Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                },
-                onProgress = {
-                    scope.launch(Dispatchers.Main) {
-                        onZappingProgress(it)
-                    }
-                },
-                zapType = accountViewModel.account.defaultZapType
-            )
-        }
+        accountViewModel.zap(
+            baseNote,
+            accountViewModel.account.zapAmountChoices.first() * 1000,
+            null,
+            "",
+            context,
+            onError = {
+                scope.launch {
+                    onZappingProgress(0f)
+                    Toast
+                        .makeText(context, it, Toast.LENGTH_SHORT)
+                        .show()
+                }
+            },
+            onProgress = {
+                scope.launch(Dispatchers.Main) {
+                    onZappingProgress(it)
+                }
+            },
+            zapType = accountViewModel.account.defaultZapType
+        )
     } else if (accountViewModel.account.zapAmountChoices.size > 1) {
         onMultipleChoices()
     }
@@ -1422,7 +1420,6 @@ fun ZapAmountChoicePopup(
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
     val zapMessage = ""
-    val scope = rememberCoroutineScope()
 
     Popup(
         alignment = Alignment.BottomCenter,
@@ -1434,19 +1431,17 @@ fun ZapAmountChoicePopup(
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                amountInSats * 1000,
-                                null,
-                                zapMessage,
-                                context,
-                                onError,
-                                onProgress,
-                                account.defaultZapType
-                            )
-                            onDismiss()
-                        }
+                        accountViewModel.zap(
+                            baseNote,
+                            amountInSats * 1000,
+                            null,
+                            zapMessage,
+                            context,
+                            onError,
+                            onProgress,
+                            account.defaultZapType
+                        )
+                        onDismiss()
                     },
                     shape = ButtonBorder,
                     colors = ButtonDefaults
@@ -1460,19 +1455,17 @@ fun ZapAmountChoicePopup(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.zap(
-                                        baseNote,
-                                        amountInSats * 1000,
-                                        null,
-                                        zapMessage,
-                                        context,
-                                        onError,
-                                        onProgress,
-                                        account.defaultZapType
-                                    )
-                                    onDismiss()
-                                }
+                                accountViewModel.zap(
+                                    baseNote,
+                                    amountInSats * 1000,
+                                    null,
+                                    zapMessage,
+                                    context,
+                                    onError,
+                                    onProgress,
+                                    account.defaultZapType
+                                )
+                                onDismiss()
                             },
                             onLongClick = {
                                 onChangeAmount()
