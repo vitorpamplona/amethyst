@@ -26,14 +26,20 @@ class NewRelayListViewModel : ViewModel() {
         clear()
     }
 
-    fun create() {
+    fun create(signEvent: Boolean): ContactListEvent? {
+        if (!signEvent) {
+            relays.let {
+                return account.saveRelayList(it.value, false)
+            }
+        }
         relays.let {
             viewModelScope.launch(Dispatchers.IO) {
-                account.saveRelayList(it.value)
+                account.saveRelayList(it.value, true)
             }
         }
 
         clear()
+        return null
     }
 
     fun clear() {

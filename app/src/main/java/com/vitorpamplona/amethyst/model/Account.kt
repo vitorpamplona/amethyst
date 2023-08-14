@@ -155,8 +155,8 @@ class Account(
         return keyPair.privKey != null
     }
 
-    fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
-        if (!isWriteable()) return
+    fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = userProfile().latestContactList
 
@@ -164,11 +164,17 @@ class Account(
             val event = ContactListEvent.updateRelayList(
                 earlierVersion = contactList,
                 relayUse = relays,
-                privateKey = keyPair.privKey!!
+                pubKey = keyPair.pubKey.toHexKey(),
+                privateKey = keyPair.privKey
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             Client.send(event)
             LocalCache.consume(event)
+            return null
         } else {
             val event = ContactListEvent.createFromScratch(
                 followUsers = listOf(),
@@ -177,13 +183,19 @@ class Account(
                 followCommunities = listOf(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                privateKey = keyPair.privKey!!
+                privateKey = keyPair.privKey!!,
+                publicKey = if (!signEvent) keyPair.pubKey else null
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             // Keep this local to avoid erasing a good contact list.
             // Client.send(event)
             LocalCache.consume(event)
         }
+        return null
     }
 
     fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>, signEvent: Boolean = true): MetadataEvent? {
@@ -1821,11 +1833,13 @@ class Account(
             ).toSet()
     }
 
-    fun saveRelayList(value: List<RelaySetupInfo>) {
-        localRelays = value.toSet()
-        sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) })
-
-        saveable.invalidateData()
+    fun saveRelayList(value: List<RelaySetupInfo>, signEvent: Boolean): ContactListEvent? {
+        try {
+            localRelays = value.toSet()
+            return sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }, signEvent)
+        } finally {
+            saveable.invalidateData()
+        }
     }
 
     fun setHideDeleteRequestDialog() {

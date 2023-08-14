@@ -57,8 +57,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.Math.round
 
@@ -86,6 +91,25 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                 postViewModel.togglePaidRelay(item, it.limitation?.payment_required ?: false)
             }
         }
+    }
+
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                    postViewModel.clear()
+                    onClose()
+                }
+            },
+            event = event!!
+        )
     }
 
     Dialog(
@@ -128,8 +152,12 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
 
                     PostButton(
                         onPost = {
-                            postViewModel.create()
-                            onClose()
+                            if (PackageUtils.isAmberInstalled(context)) {
+                                event = postViewModel.create(false)
+                            } else {
+                                postViewModel.create(true)
+                                onClose()
+                            }
                         },
                         true
                     )

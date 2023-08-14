@@ -319,11 +319,20 @@ class ContactListEvent(
             )
         }
 
-        fun updateRelayList(earlierVersion: ContactListEvent, relayUse: Map<String, ReadWrite>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+        fun updateRelayList(earlierVersion: ContactListEvent, relayUse: Map<String, ReadWrite>?, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): ContactListEvent {
             val content = if (relayUse != null) {
                 gson.toJson(relayUse)
             } else {
                 ""
+            }
+
+            if (privateKey == null) {
+                return create(
+                    content = content,
+                    tags = earlierVersion.tags,
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
             }
 
             return create(
