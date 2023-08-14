@@ -37,7 +37,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
         return collection
             .asSequence()
-            .filter { it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent }
+            .filter { (it.event is FileHeaderEvent && (it.event as FileHeaderEvent).hasUrl()) || it.event is FileStorageHeaderEvent }
             .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false) || (it.event?.isTaggedGeoHashes(followingGeohashSet) ?: false) }
             .filter { isHiddenList || account.isAcceptable(it) }
             .filter { it.createdAt()!! <= now }

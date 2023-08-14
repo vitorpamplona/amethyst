@@ -26,6 +26,8 @@ class FileHeaderEvent(
     fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
     fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
 
+    fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
+
     companion object {
         const val kind = 1063
 
