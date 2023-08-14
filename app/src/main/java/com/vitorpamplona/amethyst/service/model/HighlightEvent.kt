@@ -29,12 +29,12 @@ class HighlightEvent(
             msg: String,
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
-        ): PollNoteEvent {
+        ): HighlightEvent {
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = CryptoUtils.sign(id, privateKey)
-            return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+            return HighlightEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }
 }
