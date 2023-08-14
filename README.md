@@ -79,6 +79,9 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Emoji Packs (Kind:30030)
 - [x] Personal Emoji Lists (Kind:10030)
 - [x] Classifieds (Kind:30403)
+- [x] Private Messages and Small Groups (NIP-24)
+- [x] Gift Wraps & Seals (NIP-59)
+- [x] Versioned Encrypted Payloads (NIP-44)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
