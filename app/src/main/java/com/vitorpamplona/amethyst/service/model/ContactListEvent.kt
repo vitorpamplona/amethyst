@@ -253,8 +253,17 @@ class ContactListEvent(
             )
         }
 
-        fun followEvent(earlierVersion: ContactListEvent, idHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+        fun followEvent(earlierVersion: ContactListEvent, idHex: String, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (earlierVersion.isTaggedEvent(idHex)) return earlierVersion
+
+            if (privateKey == null) {
+                return create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(element = listOf("e", idHex)),
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            }
 
             return create(
                 content = earlierVersion.content,
@@ -275,8 +284,17 @@ class ContactListEvent(
             )
         }
 
-        fun unfollowEvent(earlierVersion: ContactListEvent, idHex: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+        fun unfollowEvent(earlierVersion: ContactListEvent, idHex: String, publicKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (!earlierVersion.isTaggedEvent(idHex)) return earlierVersion
+
+            if (privateKey == null) {
+                return create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.filter { it.size > 1 && it[1] != idHex },
+                    pubKey = publicKey,
+                    createdAt = createdAt
+                )
+            }
 
             return create(
                 content = earlierVersion.content,
@@ -286,8 +304,17 @@ class ContactListEvent(
             )
         }
 
-        fun followAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+        fun followAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (earlierVersion.isTaggedAddressableNote(aTag.toTag())) return earlierVersion
+
+            if (privateKey == null) {
+                return create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(element = listOfNotNull("a", aTag.toTag(), aTag.relay)),
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            }
 
             return create(
                 content = earlierVersion.content,
@@ -308,8 +335,17 @@ class ContactListEvent(
             )
         }
 
-        fun unfollowAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ContactListEvent {
+        fun unfollowAddressableEvent(earlierVersion: ContactListEvent, aTag: ATag, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): ContactListEvent {
             if (!earlierVersion.isTaggedAddressableNote(aTag.toTag())) return earlierVersion
+
+            if (privateKey == null) {
+                return create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.filter { it.size > 1 && it[1] != aTag.toTag() },
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            }
 
             return create(
                 content = earlierVersion.content,

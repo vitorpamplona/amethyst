@@ -87,13 +87,17 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.amethyst.service.model.Participant
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -1090,12 +1094,29 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatCh
 @Composable
 fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                accountViewModel.account.follow(channel)
+                event = accountViewModel.account.follow(channel, !PackageUtils.isAmberInstalled(context))
             }
         },
         shape = ButtonBorder,
@@ -1112,12 +1133,29 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
 @Composable
 fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                accountViewModel.account.unfollow(channel)
+                event = accountViewModel.account.unfollow(channel, !PackageUtils.isAmberInstalled(context))
             }
         },
         shape = ButtonBorder,
@@ -1134,12 +1172,29 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
 @Composable
 fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNote, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                accountViewModel.account.follow(note)
+                event = accountViewModel.account.follow(note, !PackageUtils.isAmberInstalled(context))
             }
         },
         shape = ButtonBorder,
@@ -1156,12 +1211,29 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNot
 @Composable
 fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNote, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    Client.send(it)
+                    LocalCache.verifyAndConsume(it, null)
+                    event = null
+                }
+            },
+            event = event!!
+        )
+    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                accountViewModel.account.unfollow(note)
+                event = accountViewModel.account.unfollow(note, !PackageUtils.isAmberInstalled(context))
             }
         },
         shape = ButtonBorder,

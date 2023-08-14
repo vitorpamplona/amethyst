@@ -503,7 +503,7 @@ class Account(
                     returningContactList = if (keyPair.privKey == null) {
                         ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.pubKey.toHexKey())
                     } else {
-                        ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.privKey)
+                        ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.pubKey.toHexKey(), keyPair.privKey)
                     }
                 }
             }
@@ -515,7 +515,7 @@ class Account(
                 returningContactList = if (keyPair.privKey == null) {
                     ContactListEvent.followEvent(returningContactList, it, keyPair.pubKey.toHexKey())
                 } else {
-                    ContactListEvent.followEvent(returningContactList, it, keyPair.privKey)
+                    ContactListEvent.followEvent(returningContactList, it, keyPair.pubKey.toHexKey(), keyPair.privKey)
                 }
             }
             followingChannels = emptySet()
@@ -557,13 +557,13 @@ class Account(
         return null
     }
 
-    fun follow(channel: Channel) {
-        if (!isWriteable()) return
+    fun follow(channel: Channel, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followEvent(contactList, channel.idHex, keyPair.privKey!!)
+            ContactListEvent.followEvent(contactList, channel.idHex, keyPair.pubKey.toHexKey(), keyPair.privKey)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
@@ -572,21 +572,27 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList().plus(channel.idHex),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey!!
+                publicKey = if (!signEvent) keyPair.pubKey else null,
+                privateKey = keyPair.privKey
             )
+        }
+
+        if (!signEvent) {
+            return event
         }
 
         Client.send(event)
         LocalCache.consume(event)
+        return null
     }
 
-    fun follow(community: AddressableNote) {
-        if (!isWriteable()) return
+    fun follow(community: AddressableNote, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followAddressableEvent(contactList, community.address, keyPair.privKey!!)
+            ContactListEvent.followAddressableEvent(contactList, community.address, keyPair.pubKey.toHexKey(), keyPair.privKey)
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
             ContactListEvent.createFromScratch(
@@ -596,12 +602,18 @@ class Account(
                 followCommunities = listOf(community.address),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                privateKey = keyPair.privKey!!
+                publicKey = if (!signEvent) keyPair.pubKey else null,
+                privateKey = keyPair.privKey
             )
+        }
+
+        if (!signEvent) {
+            return event
         }
 
         Client.send(event)
         LocalCache.consume(event)
+        return null
     }
 
     fun followHashtag(tag: String, signEvent: Boolean = true): ContactListEvent? {
@@ -745,8 +757,8 @@ class Account(
         }
     }
 
-    fun unfollow(channel: Channel) {
-        if (!isWriteable()) return
+    fun unfollow(channel: Channel, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -754,16 +766,22 @@ class Account(
             val event = ContactListEvent.unfollowEvent(
                 contactList,
                 channel.idHex,
-                keyPair.privKey!!
+                keyPair.pubKey.toHexKey(),
+                keyPair.privKey
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             Client.send(event)
             LocalCache.consume(event)
         }
+        return null
     }
 
-    fun unfollow(community: AddressableNote) {
-        if (!isWriteable()) return
+    fun unfollow(community: AddressableNote, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -771,12 +789,18 @@ class Account(
             val event = ContactListEvent.unfollowAddressableEvent(
                 contactList,
                 community.address,
-                keyPair.privKey!!
+                keyPair.pubKey.toHexKey(),
+                keyPair.privKey
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             Client.send(event)
             LocalCache.consume(event)
         }
+        return null
     }
 
     fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
@@ -1131,7 +1155,7 @@ class Account(
         LocalCache.consume(event)
 
         LocalCache.getChannelIfExists(event.id)?.let {
-            follow(it)
+            follow(it, true)
         }
     }
 
@@ -1597,7 +1621,7 @@ class Account(
         Client.send(event)
         LocalCache.consume(event)
 
-        follow(channel)
+        follow(channel, true)
     }
 
     fun unwrap(event: GiftWrapEvent): Event? {
