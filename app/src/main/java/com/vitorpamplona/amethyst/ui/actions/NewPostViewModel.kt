@@ -158,122 +158,130 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun sendPost(relayList: List<Relay>? = null, signEvent: Boolean = true): Event? {
-        val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
-        tagger.run()
+        try {
+            val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
+            tagger.run()
 
-        val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null)
-        toUsersTagger.run()
-        val dmUsers = toUsersTagger.mentions
+            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null)
+            toUsersTagger.run()
+            val dmUsers = toUsersTagger.mentions
 
-        val zapReceiver = if (wantsForwardZapTo) {
-            if (forwardZapTo != null) {
-                forwardZapTo?.info?.lud16 ?: forwardZapTo?.info?.lud06
+            val zapReceiver = if (wantsForwardZapTo) {
+                if (forwardZapTo != null) {
+                    forwardZapTo?.info?.lud16 ?: forwardZapTo?.info?.lud06
+                } else {
+                    forwardZapToEditting.text
+                }
             } else {
-                forwardZapToEditting.text
+                null
             }
-        } else {
-            null
-        }
 
-        val geoLocation = locUtil?.locationStateFlow?.value
-        val geoHash = if (wantsToAddGeoHash && geoLocation != null) {
-            geoLocation.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
-        } else {
-            null
-        }
-
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
-
-        if (originalNote?.channelHex() != null) {
-            if (originalNote is AddressableEvent && originalNote?.address() != null) {
-                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+            val geoLocation = locUtil?.locationStateFlow?.value
+            val geoHash = if (wantsToAddGeoHash && geoLocation != null) {
+                geoLocation.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
             } else {
-                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+                null
             }
-        } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
-        } else if (originalNote?.event is ChatMessageEvent) {
-            val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
 
-            account?.sendNIP24PrivateMessage(
-                message = tagger.message,
-                toUsers = receivers,
-                subject = subject.text.ifBlank { null },
-                replyingTo = originalNote!!,
-                mentions = tagger.mentions,
-                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                zapReceiver = zapReceiver,
-                zapRaiserAmount = localZapRaiserAmount,
-                geohash = geoHash
-            )
-        } else if (!dmUsers.isNullOrEmpty()) {
-            if (nip24 || dmUsers.size > 1) {
+            val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
+
+            if (originalNote?.channelHex() != null) {
+                if (originalNote is AddressableEvent && originalNote?.address() != null) {
+                    return account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, signEvent)
+                } else {
+                    return account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, signEvent)
+                }
+            } else if (originalNote?.event is PrivateDmEvent) {
+                account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+                return null
+            } else if (originalNote?.event is ChatMessageEvent) {
+                val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
+
                 account?.sendNIP24PrivateMessage(
                     message = tagger.message,
-                    toUsers = dmUsers.map { it.pubkeyHex },
+                    toUsers = receivers,
                     subject = subject.text.ifBlank { null },
-                    replyingTo = tagger.replyTos?.firstOrNull(),
+                    replyingTo = originalNote!!,
                     mentions = tagger.mentions,
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash
                 )
+                return null
+            } else if (!dmUsers.isNullOrEmpty()) {
+                if (nip24 || dmUsers.size > 1) {
+                    account?.sendNIP24PrivateMessage(
+                        message = tagger.message,
+                        toUsers = dmUsers.map { it.pubkeyHex },
+                        subject = subject.text.ifBlank { null },
+                        replyingTo = tagger.replyTos?.firstOrNull(),
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                        zapReceiver = zapReceiver,
+                        zapRaiserAmount = localZapRaiserAmount,
+                        geohash = geoHash
+                    )
+                    return null
+                } else {
+                    account?.sendPrivateMessage(
+                        message = tagger.message,
+                        toUser = dmUsers.first().pubkeyHex,
+                        replyingTo = originalNote,
+                        mentions = tagger.mentions,
+                        wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                        zapReceiver = zapReceiver,
+                        zapRaiserAmount = localZapRaiserAmount,
+                        geohash = geoHash
+                    )
+                    return null
+                }
             } else {
-                account?.sendPrivateMessage(
-                    message = tagger.message,
-                    toUser = dmUsers.first().pubkeyHex,
-                    replyingTo = originalNote,
-                    mentions = tagger.mentions,
-                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                    zapReceiver = zapReceiver,
-                    zapRaiserAmount = localZapRaiserAmount,
-                    geohash = geoHash
-                )
-            }
-        } else {
-            if (wantsPoll) {
-                account?.sendPoll(
-                    tagger.message,
-                    tagger.replyTos,
-                    tagger.mentions,
-                    pollOptions,
-                    valueMaximum,
-                    valueMinimum,
-                    consensusThreshold,
-                    closedAt,
-                    zapReceiver,
-                    wantsToMarkAsSensitive,
-                    localZapRaiserAmount,
-                    relayList,
-                    geoHash
-                )
-            } else {
-                // adds markers
-                val rootId =
-                    (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
-                        ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
-                        ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
-                val replyId = originalNote?.idHex
+                if (wantsPoll) {
+                    return account?.sendPoll(
+                        tagger.message,
+                        tagger.replyTos,
+                        tagger.mentions,
+                        pollOptions,
+                        valueMaximum,
+                        valueMinimum,
+                        consensusThreshold,
+                        closedAt,
+                        zapReceiver,
+                        wantsToMarkAsSensitive,
+                        localZapRaiserAmount,
+                        relayList,
+                        geoHash,
+                        signEvent
+                    )
+                } else {
+                    // adds markers
+                    val rootId =
+                        (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
+                            ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
+                            ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+                    val replyId = originalNote?.idHex
 
-                account?.sendPost(
-                    message = tagger.message,
-                    replyTo = tagger.replyTos,
-                    mentions = tagger.mentions,
-                    tags = null,
-                    zapReceiver = zapReceiver,
-                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                    zapRaiserAmount = localZapRaiserAmount,
-                    replyingTo = replyId,
-                    root = rootId,
-                    directMentions = tagger.directMentions,
-                    relayList = relayList,
-                    geohash = geoHash
-                )
+                    return account?.sendPost(
+                        message = tagger.message,
+                        replyTo = tagger.replyTos,
+                        mentions = tagger.mentions,
+                        tags = null,
+                        zapReceiver = zapReceiver,
+                        wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                        zapRaiserAmount = localZapRaiserAmount,
+                        replyingTo = replyId,
+                        root = rootId,
+                        directMentions = tagger.directMentions,
+                        relayList = relayList,
+                        geohash = geoHash,
+                        signEvent = signEvent
+                    )
+                }
             }
+        } finally {
+            cancel()
         }
-
-        cancel()
     }
 
     fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
