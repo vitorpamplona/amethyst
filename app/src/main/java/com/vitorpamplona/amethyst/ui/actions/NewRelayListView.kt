@@ -7,12 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,8 +22,9 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -65,13 +64,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.lang.Math.round
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "", nav: (String) -> Unit) {
     val postViewModel: NewRelayListViewModel = viewModel()
@@ -89,54 +88,68 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
     }
 
     Dialog(
-        onDismissRequest = { onClose() },
-        properties = DialogProperties(
-            decorFitsSystemWindows = false,
-            usePlatformDefaultWidth = false,
-            dismissOnClickOutside = false
-        )
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(modifier = Modifier.imePadding()) {
-            Column(
-                modifier = Modifier.padding(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CloseButton(onCancel = {
-                        postViewModel.clear()
-                        onClose()
-                    })
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(end = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Spacer(modifier = StdHorzSpacer)
 
-                    Button(
-                        onClick = {
-                            postViewModel.deleteAll()
-                            defaultRelays.forEach {
-                                postViewModel.addRelay(it)
-                            }
-                            postViewModel.relays.value.forEach { item ->
-                                loadRelayInfo(item.url, context, scope) {
-                                    postViewModel.togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                            Button(
+                                onClick = {
+                                    postViewModel.deleteAll()
+                                    defaultRelays.forEach {
+                                        postViewModel.addRelay(it)
+                                    }
+                                    postViewModel.relays.value.forEach { item ->
+                                        loadRelayInfo(item.url, context, scope) {
+                                            postViewModel.togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                                        }
+                                    }
                                 }
+                            ) {
+                                Text(stringResource(R.string.default_relays))
                             }
+
+                            PostButton(
+                                onPost = {
+                                    postViewModel.create()
+                                    onClose()
+                                },
+                                true
+                            )
                         }
-                    ) {
-                        Text(stringResource(R.string.default_relays))
-                    }
-
-                    PostButton(
-                        onPost = {
-                            postViewModel.create()
+                    },
+                    navigationIcon = {
+                        Spacer(modifier = StdHorzSpacer)
+                        CloseButton(onCancel = {
+                            postViewModel.clear()
                             onClose()
-                        },
-                        true
-                    )
-                }
+                        })
+                    },
+                    backgroundColor = MaterialTheme.colors.surface,
+                    elevation = 0.dp
+                )
+            }
+        ) { pad ->
+            val scope = rememberCoroutineScope()
 
-                Spacer(modifier = StdVertSpacer)
-
+            Column(
+                modifier = Modifier.padding(
+                    16.dp,
+                    pad.calculateTopPadding(),
+                    16.dp,
+                    pad.calculateBottomPadding()
+                ),
+                verticalArrangement = Arrangement.SpaceAround
+            ) {
                 Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     LazyColumn(
                         contentPadding = PaddingValues(
