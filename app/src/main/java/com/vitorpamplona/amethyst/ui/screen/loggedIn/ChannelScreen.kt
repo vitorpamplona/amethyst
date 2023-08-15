@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -573,7 +572,12 @@ fun ChannelHeader(
                 }
             }
         ) {
-            ShortChannelHeader(baseChannel, expanded, accountViewModel, nav, showFlag)
+            ShortChannelHeader(
+                baseChannel = baseChannel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                showFlag = showFlag
+            )
 
             if (expanded.value) {
                 LongChannelHeader(baseChannel, accountViewModel, nav)
@@ -589,7 +593,7 @@ fun ChannelHeader(
 }
 
 @Composable
-private fun ShowVideoStreaming(
+fun ShowVideoStreaming(
     baseChannel: LiveActivitiesChannel,
     accountViewModel: AccountViewModel
 ) {
@@ -647,10 +651,10 @@ private fun ShowVideoStreaming(
 }
 
 @Composable
-private fun ShortChannelHeader(
+fun ShortChannelHeader(
     baseChannel: Channel,
-    expanded: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    fontWeight: FontWeight = FontWeight.Bold,
     nav: (String) -> Unit,
     showFlag: Boolean
 ) {
@@ -691,26 +695,10 @@ private fun ShortChannelHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = remember(channelState) { channel.toBestDisplayName() },
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = fontWeight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            val summary = remember(channelState) {
-                channel.summary()?.ifBlank { null }
-            }
-
-            if (summary != null && !expanded.value) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = summary,
-                        color = MaterialTheme.colors.placeholderText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 12.sp
-                    )
-                }
             }
         }
 
@@ -731,7 +719,7 @@ private fun ShortChannelHeader(
 }
 
 @Composable
-private fun LongChannelHeader(
+fun LongChannelHeader(
     baseChannel: Channel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -965,6 +953,7 @@ fun LiveFlag() {
         text = stringResource(id = R.string.live_stream_live_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
         modifier = remember {
             Modifier
                 .clip(SmallBorder)

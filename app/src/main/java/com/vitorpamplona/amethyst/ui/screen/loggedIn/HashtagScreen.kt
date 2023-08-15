@@ -130,7 +130,7 @@ fun HashtagHeader(tag: String, modifier: Modifier = StdPadding, account: Account
 }
 
 @Composable
-private fun HashtagActionOptions(
+fun HashtagActionOptions(
     tag: String,
     accountViewModel: AccountViewModel
 ) {

@@ -8,22 +8,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.AppBarDefaults
+import androidx.compose.material.ContentAlpha
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.ScaffoldState
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
+import androidx.compose.material.contentColorFor
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -39,8 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -49,8 +57,10 @@ import androidx.navigation.NavBackStackEntry
 import coil.Coil
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -73,22 +83,37 @@ import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.note.CommunityHeader
+import com.vitorpamplona.amethyst.ui.note.AmethystIcon
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.LoadUser
+import com.vitorpamplona.amethyst.ui.note.LongCommunityHeader
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
+import com.vitorpamplona.amethyst.ui.note.ShortCommunityHeader
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DislayGeoTagHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashActionOptions
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagActionOptions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRoom
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRoomByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LongChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LongRoomHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowVideoStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -143,56 +168,12 @@ private fun RenderTopRouteBar(
         else -> {
             if (id != null) {
                 when (currentRoute) {
-                    Route.Channel.base -> LoadChannel(baseChannelHex = id) {
-                        ChannelHeader(
-                            baseChannel = it,
-                            showVideo = true,
-                            showBottomDiviser = true,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 11.dp),
-                            accountViewModel = accountViewModel,
-                            nav = nav
-                        )
-                    }
-                    Route.RoomByAuthor.base -> LoadRoomByAuthor(authorPubKeyHex = id, accountViewModel) {
-                        if (it != null) {
-                            ChatroomHeader(
-                                room = it,
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 11.dp),
-                                accountViewModel = accountViewModel,
-                                nav = nav
-                            )
-                        } else {
-                            Spacer(BottomTopHeight)
-                        }
-                    }
-                    Route.Room.base -> LoadRoom(roomId = id, accountViewModel) {
-                        if (it != null) {
-                            ChatroomHeader(
-                                room = it,
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 11.dp),
-                                accountViewModel = accountViewModel,
-                                nav = nav
-                            )
-                        } else {
-                            Spacer(BottomTopHeight)
-                        }
-                    }
-                    Route.Community.base -> LoadAddressableNote(aTagHex = id) {
-                        if (it != null) {
-                            CommunityHeader(
-                                baseNote = it,
-                                showBottomDiviser = true,
-                                sendToCommunity = false,
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
-                                accountViewModel = accountViewModel,
-                                nav = nav
-                            )
-                        } else {
-                            Spacer(BottomTopHeight)
-                        }
-                    }
-                    Route.Hashtag.base -> HashtagHeader(id, Modifier.padding(vertical = 0.dp, horizontal = 10.dp), accountViewModel)
-                    Route.Geohash.base -> GeoHashHeader(id, Modifier.padding(vertical = 0.dp, horizontal = 10.dp), accountViewModel)
+                    Route.Channel.base -> ChannelTopBar(id, accountViewModel, nav, navPopBack)
+                    Route.RoomByAuthor.base -> RoomByAuthorTopBar(id, accountViewModel, nav, navPopBack)
+                    Route.Room.base -> RoomTopBar(id, accountViewModel, nav, navPopBack)
+                    Route.Community.base -> CommunityTopBar(id, accountViewModel, nav, navPopBack)
+                    Route.Hashtag.base -> HashTagTopBar(id, accountViewModel, navPopBack)
+                    Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
                     else -> MainTopBar(scaffoldState, accountViewModel, nav)
                 }
             } else {
@@ -203,12 +184,179 @@ private fun RenderTopRouteBar(
 }
 
 @Composable
+private fun GeoHashTopBar(
+    tag: String,
+    accountViewModel: AccountViewModel,
+    navPopBack: () -> Unit
+) {
+    FlexibleTopBarWithBackButton(
+        title = {
+            DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
+            GeoHashActionOptions(tag, accountViewModel)
+        },
+        popBack = navPopBack
+    )
+}
+
+@Composable
+private fun HashTagTopBar(
+    tag: String,
+    accountViewModel: AccountViewModel,
+    navPopBack: () -> Unit
+) {
+    FlexibleTopBarWithBackButton(
+        title = {
+            Text(
+                remember(tag) { "#$tag" },
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+
+            HashtagActionOptions(tag, accountViewModel)
+        },
+        popBack = navPopBack
+    )
+}
+
+@Composable
+private fun CommunityTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
+) {
+    LoadAddressableNote(aTagHex = id) { baseNote ->
+        if (baseNote != null) {
+            FlexibleTopBarWithBackButton(
+                title = {
+                    ShortCommunityHeader(baseNote, fontWeight = FontWeight.Medium, accountViewModel, nav)
+                },
+                extendableRow = {
+                    LongCommunityHeader(baseNote, accountViewModel, nav)
+                },
+                popBack = navPopBack
+            )
+        } else {
+            Spacer(BottomTopHeight)
+        }
+    }
+}
+
+@Composable
+private fun RoomTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
+) {
+    LoadRoom(roomId = id, accountViewModel) { room ->
+        if (room != null) {
+            RenderRoomTopBar(room, accountViewModel, nav, navPopBack)
+        } else {
+            Spacer(BottomTopHeight)
+        }
+    }
+}
+
+@Composable
+private fun RoomByAuthorTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
+) {
+    LoadRoomByAuthor(authorPubKeyHex = id, accountViewModel) { room ->
+        if (room != null) {
+            RenderRoomTopBar(room, accountViewModel, nav, navPopBack)
+        } else {
+            Spacer(BottomTopHeight)
+        }
+    }
+}
+
+@Composable
+private fun RenderRoomTopBar(
+    room: ChatroomKey,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
+) {
+    if (room.users.size == 1) {
+        FlexibleTopBarWithBackButton(
+            title = {
+                LoadUser(baseUserHex = room.users.first()) { baseUser ->
+                    if (baseUser != null) {
+                        ClickableUserPicture(
+                            baseUser = baseUser,
+                            accountViewModel = accountViewModel,
+                            size = Size34dp
+                        )
+
+                        Spacer(modifier = DoubleHorzSpacer)
+
+                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                    }
+                }
+            },
+            popBack = navPopBack
+        )
+    } else {
+        FlexibleTopBarWithBackButton(
+            title = {
+                NonClickableUserPictures(
+                    users = room.users,
+                    accountViewModel = accountViewModel,
+                    size = Size34dp
+                )
+
+                RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp).weight(1f), fontWeight = FontWeight.Medium, accountViewModel.userProfile())
+            },
+            extendableRow = {
+                LongRoomHeader(room, accountViewModel, nav)
+            },
+            popBack = navPopBack
+        )
+    }
+}
+
+@Composable
+private fun ChannelTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
+) {
+    LoadChannel(baseChannelHex = id) { baseChannel ->
+        FlexibleTopBarWithBackButton(
+            prefixRow = {
+                if (baseChannel is LiveActivitiesChannel) {
+                    ShowVideoStreaming(baseChannel, accountViewModel)
+                }
+            },
+            title = {
+                ShortChannelHeader(
+                    baseChannel = baseChannel,
+                    accountViewModel = accountViewModel,
+                    fontWeight = FontWeight.Medium,
+                    nav = nav,
+                    showFlag = true
+                )
+            },
+            extendableRow = {
+                LongChannelHeader(baseChannel, accountViewModel, nav)
+            },
+            popBack = navPopBack
+        )
+    }
+}
+
+@Composable
 fun NoTopBar() {
 }
 
 @Composable
 fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.storiesListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
@@ -223,7 +371,7 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
 
 @Composable
 fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.homeListLiveData.observeAsState(KIND3_FOLLOWS)
 
         FollowList(
@@ -238,7 +386,7 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
 
 @Composable
 fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.notificationListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
@@ -253,7 +401,7 @@ fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: Scaffold
 
 @Composable
 fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.discoveryListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
@@ -268,18 +416,23 @@ fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldSta
 
 @Composable
 fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericTopBar(scaffoldState, accountViewModel, nav) {
-        AmethystIcon()
+    GenericMainTopBar(scaffoldState, accountViewModel, nav) {
+        AmethystClickableIcon()
     }
 }
 
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
-fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit, content: @Composable (AccountViewModel) -> Unit) {
+fun GenericMainTopBar(
+    scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    content: @Composable (AccountViewModel) -> Unit
+) {
     val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = BottomTopHeight) {
-        TopAppBar(
+        MyTopAppBar(
             elevation = 0.dp,
             backgroundColor = MaterialTheme.colors.surface,
             title = {
@@ -291,8 +444,7 @@ fun GenericTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewMod
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .fillMaxHeight()
-                                .padding(start = 0.dp, end = 20.dp),
+                                .fillMaxHeight(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
@@ -489,23 +641,16 @@ fun SimpleTextSpinner(
 
 @Composable
 fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
-    Column() {
-        TopAppBar(
+    Column(modifier = BottomTopHeight) {
+        MyTopAppBar(
             elevation = 0.dp,
-            backgroundColor = Color(0xFFFFFF),
-            title = {
-                Text(caption)
-            },
+            title = { Text(caption) },
             navigationIcon = {
                 IconButton(
                     onClick = popBack,
                     modifier = Modifier
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = stringResource(R.string.back),
-                        tint = MaterialTheme.colors.onSurface
-                    )
+                    ArrowBackIcon()
                 }
             },
             actions = {}
@@ -515,7 +660,34 @@ fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
 }
 
 @Composable
-fun AmethystIcon() {
+fun FlexibleTopBarWithBackButton(
+    prefixRow: (@Composable () -> Unit)? = null,
+    title: @Composable RowScope.() -> Unit,
+    extendableRow: (@Composable () -> Unit)? = null,
+    popBack: () -> Unit
+) {
+    Column() {
+        MyExtensibleTopAppBar(
+            elevation = 0.dp,
+            prefixRow = prefixRow,
+            title = title,
+            extendableRow = extendableRow,
+            navigationIcon = {
+                IconButton(
+                    onClick = popBack,
+                    modifier = Modifier
+                ) {
+                    ArrowBackIcon()
+                }
+            },
+            actions = {}
+        )
+        Divider(thickness = 0.25.dp)
+    }
+}
+
+@Composable
+fun AmethystClickableIcon() {
     val context = LocalContext.current
 
     IconButton(
@@ -523,12 +695,7 @@ fun AmethystIcon() {
             debugState(context)
         }
     ) {
-        Icon(
-            painter = painterResource(R.drawable.amethyst),
-            null,
-            modifier = Modifier.size(40.dp),
-            tint = Color.Unspecified
-        )
+        AmethystIcon(Size40dp)
     }
 }
 
@@ -578,3 +745,151 @@ fun debugState(context: Context) {
         Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ")
     }
 }
+
+@Composable
+fun MyTopAppBar(
+    title: @Composable RowScope.() -> Unit,
+    modifier: Modifier = Modifier,
+    navigationIcon: @Composable (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    backgroundColor: Color = MaterialTheme.colors.surface,
+    contentColor: Color = contentColorFor(backgroundColor),
+    elevation: Dp = AppBarDefaults.TopAppBarElevation
+) {
+    Surface(
+        contentColor = contentColor,
+        elevation = elevation,
+        modifier = modifier
+    ) {
+        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(AppBarDefaults.ContentPadding),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (navigationIcon == null) {
+                    Spacer(TitleInsetWithoutIcon)
+                } else {
+                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                        CompositionLocalProvider(
+                            LocalContentAlpha provides ContentAlpha.high,
+                            content = navigationIcon
+                        )
+                    }
+                }
+
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ProvideTextStyle(MaterialTheme.typography.h6) {
+                        title()
+                    }
+                }
+
+                CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                        content = actions
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MyExtensibleTopAppBar(
+    prefixRow: (@Composable () -> Unit)? = null,
+    title: @Composable RowScope.() -> Unit,
+    extendableRow: (@Composable () -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    navigationIcon: @Composable (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    backgroundColor: Color = MaterialTheme.colors.surface,
+    contentColor: Color = contentColorFor(backgroundColor),
+    elevation: Dp = AppBarDefaults.TopAppBarElevation
+) {
+    val expanded = remember { mutableStateOf(false) }
+
+    Surface(
+        color = backgroundColor,
+        contentColor = contentColor,
+        elevation = elevation,
+        modifier = modifier.clickable {
+            expanded.value = !expanded.value
+        }
+    ) {
+        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(AppBarDefaults.ContentPadding),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (navigationIcon == null) {
+                        Spacer(TitleInsetWithoutIcon)
+                    } else {
+                        Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                            CompositionLocalProvider(
+                                LocalContentAlpha provides ContentAlpha.high,
+                                content = navigationIcon
+                            )
+                        }
+                    }
+
+                    Row(
+                        Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ProvideTextStyle(MaterialTheme.typography.h6) {
+                            title()
+                        }
+                    }
+
+                    CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically,
+                            content = actions
+                        )
+                    }
+                }
+
+                if (expanded.value && extendableRow != null) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = Size10dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            extendableRow()
+                        }
+                    }
+                }
+
+                if (prefixRow != null) {
+                    prefixRow()
+                }
+            }
+        }
+    }
+}
+
+private val AppBarHeight = 50.dp
+
+// TODO: this should probably be part of the touch target of the start and end icons, clarify this
+private val AppBarHorizontalPadding = 4.dp
+
+// Start inset for the title when there is no navigation icon provided
+private val TitleInsetWithoutIcon = Modifier.width(16.dp - AppBarHorizontalPadding)
+
+// Start inset for the title when there is a navigation icon provided
+private val TitleIconModifier = Modifier.width(48.dp - AppBarHorizontalPadding)
