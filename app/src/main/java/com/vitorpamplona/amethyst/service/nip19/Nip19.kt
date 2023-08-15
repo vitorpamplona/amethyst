@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.service.nip19
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.toNEvent
@@ -82,13 +81,8 @@ object Nip19 {
     private fun nprofile(bytes: ByteArray): Return? {
         val tlv = Tlv.parse(bytes)
 
-        val hex = tlv.get(Tlv.Type.SPECIAL.id)
-            ?.get(0)
-            ?.toHexKey() ?: return null
-
-        val relay = tlv.get(Tlv.Type.RELAY.id)
-            ?.get(0)
-            ?.toString(Charsets.UTF_8)
+        val hex = tlv.firstAsHex(Tlv.Type.SPECIAL) ?: return null
+        val relay = tlv.firstAsString(Tlv.Type.RELAY)
 
         return Return(Type.USER, hex, relay)
     }
@@ -96,30 +90,16 @@ object Nip19 {
     private fun nevent(bytes: ByteArray): Return? {
         val tlv = Tlv.parse(bytes)
 
-        val hex = tlv.get(Tlv.Type.SPECIAL.id)
-            ?.get(0)
-            ?.toHexKey() ?: return null
-
-        val relay = tlv.get(Tlv.Type.RELAY.id)
-            ?.get(0)
-            ?.toString(Charsets.UTF_8)
-
-        val author = tlv.get(Tlv.Type.AUTHOR.id)
-            ?.get(0)
-            ?.toHexKey()
-
-        val kind = tlv.get(Tlv.Type.KIND.id)
-            ?.get(0)
-            ?.let { Tlv.toInt32(it) }
+        val hex = tlv.firstAsHex(Tlv.Type.SPECIAL) ?: return null
+        val relay = tlv.firstAsString(Tlv.Type.RELAY)
+        val author = tlv.firstAsHex(Tlv.Type.AUTHOR)
+        val kind = tlv.firstAsInt(Tlv.Type.KIND.id)
 
         return Return(Type.EVENT, hex, relay, author, kind)
     }
 
     private fun nrelay(bytes: ByteArray): Return? {
-        val relayUrl = Tlv.parse(bytes)
-            .get(Tlv.Type.SPECIAL.id)
-            ?.get(0)
-            ?.toString(Charsets.UTF_8) ?: return null
+        val relayUrl = Tlv.parse(bytes).firstAsString(Tlv.Type.SPECIAL.id) ?: return null
 
         return Return(Type.RELAY, relayUrl)
     }
@@ -127,53 +107,20 @@ object Nip19 {
     private fun naddr(bytes: ByteArray): Return? {
         val tlv = Tlv.parse(bytes)
 
-        val d = tlv.get(Tlv.Type.SPECIAL.id)
-            ?.get(0)
-            ?.toString(Charsets.UTF_8) ?: return null
-
-        val relay = tlv.get(Tlv.Type.RELAY.id)
-            ?.get(0)
-            ?.toString(Charsets.UTF_8)
-
-        val author = tlv.get(Tlv.Type.AUTHOR.id)
-            ?.get(0)
-            ?.toHexKey()
-
-        val kind = tlv.get(Tlv.Type.KIND.id)
-            ?.get(0)
-            ?.let { Tlv.toInt32(it) }
+        val d = tlv.firstAsString(Tlv.Type.SPECIAL.id) ?: ""
+        val relay = tlv.firstAsString(Tlv.Type.RELAY.id)
+        val author = tlv.firstAsHex(Tlv.Type.AUTHOR.id) ?: return null
+        val kind = tlv.firstAsInt(Tlv.Type.KIND.id) ?: return null
 
         return Return(Type.ADDRESS, "$kind:$author:$d", relay, author, kind)
     }
 
     public fun createNEvent(idHex: String, author: String?, kind: Int?, relay: String?): String {
-        val kind = kind?.toByteArray()
-        val author = author?.hexToByteArray()
-        val idHex = idHex.hexToByteArray()
-        val relay = relay?.toByteArray(Charsets.UTF_8)
-
-        var fullArray = byteArrayOf(Tlv.Type.SPECIAL.id, idHex.size.toByte()) + idHex
-
-        if (relay != null) {
-            fullArray = fullArray + byteArrayOf(Tlv.Type.RELAY.id, relay.size.toByte()) + relay
-        }
-
-        if (author != null) {
-            fullArray = fullArray + byteArrayOf(Tlv.Type.AUTHOR.id, author.size.toByte()) + author
-        }
-
-        if (kind != null) {
-            fullArray = fullArray + byteArrayOf(Tlv.Type.KIND.id, kind.size.toByte()) + kind
-        }
-
-        return fullArray.toNEvent()
+        return TlvBuilder().apply {
+            addHex(Tlv.Type.SPECIAL, idHex)
+            addStringIfNotNull(Tlv.Type.RELAY, relay)
+            addHexIfNotNull(Tlv.Type.AUTHOR, author)
+            addIntIfNotNull(Tlv.Type.KIND, kind)
+        }.build().toNEvent()
     }
-}
-
-fun Int.toByteArray(): ByteArray {
-    val bytes = ByteArray(4)
-    (0..3).forEach {
-        bytes[3 - it] = ((this ushr (8 * it)) and 0xFFFF).toByte()
-    }
-    return bytes
 }
