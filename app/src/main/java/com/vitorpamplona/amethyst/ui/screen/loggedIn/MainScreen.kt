@@ -95,6 +95,13 @@ fun MainScreen(
         }
     }
 
+    val navPopBack = remember(navController) {
+        {
+            navController.popBackStack()
+            Unit
+        }
+    }
+
     val followLists: FollowListViewModel = viewModel(
         key = accountViewModel.userProfile().pubkeyHex + "FollowListViewModel",
         factory = FollowListViewModel.Factory(accountViewModel.account)
@@ -201,7 +208,7 @@ fun MainScreen(
                 AppBottomBar(accountViewModel, navState, navBottomRow)
             },
             topBar = {
-                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav)
+                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav, navPopBack)
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)

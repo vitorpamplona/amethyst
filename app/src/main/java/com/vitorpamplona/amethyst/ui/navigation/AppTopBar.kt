@@ -44,10 +44,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import coil.Coil
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -108,7 +106,8 @@ fun AppTopBar(
     navEntryState: State<NavBackStackEntry?>,
     scaffoldState: ScaffoldState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
 ) {
     val currentRoute by remember(navEntryState.value) {
         derivedStateOf {
@@ -122,7 +121,7 @@ fun AppTopBar(
         }
     }
 
-    RenderTopRouteBar(currentRoute, id, followLists, scaffoldState, accountViewModel, nav)
+    RenderTopRouteBar(currentRoute, id, followLists, scaffoldState, accountViewModel, nav, navPopBack)
 }
 
 @Composable
@@ -132,14 +131,15 @@ private fun RenderTopRouteBar(
     followLists: FollowListViewModel,
     scaffoldState: ScaffoldState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit
 ) {
     when (currentRoute) {
-        // Route.Profile.route -> TopBarWithBackButton(nav)
         Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Discover.base -> DiscoveryTopBar(followLists, scaffoldState, accountViewModel, nav)
         Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel, nav)
+        Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
         else -> {
             if (id != null) {
                 when (currentRoute) {
@@ -488,24 +488,23 @@ fun SimpleTextSpinner(
 }
 
 @Composable
-fun TopBarWithBackButton(navController: NavHostController) {
+fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
     Column() {
         TopAppBar(
             elevation = 0.dp,
             backgroundColor = Color(0xFFFFFF),
-            title = {},
+            title = {
+                Text(caption)
+            },
             navigationIcon = {
                 IconButton(
-                    onClick = {
-                        navController.popBackStack()
-                    },
+                    onClick = popBack,
                     modifier = Modifier
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowBack,
-                        null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colors.primary
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = MaterialTheme.colors.onSurface
                     )
                 }
             },
