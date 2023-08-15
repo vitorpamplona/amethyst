@@ -134,16 +134,18 @@ private fun UserAndUsernameDisplay(
             text = bestDisplayName,
             tags = tags,
             fontWeight = fontWeight,
-            maxLines = 1
+            maxLines = 1,
+            modifier = modifier
         )
+        /*
         CreateTextWithEmoji(
             text = remember { "@$bestUserName" },
             tags = tags,
             color = MaterialTheme.colors.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
+
+        )*/
         if (showPlayButton) {
             Spacer(StdHorzSpacer)
             DrawPlayName(bestDisplayName)
