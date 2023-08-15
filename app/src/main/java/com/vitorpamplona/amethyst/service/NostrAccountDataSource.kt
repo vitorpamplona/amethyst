@@ -48,6 +48,17 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
+    fun createAccountRelayListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter = JsonFilter(
+                kinds = listOf(AdvertisedRelayListEvent.kind),
+                authors = listOf(account.userProfile().pubkeyHex),
+                limit = 1
+            )
+        )
+    }
+
     fun createAccountAcceptedAwardsFilter(): TypedFilter {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
@@ -155,6 +166,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         accountChannel.typedFilters = listOf(
             createAccountMetadataFilter(),
             createAccountContactListFilter(),
+            createAccountRelayListFilter(),
             createNotificationFilter(),
             createGiftWrapsToMeFilter(),
             createAccountReportsFilter(),

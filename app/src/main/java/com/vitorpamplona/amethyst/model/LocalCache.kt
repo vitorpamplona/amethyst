@@ -220,6 +220,26 @@ object LocalCache {
         }
     }
 
+    private fun consume(event: AdvertisedRelayListEvent) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            refreshObservers(note)
+        }
+    }
+
     fun formattedDateTime(timestamp: Long): String {
         return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
@@ -1497,6 +1517,7 @@ object LocalCache {
 
         try {
             when (event) {
+                is AdvertisedRelayListEvent -> consume(event)
                 is AppDefinitionEvent -> consume(event)
                 is AppRecommendationEvent -> consume(event)
                 is AudioTrackEvent -> consume(event)
