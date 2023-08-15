@@ -140,7 +140,10 @@ object ImageUploader {
     }
 
     fun NIP98Header(url: String, method: String, body: String): String {
-        val noteJson = account.createHTTPAuthorization(url, method, body)?.toJson() ?: ""
+        val noteJson = if (this::account.isInitialized) {
+            account.createHTTPAuthorization(url, method, body)?.toJson() ?: ""
+        } else { "" }
+
         val encodedNIP98Event: String = Base64.getEncoder().encodeToString(noteJson.toByteArray())
         return "Nostr " + encodedNIP98Event
     }
