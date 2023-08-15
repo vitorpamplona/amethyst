@@ -75,11 +75,11 @@ private fun UserNameDisplay(
     fontWeight: FontWeight = FontWeight.Bold
 ) {
     if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
-        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier, showPlayButton, fontWeight)
+        UserAndUsernameDisplay(bestDisplayName.trim(), tags, bestUserName.trim(), modifier, showPlayButton, fontWeight)
     } else if (bestDisplayName != null) {
-        UserDisplay(bestDisplayName, tags, modifier, showPlayButton, fontWeight)
+        UserDisplay(bestDisplayName.trim(), tags, modifier, showPlayButton, fontWeight)
     } else if (bestUserName != null) {
-        UserDisplay(bestUserName, tags, modifier, showPlayButton, fontWeight)
+        UserDisplay(bestUserName.trim(), tags, modifier, showPlayButton, fontWeight)
     } else {
         NPubDisplay(npubDisplay, modifier, fontWeight)
     }
