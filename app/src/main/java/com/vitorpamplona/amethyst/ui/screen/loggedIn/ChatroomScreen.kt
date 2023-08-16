@@ -531,7 +531,7 @@ fun GroupChatroomHeader(
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
-                    RoomNameOnlyDisplay(room, Modifier, accountViewModel.userProfile())
+                    RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel.userProfile())
                     DisplayUserSetAsSubject(room, FontWeight.Normal)
                 }
             }
@@ -714,14 +714,14 @@ fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (
 }
 
 @Composable
-fun RoomNameOnlyDisplay(room: ChatroomKey, modifier: Modifier, loggedInUser: User) {
+fun RoomNameOnlyDisplay(room: ChatroomKey, modifier: Modifier, fontWeight: FontWeight = FontWeight.Bold, loggedInUser: User) {
     val roomSubject by loggedInUser.live().messages.map {
         it.user.privateChatrooms[room]?.subject
     }.distinctUntilChanged().observeAsState(loggedInUser.privateChatrooms[room]?.subject)
 
     Crossfade(targetState = roomSubject, modifier) {
         if (it != null && it.isNotBlank()) {
-            DisplayRoomSubject(it)
+            DisplayRoomSubject(it, fontWeight)
         }
     }
 }

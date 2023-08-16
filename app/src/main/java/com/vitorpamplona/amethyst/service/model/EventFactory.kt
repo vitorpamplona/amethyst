@@ -14,6 +14,7 @@ class EventFactory {
             sig: String,
             lenient: Boolean
         ) = when (kind) {
+            AdvertisedRelayListEvent.kind -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             AppDefinitionEvent.kind -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             AppRecommendationEvent.kind -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
             AudioTrackEvent.kind -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)

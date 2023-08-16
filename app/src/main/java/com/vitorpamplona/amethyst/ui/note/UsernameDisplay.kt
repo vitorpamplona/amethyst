@@ -75,11 +75,11 @@ private fun UserNameDisplay(
     fontWeight: FontWeight = FontWeight.Bold
 ) {
     if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
-        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier, showPlayButton, fontWeight)
+        UserAndUsernameDisplay(bestDisplayName.trim(), tags, bestUserName.trim(), modifier, showPlayButton, fontWeight)
     } else if (bestDisplayName != null) {
-        UserDisplay(bestDisplayName, tags, modifier, showPlayButton, fontWeight)
+        UserDisplay(bestDisplayName.trim(), tags, modifier, showPlayButton, fontWeight)
     } else if (bestUserName != null) {
-        UserDisplay(bestUserName, tags, modifier, showPlayButton, fontWeight)
+        UserDisplay(bestUserName.trim(), tags, modifier, showPlayButton, fontWeight)
     } else {
         NPubDisplay(npubDisplay, modifier, fontWeight)
     }
@@ -134,16 +134,18 @@ private fun UserAndUsernameDisplay(
             text = bestDisplayName,
             tags = tags,
             fontWeight = fontWeight,
-            maxLines = 1
+            maxLines = 1,
+            modifier = modifier
         )
+        /*
         CreateTextWithEmoji(
             text = remember { "@$bestUserName" },
             tags = tags,
             color = MaterialTheme.colors.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
+
+        )*/
         if (showPlayButton) {
             Spacer(StdHorzSpacer)
             DrawPlayName(bestDisplayName)

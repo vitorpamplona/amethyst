@@ -493,12 +493,12 @@
     <string name="system">System</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
-    <string name="application_preferences">Application preferences</string>
+    <string name="application_preferences">Application Preferences</string>
     <string name="language">Language</string>
     <string name="theme">Theme</string>
-    <string name="automatically_load_images_gifs">Automatically load images/gifs</string>
-    <string name="automatically_play_videos">Automatically play videos</string>
-    <string name="automatically_show_url_preview">Automatically show url preview</string>
+    <string name="automatically_load_images_gifs">Image Preview</string>
+    <string name="automatically_play_videos">Video Playback</string>
+    <string name="automatically_show_url_preview">URL Preview</string>
     <string name="load_image">Load Image</string>
 
     <string name="spamming_users">Spammers</string>
@@ -536,5 +536,13 @@
     <string name="messages_group_descriptor">Members of this group</string>
     <string name="messages_new_subject_message">Explanation to members</string>
     <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
+
     <string name="paste_from_clipboard">Paste from clipboard</string>
+  
+    <string name="language_description">For the App\'s Interface</string>
+    <string name="theme_description">Dark, Light or System theme</string>
+    <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
+    <string name="automatically_play_videos_description">Automatically plays videos and GIFs</string>
+    <string name="automatically_show_url_preview_description">Show URL previews</string>
+    <string name="load_image_description">When to load images</string>
 </resources>

@@ -36,6 +36,16 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
 
 @Composable
+fun AmethystIcon(iconSize: Dp) {
+    Icon(
+        painter = painterResource(R.drawable.amethyst),
+        null,
+        modifier = Modifier.size(iconSize),
+        tint = Color.Unspecified
+    )
+}
+
+@Composable
 fun FollowingIcon(iconSize: Dp) {
     Icon(
         painter = painterResource(R.drawable.following),
@@ -46,12 +56,11 @@ fun FollowingIcon(iconSize: Dp) {
 }
 
 @Composable
-fun ArrowBackIcon(iconSize: Dp) {
+fun ArrowBackIcon() {
     Icon(
         imageVector = Icons.Default.ArrowBack,
-        contentDescription = null,
-        modifier = remember(iconSize) { Modifier.size(iconSize) },
-        tint = MaterialTheme.colors.primary
+        contentDescription = stringResource(R.string.back),
+        tint = MaterialTheme.colors.onSurface
     )
 }
 

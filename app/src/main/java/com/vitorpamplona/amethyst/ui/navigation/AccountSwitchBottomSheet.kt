@@ -21,7 +21,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.runtime.Composable
@@ -52,6 +51,7 @@ import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -108,11 +108,7 @@ fun AccountSwitchBottomSheet(
                         title = { Text(text = stringResource(R.string.account_switch_add_account_dialog_title)) },
                         navigationIcon = {
                             IconButton(onClick = { popupExpanded = false }) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowBack,
-                                    contentDescription = stringResource(R.string.back),
-                                    tint = MaterialTheme.colors.onSurface
-                                )
+                                ArrowBackIcon()
                             }
                         },
                         backgroundColor = Color.Transparent,

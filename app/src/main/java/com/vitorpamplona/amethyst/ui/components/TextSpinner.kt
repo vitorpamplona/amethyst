@@ -35,7 +35,7 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun TextSpinner(
-    label: String,
+    label: String?,
     placeholder: String,
     options: ImmutableList<String>,
     explainers: ImmutableList<String>? = null,
@@ -54,7 +54,7 @@ fun TextSpinner(
             value = currentText,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label) },
+            label = { label?.let { Text(it) } },
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)

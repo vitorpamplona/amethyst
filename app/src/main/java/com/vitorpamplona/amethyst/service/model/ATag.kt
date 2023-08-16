@@ -2,11 +2,9 @@ package com.vitorpamplona.amethyst.service.model
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.hexToByteArray
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.bechToBytes
 import com.vitorpamplona.amethyst.service.nip19.Tlv
-import com.vitorpamplona.amethyst.service.nip19.toByteArray
+import com.vitorpamplona.amethyst.service.nip19.TlvBuilder
 import com.vitorpamplona.amethyst.service.toNAddress
 import fr.acinq.secp256k1.Hex
 
@@ -15,22 +13,12 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
     fun toTag() = "$kind:$pubKeyHex:$dTag"
 
     fun toNAddr(): String {
-        val kind = kind.toByteArray()
-        val author = pubKeyHex.hexToByteArray()
-        val dTag = dTag.toByteArray(Charsets.UTF_8)
-        val relay = relay?.toByteArray(Charsets.UTF_8)
-
-        var fullArray = byteArrayOf(Tlv.Type.SPECIAL.id, dTag.size.toByte()) + dTag
-
-        if (relay != null) {
-            fullArray = fullArray + byteArrayOf(Tlv.Type.RELAY.id, relay.size.toByte()) + relay
-        }
-
-        fullArray = fullArray +
-            byteArrayOf(Tlv.Type.AUTHOR.id, author.size.toByte()) + author +
-            byteArrayOf(Tlv.Type.KIND.id, kind.size.toByte()) + kind
-
-        return fullArray.toNAddress()
+        return TlvBuilder().apply {
+            addString(Tlv.Type.SPECIAL, dTag)
+            addStringIfNotNull(Tlv.Type.RELAY, relay)
+            addHex(Tlv.Type.AUTHOR, pubKeyHex)
+            addInt(Tlv.Type.KIND, kind)
+        }.build().toNAddress()
     }
 
     companion object {
@@ -63,10 +51,11 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
 
                 if (key.startsWith("naddr")) {
                     val tlv = Tlv.parse(key.bechToBytes())
-                    val d = tlv.get(Tlv.Type.SPECIAL.id)?.get(0)?.toString(Charsets.UTF_8) ?: ""
-                    val relay = tlv.get(Tlv.Type.RELAY.id)?.get(0)?.toString(Charsets.UTF_8)
-                    val author = tlv.get(Tlv.Type.AUTHOR.id)?.get(0)?.toHexKey()
-                    val kind = tlv.get(Tlv.Type.KIND.id)?.get(0)?.let { Tlv.toInt32(it) }
+
+                    val d = tlv.firstAsString(Tlv.Type.SPECIAL) ?: ""
+                    val relay = tlv.firstAsString(Tlv.Type.RELAY)
+                    val author = tlv.firstAsHex(Tlv.Type.AUTHOR)
+                    val kind = tlv.firstAsInt(Tlv.Type.KIND)
 
                     if (kind != null && author != null) {
                         return ATag(kind, author, d, relay)

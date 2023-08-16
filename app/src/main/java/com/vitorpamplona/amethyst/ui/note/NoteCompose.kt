@@ -527,7 +527,11 @@ fun CommunityHeader(
                 }
             }
         ) {
-            ShortCommunityHeader(baseNote, expanded, accountViewModel, nav)
+            ShortCommunityHeader(
+                baseNote = baseNote,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
 
             if (expanded.value) {
                 LongCommunityHeader(baseNote, accountViewModel, nav)
@@ -685,7 +689,7 @@ fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountView
 }
 
 @Composable
-fun ShortCommunityHeader(baseNote: AddressableNote, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ShortCommunityHeader(baseNote: AddressableNote, fontWeight: FontWeight = FontWeight.Bold, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
@@ -710,26 +714,10 @@ fun ShortCommunityHeader(baseNote: AddressableNote, expanded: MutableState<Boole
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = remember(noteState) { noteEvent.dTag() },
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = fontWeight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            val summary = remember(noteState) {
-                noteEvent.description()?.ifBlank { null }
-            }
-
-            if (summary != null && !expanded.value) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = summary,
-                        color = MaterialTheme.colors.placeholderText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 12.sp
-                    )
-                }
             }
         }
 

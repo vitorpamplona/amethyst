@@ -119,7 +119,7 @@ fun GeoHashHeader(tag: String, modifier: Modifier = StdPadding, account: Account
             ) {
                 DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
 
-                HashtagActionOptions(tag, account)
+                GeoHashActionOptions(tag, account)
             }
         }
 
@@ -154,7 +154,7 @@ fun DislayGeoTagHeader(geohash: String, modifier: Modifier) {
 }
 
 @Composable
-private fun HashtagActionOptions(
+fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel
 ) {

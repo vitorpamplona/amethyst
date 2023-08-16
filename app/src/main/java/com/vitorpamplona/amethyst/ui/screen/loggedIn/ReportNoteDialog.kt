@@ -19,7 +19,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
@@ -41,6 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -70,11 +70,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                     title = { Text(text = stringResource(id = R.string.report_dialog_title)) },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                                tint = MaterialTheme.colors.onSurface
-                            )
+                            ArrowBackIcon()
                         }
                     },
                     backgroundColor = MaterialTheme.colors.surface,
