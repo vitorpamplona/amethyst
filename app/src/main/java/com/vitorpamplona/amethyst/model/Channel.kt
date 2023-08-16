@@ -4,13 +4,14 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.toNote
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toNote
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.ConcurrentHashMap
 

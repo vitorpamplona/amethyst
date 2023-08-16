@@ -8,11 +8,8 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.OptOutFromFilters
-import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
-import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -20,6 +17,13 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.combineWith
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.hexToByteArray
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.*
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -1192,7 +1196,12 @@ class Account(
     }
 
     fun getBlockListNote(): AddressableNote {
-        val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, PeopleListEvent.blockList, null)
+        val aTag = ATag(
+            PeopleListEvent.kind,
+            userProfile().pubkeyHex,
+            PeopleListEvent.blockList,
+            null
+        )
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
@@ -1320,7 +1329,12 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val aTag = ATag(
+                PeopleListEvent.kind,
+                userProfile().pubkeyHex,
+                listName,
+                null
+            ).toTag()
             val list = LocalCache.addressables[aTag]
             if (list != null) {
                 val publicHexList = (list.event as? PeopleListEvent)?.bookmarkedPeople() ?: emptySet()
@@ -1344,7 +1358,12 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val aTag = ATag(
+                PeopleListEvent.kind,
+                userProfile().pubkeyHex,
+                listName,
+                null
+            ).toTag()
             val list = LocalCache.addressables[aTag]
             if (list != null) {
                 val publicAddresses = list.event?.hashtags() ?: emptySet()
@@ -1368,7 +1387,12 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val aTag = ATag(
+                PeopleListEvent.kind,
+                userProfile().pubkeyHex,
+                listName,
+                null
+            ).toTag()
             val list = LocalCache.addressables[aTag]
             if (list != null) {
                 val publicAddresses = list.event?.geohashes() ?: emptySet()
@@ -1392,7 +1416,12 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(PeopleListEvent.kind, userProfile().pubkeyHex, listName, null).toTag()
+            val aTag = ATag(
+                PeopleListEvent.kind,
+                userProfile().pubkeyHex,
+                listName,
+                null
+            ).toTag()
             val list = LocalCache.addressables[aTag]
             if (list != null) {
                 val publicAddresses = list.event?.taggedAddresses()?.map { it.toTag() } ?: emptySet()

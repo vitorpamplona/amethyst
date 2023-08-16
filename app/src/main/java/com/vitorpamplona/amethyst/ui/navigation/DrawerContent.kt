@@ -63,7 +63,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

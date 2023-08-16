@@ -13,9 +13,9 @@ import coil.fetch.Fetcher
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
-import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.CryptoUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.toHexKey
 import okio.Buffer
 
 private fun toHex(color: Color): String {

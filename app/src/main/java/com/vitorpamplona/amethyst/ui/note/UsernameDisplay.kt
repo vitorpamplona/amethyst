@@ -24,11 +24,11 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 @Composable
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true) {

@@ -343,7 +343,7 @@ fun loadRelayInfo(
                     }
 
                     override fun onFailure(call: Call, e: IOException) {
-                        Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable $dirtyUrl", e)
+                        Log.e("RelayInfoFail", "$dirtyUrl unavailable", e)
                         scope.launch {
                             Toast
                                 .makeText(

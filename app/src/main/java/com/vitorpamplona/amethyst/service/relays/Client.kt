@@ -2,8 +2,8 @@ package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.EventInterface
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -17,16 +17,6 @@ import java.util.UUID
  * Events are stored with their respective persona.
  */
 object Client : RelayPool.Listener {
-    /**
-     * Lenient mode:
-     *
-     * true: For maximum compatibility. If you want to play ball with sloppy counterparts, use
-     *       this.
-     * false: For developers who want to make protocol compliant counterparts. If your software
-     *        produces events that fail to deserialize in strict mode, you should probably fix
-     *        something.
-     **/
-    var lenient: Boolean = false
     private var listeners = setOf<Listener>()
     private var relays = Constants.convertDefaultRelays()
     private var subscriptions = mapOf<String, List<TypedFilter>>()

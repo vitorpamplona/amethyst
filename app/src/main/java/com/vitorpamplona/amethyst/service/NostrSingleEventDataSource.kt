@@ -2,11 +2,11 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.*
 
 object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()

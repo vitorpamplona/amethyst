@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.quartz.encoders.HexKey
+
 class ParticipantListBuilder {
     private fun addFollowsThatDirectlyParticipateOnToSet(baseNote: Note, followingSet: Set<HexKey>?, set: MutableSet<User>) {
         baseNote.author?.let { author ->

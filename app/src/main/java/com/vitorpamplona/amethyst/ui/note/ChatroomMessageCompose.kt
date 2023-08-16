@@ -44,12 +44,6 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -69,6 +63,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers

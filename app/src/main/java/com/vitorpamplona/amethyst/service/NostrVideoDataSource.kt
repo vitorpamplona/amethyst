@@ -1,12 +1,12 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 
 object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     lateinit var account: Account

@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 

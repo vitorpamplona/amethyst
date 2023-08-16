@@ -3,8 +3,9 @@ package com.vitorpamplona.amethyst.service
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.toHexKey
 import io.trbl.blurhash.BlurHash
 import kotlin.math.roundToInt
 

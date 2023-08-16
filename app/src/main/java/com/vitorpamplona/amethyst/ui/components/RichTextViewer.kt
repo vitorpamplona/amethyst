@@ -57,8 +57,6 @@ import com.vitorpamplona.amethyst.service.RichTextViewerState
 import com.vitorpamplona.amethyst.service.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.service.Segment
 import com.vitorpamplona.amethyst.service.WithdrawSegment
-import com.vitorpamplona.amethyst.service.nip19.Nip19
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -70,6 +68,8 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.uriToRoute
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.net.MalformedURLException

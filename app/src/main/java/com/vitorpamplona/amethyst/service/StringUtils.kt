@@ -1,6 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 fun String.isUTF16Char(pos: Int): Boolean {
     return Character.charCount(this.codePointAt(pos)) == 2

@@ -6,25 +6,24 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.toNote
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.toNote
+import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.regex.Pattern
-
-val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 @Stable
 class AddressableNote(val address: ATag) : Note(address.toTag()) {

@@ -41,11 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
@@ -57,7 +54,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteComposeReportState
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
-import com.vitorpamplona.amethyst.ui.note.RenderReportState
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -72,6 +68,8 @@ import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers

@@ -4,16 +4,16 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.TimeUtils
-import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
-import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.HighlightEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PeopleListEvent
-import com.vitorpamplona.amethyst.service.model.PollNoteEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.quartz.events.AudioTrackEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {

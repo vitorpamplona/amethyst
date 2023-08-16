@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.NumberFormat

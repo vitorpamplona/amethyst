@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.service.RichTextParser
 import com.vitorpamplona.amethyst.service.RichTextViewerState
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith

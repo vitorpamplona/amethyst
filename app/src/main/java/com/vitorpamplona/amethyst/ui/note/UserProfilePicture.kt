@@ -41,13 +41,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.quartz.encoders.HexKey
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

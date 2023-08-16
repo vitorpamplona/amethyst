@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.quartz.encoders.Nip19
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -3,12 +3,12 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 
 object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
     private var channelsToWatch = setOf<String>()

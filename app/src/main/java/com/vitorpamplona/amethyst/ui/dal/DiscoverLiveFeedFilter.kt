@@ -5,11 +5,11 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.amethyst.model.TimeUtils
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {

@@ -4,10 +4,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.amethyst.service.model.PollNoteEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 
 class UserProfileConversationsFeedFilter(val user: User, val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {

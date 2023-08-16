@@ -24,9 +24,6 @@ import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -35,6 +32,9 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*

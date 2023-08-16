@@ -46,9 +46,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -72,6 +69,9 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers

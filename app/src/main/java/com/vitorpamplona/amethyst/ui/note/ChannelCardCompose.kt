@@ -50,12 +50,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -72,6 +66,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf

@@ -1,12 +1,12 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.ReportEvent
 
 object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     var usersToWatch = setOf<User>()

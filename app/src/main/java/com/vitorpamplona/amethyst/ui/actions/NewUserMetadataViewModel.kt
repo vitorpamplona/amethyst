@@ -10,11 +10,10 @@ import androidx.lifecycle.viewModelScope
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.model.GitHubIdentity
-import com.vitorpamplona.amethyst.service.model.MastodonIdentity
-import com.vitorpamplona.amethyst.service.model.TwitterIdentity
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
-import id.zelory.compressor.Compressor.compress
+import com.vitorpamplona.quartz.events.GitHubIdentity
+import com.vitorpamplona.quartz.events.MastodonIdentity
+import com.vitorpamplona.quartz.events.TwitterIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch

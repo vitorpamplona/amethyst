@@ -6,19 +6,19 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.GiftWrapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.model.SealedGossipEvent
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
+import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,17 +47,18 @@ class EventNotificationConsumer(private val applicationContext: Context) {
     }
 
     fun unwrapAndConsume(event: Event, account: Account): Event? {
-        if (account.keyPair.privKey == null) return null
         if (!LocalCache.justVerify(event)) return null
 
         return when (event) {
             is GiftWrapEvent -> {
-                event.cachedGift(account.keyPair.privKey)?.let {
+                val key = account.keyPair.privKey ?: return null
+                event.cachedGift(key)?.let {
                     unwrapAndConsume(it, account)
                 }
             }
             is SealedGossipEvent -> {
-                event.cachedGossip(account.keyPair.privKey)?.let {
+                val key = account.keyPair.privKey ?: return null
+                event.cachedGossip(key)?.let {
                     // this is not verifiable
                     LocalCache.justConsume(it, null)
                     it

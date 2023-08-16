@@ -86,15 +86,11 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.amethyst.service.model.Participant
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -133,6 +129,10 @@ import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

@@ -1,12 +1,12 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ChatroomKey
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 
 object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
     lateinit var account: Account

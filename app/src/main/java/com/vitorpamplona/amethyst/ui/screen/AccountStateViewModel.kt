@@ -7,12 +7,12 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.KeyPair
-import com.vitorpamplona.amethyst.service.bechToBytes
-import com.vitorpamplona.amethyst.service.nip19.Nip19
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.bechToBytes
+import com.vitorpamplona.quartz.encoders.hexToByteArray
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

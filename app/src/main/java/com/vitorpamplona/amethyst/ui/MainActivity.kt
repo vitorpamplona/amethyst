@@ -17,8 +17,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,15 +24,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -44,6 +34,13 @@ import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -87,8 +84,6 @@ class MainActivity : AppCompatActivity() {
 
         val connectivityManager = getSystemService(ConnectivityManager::class.java) as ConnectivityManager
         connectivityManager.requestNetwork(networkRequest, networkCallback)
-
-        Client.lenient = true
     }
 
     @OptIn(DelicateCoroutinesApi::class)

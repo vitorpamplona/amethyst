@@ -4,8 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
@@ -14,17 +13,16 @@ import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.Settings
-import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.model.parseConnectivityType
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.KeyPair
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.toNpub
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.hexToByteArray
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.LnZapEvent
 import java.io.File
 import java.util.Locale
 
@@ -78,8 +76,6 @@ private object PrefKeys {
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
-
-private val gson = GsonBuilder().create()
 
 object LocalPreferences {
     private const val comma = ","
@@ -217,20 +213,20 @@ object LocalPreferences {
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
             putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
-            putString(PrefKeys.RELAYS, gson.toJson(account.localRelays))
+            putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(account.localRelays))
             putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
-            putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(account.languagePreferences))
+            putString(PrefKeys.LANGUAGE_PREFS, Event.mapper.writeValueAsString(account.languagePreferences))
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
-            putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
-            putString(PrefKeys.REACTION_CHOICES, gson.toJson(account.reactionChoices))
-            putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
-            putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
+            putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(account.zapAmountChoices))
+            putString(PrefKeys.REACTION_CHOICES, Event.mapper.writeValueAsString(account.reactionChoices))
+            putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.name)
+            putString(PrefKeys.DEFAULT_FILE_SERVER, account.defaultFileServer.name)
             putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
             putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList)
             putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, account.defaultNotificationFollowList)
             putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, account.defaultDiscoveryFollowList)
-            putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
-            putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
+            putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, Event.mapper.writeValueAsString(account.zapPaymentRequest))
+            putString(PrefKeys.LATEST_CONTACT_LIST, Event.mapper.writeValueAsString(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
             putBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, account.hideNIP24WarningDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
@@ -238,7 +234,7 @@ object LocalPreferences {
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
             putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
             putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
-            putString(PrefKeys.LAST_READ_PER_ROUTE, gson.toJson(account.lastReadPerRoute))
+            putString(PrefKeys.LAST_READ_PER_ROUTE, Event.mapper.writeValueAsString(account.lastReadPerRoute))
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -302,10 +298,9 @@ object LocalPreferences {
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
             val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
             val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
-            val localRelays = gson.fromJson(
-                getString(PrefKeys.RELAYS, "[]"),
-                object : TypeToken<Set<RelaySetupInfo>>() {}.type
-            ) ?: setOf<RelaySetupInfo>()
+            val localRelays = getString(PrefKeys.RELAYS, "[]")?.let {
+                Event.mapper.readValue<Set<RelaySetupInfo>>(it)
+            } ?: setOf<RelaySetupInfo>()
 
             val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
             val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
@@ -314,29 +309,25 @@ object LocalPreferences {
             val defaultNotificationFollowList = getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
             val defaultDiscoveryFollowList = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
-            val zapAmountChoices = gson.fromJson(
-                getString(PrefKeys.ZAP_AMOUNTS, "[]"),
-                object : TypeToken<List<Long>>() {}.type
-            ) ?: listOf(500L, 1000L, 5000L)
+            val zapAmountChoices = getString(PrefKeys.ZAP_AMOUNTS, "[]")?.let {
+                Event.mapper.readValue<List<Long>>(it)
+            }?.ifEmpty { listOf(500L, 1000L, 5000L) } ?: listOf(500L, 1000L, 5000L)
 
-            val reactionChoices = gson.fromJson<List<String>>(
-                getString(PrefKeys.REACTION_CHOICES, "[]"),
-                object : TypeToken<List<String>>() {}.type
-            ).ifEmpty { listOf("+") } ?: listOf("+")
+            val reactionChoices = getString(PrefKeys.REACTION_CHOICES, "[]")?.let {
+                Event.mapper.readValue<List<String>>(it)
+            }?.ifEmpty { listOf("+") } ?: listOf("+")
 
-            val defaultZapType = gson.fromJson(
-                getString(PrefKeys.DEFAULT_ZAPTYPE, "PUBLIC"),
-                object : TypeToken<LnZapEvent.ZapType>() {}.type
-            ) ?: LnZapEvent.ZapType.PUBLIC
+            val defaultZapType = getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
+                LnZapEvent.ZapType.values().first { it.name == serverName }
+            } ?: LnZapEvent.ZapType.PUBLIC
 
-            val defaultFileServer = gson.fromJson(
-                getString(PrefKeys.DEFAULT_FILE_SERVER, "NOSTR_BUILD"),
-                object : TypeToken<ServersAvailable>() {}.type
-            ) ?: ServersAvailable.NOSTR_BUILD
+            val defaultFileServer = getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
+                ServersAvailable.values().first { it.name == serverName }
+            } ?: ServersAvailable.NOSTR_BUILD
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                    gson.fromJson(it, Nip47URI::class.java)
+                    Event.mapper.readValue<Nip47URI>(it)
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -345,8 +336,7 @@ object LocalPreferences {
 
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
-                    Event.gson.fromJson(it, Event::class.java)
-                        .getRefinedEvent(true) as ContactListEvent
+                    Event.fromJson(it) as ContactListEvent?
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -355,10 +345,7 @@ object LocalPreferences {
 
             val languagePreferences = try {
                 getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
-                    gson.fromJson(
-                        it,
-                        object : TypeToken<Map<String, String>>() {}.type
-                    ) as Map<String, String>
+                    Event.mapper.readValue<Map<String, String>>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -382,10 +369,7 @@ object LocalPreferences {
 
             val lastReadPerRoute = try {
                 getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
-                    gson.fromJson(
-                        it,
-                        object : TypeToken<Map<String, Long>>() {}.type
-                    ) as Map<String, Long>
+                    Event.mapper.readValue<Map<String, Long>>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
                 e.printStackTrace()

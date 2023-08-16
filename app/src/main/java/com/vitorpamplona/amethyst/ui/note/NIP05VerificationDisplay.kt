@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -25,9 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserMetadata
 import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
@@ -36,6 +33,8 @@ import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.UserMetadata
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

@@ -22,9 +22,9 @@ import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChatroomKeyable
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChatroomKeyable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

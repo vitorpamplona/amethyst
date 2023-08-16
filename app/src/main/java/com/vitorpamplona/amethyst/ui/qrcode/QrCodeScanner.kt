@@ -10,7 +10,7 @@ import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19
 
 @Composable
 fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {

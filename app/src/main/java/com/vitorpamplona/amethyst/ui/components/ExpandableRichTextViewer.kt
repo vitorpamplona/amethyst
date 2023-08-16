@@ -24,11 +24,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 const val SHORT_TEXT_LENGTH = 350
 

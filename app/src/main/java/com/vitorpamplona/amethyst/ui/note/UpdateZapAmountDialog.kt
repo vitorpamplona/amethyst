@@ -68,9 +68,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Nip47URI
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
@@ -80,6 +77,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.decodePublicKey
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
