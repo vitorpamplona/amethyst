@@ -500,4 +500,26 @@
     <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
 
     <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
+
+    <string name="new_feature_nip24_might_not_be_available_title">Nová funkce</string>
+    <string name="new_feature_nip24_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-24 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-24 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
+    <string name="new_feature_nip24_activate">Aktivovat</string>
+
+    <string name="messages_create_public_chat">Veřejné</string>
+    <string name="messages_new_message">Soukromé</string>
+    <string name="messages_new_message_to">Pro</string>
+    <string name="messages_new_message_subject">Předmět</string>
+    <string name="messages_new_message_subject_caption">Téma konverzace</string>
+    <string name="messages_new_message_to_caption">"@Uživatel1, @Uživatel2, @Uživatel3"</string>
+
+    <string name="messages_group_descriptor">Členové této skupiny</string>
+    <string name="messages_new_subject_message">Vysvětlení členům</string>
+    <string name="messages_new_subject_message_placeholder">Změna názvu pro nové cíle.</string>
+
+    <string name="language_description">Pro rozhraní aplikace</string>
+    <string name="theme_description">Tmavé, světlé nebo systémové téma</string>
+    <string name="automatically_load_images_gifs_description">Automaticky načítat obrázky a GIFy</string>
+    <string name="automatically_play_videos_description">Automaticky přehrávat videa a GIFy</string>
+    <string name="automatically_show_url_preview_description">Zobrazit náhledy URL</string>
+    <string name="load_image_description">Kdy načíst obrázek</string>
 </resources>
