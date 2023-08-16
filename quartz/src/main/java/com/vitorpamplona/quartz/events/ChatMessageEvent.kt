@@ -31,9 +31,9 @@ class ChatMessageEvent(
         val listedPubKeys = recipientsPubKey()
 
         val result = if (pubKey == oneSideHex) {
-            listedPubKeys.minus(oneSideHex).toSet()
+            listedPubKeys.toSet().minus(oneSideHex)
         } else {
-            listedPubKeys.plus(pubKey).minus(oneSideHex).toSet()
+            listedPubKeys.plus(pubKey).toSet().minus(oneSideHex)
         }
 
         if (result.isEmpty()) {
