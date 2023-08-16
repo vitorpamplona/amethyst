@@ -5,6 +5,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.service.model.ImmutableListOfLists
 
 @Composable
