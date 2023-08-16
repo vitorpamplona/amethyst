@@ -59,7 +59,7 @@ val noProtocolUrlValidator = try {
     Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
 }
 
-val HTTPRegex = "^((http|https)://)?([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
+val HTTPRegex = "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
 
 class RichTextParser() {
     fun parseText(
@@ -183,7 +183,7 @@ class RichTextParser() {
         } else if (word.contains(".") && schemelessMatcher.find()) {
             val url = schemelessMatcher.group(1) // url
             val additionalChars = schemelessMatcher.group(4) // additional chars
-            val pattern = "^([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
+            val pattern = """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?""".toRegex(RegexOption.IGNORE_CASE)
             if (pattern.find(word) != null) {
                 SchemelessUrlSegment(word, url, additionalChars)
             } else {
