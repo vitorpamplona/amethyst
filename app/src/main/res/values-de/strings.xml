@@ -509,4 +509,26 @@ anz der Bedingungen ist erforderlich</string>
     <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass Sie sich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
 
     <string name="add_sensitive_content_explainer">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor Ihr Inhalt angezeigt wird. Dies ist ideal für NSFW-Inhalte (nicht sicher für die Arbeit) oder Inhalte, die manche Menschen als anstößig oder verstörend empfinden könnten</string>
+
+    <string name="new_feature_nip24_might_not_be_available_title">Neues Feature</string>
+    <string name="new_feature_nip24_might_not_be_available_description">Um diesen Modus zu aktivieren, muss Amethyst eine NIP-24-Nachricht senden (GiftWrapped, Versiegelte Direkt- und Gruppennachrichten). NIP-24 ist neu und die meisten Clients haben es noch nicht implementiert. Stellen Sie sicher, dass der Empfänger einen kompatiblen Client verwendet.</string>
+    <string name="new_feature_nip24_activate">Aktivieren</string>
+
+    <string name="messages_create_public_chat">Öffentlich</string>
+    <string name="messages_new_message">Privat</string>
+    <string name="messages_new_message_to">An</string>
+    <string name="messages_new_message_subject">Betreff</string>
+    <string name="messages_new_message_subject_caption">Gesprächsthema</string>
+    <string name="messages_new_message_to_caption">"@Benutzer1, @Benutzer2, @Benutzer3"</string>
+
+    <string name="messages_group_descriptor">Mitglieder dieser Gruppe</string>
+    <string name="messages_new_subject_message">Erklärung an Mitglieder</string>
+    <string name="messages_new_subject_message_placeholder">Ändern des Namens für die neuen Ziele.</string>
+
+    <string name="language_description">Für die App-Benutzeroberfläche</string>
+    <string name="theme_description">Dunkles, helles oder Systemdesign</string>
+    <string name="automatically_load_images_gifs_description">Bilder und GIFs automatisch laden</string>
+    <string name="automatically_play_videos_description">Videos und GIFs automatisch abspielen</string>
+    <string name="automatically_show_url_preview_description">URL-Vorschauen anzeigen</string>
+    <string name="load_image_description">Wann Bilder geladen werden sollen</string>
 </resources>
