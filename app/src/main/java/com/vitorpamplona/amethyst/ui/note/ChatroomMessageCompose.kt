@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,11 +45,13 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
 import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
 import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -634,8 +637,24 @@ private fun RenderRegularTextNote(
     nav: (String) -> Unit
 ) {
     val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
-    val eventContent = remember { accountViewModel.decrypt(note) }
+    var eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
+    val context = LocalContext.current
+    val isAmberInstalled = PackageUtils.isAmberInstalled(context)
+    var triedToDecrypt by remember { mutableStateOf(false) }
+    if (isAmberInstalled && !triedToDecrypt && note.event is PrivateDmEvent) {
+        SignerDialog(
+            onClose = {
+                triedToDecrypt = true
+                eventContent = accountViewModel.decrypt(note)
+            },
+            onPost = {
+                eventContent = it.content
+                triedToDecrypt = true
+            },
+            event = note.event!!
+        )
+    }
 
     if (eventContent != null) {
         SensitivityWarning(
@@ -643,7 +662,7 @@ private fun RenderRegularTextNote(
             accountViewModel = accountViewModel
         ) {
             TranslatableRichTextViewer(
-                content = eventContent,
+                content = eventContent!!,
                 canPreview = canPreview,
                 modifier = modifier,
                 tags = tags,

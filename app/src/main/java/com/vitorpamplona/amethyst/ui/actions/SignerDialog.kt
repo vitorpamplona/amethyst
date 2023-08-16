@@ -41,17 +41,22 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.model.Event
+import com.vitorpamplona.amethyst.service.model.EventInterface
+import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import kotlinx.coroutines.launch
 
 fun openAmber(
-    event: Event,
+    event: EventInterface,
     intentResult: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) {
     val json = event.toJson()
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$json"))
+    if (event is PrivateDmEvent) {
+        intent.putExtra("type", "nip04_decrypt")
+    }
     intent.`package` = "com.greenart7c3.nostrsigner.debug"
     intentResult.launch(intent)
 }
@@ -60,7 +65,7 @@ fun openAmber(
 fun SignerDialog(
     onClose: () -> Unit,
     onPost: (signedEvent: Event) -> Unit,
-    event: Event
+    event: EventInterface
 ) {
     var signature by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -80,6 +85,19 @@ fun SignerDialog(
             }
 
             signature = it.data?.getStringExtra("signature") ?: ""
+            if (event is PrivateDmEvent) {
+                onPost(
+                    Event(
+                        event.id(),
+                        event.pubKey(),
+                        event.createdAt(),
+                        event.kind(),
+                        event.tags(),
+                        signature,
+                        event.sig()
+                    )
+                )
+            }
         }
     )
 
@@ -120,16 +138,28 @@ fun SignerDialog(
 
                     PostButton(
                         onPost = {
-                            val signedEvent = Event(
-                                event.id,
-                                event.pubKey,
-                                event.createdAt,
-                                event.kind,
-                                event.tags,
-                                event.content,
-                                signature
-                            )
-                            if (!signedEvent.hasValidSignature()) {
+                            val signedEvent = if (event is PrivateDmEvent) {
+                                Event(
+                                    event.id(),
+                                    event.pubKey(),
+                                    event.createdAt(),
+                                    event.kind(),
+                                    event.tags(),
+                                    signature,
+                                    event.sig()
+                                )
+                            } else {
+                                Event(
+                                    event.id(),
+                                    event.pubKey(),
+                                    event.createdAt(),
+                                    event.kind(),
+                                    event.tags(),
+                                    event.content(),
+                                    signature
+                                )
+                            }
+                            if (!signedEvent.hasValidSignature() && event !is PrivateDmEvent) {
                                 scope.launch {
                                     Toast.makeText(
                                         context,
