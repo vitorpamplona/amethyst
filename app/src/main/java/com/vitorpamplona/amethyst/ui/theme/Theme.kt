@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
+import com.patrykandpatrick.vico.compose.style.ChartStyle
+import com.patrykandpatrick.vico.core.DefaultColors
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 
 private val DarkColorPalette = darkColors(
@@ -301,6 +303,22 @@ val Colors.replyModifier: Modifier
 
 val Colors.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
+
+val Colors.chartStyle: ChartStyle
+    get() {
+        val defaultColors = if (isLight) DefaultColors.Light else DefaultColors.Dark
+        return ChartStyle.fromColors(
+            axisLabelColor = Color(defaultColors.axisLabelColor),
+            axisGuidelineColor = Color(defaultColors.axisGuidelineColor),
+            axisLineColor = Color(defaultColors.axisLineColor),
+            entityColors = listOf(
+                defaultColors.entity1Color,
+                defaultColors.entity2Color,
+                defaultColors.entity3Color
+            ).map(::Color),
+            elevationOverlayColor = Color(defaultColors.elevationOverlayColor)
+        )
+    }
 
 @Composable
 fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Unit) {
