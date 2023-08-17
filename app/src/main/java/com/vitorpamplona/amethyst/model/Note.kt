@@ -120,17 +120,24 @@ open class Note(val idHex: String) {
     /**
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */
-    fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
+    fun replyLevelSignature(
+        eventsToConsider: Set<Note>,
+        cachedSignatures: MutableMap<Note, String>
+    ): String {
         val replyTo = replyTo
         if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
-        return replyTo
+        val mySignature = replyTo
+            .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
             .map {
-                cachedSignatures[it] ?: it.replyLevelSignature(cachedSignatures).apply { cachedSignatures.put(it, this) }
+                cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
             }
             .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(createdAt() ?: 0) + ";"
+
+        cachedSignatures[this] = mySignature
+        return mySignature
     }
 
     fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {
