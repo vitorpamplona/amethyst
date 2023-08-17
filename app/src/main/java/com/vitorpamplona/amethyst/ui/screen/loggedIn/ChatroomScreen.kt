@@ -183,6 +183,17 @@ fun PrepareChatroomViewModels(room: ChatroomKey, accountViewModel: AccountViewMo
         newPostModel.nip24 = true
     }
 
+    LaunchedEffect(key1 = newPostModel) {
+        launch(Dispatchers.IO) {
+            val hasNIP24 = accountViewModel.userProfile().privateChatrooms[room]?.roomMessages?.any {
+                it.event is ChatMessageEvent && (it.event as ChatMessageEvent).pubKey != accountViewModel.userProfile().pubkeyHex
+            }
+            if (hasNIP24 == true && newPostModel.nip24 == false) {
+                newPostModel.nip24 = true
+            }
+        }
+    }
+
     ChatroomScreen(
         room = room,
         feedViewModel = feedViewModel,
@@ -515,9 +526,11 @@ fun GroupChatroomHeader(
     val expanded = remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxWidth().clickable {
-            expanded.value = !expanded.value
-        }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                expanded.value = !expanded.value
+            }
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
@@ -680,7 +693,9 @@ fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (
     }
 
     Row(
-        modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(top = 10.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
