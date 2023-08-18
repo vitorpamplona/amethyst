@@ -24,6 +24,11 @@ object CryptoUtils {
     private val random = SecureRandom()
     private val h02 = Hex.decode("02")
 
+    fun clearCache() {
+        sharedKeyCache04.evictAll()
+        sharedKeyCache24.evictAll()
+    }
+
     fun randomInt(bound: Int): Int {
         return random.nextInt(bound)
     }

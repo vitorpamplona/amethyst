@@ -3,8 +3,11 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import org.junit.Assert
@@ -53,6 +56,38 @@ class GiftWrapBenchmark {
         }
     }
 
+    fun receivePerformanceTest(message: String) {
+        val sender = KeyPair()
+        val receiver = KeyPair()
+
+        val giftWrap = NIP24Factory().createMsgNIP24(
+            message,
+            listOf(receiver.pubKey.toHexKey()),
+            sender.privKey!!
+        ).first()
+
+        val keyToUse = if (giftWrap.recipientPubKey() == sender.pubKey.toHexKey()) sender.privKey!! else receiver.privKey!!
+        val giftWrapJson = giftWrap.toJson()
+
+        // Simulate Receiver
+        benchmarkRule.measureRepeated {
+            CryptoUtils.clearCache()
+
+            val wrap = Event.fromJson(giftWrapJson) as GiftWrapEvent
+            wrap.checkSignature()
+
+            val seal = wrap.unwrap(keyToUse)
+            seal?.checkSignature()
+
+            if (seal is SealedGossipEvent) {
+                val innerData = seal.unseal(keyToUse)
+                Assert.assertEquals(message, innerData?.content)
+            } else {
+                Assert.fail("Wrong Event")
+            }
+        }
+    }
+
 
     @Test
     fun tinyMessageHardCoded() {
@@ -77,6 +112,25 @@ class GiftWrapBenchmark {
             )
         }
     }
+
+    @Test
+    fun receivesTinyMessage() {
+        receivePerformanceTest("Hola, que tal?")
+    }
+
+    @Test
+    fun receivesRegularMessage() {
+        receivePerformanceTest("Hi, honey, can you drop by the market and get some bread?")
+    }
+
+    @Test
+    fun receivesLongMessageHardCoded() {
+        receivePerformanceTest(
+            "My queen, you are nothing short of royalty to me. You possess more beauty in the nail of your pinkie toe than everything else in this world combined. I am astounded by your grace, generosity, and graciousness. I am so lucky to know you. "
+        )
+    }
+
+
 /*
     @Test
     fun tinyMessageHardCodedCompressed() {

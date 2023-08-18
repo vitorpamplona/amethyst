@@ -75,6 +75,50 @@ class GiftWrapReceivingBenchmark {
     }
 
     @Test
+    fun checkId() {
+        val sender = KeyPair()
+        val receiver = KeyPair()
+
+        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+        val senderMessage = createMessage(sender, receiver)
+
+        val wrap = GiftWrapEvent.create(
+            event = SealedGossipEvent.create(
+                event = senderMessage,
+                encryptTo = senderPublicKey,
+                privateKey = sender.privKey!!
+            ),
+            recipientPubKey = senderPublicKey
+        )
+
+        benchmarkRule.measureRepeated {
+            wrap.hasCorrectIDHash()
+        }
+    }
+
+    @Test
+    fun checkSignature() {
+        val sender = KeyPair()
+        val receiver = KeyPair()
+
+        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+        val senderMessage = createMessage(sender, receiver)
+
+        val wrap = GiftWrapEvent.create(
+            event = SealedGossipEvent.create(
+                event = senderMessage,
+                encryptTo = senderPublicKey,
+                privateKey = sender.privKey!!
+            ),
+            recipientPubKey = senderPublicKey
+        )
+
+        benchmarkRule.measureRepeated {
+            wrap.hasVerifedSignature()
+        }
+    }
+
+    @Test
     fun decodeWrapEvent() {
         val sender = KeyPair()
         val receiver = KeyPair()
