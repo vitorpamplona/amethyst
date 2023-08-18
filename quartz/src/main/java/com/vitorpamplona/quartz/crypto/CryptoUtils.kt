@@ -1,10 +1,11 @@
 package com.vitorpamplona.quartz.crypto
 
 import android.util.Log
+import android.util.LruCache
 import com.goterl.lazysodium.SodiumAndroid
 import com.goterl.lazysodium.utils.Key
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.events.Event
 import fr.acinq.secp256k1.Secp256k1
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -15,6 +16,9 @@ import javax.crypto.spec.SecretKeySpec
 
 
 object CryptoUtils {
+    private val sharedKeyCache04 = LruCache<Int, ByteArray>(200)
+    private val sharedKeyCache24 = LruCache<Int, ByteArray>(200)
+
     private val secp256k1 = Secp256k1.get()
     private val libSodium = SodiumAndroid()
     private val random = SecureRandom()
@@ -27,8 +31,10 @@ object CryptoUtils {
     /**
      * Provides a 32B "private key" aka random number
      */
-    fun privkeyCreate(): ByteArray {
-        val bytes = ByteArray(32)
+    fun privkeyCreate() = random(32)
+
+    fun random(size: Int): ByteArray {
+        val bytes = ByteArray(size)
         random.nextBytes(bytes)
         return bytes
     }
@@ -51,12 +57,6 @@ object CryptoUtils {
         // Creates a new buffer every time
         return MessageDigest.getInstance("SHA-256").digest(data)
     }
-
-    /**
-     * @return 32B shared secret
-     */
-    fun getSharedSecretNIP04(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
-        secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
 
     fun encryptNIP04(msg: String, privateKey: ByteArray, pubKey: ByteArray): String {
         val info = encryptNIP04(msg, getSharedSecretNIP04(privateKey, pubKey))
@@ -150,7 +150,39 @@ object CryptoUtils {
     /**
      * @return 32B shared secret
      */
-    fun getSharedSecretNIP24(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
+    fun getSharedSecretNIP04(privateKey: ByteArray, pubKey: ByteArray): ByteArray {
+        val hash = combinedHashCode(privateKey, pubKey)
+        val preComputed = sharedKeyCache04[hash]
+        if (preComputed != null) return preComputed
+
+        val computed = computeSharedSecretNIP04(privateKey, pubKey)
+        sharedKeyCache04.put(hash, computed)
+        return computed
+    }
+
+    /**
+     * @return 32B shared secret
+     */
+    fun computeSharedSecretNIP04(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
+        secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
+
+    /**
+     * @return 32B shared secret
+     */
+    fun getSharedSecretNIP24(privateKey: ByteArray, pubKey: ByteArray): ByteArray {
+        val hash = combinedHashCode(privateKey, pubKey)
+        val preComputed = sharedKeyCache24[hash]
+        if (preComputed != null) return preComputed
+
+        val computed = computeSharedSecretNIP24(privateKey, pubKey)
+        sharedKeyCache24.put(hash, computed)
+        return computed
+    }
+
+    /**
+     * @return 32B shared secret
+     */
+    fun computeSharedSecretNIP24(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
         sha256(secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33))
 }
 
@@ -211,6 +243,13 @@ fun decodeJackson(json: String): EncryptedInfo {
         nonce = Base64.getDecoder().decode(info.nonce),
         ciphertext = Base64.getDecoder().decode(info.ciphertext)
     )
+}
+
+fun combinedHashCode(a: ByteArray, b: ByteArray): Int {
+    var result = 1
+    for (element in a) result = 31 * result + element
+    for (element in b) result = 31 * result + element
+    return result
 }
 
 /*
