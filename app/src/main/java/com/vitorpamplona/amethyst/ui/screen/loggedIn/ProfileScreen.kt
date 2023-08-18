@@ -101,6 +101,7 @@ import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.IdentityClaim
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -759,12 +760,13 @@ private fun DisplayFollowUnfollowButton(
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 

@@ -79,14 +79,15 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         },
                         onPost = {
                             scope.launch(Dispatchers.IO) {
-                                Client.send(it)
-                                LocalCache.verifyAndConsume(it, null)
+                                val signedEvent = Event.fromJson(it)
+                                Client.send(signedEvent)
+                                LocalCache.verifyAndConsume(signedEvent, null)
                                 event = null
                                 postViewModel.clear()
                                 onClose()
                             }
                         },
-                        event = event!!
+                        data = event!!.toJson()
                     )
                 }
 

@@ -169,13 +169,14 @@ fun NewPostView(
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it, relayList = relayList)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent, relayList = relayList)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                     onClose()
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 

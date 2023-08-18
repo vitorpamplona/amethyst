@@ -41,22 +41,36 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 
+enum class SignerType {
+    SIGN_EVENT,
+    NIP04_ENCRYPT,
+    NIP04_DECRYPT,
+    NIP44_ENCRYPT,
+    NIP44_DECRYPT
+}
+
 fun openAmber(
-    event: EventInterface,
-    intentResult: ManagedActivityResultLauncher<Intent, ActivityResult>
+    data: String,
+    type: SignerType,
+    intentResult: ManagedActivityResultLauncher<Intent, ActivityResult>,
+    pubKey: HexKey
 ) {
-    val json = event.toJson()
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$json"))
-    if (event is PrivateDmEvent) {
-        intent.putExtra("type", "nip04_decrypt")
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
+    val signerType = when (type) {
+        SignerType.SIGN_EVENT -> "sign_event"
+        SignerType.NIP04_ENCRYPT -> "nip04_encrypt"
+        SignerType.NIP04_DECRYPT -> "nip04_decrypt"
+        SignerType.NIP44_ENCRYPT -> "nip44_encrypt"
+        SignerType.NIP44_DECRYPT -> "nip44_decrypt"
     }
+    intent.putExtra("type", signerType)
+    intent.putExtra("pubKey", pubKey)
     intent.`package` = "com.greenart7c3.nostrsigner.debug"
     intentResult.launch(intent)
 }
@@ -64,8 +78,10 @@ fun openAmber(
 @Composable
 fun SignerDialog(
     onClose: () -> Unit,
-    onPost: (signedEvent: Event) -> Unit,
-    event: EventInterface
+    onPost: (content: String) -> Unit,
+    data: String,
+    type: SignerType = SignerType.SIGN_EVENT,
+    pubKey: HexKey = ""
 ) {
     var signature by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -85,24 +101,16 @@ fun SignerDialog(
             }
 
             signature = it.data?.getStringExtra("signature") ?: ""
-            if (event is PrivateDmEvent) {
+            if (type == SignerType.NIP04_DECRYPT) {
                 onPost(
-                    Event(
-                        event.id(),
-                        event.pubKey(),
-                        event.createdAt(),
-                        event.kind(),
-                        event.tags(),
-                        signature,
-                        event.sig()
-                    )
+                    signature
                 )
             }
         }
     )
 
     LaunchedEffect(Unit) {
-        openAmber(event, intentResult)
+        openAmber(data, type, intentResult, pubKey)
     }
 
     Dialog(
@@ -138,18 +146,9 @@ fun SignerDialog(
 
                     PostButton(
                         onPost = {
-                            val signedEvent = if (event is PrivateDmEvent) {
-                                Event(
-                                    event.id(),
-                                    event.pubKey(),
-                                    event.createdAt(),
-                                    event.kind(),
-                                    event.tags(),
-                                    signature,
-                                    event.sig()
-                                )
-                            } else {
-                                Event(
+                            if (type == SignerType.SIGN_EVENT) {
+                                val event = Event.fromJson(data)
+                                val signedEvent = Event(
                                     event.id(),
                                     event.pubKey(),
                                     event.createdAt(),
@@ -158,18 +157,21 @@ fun SignerDialog(
                                     event.content(),
                                     signature
                                 )
-                            }
-                            if (!signedEvent.hasValidSignature() && event !is PrivateDmEvent) {
-                                scope.launch {
-                                    Toast.makeText(
-                                        context,
-                                        "Invalid signature",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+
+                                if (!signedEvent.hasValidSignature()) {
+                                    scope.launch {
+                                        Toast.makeText(
+                                            context,
+                                            "Invalid signature",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                    return@PostButton
                                 }
-                                return@PostButton
+                                onPost(signedEvent.toJson())
+                            } else {
+                                onPost(signature)
                             }
-                            onPost(signedEvent)
                         },
                         isActive = true
                     )
@@ -199,7 +201,7 @@ fun SignerDialog(
                 )
                 Button(
                     shape = ButtonBorder,
-                    onClick = { openAmber(event, intentResult) }
+                    onClick = { openAmber(data, type, intentResult, pubKey) }
                 ) {
                     Text("Open Amber")
                 }
@@ -214,6 +216,8 @@ fun Test() {
     SignerDialog(
         onClose = { },
         onPost = { },
-        event = TextNoteEvent("", "", TimeUtils.now(), emptyList(), "test", "")
+        data = TextNoteEvent("", "", TimeUtils.now(), emptyList(), "test", "").toJson(),
+        type = SignerType.SIGN_EVENT,
+        pubKey = ""
     )
 }

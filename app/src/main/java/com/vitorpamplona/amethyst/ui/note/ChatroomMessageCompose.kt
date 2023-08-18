@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
@@ -649,10 +651,12 @@ private fun RenderRegularTextNote(
                 eventContent = accountViewModel.decrypt(note)
             },
             onPost = {
-                eventContent = it.content
+                eventContent = it
                 triedToDecrypt = true
             },
-            event = note.event!!
+            data = eventContent ?: "",
+            type = SignerType.NIP04_DECRYPT,
+            pubKey = (note.event as PrivateDmEvent).talkingWith(accountViewModel.account.keyPair.pubKey.toHexKey()) ?: ""
         )
     }
 

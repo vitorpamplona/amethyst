@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.coroutines.Dispatchers
@@ -219,12 +220,13 @@ fun ShowFollowingOrUnfollowingButton(
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 

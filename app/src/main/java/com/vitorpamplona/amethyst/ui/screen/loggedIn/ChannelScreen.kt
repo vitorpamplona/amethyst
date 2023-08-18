@@ -1092,12 +1092,13 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 
@@ -1131,12 +1132,13 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 
@@ -1170,12 +1172,13 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNot
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 
@@ -1209,12 +1212,13 @@ fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNo
             },
             onPost = {
                 scope.launch(Dispatchers.IO) {
-                    Client.send(it)
-                    LocalCache.verifyAndConsume(it, null)
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
                     event = null
                 }
             },
-            event = event!!
+            data = event!!.toJson()
         )
     }
 
