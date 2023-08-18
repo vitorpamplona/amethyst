@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
 
@@ -60,7 +61,7 @@ fun ArrowBackIcon() {
     Icon(
         imageVector = Icons.Default.ArrowBack,
         contentDescription = stringResource(R.string.back),
-        tint = MaterialTheme.colors.onSurface
+        tint = MaterialTheme.colors.grayText
     )
 }
 

@@ -2,13 +2,13 @@ package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.KeyPair
 import com.vitorpamplona.amethyst.ui.actions.FileServer
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 import com.vitorpamplona.amethyst.ui.actions.ImgurServer
 import com.vitorpamplona.amethyst.ui.actions.NostrBuildServer
 import com.vitorpamplona.amethyst.ui.actions.NostrFilesDevServer
 import com.vitorpamplona.amethyst.ui.actions.NostrImgServer
+import com.vitorpamplona.quartz.crypto.KeyPair
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test

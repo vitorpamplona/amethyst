@@ -64,12 +64,10 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.service.model.ChatMessageEvent
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
@@ -93,6 +91,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
@@ -181,6 +181,17 @@ fun PrepareChatroomViewModels(room: ChatroomKey, accountViewModel: AccountViewMo
     newPostModel.requiresNIP24 = room.users.size > 1
     if (newPostModel.requiresNIP24) {
         newPostModel.nip24 = true
+    }
+
+    LaunchedEffect(key1 = newPostModel) {
+        launch(Dispatchers.IO) {
+            val hasNIP24 = accountViewModel.userProfile().privateChatrooms[room]?.roomMessages?.any {
+                it.event is ChatMessageEvent && (it.event as ChatMessageEvent).pubKey != accountViewModel.userProfile().pubkeyHex
+            }
+            if (hasNIP24 == true && newPostModel.nip24 == false) {
+                newPostModel.nip24 = true
+            }
+        }
     }
 
     ChatroomScreen(
@@ -515,9 +526,11 @@ fun GroupChatroomHeader(
     val expanded = remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxWidth().clickable {
-            expanded.value = !expanded.value
-        }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                expanded.value = !expanded.value
+            }
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
@@ -680,7 +693,9 @@ fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (
     }
 
     Row(
-        modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(top = 10.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {

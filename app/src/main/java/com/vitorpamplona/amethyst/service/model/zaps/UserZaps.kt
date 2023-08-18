@@ -1,8 +1,8 @@
-package com.vitorpamplona.amethyst.service.model.zaps
+package com.vitorpamplona.quartz.events.zaps
 
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
+import com.vitorpamplona.quartz.events.LnZapEventInterface
 
 object UserZaps {
     fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {

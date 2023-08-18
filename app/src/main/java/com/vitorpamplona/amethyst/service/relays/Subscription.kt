@@ -1,8 +1,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
+import com.fasterxml.jackson.databind.JsonNode
+import com.vitorpamplona.quartz.events.Event
 import java.util.UUID
 
 data class Subscription(
@@ -16,15 +15,24 @@ data class Subscription(
     }
 
     fun toJson(): String {
-        return GsonBuilder().create().toJson(toJsonObject())
+        return Event.mapper.writeValueAsString(toJsonObject())
     }
 
-    fun toJsonObject(): JsonObject {
-        val jsonObject = JsonObject()
-        jsonObject.addProperty("id", id)
-        typedFilters?.run {
-            jsonObject.add("typedFilters", JsonArray().apply { typedFilters?.forEach { add(it.toJsonObject()) } })
+    fun toJsonObject(): JsonNode {
+        val factory = Event.mapper.nodeFactory
+
+        return factory.objectNode().apply {
+            put("id", id)
+            typedFilters?.also { filters ->
+                put(
+                    "typedFilters",
+                    factory.arrayNode(filters.size).apply {
+                        filters.forEach { filter ->
+                            add(filter.toJsonObject())
+                        }
+                    }
+                )
+            }
         }
-        return jsonObject
     }
 }

@@ -4,7 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 
 class CommunityFeedFilter(val note: AddressableNote, val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {

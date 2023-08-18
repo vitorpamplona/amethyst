@@ -54,27 +54,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.PackageUtils
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
-import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
-import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequestCard
@@ -108,6 +95,22 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.GitHubIdentity
+import com.vitorpamplona.quartz.events.IdentityClaim
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.MastodonIdentity
+import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.TelegramIdentity
+import com.vitorpamplona.quartz.events.TwitterIdentity
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -845,6 +848,26 @@ fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, conten
     content(isHidden)
 }
 
+fun getIdentityClaimIcon(identity: IdentityClaim): Int {
+    return when (identity) {
+        is TwitterIdentity -> R.drawable.twitter
+        is TelegramIdentity -> R.drawable.telegram
+        is MastodonIdentity -> R.drawable.mastodon
+        is GitHubIdentity -> R.drawable.github
+        else -> R.drawable.github
+    }
+}
+
+fun getIdentityClaimDescription(identity: IdentityClaim): Int {
+    return when (identity) {
+        is TwitterIdentity -> R.string.twitter
+        is TelegramIdentity -> R.string.telegram
+        is MastodonIdentity -> R.string.mastodon
+        is GitHubIdentity -> R.string.github
+        else -> R.drawable.github
+    }
+}
+
 @Composable
 private fun DrawAdditionalInfo(
     baseUser: User,
@@ -967,8 +990,8 @@ private fun DrawAdditionalInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
-                    painter = painterResource(id = identity.toIcon()),
-                    contentDescription = stringResource(identity.toDescriptor()),
+                    painter = painterResource(id = getIdentityClaimIcon(identity)),
+                    contentDescription = stringResource(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp)
                 )
 
@@ -996,7 +1019,7 @@ private fun DrawAdditionalInfo(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
-                tags = remember { ImmutableListOfLists(emptyList()) },
+                tags = remember { ImmutableListOfLists<String>(emptyList()) },
                 backgroundColor = background,
                 accountViewModel = accountViewModel,
                 nav = nav

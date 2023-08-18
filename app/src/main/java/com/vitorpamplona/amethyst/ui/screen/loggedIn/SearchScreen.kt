@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.findHashtags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +77,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.regex.Pattern
 import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
@@ -393,23 +393,6 @@ private fun DisplaySearchResults(
             )
         }
     }
-}
-
-val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)")
-
-fun findHashtags(content: String): List<String> {
-    val matcher = hashtagSearch.matcher(content)
-    val returningList = mutableSetOf<String>()
-    while (matcher.find()) {
-        try {
-            val tag = matcher.group(1)
-            if (tag != null && tag.isNotBlank()) {
-                returningList.add(tag)
-            }
-        } catch (e: Exception) {
-        }
-    }
-    return returningList.toList()
 }
 
 @Composable

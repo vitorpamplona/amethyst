@@ -33,12 +33,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.service.PackageUtils
-import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

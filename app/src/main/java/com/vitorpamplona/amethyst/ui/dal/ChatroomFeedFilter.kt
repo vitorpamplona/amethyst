@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ChatroomKey
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.quartz.events.ChatroomKey
 
 class ChatroomFeedFilter(val withUser: ChatroomKey, val account: Account) : AdditiveFeedFilter<Note>() {
     // returns the last Note of each user.

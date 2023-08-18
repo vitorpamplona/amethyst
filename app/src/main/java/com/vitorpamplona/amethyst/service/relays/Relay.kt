@@ -1,13 +1,13 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
-import com.google.gson.JsonElement
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.model.TimeUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.EventInterface
-import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.events.RelayAuthEvent
+import com.vitorpamplona.quartz.events.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.TimeUtils
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -189,13 +189,13 @@ class Relay(
     }
 
     fun processNewRelayMessage(newMessage: String) {
-        val msgArray = Event.gson.fromJson(newMessage, JsonElement::class.java).asJsonArray
-        val type = msgArray[0].asString
-        val channel = msgArray[1].asString
+        val msgArray = Event.mapper.readTree(newMessage)
+        val type = msgArray.get(0).asText()
+        val channel = msgArray.get(1).asText()
 
         when (type) {
             "EVENT" -> {
-                val event = Event.fromJson(msgArray[2], Client.lenient)
+                val event = Event.fromJson(msgArray.get(2))
 
                 // Log.w("Relay", "Relay onEVENT $url, $channel")
                 listeners.forEach {
@@ -215,12 +215,12 @@ class Relay(
                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
             }
             "OK" -> listeners.forEach {
-                Log.w("Relay", "Relay on OK $url, ${msgArray[1].asString}, ${msgArray[2].asBoolean}, ${msgArray[3].asString}")
-                it.onSendResponse(this@Relay, msgArray[1].asString, msgArray[2].asBoolean, msgArray[3].asString)
+                Log.w("Relay", "Relay on OK $url, ${msgArray[1].asText()}, ${msgArray[2].asBoolean()}, ${msgArray[3].asText()}")
+                it.onSendResponse(this@Relay, msgArray[1].asText(), msgArray[2].asBoolean(), msgArray[3].asText())
             }
             "AUTH" -> listeners.forEach {
                 // Log.w("Relay", "Relay$url, ${msg[1].asString}")
-                it.onAuth(this@Relay, msgArray[1].asString)
+                it.onAuth(this@Relay, msgArray[1].asText())
             }
             else -> listeners.forEach {
                 // Log.w("Relay", "Relay something else $url, $channel")
@@ -342,8 +342,4 @@ class Relay(
          */
         fun onRelayStateChange(relay: Relay, type: Type, channel: String?)
     }
-}
-
-fun String.bytesUsedInMemory(): Int {
-    return (8 * ((((this.length) * 2) + 45) / 8))
 }

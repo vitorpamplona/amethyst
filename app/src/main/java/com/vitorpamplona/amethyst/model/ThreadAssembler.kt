@@ -1,9 +1,8 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import kotlin.time.ExperimentalTime
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import kotlin.time.measureTimedValue
 
 class ThreadAssembler {
@@ -37,7 +36,6 @@ class ThreadAssembler {
         return null
     }
 
-    @OptIn(ExperimentalTime::class)
     fun findThreadFor(noteId: String): Set<Note> {
         checkNotInMainThread()
 

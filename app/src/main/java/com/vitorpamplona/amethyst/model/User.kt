@@ -3,34 +3,31 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.service.Bech32
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.toNpub
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
-import kotlinx.collections.immutable.ImmutableSet
+import com.vitorpamplona.quartz.encoders.Bech32
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.events.BookmarkListEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.UserMetadata
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
 import java.util.regex.Pattern
 
 val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
-
-@Stable
-data class ChatroomKey(
-    val users: ImmutableSet<HexKey>
-)
 
 @Stable
 class User(val pubkeyHex: String) {
@@ -466,65 +463,6 @@ class Chatroom() {
         val toRemove = roomMessages.minus(toKeep)
         roomMessages = toKeep
         return toRemove
-    }
-}
-
-@Stable
-class UserMetadata {
-    var name: String? = null
-    var username: String? = null
-    var display_name: String? = null
-    var displayName: String? = null
-    var picture: String? = null
-    var banner: String? = null
-    var website: String? = null
-    var about: String? = null
-
-    var nip05: String? = null
-    var nip05Verified: Boolean = false
-    var nip05LastVerificationTime: Long? = 0
-
-    var domain: String? = null
-    var lud06: String? = null
-    var lud16: String? = null
-
-    var publish: String? = null
-    var iris: String? = null
-    var main_relay: String? = null
-    var twitter: String? = null
-
-    var updatedMetadataAt: Long = 0
-    var latestMetadata: MetadataEvent? = null
-    var tags: ImmutableListOfLists<String>? = null
-
-    fun anyName(): String? {
-        return display_name ?: displayName ?: name ?: username
-    }
-
-    fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(name, username, display_name, displayName, nip05, lud06, lud16)
-            .any { it.contains(prefix, true) }
-    }
-
-    fun lnAddress(): String? {
-        return (lud16?.trim() ?: lud06?.trim())?.ifBlank { null }
-    }
-
-    fun bestUsername(): String? {
-        return name?.ifBlank { null } ?: username?.ifBlank { null }
-    }
-
-    fun bestDisplayName(): String? {
-        return displayName?.ifBlank { null } ?: display_name?.ifBlank { null }
-    }
-
-    fun nip05(): String? {
-        return nip05?.ifBlank { null }
-    }
-
-    fun profilePicture(): String? {
-        if (picture.isNullOrBlank()) picture = null
-        return picture
     }
 }
 

@@ -1,13 +1,13 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.KeyPair
-import com.vitorpamplona.amethyst.service.bechToBytes
-import com.vitorpamplona.amethyst.service.nip19.Nip19
-import com.vitorpamplona.amethyst.service.toNpub
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.bechToBytes
+import com.vitorpamplona.quartz.encoders.toNpub
 
 class NewMessageTagger(
     var message: String,

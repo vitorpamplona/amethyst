@@ -2,10 +2,11 @@ package com.vitorpamplona.amethyst.service.lnurl
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.Bech32
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.toLnUrl
+import com.vitorpamplona.quartz.encoders.Bech32
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.encoders.toLnUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

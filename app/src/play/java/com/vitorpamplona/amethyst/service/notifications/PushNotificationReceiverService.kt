@@ -5,9 +5,9 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateDMChannel
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
+import com.vitorpamplona.quartz.events.Event
 
 class PushNotificationReceiverService : FirebaseMessagingService() {
 
@@ -15,7 +15,7 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         remoteMessage.data.let {
             val eventStr = remoteMessage.data["event"] ?: return
-            val event = Event.fromJson(eventStr, true)
+            val event = Event.fromJson(eventStr)
             EventNotificationConsumer(applicationContext).consume(event)
         }
     }

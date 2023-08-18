@@ -6,25 +6,24 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.toNote
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.toNote
+import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.regex.Pattern
-
-val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 @Stable
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
@@ -121,17 +120,24 @@ open class Note(val idHex: String) {
     /**
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */
-    fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
+    fun replyLevelSignature(
+        eventsToConsider: Set<Note>,
+        cachedSignatures: MutableMap<Note, String>
+    ): String {
         val replyTo = replyTo
         if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
-        return replyTo
+        val mySignature = replyTo
+            .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
             .map {
-                cachedSignatures[it] ?: it.replyLevelSignature(cachedSignatures).apply { cachedSignatures.put(it, this) }
+                cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
             }
             .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(createdAt() ?: 0) + ";"
+
+        cachedSignatures[this] = mySignature
+        return mySignature
     }
 
     fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {

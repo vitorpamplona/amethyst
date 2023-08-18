@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 import androidx.core.content.ContextCompat
-import com.vitorpamplona.amethyst.service.lnurl.LnWithdrawalUtil
+import com.vitorpamplona.quartz.encoders.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
