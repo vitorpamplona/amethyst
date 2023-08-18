@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace 'com.vitorpamplona.amethyst'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
-        targetSdk 33
+        targetSdk 34
         versionCode 272
         versionName "0.73.3"
 
