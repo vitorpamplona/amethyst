@@ -64,13 +64,18 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -93,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.Event
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
@@ -278,6 +284,49 @@ fun ChatroomScreen(
 
         val scope = rememberCoroutineScope()
 
+        var event by remember { mutableStateOf<Event?>(null) }
+        if (event != null) {
+            SignerDialog(
+                onClose = {
+                    event = null
+                },
+                onPost = {
+                    scope.launch(Dispatchers.IO) {
+                        val signedEvent = Event.fromJson(it)
+                        Client.send(signedEvent)
+                        LocalCache.verifyAndConsume(signedEvent, null)
+                        event = null
+                    }
+                },
+                data = event!!.toJson()
+            )
+        }
+
+        var message by remember { mutableStateOf<String?>(null) }
+        if (message != null) {
+            SignerDialog(
+                onClose = {
+                    message = null
+                },
+                onPost = {
+                    scope.launch(Dispatchers.IO) {
+                        event = accountViewModel.account.sendPrivateMessage(
+                            message = it,
+                            toUser = room.users.first(),
+                            replyingTo = replyTo.value,
+                            mentions = null,
+                            wantsToMarkAsSensitive = false,
+                            signEvent = false
+                        )
+                        message = null
+                    }
+                },
+                data = message!!,
+                pubKey = room.users.first(),
+                type = SignerType.NIP04_ENCRYPT
+            )
+        }
+
         // LAST ROW
         PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
@@ -290,13 +339,17 @@ fun ChatroomScreen(
                         wantsToMarkAsSensitive = false
                     )
                 } else {
-                    accountViewModel.account.sendPrivateMessage(
-                        message = newPostModel.message.text,
-                        toUser = room.users.first(),
-                        replyingTo = replyTo.value,
-                        mentions = null,
-                        wantsToMarkAsSensitive = false
-                    )
+                    if (!accountViewModel.isWriteable() && PackageUtils.isAmberInstalled(context)) {
+                        message = newPostModel.message.text
+                    } else {
+                        accountViewModel.account.sendPrivateMessage(
+                            message = newPostModel.message.text,
+                            toUser = room.users.first(),
+                            replyingTo = replyTo.value,
+                            mentions = null,
+                            wantsToMarkAsSensitive = false
+                        )
+                    }
                 }
 
                 newPostModel.message = TextFieldValue("")

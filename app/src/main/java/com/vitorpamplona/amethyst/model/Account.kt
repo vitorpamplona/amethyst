@@ -1069,7 +1069,8 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            privateKey = keyPair.privKey!!,
+            pubKey = keyPair.pubKey.toHexKey(),
+            privateKey = keyPair.privKey,
             advertiseNip18 = false
         )
 

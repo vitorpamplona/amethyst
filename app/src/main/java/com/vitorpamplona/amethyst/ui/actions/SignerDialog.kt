@@ -101,7 +101,7 @@ fun SignerDialog(
             }
 
             signature = it.data?.getStringExtra("signature") ?: ""
-            if (type == SignerType.NIP04_DECRYPT) {
+            if (type != SignerType.SIGN_EVENT) {
                 onPost(
                     signature
                 )

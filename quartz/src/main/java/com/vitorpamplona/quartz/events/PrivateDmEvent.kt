@@ -86,7 +86,8 @@ class PrivateDmEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: String?,
-            privateKey: ByteArray,
+            pubKey: HexKey,
+            privateKey: ByteArray?,
             createdAt: Long = TimeUtils.now(),
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
@@ -94,12 +95,12 @@ class PrivateDmEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): PrivateDmEvent {
-            val content = CryptoUtils.encryptNIP04(
-                if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
+            val message = if (advertiseNip18) { nip18Advertisement } else { "" } + msg
+            val content = if (privateKey == null) message else CryptoUtils.encryptNIP04(
+                message,
                 privateKey,
                 recipientPubKey
             )
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             publishedRecipientPubKey?.let {
                 tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
@@ -124,8 +125,8 @@ class PrivateDmEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
     }
 }
