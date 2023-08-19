@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
@@ -1045,6 +1046,14 @@ private fun RenderNoteRow(
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
 
+        is AudioTrackEvent -> {
+            RenderAudioTrack(baseNote, accountViewModel, nav)
+        }
+
+        is AudioHeaderEvent -> {
+            RenderAudioHeader(baseNote, accountViewModel, nav)
+        }
+
         is ReactionEvent -> {
             RenderReaction(baseNote, backgroundColor, accountViewModel, nav)
         }
@@ -1075,10 +1084,6 @@ private fun RenderNoteRow(
 
         is RelaySetEvent -> {
             DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is AudioTrackEvent -> {
-            RenderAudioTrack(baseNote, accountViewModel, nav)
         }
 
         is PinListEvent -> {
@@ -2252,6 +2257,17 @@ private fun RenderAudioTrack(
 }
 
 @Composable
+private fun RenderAudioHeader(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val noteEvent = note.event as? AudioHeaderEvent ?: return
+
+    AudioHeader(noteEvent, note, accountViewModel, nav)
+}
+
+@Composable
 private fun RenderLongFormContent(
     note: Note,
     accountViewModel: AccountViewModel,
@@ -3343,8 +3359,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
 
             media?.let { media ->
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(10.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     cover?.let { cover ->
                         LoadThumbAndThenVideoView(
@@ -3364,6 +3379,62 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
                         )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val media = remember { noteEvent.stream() ?: noteEvent.download() }
+    val subject = remember { noteEvent.subject()?.ifBlank { null } }
+    val content = remember { noteEvent.content().ifBlank { null } }
+
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            media?.let { media ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    VideoView(
+                        videoUri = media,
+                        title = noteEvent.subject(),
+                        authorName = note.author?.toBestDisplayName(),
+                        accountViewModel = accountViewModel,
+                        nostrUriCallback = note.toNostrUri()
+                    )
+                }
+            }
+
+            Row() {
+                subject?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            Row() {
+                content?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                        Text(
+                            text = it,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
+            DisplayUncitedHashtags(hashtags, content ?: "", nav)
         }
     }
 }

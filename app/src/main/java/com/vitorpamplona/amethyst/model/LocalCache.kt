@@ -1051,6 +1051,23 @@ object LocalCache {
         refreshObservers(note)
     }
 
+    fun consume(event: AudioHeaderEvent, relay: Relay?) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
     fun consume(event: FileHeaderEvent, relay: Relay?) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1284,7 +1301,7 @@ object LocalCache {
         }
 
         return notes.values.filter {
-            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent) &&
+            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent) &&
                 (
                     it.event?.content()?.contains(text, true) ?: false ||
                         it.event?.matchTag1With(text) ?: false ||
@@ -1292,7 +1309,7 @@ object LocalCache {
                         it.idNote().startsWith(text, true)
                     )
         } + addressables.values.filter {
-            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent) &&
+            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent) &&
                 (
                     it.event?.content()?.contains(text, true) ?: false ||
                         it.event?.matchTag1With(text) ?: false ||
@@ -1524,6 +1541,7 @@ object LocalCache {
                 is AdvertisedRelayListEvent -> consume(event)
                 is AppDefinitionEvent -> consume(event)
                 is AppRecommendationEvent -> consume(event)
+                is AudioHeaderEvent -> consume(event, relay)
                 is AudioTrackEvent -> consume(event)
                 is BadgeAwardEvent -> consume(event)
                 is BadgeDefinitionEvent -> consume(event)

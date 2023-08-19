@@ -34,6 +34,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
                     RepostEvent.kind,
                     LongTextNoteEvent.kind,
                     AudioTrackEvent.kind,
+                    AudioHeaderEvent.kind,
                     PinListEvent.kind,
                     PollNoteEvent.kind,
                     HighlightEvent.kind

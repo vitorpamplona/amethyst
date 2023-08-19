@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
@@ -73,6 +74,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     PollNoteEvent.kind,
                     HighlightEvent.kind,
                     AudioTrackEvent.kind,
+                    AudioHeaderEvent.kind,
                     PinListEvent.kind,
                     LiveActivitiesChatMessageEvent.kind,
                     LiveActivitiesEvent.kind
@@ -92,7 +94,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioHeaderEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 tags = mapOf(
                     "t" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
@@ -112,7 +114,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioHeaderEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 tags = mapOf(
                     "g" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
@@ -137,6 +139,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     LongTextNoteEvent.kind,
                     ClassifiedsEvent.kind,
                     HighlightEvent.kind,
+                    AudioHeaderEvent.kind,
                     AudioTrackEvent.kind,
                     PinListEvent.kind,
                     CommunityPostApprovalEvent.kind
