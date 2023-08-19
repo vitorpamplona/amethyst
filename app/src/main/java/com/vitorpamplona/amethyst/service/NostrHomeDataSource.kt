@@ -57,10 +57,10 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         val follows = account.selectedUsersFollowList(account.defaultHomeFollowList)
 
         val followKeys = follows?.map {
-            it.substring(0, 6)
+            it.substring(0, 8)
         }
 
-        val followSet = followKeys?.plus(account.userProfile().pubkeyHex.substring(0, 6))
+        val followSet = followKeys?.plus(account.userProfile().pubkeyHex.substring(0, 8))
 
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
