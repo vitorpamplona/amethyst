@@ -605,11 +605,11 @@ private fun pollCurrentDuration(controller: MediaController) = flow {
 fun Waveform(
     waveform: ImmutableList<Int>,
     controller: MediaController,
-    align: Modifier
+    modifier: Modifier
 ) {
     val waveformProgress = remember { mutableStateOf(0F) }
 
-    DrawWaveform(waveform, waveformProgress, align)
+    DrawWaveform(waveform, waveformProgress, modifier)
 
     val restartFlow = remember {
         mutableStateOf(0)
@@ -641,9 +641,9 @@ fun Waveform(
 }
 
 @Composable
-fun DrawWaveform(waveform: ImmutableList<Int>, waveformProgress: MutableState<Float>, align: Modifier) {
+fun DrawWaveform(waveform: ImmutableList<Int>, waveformProgress: MutableState<Float>, modifier: Modifier) {
     AudioWaveformReadOnly(
-        modifier = align.padding(start = 10.dp, end = 10.dp),
+        modifier = modifier.padding(start = 10.dp, end = 10.dp),
         amplitudes = waveform,
         progress = waveformProgress.value,
         progressBrush = Brush.infiniteLinearGradient(
