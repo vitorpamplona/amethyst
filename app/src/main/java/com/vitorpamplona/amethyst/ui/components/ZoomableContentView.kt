@@ -181,6 +181,7 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 fun ZoomableContentView(
     content: ZoomableContent,
     images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
+    roundedCorner: Boolean,
     accountViewModel: AccountViewModel
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -190,7 +191,11 @@ fun ZoomableContentView(
         mutableStateOf(false)
     }
 
-    var mainImageModifier = MaterialTheme.colors.imageModifier
+    var mainImageModifier = if (roundedCorner) {
+        MaterialTheme.colors.imageModifier
+    } else {
+        Modifier.fillMaxWidth()
+    }
 
     if (content is ZoomableUrlContent) {
         mainImageModifier = mainImageModifier.combinedClickable(
@@ -215,6 +220,7 @@ fun ZoomableContentView(
             title = content.description,
             artworkUri = content.artworkUri,
             authorName = content.authorName,
+            roundedCorner = roundedCorner,
             nostrUriCallback = content.uri,
             onDialog = { dialogOpen = true },
             accountViewModel = accountViewModel
@@ -228,6 +234,7 @@ fun ZoomableContentView(
                     title = content.description,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
+                    roundedCorner = roundedCorner,
                     nostrUriCallback = content.uri,
                     onDialog = { dialogOpen = true },
                     accountViewModel = accountViewModel
@@ -624,11 +631,11 @@ fun ZoomableImageDialog(
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index], accountViewModel)
+                            RenderImageOrVideo(allImages[index], false, accountViewModel)
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl, accountViewModel)
+                    RenderImageOrVideo(imageUrl, false, accountViewModel)
                 }
 
                 Row(
@@ -656,7 +663,7 @@ fun ZoomableImageDialog(
 }
 
 @Composable
-private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel) {
+private fun RenderImageOrVideo(content: ZoomableContent, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
@@ -670,6 +677,7 @@ private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: Accou
                 title = content.description,
                 artworkUri = content.artworkUri,
                 authorName = content.authorName,
+                roundedCorner = roundedCorner,
                 accountViewModel = accountViewModel,
                 alwaysShowVideo = true
             )
@@ -684,6 +692,7 @@ private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: Accou
                     title = content.description,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
+                    roundedCorner = roundedCorner,
                     accountViewModel = accountViewModel,
                     alwaysShowVideo = true
                 )

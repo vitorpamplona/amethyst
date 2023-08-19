@@ -377,9 +377,9 @@ fun NoteMaster(
                             nav = nav
                         )
                     } else if (noteEvent is FileHeaderEvent) {
-                        FileHeaderDisplay(baseNote, accountViewModel)
+                        FileHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
-                        FileStorageHeaderDisplay(baseNote, accountViewModel)
+                        FileStorageHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {

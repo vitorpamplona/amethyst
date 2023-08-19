@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -88,6 +90,7 @@ fun LoadThumbAndThenVideoView(
     title: String? = null,
     thumbUri: String,
     authorName: String? = null,
+    roundedCorner: Boolean,
     nostrUriCallback: String? = null,
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null
@@ -119,6 +122,7 @@ fun LoadThumbAndThenVideoView(
                 videoUri = videoUri,
                 title = title,
                 thumb = VideoThumb(loadingFinished.second),
+                roundedCorner = roundedCorner,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -130,6 +134,7 @@ fun LoadThumbAndThenVideoView(
                 videoUri = videoUri,
                 title = title,
                 thumb = null,
+                roundedCorner = roundedCorner,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -145,6 +150,7 @@ fun VideoView(
     videoUri: String,
     title: String? = null,
     thumb: VideoThumb? = null,
+    roundedCorner: Boolean,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -160,6 +166,7 @@ fun VideoView(
         defaultToStart,
         title,
         thumb,
+        roundedCorner,
         waveform,
         artworkUri,
         authorName,
@@ -177,6 +184,7 @@ fun VideoViewInner(
     defaultToStart: Boolean = false,
     title: String? = null,
     thumb: VideoThumb? = null,
+    roundedCorner: Boolean,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -231,7 +239,16 @@ fun VideoViewInner(
                 defaultToStart = defaultToStart,
                 nostrUriCallback = nostrUriCallback
             ) { controller, keepPlaying ->
-                RenderVideoPlayer(controller, thumb, waveform, keepPlaying, automaticallyStartPlayback, activeOnScreen, onDialog)
+                RenderVideoPlayer(
+                    controller = controller,
+                    thumbData = thumb,
+                    roundedCorner = roundedCorner,
+                    waveform = waveform,
+                    keepPlaying = keepPlaying,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
+                    activeOnScreen = activeOnScreen,
+                    onDialog = onDialog
+                )
             }
         }
     }
@@ -483,6 +500,7 @@ data class VideoThumb(
 private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
+    roundedCorner: Boolean,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
@@ -499,10 +517,15 @@ private fun RenderVideoPlayer(
 
     BoxWithConstraints() {
         AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = 100.dp)
-                .align(Alignment.Center),
+            modifier = if (roundedCorner) {
+                MaterialTheme.colors.imageModifier
+                    .defaultMinSize(minHeight = 100.dp)
+                    .align(Alignment.Center)
+            } else {
+                Modifier.fillMaxWidth()
+                    .defaultMinSize(minHeight = 100.dp)
+                    .align(Alignment.Center)
+            },
             factory = {
                 PlayerView(context).apply {
                     player = controller
@@ -620,7 +643,7 @@ fun Waveform(
 @Composable
 fun DrawWaveform(waveform: ImmutableList<Int>, waveformProgress: MutableState<Float>, align: Modifier) {
     AudioWaveformReadOnly(
-        modifier = align,
+        modifier = align.padding(start = 10.dp, end = 10.dp),
         amplitudes = waveform,
         progress = waveformProgress.value,
         progressBrush = Brush.infiniteLinearGradient(

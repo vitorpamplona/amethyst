@@ -241,6 +241,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
             postViewModel.galleryUri?.let {
                 VideoView(
                     videoUri = it.toString(),
+                    roundedCorner = false,
                     accountViewModel = accountViewModel
                 )
             }

@@ -385,7 +385,7 @@ fun NewPostView(
                                                     )
                                             )
                                         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                            VideoView(myUrlPreview, accountViewModel = accountViewModel)
+                                            VideoView(myUrlPreview, roundedCorner = true, accountViewModel = accountViewModel)
                                         } else {
                                             UrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
                                         }
@@ -1365,7 +1365,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri.toString(), accountViewModel = accountViewModel)
+                    VideoView(uri.toString(), roundedCorner = true, accountViewModel = accountViewModel)
                 }
             }
 

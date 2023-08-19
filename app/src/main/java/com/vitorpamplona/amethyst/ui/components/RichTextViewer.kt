@@ -287,7 +287,7 @@ private fun ZoomableContentView(
 ) {
     state.imagesForPager[word]?.let {
         Box(modifier = HalfVertPadding) {
-            ZoomableContentView(it, state.imageList, accountViewModel)
+            ZoomableContentView(it, state.imageList, roundedCorner = true, accountViewModel)
         }
     }
 }
