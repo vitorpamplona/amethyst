@@ -1,6 +1,7 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -18,7 +19,9 @@ class AudioHeaderEvent(
 
     fun download() = tags.firstOrNull { it.size > 1 && it[0] == DOWNLOAD_URL }?.get(1)
     fun stream() = tags.firstOrNull { it.size > 1 && it[0] == STREAM_URL }?.get(1)
-    fun wavefrom() = tags.firstOrNull { it.size > 1 && it[0] == WAVEFORM }?.get(1)
+    fun wavefrom() = tags.firstOrNull { it.size > 1 && it[0] == WAVEFORM }?.get(1)?.let {
+        mapper.readValue<List<Int>>(it)
+    }
 
     companion object {
         const val kind = 1808

@@ -3386,6 +3386,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
 @Composable
 fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
+    val waveform = remember { noteEvent.wavefrom()?.toImmutableList()?.ifEmpty { null } }
     val subject = remember { noteEvent.subject()?.ifBlank { null } }
     val content = remember { noteEvent.content().ifBlank { null } }
 
@@ -3397,6 +3398,7 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
                 ) {
                     VideoView(
                         videoUri = media,
+                        waveform = waveform,
                         title = noteEvent.subject(),
                         authorName = note.author?.toBestDisplayName(),
                         accountViewModel = accountViewModel,

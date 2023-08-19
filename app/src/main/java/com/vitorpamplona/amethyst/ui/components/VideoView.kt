@@ -9,6 +9,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -34,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -54,6 +58,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.PlaybackClientController
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
@@ -66,8 +71,11 @@ import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.abs
@@ -137,6 +145,7 @@ fun VideoView(
     videoUri: String,
     title: String? = null,
     thumb: VideoThumb? = null,
+    waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
     nostrUriCallback: String? = null,
@@ -151,6 +160,7 @@ fun VideoView(
         defaultToStart,
         title,
         thumb,
+        waveform,
         artworkUri,
         authorName,
         nostrUriCallback,
@@ -167,6 +177,7 @@ fun VideoViewInner(
     defaultToStart: Boolean = false,
     title: String? = null,
     thumb: VideoThumb? = null,
+    waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
     nostrUriCallback: String? = null,
@@ -220,7 +231,7 @@ fun VideoViewInner(
                 defaultToStart = defaultToStart,
                 nostrUriCallback = nostrUriCallback
             ) { controller, keepPlaying ->
-                RenderVideoPlayer(controller, thumb, keepPlaying, automaticallyStartPlayback, activeOnScreen, onDialog)
+                RenderVideoPlayer(controller, thumb, waveform, keepPlaying, automaticallyStartPlayback, activeOnScreen, onDialog)
             }
         }
     }
@@ -472,6 +483,7 @@ data class VideoThumb(
 private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
+    waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     activeOnScreen: MutableState<Boolean>,
@@ -489,7 +501,7 @@ private fun RenderVideoPlayer(
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 70.dp)
+                .defaultMinSize(minHeight = 100.dp)
                 .align(Alignment.Center),
             factory = {
                 PlayerView(context).apply {
@@ -517,6 +529,10 @@ private fun RenderVideoPlayer(
                 }
             }
         )
+
+        waveform?.let {
+            Waveform(it, controller, Modifier.align(Alignment.Center))
+        }
 
         val startingMuteState = remember(controller) {
             controller.volume < 0.001
@@ -553,6 +569,69 @@ private fun RenderVideoPlayer(
             keepPlaying.value = newKeepPlaying
         }
     }
+}
+
+private fun pollCurrentDuration(controller: MediaController) = flow {
+    while (controller.currentPosition <= controller.duration) {
+        emit(controller.currentPosition / controller.duration.toFloat())
+        delay(100)
+    }
+}.conflate()
+
+@Composable
+fun Waveform(
+    waveform: ImmutableList<Int>,
+    controller: MediaController,
+    align: Modifier
+) {
+    val waveformProgress = remember { mutableStateOf(0F) }
+
+    DrawWaveform(waveform, waveformProgress, align)
+
+    val restartFlow = remember {
+        mutableStateOf(0)
+    }
+
+    // Keeps the screen on while playing and viewing videos.
+    DisposableEffect(key1 = controller) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                // doesn't consider the mutex because the screen can turn off if the video
+                // being played in the mutex is not visible.
+                if (isPlaying) {
+                    restartFlow.value += 1
+                }
+            }
+        }
+
+        controller.addListener(listener)
+        onDispose {
+            controller.removeListener(listener)
+        }
+    }
+
+    LaunchedEffect(key1 = restartFlow.value) {
+        pollCurrentDuration(controller).collect() { value ->
+            waveformProgress.value = value
+        }
+    }
+}
+
+@Composable
+fun DrawWaveform(waveform: ImmutableList<Int>, waveformProgress: MutableState<Float>, align: Modifier) {
+    AudioWaveformReadOnly(
+        modifier = align,
+        amplitudes = waveform,
+        progress = waveformProgress.value,
+        progressBrush = Brush.infiniteLinearGradient(
+            colors = listOf(Color(0xff2598cf), Color(0xff652d80)),
+            animation = tween(durationMillis = 6000, easing = LinearEasing),
+            width = 128F
+        ),
+        onProgressChange = {
+            waveformProgress.value = it
+        }
+    )
 }
 
 @Composable
