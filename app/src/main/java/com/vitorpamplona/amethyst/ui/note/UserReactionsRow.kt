@@ -191,7 +191,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         takenIntoAccount.add(noteEvent.id())
                     }
                 } else if (noteEvent is LnZapEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                    if (noteEvent.isTaggedUser(currentUser)) { // the user might be sending his own receipts noteEvent.pubKey != currentUser
                         val netDate = formatDate(noteEvent.createdAt)
                         zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id())
@@ -245,7 +245,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         hasNewElements = true
                     }
                 } else if (noteEvent is LnZapEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                    if (noteEvent.isTaggedUser(currentUser)) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
                         val netDate = formatDate(noteEvent.createdAt)
                         zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id())
