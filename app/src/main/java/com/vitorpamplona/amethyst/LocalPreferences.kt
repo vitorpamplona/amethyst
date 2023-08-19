@@ -318,10 +318,12 @@ object LocalPreferences {
             }?.ifEmpty { listOf("+") } ?: listOf("+")
 
             val defaultZapType = getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
+                println("ZapType: $serverName")
                 LnZapEvent.ZapType.values().first { it.name == serverName }
             } ?: LnZapEvent.ZapType.PUBLIC
 
             val defaultFileServer = getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
+                println("FileServer: $serverName")
                 ServersAvailable.values().first { it.name == serverName }
             } ?: ServersAvailable.NOSTR_BUILD
 
