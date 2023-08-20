@@ -38,7 +38,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
 
     private fun innerApplyFilter(collection: Collection<Note>, ignoreAddressables: Boolean): Set<Note> {
         val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
-        val gRelays = account.convertGlobalRelays()
+        val gRelays = account.activeGlobalRelays()
         val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()

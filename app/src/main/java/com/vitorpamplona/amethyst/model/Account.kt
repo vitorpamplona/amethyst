@@ -1616,8 +1616,8 @@ class Account(
         }.toTypedArray()
     }
 
-    fun convertGlobalRelays(): Array<String> {
-        return localRelays.filter { it.feedTypes.contains(FeedType.GLOBAL) }
+    fun activeGlobalRelays(): Array<String> {
+        return (activeRelays() ?: convertLocalRelays()).filter { it.activeTypes.contains(FeedType.GLOBAL) }
             .map { it.url }
             .toTypedArray()
     }
