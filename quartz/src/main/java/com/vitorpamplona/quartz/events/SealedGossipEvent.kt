@@ -20,7 +20,7 @@ class SealedGossipEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+): WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     @Transient
     private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
@@ -30,6 +30,10 @@ class SealedGossipEvent(
 
         val gossip = unseal(privKey = privKey)
         val event = gossip?.mergeWith(this)
+        if (event is WrappedEvent) {
+            event.host = host ?: this
+        }
+
         cachedInnerEvent = cachedInnerEvent + Pair(hex, event)
         return event
     }

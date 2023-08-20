@@ -452,7 +452,13 @@ class Account(
 
     fun broadcast(note: Note) {
         note.event?.let {
-            Client.send(it)
+            if (it is WrappedEvent && it.host != null) {
+                it.host?.let { hostEvent ->
+                    Client.send(hostEvent)
+                }
+            } else {
+                Client.send(it)
+            }
         }
     }
 
