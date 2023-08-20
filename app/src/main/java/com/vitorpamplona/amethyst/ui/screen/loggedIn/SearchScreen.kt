@@ -195,6 +195,11 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
         }
     }
 
+    override fun onCleared() {
+        bundler.cancel()
+        super.onCleared()
+    }
+
     fun isSearchingFun() = searchValue.isNotBlank()
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

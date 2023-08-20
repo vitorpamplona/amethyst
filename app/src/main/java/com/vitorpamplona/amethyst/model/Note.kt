@@ -615,6 +615,7 @@ open class Note(val idHex: String) {
 
     fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
+            liveSet?.destroy()
             liveSet = null
         }
     }
@@ -656,11 +657,25 @@ class NoteLiveSet(u: Note) {
             relays.hasObservers() ||
             zaps.hasObservers()
     }
+
+    fun destroy() {
+        metadata.destroy()
+        reactions.destroy()
+        boosts.destroy()
+        replies.destroy()
+        reports.destroy()
+        relays.destroy()
+        zaps.destroy()
+    }
 }
 
 class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
+
+    fun destroy() {
+        bundler.cancel()
+    }
 
     fun invalidateData() {
         if (!hasObservers()) return

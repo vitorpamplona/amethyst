@@ -326,6 +326,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
     override fun onCleared() {
         collectorJob?.cancel()
+        bundlerInsert.cancel()
         super.onCleared()
     }
 

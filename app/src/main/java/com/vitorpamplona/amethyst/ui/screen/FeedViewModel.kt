@@ -340,6 +340,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     override fun onCleared() {
+        bundlerInsert.cancel()
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }
