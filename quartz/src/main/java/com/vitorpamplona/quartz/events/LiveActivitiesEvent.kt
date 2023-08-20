@@ -40,6 +40,10 @@ class LiveActivitiesEvent(
         }
     }
 
+    fun participantsIntersect(keySet: Set<String>): Boolean {
+        return tags.any { it.size > 1 && it[0] == "p" && it[1] in keySet }
+    }
+
     companion object {
         const val kind = 30311
 
