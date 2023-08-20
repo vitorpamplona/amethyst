@@ -11,6 +11,7 @@ buildscript {
         coil_version = '2.4.0'
         vico_version = '1.7.3'
         exoplayer_version = '1.1.0'
+        media3_version = '1.1.0'
     }
     dependencies {
         classpath 'com.google.gms:google-services:4.3.15'
