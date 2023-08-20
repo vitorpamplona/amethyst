@@ -15,7 +15,12 @@ class ThreadAssembler {
         testedNotes.add(note)
 
         val markedAsRoot = note.event?.tags()?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1)
-        if (markedAsRoot != null) return LocalCache.checkGetOrCreateNote(markedAsRoot)
+        if (markedAsRoot != null) {
+            // Check to ssee if there is an error in the tag and the root has replies
+            if (LocalCache.getNoteIfExists(markedAsRoot)?.replyTo?.isEmpty() == true) {
+                return LocalCache.checkGetOrCreateNote(markedAsRoot)
+            }
+        }
 
         val hasNoReplyTo = note.replyTo?.firstOrNull { it.replyTo?.isEmpty() == true }
         if (hasNoReplyTo != null) return hasNoReplyTo

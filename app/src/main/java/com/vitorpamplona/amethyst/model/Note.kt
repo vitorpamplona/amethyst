@@ -129,12 +129,14 @@ open class Note(val idHex: String) {
             return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
-        val mySignature = replyTo
-            .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
-            .map {
-                cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
-            }
-            .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(createdAt() ?: 0) + ";"
+        val mySignature = (
+            replyTo
+                .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
+                .map {
+                    cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
+                }
+                .maxByOrNull { it.length }?.removeSuffix(";") ?: ""
+            ) + "/" + formattedDateTime(createdAt() ?: 0) + ";"
 
         cachedSignatures[this] = mySignature
         return mySignature
