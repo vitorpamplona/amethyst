@@ -103,7 +103,7 @@
     <string name="uploading">Uploading…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address setup to receive sats</string>
     <string name="reply_here">"reply here.. "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copy Channel ID (Note) to the Clipboard</string>
     <string name="edits_the_channel_metadata">Edits the Channel Metadata</string>
     <string name="join">Join</string>
@@ -544,4 +544,6 @@
     <string name="automatically_show_url_preview_description">Show URL previews</string>
     <string name="load_image_description">When to load images</string>
 
+    <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
+    <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
 </resources>

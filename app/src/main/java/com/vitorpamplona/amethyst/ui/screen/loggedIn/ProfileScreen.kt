@@ -685,9 +685,6 @@ private fun ProfileHeader(
                 ) {
                     MessageButton(baseUser, accountViewModel, nav)
 
-                    // No need for this button anymore
-                    // NPubCopyButton(baseUser)
-
                     ProfileActions(baseUser, accountViewModel)
                 }
             }
