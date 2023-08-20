@@ -790,6 +790,23 @@ class Account(
 
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
+
+        // broadcast replied notes
+        replyingTo?.let {
+            LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
+        replyTo?.forEach {
+            it.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
+        addresses?.forEach {
+            LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
     }
 
     fun sendPoll(
@@ -832,6 +849,17 @@ class Account(
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
+
+        replyTo?.forEach {
+            it.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
+        addresses?.forEach {
+            LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
     }
 
     fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
