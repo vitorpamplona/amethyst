@@ -49,8 +49,8 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
-val GLOBAL_FOLLOWS = " Global "
-val KIND3_FOLLOWS = " All Follows "
+val GLOBAL_FOLLOWS = " Global " // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val KIND3_FOLLOWS = " All Follows " // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
