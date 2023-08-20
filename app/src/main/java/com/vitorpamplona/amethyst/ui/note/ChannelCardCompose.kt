@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -361,6 +363,10 @@ fun InnerChannelCardWithReactions(
             )
         }
     }
+
+    Divider(
+        thickness = DividerThickness
+    )
 }
 
 @Composable

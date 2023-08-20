@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -159,6 +161,10 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
 
             NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
         }
+
+        Divider(
+            thickness = DividerThickness
+        )
     }
 }
 
