@@ -95,7 +95,7 @@ fun LoadRedirectScreen(baseNote: Note, accountViewModel: AccountViewModel, nav: 
                 nav("Channel/${note.idHex}")
             } else if (event is ChatroomKeyable) {
                 note.author?.let {
-                    val withKey = (note.event as ChatroomKeyable)
+                    val withKey = (event as ChatroomKeyable)
                         .chatroomKey(accountViewModel.userProfile().pubkeyHex)
 
                     withContext(Dispatchers.IO) {
