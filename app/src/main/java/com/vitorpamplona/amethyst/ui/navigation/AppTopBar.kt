@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AppBarDefaults
 import androidx.compose.material.ContentAlpha
 import androidx.compose.material.Divider
@@ -108,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowVideoStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
@@ -231,7 +234,9 @@ private fun CommunityTopBar(
                     ShortCommunityHeader(baseNote, fontWeight = FontWeight.Medium, accountViewModel, nav)
                 },
                 extendableRow = {
-                    LongCommunityHeader(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        LongCommunityHeader(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
+                    }
                 },
                 popBack = navPopBack
             )
@@ -698,6 +703,7 @@ fun FlexibleTopBarWithBackButton(
             },
             actions = {}
         )
+        Spacer(modifier = HalfVertSpacer)
         Divider(thickness = 0.25.dp)
     }
 }

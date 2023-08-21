@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
@@ -536,7 +538,14 @@ fun CommunityHeader(
             )
 
             if (expanded.value) {
-                LongCommunityHeader(baseNote = baseNote, lineModifier = modifier, accountViewModel = accountViewModel, nav = nav)
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    LongCommunityHeader(
+                        baseNote = baseNote,
+                        lineModifier = modifier,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
             }
         }
 
@@ -561,8 +570,25 @@ fun LongCommunityHeader(
     Row(
         lineModifier
     ) {
+        val rulesLabel = stringResource(id = R.string.rules)
         val summary = remember(noteState) {
-            noteEvent.description()?.ifBlank { null }
+            val subject = noteEvent.subject()?.ifEmpty { null }
+            val body = noteEvent.description()?.ifBlank { null }
+            val rules = noteEvent.rules()?.ifBlank { null }
+
+            if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
+                if (rules == null) {
+                    "## $subject\n$body"
+                } else {
+                    "## $subject\n$body\n\n## $rulesLabel\n\n$rules"
+                }
+            } else {
+                if (rules == null) {
+                    body
+                } else {
+                    "$body\n\n$rulesLabel\n$rules"
+                }
+            }
         }
 
         Column(
@@ -593,31 +619,6 @@ fun LongCommunityHeader(
                 Spacer(DoubleHorzSpacer)
                 LongCommunityActionOptions(baseNote, accountViewModel, nav)
             }
-        }
-    }
-
-    val rules = remember(noteState) {
-        noteEvent.rules()?.ifBlank { null }
-    }
-
-    rules?.let {
-        Row(
-            lineModifier
-        ) {
-            val defaultBackground = MaterialTheme.colors.background
-            val background = remember {
-                mutableStateOf(defaultBackground)
-            }
-            val tags = remember(noteEvent) { noteEvent.tags().toImmutableListOfLists() }
-
-            TranslatableRichTextViewer(
-                content = it,
-                canPreview = false,
-                tags = tags,
-                backgroundColor = background,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
         }
     }
 
