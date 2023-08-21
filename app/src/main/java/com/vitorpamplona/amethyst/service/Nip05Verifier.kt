@@ -2,10 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
@@ -26,55 +23,46 @@ class Nip05Verifier() {
         return null
     }
 
-    fun fetchNip05Json(nip05address: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            fetchNip05JsonSuspend(nip05address, onSuccess, onError)
-        }
-    }
-
-    private suspend fun fetchNip05JsonSuspend(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    suspend fun fetchNip05Json(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) = withContext(Dispatchers.IO) {
         checkNotInMainThread()
 
         val url = assembleUrl(nip05)
 
         if (url == null) {
             onError("Could not assemble url from Nip05: \"${nip05}\". Check the user's setup")
-            return
+            return@withContext
         }
 
-        withContext(Dispatchers.IO) {
-            try {
-                val request = Request.Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                    .url(url)
-                    .build()
+        try {
+            val request = Request.Builder()
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .url(url)
+                .build()
 
-                HttpClient.getHttpClient().newCall(request).enqueue(object : Callback {
-                    override fun onResponse(call: Call, response: Response) {
-                        checkNotInMainThread()
+            HttpClient.getHttpClient().newCall(request).enqueue(object : Callback {
+                override fun onResponse(call: Call, response: Response) {
+                    checkNotInMainThread()
 
-                        response.use {
-                            if (it.isSuccessful) {
-                                onSuccess(it.body.string())
-                            } else {
-                                onError("Could not resolve $nip05. Error: ${it.code}. Check if the server up and if the address $nip05 is correct")
-                            }
+                    response.use {
+                        if (it.isSuccessful) {
+                            onSuccess(it.body.string())
+                        } else {
+                            onError("Could not resolve $nip05. Error: ${it.code}. Check if the server up and if the address $nip05 is correct")
                         }
                     }
+                }
 
-                    override fun onFailure(call: Call, e: java.io.IOException) {
-                        onError("Could not resolve $url. Check if the server up and if the address $nip05 is correct")
-                        e.printStackTrace()
-                    }
-                })
-            } catch (e: java.lang.Exception) {
-                onError("Could not resolve '$url': ${e.message}")
-            }
+                override fun onFailure(call: Call, e: java.io.IOException) {
+                    onError("Could not resolve $url. Check if the server up and if the address $nip05 is correct")
+                    e.printStackTrace()
+                }
+            })
+        } catch (e: java.lang.Exception) {
+            onError("Could not resolve '$url': ${e.message}")
         }
     }
 
-    fun verifyNip05(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    suspend fun verifyNip05(nip05: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         // check fails on tests
         checkNotInMainThread()
 

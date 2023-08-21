@@ -2,11 +2,13 @@ package com.vitorpamplona.amethyst.service
 
 import android.os.Looper
 import io.mockk.MockKAnnotations
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.SpyK
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -30,7 +32,7 @@ class Nip05VerifierTest {
     }
 
     @Test
-    fun `test with matching case on user name`() {
+    fun `test with matching case on user name`() = runBlocking {
         // Set-up
         val userNameToTest = ALL_UPPER_CASE_USER_NAME
         val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
@@ -41,7 +43,7 @@ class Nip05VerifierTest {
             "  }\n" +
             "}"
 
-        every { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers {
+        coEvery { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers {
             secondArg<(String) -> Unit>().invoke(nostrJson)
         }
 
@@ -64,7 +66,7 @@ class Nip05VerifierTest {
     }
 
     @Test
-    fun `test with NOT matching case on user name`() {
+    fun `test with NOT matching case on user name`() = runBlocking {
         // Set-up
         val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
 
@@ -73,7 +75,7 @@ class Nip05VerifierTest {
             "    \"$ALL_UPPER_CASE_USER_NAME\": \"$expectedPubKey\" \n" +
             "  }\n" +
             "}"
-        every { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers {
+        coEvery { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers {
             secondArg<(String) -> Unit>().invoke(nostrJson)
         }
 

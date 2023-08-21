@@ -18,7 +18,6 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,8 +63,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             refreshSuspended()
         }
     }
@@ -87,8 +85,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     }
 
     private fun updateFeed(notes: ImmutableList<User>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { UserFeedState.Empty }

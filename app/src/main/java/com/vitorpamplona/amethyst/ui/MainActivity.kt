@@ -97,7 +97,9 @@ class MainActivity : AppCompatActivity() {
             ServiceManager.start(this@MainActivity)
         }
 
-        PushNotificationUtils().init(LocalPreferences.allSavedAccounts())
+        GlobalScope.launch(Dispatchers.IO) {
+            PushNotificationUtils().init(LocalPreferences.allSavedAccounts())
+        }
     }
 
     override fun onPause() {

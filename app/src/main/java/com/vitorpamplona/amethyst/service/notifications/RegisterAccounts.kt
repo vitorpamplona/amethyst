@@ -6,10 +6,8 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.events.RelayAuthEvent
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -64,12 +62,9 @@ class RegisterAccounts(
         }
     }
 
-    fun go(notificationToken: String) {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            postRegistrationEvent(
-                signEventsToProveControlOfAccounts(accounts, notificationToken)
-            )
-        }
+    suspend fun go(notificationToken: String) = withContext(Dispatchers.IO) {
+        postRegistrationEvent(
+            signEventsToProveControlOfAccounts(accounts, notificationToken)
+        )
     }
 }

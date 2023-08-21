@@ -4,18 +4,11 @@ import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
  */
 object RelayPool : Relay.Listener {
-
-    val scope = CoroutineScope(Job() + Dispatchers.IO)
-
     private var relays = listOf<Relay>()
     private var listeners = setOf<Listener>()
 
@@ -136,9 +129,7 @@ object RelayPool : Relay.Listener {
     val live: RelayPoolLiveData = RelayPoolLiveData(this)
 
     private fun refreshObservers() {
-        scope.launch {
-            live.refresh()
-        }
+        live.refresh()
     }
 }
 
