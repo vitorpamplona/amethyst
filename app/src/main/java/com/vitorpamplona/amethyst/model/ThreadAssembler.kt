@@ -22,7 +22,7 @@ class ThreadAssembler {
             }
         }
 
-        val hasNoReplyTo = note.replyTo?.firstOrNull { it.replyTo?.isEmpty() == true }
+        val hasNoReplyTo = note.replyTo?.reversed()?.firstOrNull { it.replyTo?.isEmpty() == true }
         if (hasNoReplyTo != null) return hasNoReplyTo
 
         // recursive
