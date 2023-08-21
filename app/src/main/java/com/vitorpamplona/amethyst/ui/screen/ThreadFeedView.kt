@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -376,13 +377,15 @@ fun NoteMaster(
                             nav = nav
                         )
                     } else if (noteEvent is FileHeaderEvent) {
-                        FileHeaderDisplay(baseNote, accountViewModel)
+                        FileHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
-                        FileStorageHeaderDisplay(baseNote, accountViewModel)
+                        FileStorageHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, baseNote, accountViewModel, nav)
+                    } else if (noteEvent is AudioHeaderEvent) {
+                        AudioHeader(noteEvent, baseNote, accountViewModel, nav)
                     } else if (noteEvent is CommunityPostApprovalEvent) {
                         RenderPostApproval(
                             baseNote,

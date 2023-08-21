@@ -30,6 +30,7 @@ private typealias Int5 = Byte
  */
 object Bech32 {
     const val alphabet: String = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+    const val alphabetUpperCase: String = "QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L"
 
     enum class Encoding(public val constant: Int) {
         Bech32(1),
@@ -44,20 +45,26 @@ object Bech32 {
         for (i in 0..alphabet.lastIndex) {
             map[alphabet[i].code] = i.toByte()
         }
-    }
-
-    private fun expand(hrp: String): Array<Int5> {
-        val result = Array<Int5>(hrp.length + 1 + hrp.length) { 0 }
-        for (i in hrp.indices) {
-            result[i] = hrp[i].code.shr(5).toByte()
-            result[hrp.length + 1 + i] = (hrp[i].code and 31).toByte()
+        for (i in 0..alphabetUpperCase.lastIndex) {
+            map[alphabetUpperCase[i].code] = i.toByte()
         }
-        result[hrp.length] = 0
-        return result
     }
 
-    private fun polymod(values: Array<Int5>, values1: Array<Int5>): Int {
-        val GEN = arrayOf(0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
+    fun expand(hrp: String): Array<Int5> {
+        val half = hrp.length + 1
+        val size = half + hrp.length
+        return Array<Int5>(size) {
+            when (it) {
+                in hrp.indices -> hrp[it].code.shr(5).toByte()
+                in half until size -> (hrp[it - half].code and 31).toByte()
+                else -> 0
+            }
+        }
+    }
+
+    private val GEN = arrayOf(0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
+
+    fun polymod(values: Array<Int5>, values1: Array<Int5>): Int {
         var chk = 1
         values.forEach { v ->
             val b = chk shr 25
@@ -83,14 +90,18 @@ object Bech32 {
      * @return hrp + data encoded as a Bech32 string
      */
     @JvmStatic
-    public fun encode(hrp: String, int5s: Array<Int5>, encoding: Encoding): String {
+    public fun encode(hrp: String, int5s: ArrayList<Int5>, encoding: Encoding): String {
         require(hrp.lowercase() == hrp || hrp.uppercase() == hrp) { "mixed case strings are not valid bech32 prefixes" }
-        val data = int5s.toByteArray().toTypedArray()
-        val checksum = when (encoding) {
-            Encoding.Beck32WithoutChecksum -> arrayOf()
-            else -> checksum(hrp, data, encoding)
+        val dataWithChecksum = when (encoding) {
+            Encoding.Beck32WithoutChecksum -> int5s
+            else -> addChecksum(hrp, int5s, encoding)
         }
-        return hrp + "1" + (data + checksum).map { i -> alphabet[i.toInt()] }.toCharArray().concatToString()
+
+        val charArray = CharArray(dataWithChecksum.size) {
+            alphabet[dataWithChecksum[it].toInt()]
+        }.concatToString()
+
+        return hrp + "1" + charArray
     }
 
     /**
@@ -110,14 +121,21 @@ object Bech32 {
      */
     @JvmStatic
     public fun decode(bech32: String, noChecksum: Boolean = false): Triple<String, Array<Int5>, Encoding> {
-        require(bech32.lowercase() == bech32 || bech32.uppercase() == bech32) { "mixed case strings are not valid bech32" }
-        bech32.forEach { require(it.code in 33..126) { "invalid character " } }
-        val input = bech32.lowercase()
-        val pos = input.lastIndexOf('1')
-        val hrp = input.take(pos)
+        var pos = 0
+        bech32.forEachIndexed { index, char ->
+            require( char.code in 33..126 ) { "invalid character ${char}" }
+            if (char == '1') {
+                pos = index
+            }
+        }
+
+        val hrp = bech32.take(pos)
         require(hrp.length in 1..83) { "hrp must contain 1 to 83 characters" }
-        val data = Array<Int5>(input.length - pos - 1) { 0 }
-        for (i in 0..data.lastIndex) data[i] = map[input[pos + 1 + i].code]
+
+        val data = Array(bech32.length - pos - 1) {
+            map[bech32[pos + 1 + it].code]
+        }
+
         return if (noChecksum) {
             Triple(hrp, data, Encoding.Beck32WithoutChecksum)
         } else {
@@ -126,7 +144,7 @@ object Bech32 {
                 Encoding.Bech32m.constant -> Encoding.Bech32m
                 else -> throw IllegalArgumentException("invalid checksum for $bech32")
             }
-            Triple(hrp, data.dropLast(6).toTypedArray(), encoding)
+            Triple(hrp, data.copyOfRange(0, data.size-6), encoding)
         }
     }
 
@@ -142,16 +160,23 @@ object Bech32 {
         return Triple(hrp, five2eight(int5s, 0), encoding)
     }
 
+    val ZEROS = arrayOf(0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte())
+
     /**
      * @param hrp Human Readable Part
      * @param data data (a sequence of 5 bits integers)
      * @param encoding encoding to use (bech32 or bech32m)
      * @return a checksum computed over hrp and data
      */
-    private fun checksum(hrp: String, data: Array<Int5>, encoding: Encoding): Array<Int5> {
+    private fun addChecksum(hrp: String, data: ArrayList<Int5>, encoding: Encoding): ArrayList<Int5> {
         val values = expand(hrp) + data
-        val poly = polymod(values, arrayOf(0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte())) xor encoding.constant
-        return Array(6) { i -> (poly.shr(5 * (5 - i)) and 31).toByte() }
+        val poly = polymod(values, ZEROS) xor encoding.constant
+
+        for (i in 0 until 6) {
+            data.add((poly.shr(5 * (5 - i)) and 31).toByte())
+        }
+
+        return data
     }
 
     /**
@@ -159,9 +184,9 @@ object Bech32 {
      * @return a sequence of 5 bits integers
      */
     @JvmStatic
-    public fun eight2five(input: ByteArray): Array<Int5> {
+    public fun eight2five(input: ByteArray): ArrayList<Int5> {
         var buffer = 0L
-        val output = ArrayList<Int5>()
+        val output = ArrayList<Int5>(input.size * 2) //larger array on purpose. Checksum is added later.
         var count = 0
         input.forEach { b ->
             buffer = (buffer shl 8) or (b.toLong() and 0xff)
@@ -172,7 +197,7 @@ object Bech32 {
             }
         }
         if (count > 0) output.add(((buffer shl (5 - count)) and 31).toByte())
-        return output.toTypedArray()
+        return output
     }
 
     /**
@@ -182,7 +207,7 @@ object Bech32 {
     @JvmStatic
     public fun five2eight(input: Array<Int5>, offset: Int): ByteArray {
         var buffer = 0L
-        val output = ArrayList<Byte>()
+        val output = ArrayList<Byte>(input.size)
         var count = 0
         for (i in offset..input.lastIndex) {
             val b = input[i]

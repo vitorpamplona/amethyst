@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
@@ -201,7 +202,6 @@ import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.Locale
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -480,8 +480,8 @@ fun NormalNote(
             )
         }
         is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote, accountViewModel)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, accountViewModel)
+        is FileHeaderEvent -> FileHeaderDisplay(baseNote, isQuotedNote, accountViewModel)
+        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, isQuotedNote, accountViewModel)
         else ->
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                 CheckNewAndRenderNote(
@@ -896,7 +896,6 @@ fun ClickableNote(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
@@ -1045,6 +1044,14 @@ private fun RenderNoteRow(
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
 
+        is AudioTrackEvent -> {
+            RenderAudioTrack(baseNote, accountViewModel, nav)
+        }
+
+        is AudioHeaderEvent -> {
+            RenderAudioHeader(baseNote, accountViewModel, nav)
+        }
+
         is ReactionEvent -> {
             RenderReaction(baseNote, backgroundColor, accountViewModel, nav)
         }
@@ -1075,10 +1082,6 @@ private fun RenderNoteRow(
 
         is RelaySetEvent -> {
             DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is AudioTrackEvent -> {
-            RenderAudioTrack(baseNote, accountViewModel, nav)
         }
 
         is PinListEvent -> {
@@ -2252,6 +2255,17 @@ private fun RenderAudioTrack(
 }
 
 @Composable
+private fun RenderAudioHeader(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val noteEvent = note.event as? AudioHeaderEvent ?: return
+
+    AudioHeader(noteEvent, note, accountViewModel, nav)
+}
+
+@Composable
 private fun RenderLongFormContent(
     note: Note,
     accountViewModel: AccountViewModel,
@@ -3178,7 +3192,7 @@ private fun RenderBadge(
 }
 
 @Composable
-fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
+fun FileHeaderDisplay(note: Note, isQuotedNote: Boolean, accountViewModel: AccountViewModel) {
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
 
@@ -3214,18 +3228,18 @@ fun FileHeaderDisplay(note: Note, accountViewModel: AccountViewModel) {
     }
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-        ZoomableContentView(content = content, accountViewModel = accountViewModel)
+        ZoomableContentView(content = content, roundedCorner = isQuotedNote, accountViewModel = accountViewModel)
     }
 }
 
 @Composable
-fun FileStorageHeaderDisplay(baseNote: Note, accountViewModel: AccountViewModel) {
+fun FileStorageHeaderDisplay(baseNote: Note, isQuotedNote: Boolean, accountViewModel: AccountViewModel) {
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
     val dataEventId = eventHeader.dataEventId() ?: return
 
     LoadNote(baseNoteHex = dataEventId) { contentNote ->
         if (contentNote != null) {
-            ObserverAndRenderNIP95(baseNote, contentNote, accountViewModel)
+            ObserverAndRenderNIP95(baseNote, contentNote, isQuotedNote, accountViewModel)
         }
     }
 }
@@ -3234,6 +3248,7 @@ fun FileStorageHeaderDisplay(baseNote: Note, accountViewModel: AccountViewModel)
 private fun ObserverAndRenderNIP95(
     header: Note,
     content: Note,
+    isQuotedNote: Boolean,
     accountViewModel: AccountViewModel
 ) {
     val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
@@ -3280,7 +3295,7 @@ private fun ObserverAndRenderNIP95(
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it, accountViewModel = accountViewModel)
+                ZoomableContentView(content = it, roundedCorner = isQuotedNote, accountViewModel = accountViewModel)
             }
         }
     }
@@ -3343,8 +3358,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
 
             media?.let { media ->
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(10.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     cover?.let { cover ->
                         LoadThumbAndThenVideoView(
@@ -3352,6 +3366,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
                             title = noteEvent.subject(),
                             thumbUri = cover,
                             authorName = note.author?.toBestDisplayName(),
+                            roundedCorner = true,
                             nostrUriCallback = "nostr:${note.toNEvent()}",
                             accountViewModel = accountViewModel
                         )
@@ -3360,9 +3375,70 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
                             videoUri = media,
                             title = noteEvent.subject(),
                             authorName = note.author?.toBestDisplayName(),
+                            roundedCorner = true,
                             accountViewModel = accountViewModel
                         )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val media = remember { noteEvent.stream() ?: noteEvent.download() }
+    val waveform = remember { noteEvent.wavefrom()?.toImmutableList()?.ifEmpty { null } }
+    val content = remember { noteEvent.content().ifBlank { null } }
+
+    val defaultBackground = MaterialTheme.colors.background
+    val background = remember { mutableStateOf(defaultBackground) }
+    val tags = remember(noteEvent) { noteEvent?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+
+    val eventContent = remember(note.event) {
+        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+        val body = accountViewModel.decrypt(note)
+
+        if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
+            "## $subject\n$body"
+        } else {
+            body
+        }
+    }
+
+    Row(modifier = Modifier.padding(top = 5.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            media?.let { media ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    VideoView(
+                        videoUri = media,
+                        waveform = waveform,
+                        title = noteEvent.subject(),
+                        authorName = note.author?.toBestDisplayName(),
+                        roundedCorner = true,
+                        accountViewModel = accountViewModel,
+                        nostrUriCallback = note.toNostrUri()
+                    )
+                }
+            }
+
+            content?.let {
+                Row(verticalAlignment = CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                    TranslatableRichTextViewer(
+                        content = it,
+                        canPreview = true,
+                        tags = tags,
+                        backgroundColor = background,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
+                DisplayUncitedHashtags(hashtags, content ?: "", nav)
             }
         }
     }
@@ -3486,6 +3562,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                         title = subject,
                         artworkUri = cover,
                         authorName = baseNote.author?.toBestDisplayName(),
+                        roundedCorner = true,
                         accountViewModel = accountViewModel,
                         nostrUriCallback = "nostr:${baseNote.toNEvent()}"
                     )

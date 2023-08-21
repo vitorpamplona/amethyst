@@ -76,6 +76,7 @@ abstract class NostrDataSource(val debugName: String) {
     fun destroy() {
         stop()
         Client.unsubscribe(clientListener)
+        bundler.cancel()
     }
 
     open fun start() {

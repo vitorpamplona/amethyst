@@ -353,6 +353,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
 
     override fun onCleared() {
         clear()
+        bundlerInsert.cancel()
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

@@ -17,7 +17,7 @@ class ChatMessageEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
+) : WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
     /**
      * Recepients intended to receive this conversation
      */

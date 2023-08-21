@@ -7,20 +7,20 @@ plugins {
 
 android {
     namespace 'com.vitorpamplona.amethyst'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
-        targetSdk 33
-        versionCode 272
-        versionName "0.73.3"
+        targetSdk 34
+        versionCode 276
+        versionName "0.74.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
-        resourceConfigurations += ['ar', 'cs', 'de', 'eo', 'es', 'fa', 'fr', 'hu', 'night', 'nl', 'pt-rBR', 'ru', 'sv-rSE', 'ta', 'tr', 'uk', 'zh', 'sh-rHK', 'zh-rTW', 'ja']
+        resourceConfigurations += ['ar', 'cs', 'de', 'eo', 'es', 'fa', 'fr', 'hu', 'ja', 'night', 'nl', 'pt-rBR', 'ru', 'sv-rSE', 'ta', 'tr', 'uk', 'zh', 'sh-rHK', 'zh-rTW']
     }
 
     buildTypes {
@@ -111,6 +111,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
+    // Zoomable images
     implementation "net.engawapg.lib:zoomable:1.4.3"
 
     // Biometrics
@@ -119,7 +120,7 @@ dependencies {
     // Websockets API
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
-    // link preview
+    // HTML Parsing for Link Preview
     implementation 'org.jsoup:jsoup:1.16.1'
 
     // Encrypted Key Storage
@@ -159,9 +160,9 @@ dependencies {
 
     // Language picker and Theme chooser
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
-    implementation 'androidx.media3:media3-ui:1.1.0'
-    implementation 'androidx.media3:media3-session:1.1.0'
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
+    implementation "androidx.media3:media3-ui:$media3_version"
+    implementation "androidx.media3:media3-session:$media3_version"
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'
@@ -181,6 +182,9 @@ dependencies {
 
     // GeoHash
     implementation 'com.github.drfonfon:android-kotlin-geohash:1.0'
+
+    // Waveform visualizer
+    implementation 'com.github.lincollincol:compose-audiowaveform:1.1.1'
 
     // Video compression lib
     implementation 'com.github.AbedElazizShe:LightCompressor:1.3.1'

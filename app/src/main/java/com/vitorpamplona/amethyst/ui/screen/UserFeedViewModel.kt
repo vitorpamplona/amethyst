@@ -125,6 +125,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     }
 
     override fun onCleared() {
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

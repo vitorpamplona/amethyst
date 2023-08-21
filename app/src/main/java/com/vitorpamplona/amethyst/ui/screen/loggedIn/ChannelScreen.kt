@@ -644,6 +644,7 @@ fun ShowVideoStreaming(
 
                             ZoomableContentView(
                                 content = zoomableUrlVideo,
+                                roundedCorner = false,
                                 accountViewModel = accountViewModel
                             )
                         }

@@ -16,6 +16,7 @@ class EventFactory {
             AdvertisedRelayListEvent.kind -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             AppDefinitionEvent.kind -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             AppRecommendationEvent.kind -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+            AudioHeaderEvent.kind -> AudioHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             AudioTrackEvent.kind -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeAwardEvent.kind -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)

@@ -40,7 +40,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
                 it.event !is BadgeDefinitionEvent &&
                 it.event !is BadgeProfilesEvent &&
                 it.event !is GiftWrapEvent &&
-                it.author !== loggedInUser &&
+                (it.event is LnZapEvent || it.author !== loggedInUser) &&
                 (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
                 it.event?.isTaggedUser(loggedInUserHex) ?: false &&
                 (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&

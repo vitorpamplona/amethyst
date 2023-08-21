@@ -49,8 +49,8 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
-val GLOBAL_FOLLOWS = " Global "
-val KIND3_FOLLOWS = " All Follows "
+val GLOBAL_FOLLOWS = " Global " // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val KIND3_FOLLOWS = " All Follows " // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -492,7 +492,13 @@ class Account(
 
     fun broadcast(note: Note) {
         note.event?.let {
-            Client.send(it)
+            if (it is WrappedEvent && it.host != null) {
+                it.host?.let { hostEvent ->
+                    Client.send(hostEvent)
+                }
+            } else {
+                Client.send(it)
+            }
         }
     }
 
@@ -908,6 +914,23 @@ class Account(
 
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
+
+        // broadcast replied notes
+        replyingTo?.let {
+            LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
+        replyTo?.forEach {
+            it.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
+        addresses?.forEach {
+            LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
         return null
     }
 
@@ -958,6 +981,17 @@ class Account(
 
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent)
+
+        replyTo?.forEach {
+            it.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
+        addresses?.forEach {
+            LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                Client.send(it, relayList = relayList)
+            }
+        }
         return null
     }
 
@@ -1800,8 +1834,8 @@ class Account(
         }.toTypedArray()
     }
 
-    fun convertGlobalRelays(): Array<String> {
-        return localRelays.filter { it.feedTypes.contains(FeedType.GLOBAL) }
+    fun activeGlobalRelays(): Array<String> {
+        return (activeRelays() ?: convertLocalRelays()).filter { it.activeTypes.contains(FeedType.GLOBAL) }
             .map { it.url }
             .toTypedArray()
     }

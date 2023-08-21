@@ -29,11 +29,18 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -46,10 +53,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -77,11 +86,15 @@ import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
@@ -181,26 +194,38 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 fun ZoomableContentView(
     content: ZoomableContent,
     images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
+    roundedCorner: Boolean,
     accountViewModel: AccountViewModel
 ) {
-    val clipboardManager = LocalClipboardManager.current
-
     // store the dialog open or close state
     var dialogOpen by remember {
         mutableStateOf(false)
     }
 
-    var mainImageModifier = MaterialTheme.colors.imageModifier
+    // store the dialog open or close state
+    val shareOpen = remember {
+        mutableStateOf(false)
+    }
+
+    if (shareOpen.value) {
+        ShareImageAction(shareOpen, content) { shareOpen.value = false }
+    }
+
+    var mainImageModifier = if (roundedCorner) {
+        MaterialTheme.colors.imageModifier
+    } else {
+        Modifier.fillMaxWidth()
+    }
 
     if (content is ZoomableUrlContent) {
         mainImageModifier = mainImageModifier.combinedClickable(
             onClick = { dialogOpen = true },
-            onLongClick = { clipboardManager.setText(AnnotatedString(content.uri ?: content.url)) }
+            onLongClick = { shareOpen.value = true }
         )
     } else if (content is ZoomablePreloadedContent) {
         mainImageModifier = mainImageModifier.combinedClickable(
             onClick = { dialogOpen = true },
-            onLongClick = { clipboardManager.setText(AnnotatedString(content.uri)) }
+            onLongClick = { shareOpen.value = true }
         )
     } else {
         mainImageModifier = mainImageModifier.clickable {
@@ -215,6 +240,7 @@ fun ZoomableContentView(
             title = content.description,
             artworkUri = content.artworkUri,
             authorName = content.authorName,
+            roundedCorner = roundedCorner,
             nostrUriCallback = content.uri,
             onDialog = { dialogOpen = true },
             accountViewModel = accountViewModel
@@ -228,6 +254,7 @@ fun ZoomableContentView(
                     title = content.description,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
+                    roundedCorner = roundedCorner,
                     nostrUriCallback = content.uri,
                     onDialog = { dialogOpen = true },
                     accountViewModel = accountViewModel
@@ -624,11 +651,11 @@ fun ZoomableImageDialog(
                         pagerState = pagerState,
                         itemsCount = allImages.size,
                         itemContent = { index ->
-                            RenderImageOrVideo(allImages[index], accountViewModel)
+                            RenderImageOrVideo(allImages[index], false, accountViewModel)
                         }
                     )
                 } else {
-                    RenderImageOrVideo(imageUrl, accountViewModel)
+                    RenderImageOrVideo(imageUrl, false, accountViewModel)
                 }
 
                 Row(
@@ -642,7 +669,10 @@ fun ZoomableImageDialog(
 
                     val myContent = allImages[pagerState.currentPage]
                     if (myContent is ZoomableUrlContent) {
-                        SaveToGallery(url = myContent.url)
+                        Row() {
+                            CopyToClipboard(content = myContent)
+                            SaveToGallery(url = myContent.url)
+                        }
                     } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
                         SaveToGallery(
                             localFile = myContent.localFile,
@@ -656,7 +686,65 @@ fun ZoomableImageDialog(
 }
 
 @Composable
-private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: AccountViewModel) {
+private fun CopyToClipboard(
+    content: ZoomableContent
+) {
+    val popupExpanded = remember { mutableStateOf(false) }
+
+    Button(
+        modifier = Modifier.padding(horizontal = Size5dp),
+        onClick = { popupExpanded.value = true },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.placeholderText
+            )
+    ) {
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.Share,
+            modifier = Size20Modifier,
+            contentDescription = stringResource(R.string.copy_url_to_clipboard)
+        )
+
+        ShareImageAction(popupExpanded, content) { popupExpanded.value = false }
+    }
+}
+
+@Composable
+private fun ShareImageAction(
+    popupExpanded:
+        MutableState<Boolean>,
+    content: ZoomableContent,
+    onDismiss: () -> Unit
+) {
+    DropdownMenu(
+        expanded = popupExpanded.value,
+        onDismissRequest = onDismiss
+    ) {
+        val clipboardManager = LocalClipboardManager.current
+
+        if (content is ZoomableUrlContent) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(content.url)); onDismiss() }) {
+                Text(stringResource(R.string.copy_url_to_clipboard))
+            }
+            if (content.uri != null) {
+                DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(content.uri)); onDismiss() }) {
+                    Text(stringResource(R.string.copy_the_note_id_to_the_clipboard))
+                }
+            }
+        }
+
+        if (content is ZoomablePreloadedContent) {
+            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(content.uri)); onDismiss() }) {
+                Text(stringResource(R.string.copy_the_note_id_to_the_clipboard))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderImageOrVideo(content: ZoomableContent, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
@@ -670,6 +758,7 @@ private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: Accou
                 title = content.description,
                 artworkUri = content.artworkUri,
                 authorName = content.authorName,
+                roundedCorner = roundedCorner,
                 accountViewModel = accountViewModel,
                 alwaysShowVideo = true
             )
@@ -684,6 +773,7 @@ private fun RenderImageOrVideo(content: ZoomableContent, accountViewModel: Accou
                     title = content.description,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
+                    roundedCorner = roundedCorner,
                     accountViewModel = accountViewModel,
                     alwaysShowVideo = true
                 )

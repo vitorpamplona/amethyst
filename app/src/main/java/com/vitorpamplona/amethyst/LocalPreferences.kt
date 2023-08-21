@@ -299,7 +299,8 @@ object LocalPreferences {
             val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
             val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
             val localRelays = getString(PrefKeys.RELAYS, "[]")?.let {
-                Event.mapper.readValue<Set<RelaySetupInfo>>(it)
+                println("LocalRelays: $it")
+                Event.mapper.readValue<Set<RelaySetupInfo>?>(it)
             } ?: setOf<RelaySetupInfo>()
 
             val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
@@ -310,24 +311,24 @@ object LocalPreferences {
             val defaultDiscoveryFollowList = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
             val zapAmountChoices = getString(PrefKeys.ZAP_AMOUNTS, "[]")?.let {
-                Event.mapper.readValue<List<Long>>(it)
+                Event.mapper.readValue<List<Long>?>(it)
             }?.ifEmpty { listOf(500L, 1000L, 5000L) } ?: listOf(500L, 1000L, 5000L)
 
             val reactionChoices = getString(PrefKeys.REACTION_CHOICES, "[]")?.let {
-                Event.mapper.readValue<List<String>>(it)
+                Event.mapper.readValue<List<String>?>(it)
             }?.ifEmpty { listOf("+") } ?: listOf("+")
 
             val defaultZapType = getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
-                LnZapEvent.ZapType.values().firstOrNull { it.name == serverName }
+                LnZapEvent.ZapType.values().firstOrNull() { it.name == serverName }
             } ?: LnZapEvent.ZapType.PUBLIC
 
             val defaultFileServer = getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
-                ServersAvailable.values().firstOrNull { it.name == serverName }
+                ServersAvailable.values().firstOrNull() { it.name == serverName }
             } ?: ServersAvailable.NOSTR_BUILD
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                    Event.mapper.readValue<Nip47URI>(it)
+                    Event.mapper.readValue<Nip47URI?>(it)
                 }
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -345,7 +346,7 @@ object LocalPreferences {
 
             val languagePreferences = try {
                 getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
-                    Event.mapper.readValue<Map<String, String>>(it)
+                    Event.mapper.readValue<Map<String, String>?>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -369,7 +370,7 @@ object LocalPreferences {
 
             val lastReadPerRoute = try {
                 getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
-                    Event.mapper.readValue<Map<String, Long>>(it)
+                    Event.mapper.readValue<Map<String, Long>?>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
                 e.printStackTrace()

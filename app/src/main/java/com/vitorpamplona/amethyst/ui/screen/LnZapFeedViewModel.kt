@@ -96,6 +96,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : View
     }
 
     override fun onCleared() {
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

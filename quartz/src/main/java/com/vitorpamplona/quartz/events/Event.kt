@@ -363,6 +363,22 @@ open class Event(
 }
 
 @Immutable
+open class WrappedEvent(
+    id: HexKey,
+    @JsonProperty("pubkey")
+    pubKey: HexKey,
+    @JsonProperty("created_at")
+    createdAt: Long,
+    kind: Int,
+    tags: List<List<String>>,
+    content: String,
+    sig: HexKey
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+    @Transient
+    var host: Event? = null // host event to broadcast when needed
+}
+
+@Immutable
 interface AddressableEvent {
     fun dTag(): String
     fun address(): ATag

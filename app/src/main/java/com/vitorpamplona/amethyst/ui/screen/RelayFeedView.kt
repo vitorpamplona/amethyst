@@ -91,6 +91,11 @@ class RelayFeedViewModel : ViewModel() {
             refreshSuspended()
         }
     }
+
+    override fun onCleared() {
+        bundler.cancel()
+        super.onCleared()
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)

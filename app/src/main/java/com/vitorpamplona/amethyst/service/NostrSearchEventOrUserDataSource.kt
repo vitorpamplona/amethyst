@@ -56,8 +56,9 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
                 filter = JsonFilter(
                     kinds = listOf(
                         TextNoteEvent.kind, LongTextNoteEvent.kind, BadgeDefinitionEvent.kind,
-                        PeopleListEvent.kind, BookmarkListEvent.kind, AudioTrackEvent.kind, PinListEvent.kind,
-                        PollNoteEvent.kind, ChannelCreateEvent.kind
+                        PeopleListEvent.kind, BookmarkListEvent.kind, AudioHeaderEvent.kind,
+                        AudioTrackEvent.kind, PinListEvent.kind, PollNoteEvent.kind,
+                        ChannelCreateEvent.kind
                     ),
                     search = mySearchString,
                     limit = 100

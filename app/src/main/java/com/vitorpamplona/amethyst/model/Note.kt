@@ -129,12 +129,14 @@ open class Note(val idHex: String) {
             return "/" + formattedDateTime(createdAt() ?: 0) + ";"
         }
 
-        val mySignature = replyTo
-            .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
-            .map {
-                cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
-            }
-            .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(createdAt() ?: 0) + ";"
+        val mySignature = (
+            replyTo
+                .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
+                .map {
+                    cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
+                }
+                .maxByOrNull { it.length }?.removeSuffix(";") ?: ""
+            ) + "/" + formattedDateTime(createdAt() ?: 0) + ";"
 
         cachedSignatures[this] = mySignature
         return mySignature
@@ -613,6 +615,7 @@ open class Note(val idHex: String) {
 
     fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
+            liveSet?.destroy()
             liveSet = null
         }
     }
@@ -654,11 +657,25 @@ class NoteLiveSet(u: Note) {
             relays.hasObservers() ||
             zaps.hasObservers()
     }
+
+    fun destroy() {
+        metadata.destroy()
+        reactions.destroy()
+        boosts.destroy()
+        replies.destroy()
+        reports.destroy()
+        relays.destroy()
+        zaps.destroy()
+    }
 }
 
 class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
+
+    fun destroy() {
+        bundler.cancel()
+    }
 
     fun invalidateData() {
         if (!hasObservers()) return

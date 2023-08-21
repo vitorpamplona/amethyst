@@ -372,6 +372,7 @@ class User(val pubkeyHex: String) {
 
     fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
+            liveSet?.destroy()
             liveSet = null
         }
     }
@@ -399,6 +400,18 @@ class UserLiveSet(u: User) {
             metadata.hasObservers() ||
             zaps.hasObservers() ||
             bookmarks.hasObservers()
+    }
+
+    fun destroy() {
+        follows.destroy()
+        followers.destroy()
+        reports.destroy()
+        messages.destroy()
+        relays.destroy()
+        relayInfo.destroy()
+        metadata.destroy()
+        zaps.destroy()
+        bookmarks.destroy()
     }
 }
 
@@ -469,6 +482,10 @@ class Chatroom() {
 class UserLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
+
+    fun destroy() {
+        bundler.cancel()
+    }
 
     fun invalidateData() {
         if (!hasObservers()) return

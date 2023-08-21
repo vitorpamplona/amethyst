@@ -215,7 +215,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag },
+                tags = earlierVersion.tags.filter { it.size > 1 && !it[1].equals(hashtag, true) },
                 privateKey = privateKey,
                 createdAt = createdAt
             )

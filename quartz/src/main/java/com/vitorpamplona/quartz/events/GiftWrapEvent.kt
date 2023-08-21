@@ -28,6 +28,10 @@ class GiftWrapEvent(
         if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
 
         val myInnerEvent = unwrap(privKey = privKey)
+        if (myInnerEvent is WrappedEvent) {
+            myInnerEvent.host = this
+        }
+
         cachedInnerEvent = cachedInnerEvent + Pair(hex, myInnerEvent)
         return myInnerEvent
     }

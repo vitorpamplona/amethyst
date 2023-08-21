@@ -20,7 +20,6 @@ import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
@@ -102,9 +101,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        if (BuildConfig.DEBUG) {
-            debugState(this)
-        }
+        // if (BuildConfig.DEBUG) {
+        debugState(this)
+        // }
 
         ServiceManager.pause()
         super.onPause()

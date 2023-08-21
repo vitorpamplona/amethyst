@@ -26,14 +26,34 @@ class PlaybackService : MediaSessionService() {
         return ProgressiveMediaSource.Factory(VideoCache.get(Amethyst.instance, HttpClient.getHttpClient()))
     }
 
+    fun lazyHlsDS(): MultiPlayerPlaybackManager {
+        managerHls?.let { return it }
+
+        val newInstance = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
+        managerHls = newInstance
+        return newInstance
+    }
+
+    fun lazyProgressiveDS(): MultiPlayerPlaybackManager {
+        managerProgressive?.let { return it }
+
+        val newInstance = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+        managerProgressive = newInstance
+        return newInstance
+    }
+
+    fun lazyLocalDS(): MultiPlayerPlaybackManager {
+        managerLocal?.let { return it }
+
+        val newInstance = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
+        managerLocal = newInstance
+        return newInstance
+    }
+
     // Create your Player and MediaSession in the onCreate lifecycle event
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
-
-        managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
-        managerProgressive = MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
-        managerLocal = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
 
         // Stop all videos and recreates all managers when the proxy changes.
         HttpClient.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
@@ -62,11 +82,11 @@ class PlaybackService : MediaSessionService() {
 
     fun getAppropriateMediaSessionManager(fileName: String): MultiPlayerPlaybackManager? {
         return if (fileName.startsWith("file")) {
-            managerLocal
+            lazyLocalDS()
         } else if (fileName.endsWith("m3u8")) {
-            managerHls
+            lazyHlsDS()
         } else {
-            managerProgressive
+            lazyProgressiveDS()
         }
     }
 

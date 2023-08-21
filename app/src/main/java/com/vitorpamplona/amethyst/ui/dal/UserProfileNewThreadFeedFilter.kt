@@ -4,6 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -41,7 +42,8 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) : Add
                             it.event is LongTextNoteEvent ||
                             it.event is PollNoteEvent ||
                             it.event is HighlightEvent ||
-                            it.event is AudioTrackEvent
+                            it.event is AudioTrackEvent ||
+                            it.event is AudioHeaderEvent
                         ) &&
                     it.isNewThread() &&
                     account.isAcceptable(it) == true
