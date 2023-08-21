@@ -44,7 +44,7 @@ class NostrLnZapPaymentResponseDataSource(
     override fun auth(relay: Relay, challenge: String) {
         super.auth(relay, challenge)
 
-        val event = RelayAuthEvent.create(relay.url, challenge, authSigningKey)
+        val event = RelayAuthEvent.create(relay.url, challenge, "", authSigningKey)
         Client.send(
             event,
             relay.url

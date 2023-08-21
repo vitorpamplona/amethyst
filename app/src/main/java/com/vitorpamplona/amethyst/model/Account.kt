@@ -1354,10 +1354,10 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
-        if (!isWriteable()) return null
+    fun createAuthEvent(relay: Relay, challenge: String, isAmberInstalled: Boolean): RelayAuthEvent? {
+        if (!isWriteable() && !isAmberInstalled) return null
 
-        return RelayAuthEvent.create(relay.url, challenge, keyPair.privKey!!)
+        return RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
     }
 
     fun removePublicBookmark(note: Note) {

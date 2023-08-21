@@ -1,10 +1,18 @@
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.IntentUtils
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.ui.actions.SignerType
+import com.vitorpamplona.amethyst.ui.actions.openAmber
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,14 +29,16 @@ class RegisterAccounts(
     // creates proof that it controls all accounts
     private fun signEventsToProveControlOfAccounts(
         accounts: List<AccountInfo>,
-        notificationToken: String
+        notificationToken: String,
+        isAmberInstalled: Boolean
     ): List<RelayAuthEvent> {
         return accounts.mapNotNull {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
             if (acc != null) {
                 val relayToUse = acc.activeRelays()?.firstOrNull { it.read }
                 if (relayToUse != null) {
-                    acc.createAuthEvent(relayToUse, notificationToken)
+                    val event = acc.createAuthEvent(relayToUse, notificationToken, isAmberInstalled)
+                    event
                 } else {
                     null
                 }
@@ -38,7 +48,7 @@ class RegisterAccounts(
         }
     }
 
-    private fun postRegistrationEvent(events: List<RelayAuthEvent>) {
+    fun postRegistrationEvent(events: List<RelayAuthEvent>) {
         try {
             val jsonObject = """{
                 "events": [ ${events.joinToString(", ") { it.toJson() }} ]
@@ -64,12 +74,35 @@ class RegisterAccounts(
         }
     }
 
+    tailrec fun Context.activity(): Activity? = when {
+        this is Activity -> this
+        else -> (this as? ContextWrapper)?.baseContext?.activity()
+    }
+
     fun go(notificationToken: String) {
+        val isAmberInstalled = PackageUtils.isAmberInstalled(Amethyst.instance)
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
-            postRegistrationEvent(
-                signEventsToProveControlOfAccounts(accounts, notificationToken)
-            )
+            Log.d("auth event", "entered")
+            val accountsWithoutPrivKey = accounts.filter { !it.hasPrivKey }
+            val accountsWithPrivKey = accounts.filter { it.hasPrivKey }
+            accountsWithoutPrivKey.forEach { account ->
+                val events = signEventsToProveControlOfAccounts(listOf(account), notificationToken, isAmberInstalled)
+                if (events.isNotEmpty()) {
+                    openAmber(
+                        events.first().toJson(),
+                        SignerType.SIGN_EVENT,
+                        IntentUtils.activityResultLauncher,
+                        ""
+                    )
+                }
+            }
+
+            if (accountsWithPrivKey.isNotEmpty()) {
+                postRegistrationEvent(
+                    signEventsToProveControlOfAccounts(accountsWithPrivKey, notificationToken, isAmberInstalled)
+                )
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
@@ -8,17 +9,27 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.amethyst.ui.actions.SignerType
+import com.vitorpamplona.amethyst.ui.actions.openAmber
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
@@ -180,13 +191,26 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         super.auth(relay, challenge)
 
         if (this::account.isInitialized) {
-            val event = account.createAuthEvent(relay, challenge)
+            val context = Amethyst.instance
+            val isAmberInstalled = PackageUtils.isAmberInstalled(context)
+            val event = account.createAuthEvent(relay, challenge, isAmberInstalled)
 
-            if (event != null) {
-                Client.send(
-                    event,
-                    relay.url
-                )
+            if (isAmberInstalled && !account.isWriteable()) {
+                if (event != null) {
+                    openAmber(
+                        event.toJson(),
+                        SignerType.SIGN_EVENT,
+                        IntentUtils.authActivityResultLauncher,
+                        ""
+                    )
+                }
+            } else {
+                if (event != null) {
+                    Client.send(
+                        event,
+                        relay.url
+                    )
+                }
             }
         }
     }

@@ -9,8 +9,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class PushNotificationUtils {
+object PushNotificationUtils {
+    var hasInit: Boolean = false
     fun init(accounts: List<AccountInfo>) {
+        if (hasInit) {
+            return
+        }
         val scope = CoroutineScope(Job() + Dispatchers.IO)
         scope.launch {
             // get user notification token provided by firebase

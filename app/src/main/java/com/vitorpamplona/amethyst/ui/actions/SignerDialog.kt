@@ -4,9 +4,8 @@ import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -58,9 +58,10 @@ enum class SignerType {
 fun openAmber(
     data: String,
     type: SignerType,
-    intentResult: ManagedActivityResultLauncher<Intent, ActivityResult>,
+    intentResult: ActivityResultLauncher<Intent>,
     pubKey: HexKey
 ) {
+    ServiceManager.shouldPauseService = false
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
     val signerType = when (type) {
         SignerType.SIGN_EVENT -> "sign_event"
@@ -106,6 +107,7 @@ fun SignerDialog(
                     signature
                 )
             }
+            ServiceManager.shouldPauseService = true
         }
     )
 

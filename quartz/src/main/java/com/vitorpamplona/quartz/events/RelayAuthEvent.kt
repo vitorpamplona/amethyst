@@ -21,16 +21,15 @@ class RelayAuthEvent(
     companion object {
         const val kind = 22242
 
-        fun create(relay: String, challenge: String, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): RelayAuthEvent {
+        fun create(relay: String, challenge: String, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): RelayAuthEvent {
             val content = ""
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = listOf(
                 listOf("relay", relay),
                 listOf("challenge", challenge)
             )
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return RelayAuthEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return RelayAuthEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -9,6 +10,7 @@ import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -20,10 +22,14 @@ import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.IntentUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
+import com.vitorpamplona.amethyst.service.notifications.RegisterAccounts
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -38,8 +44,10 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -48,8 +56,60 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
+    @OptIn(DelicateCoroutinesApi::class)
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
+        IntentUtils.activityResultLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@registerForActivityResult
+            }
+
+            val event = it.data?.getStringExtra("event") ?: ""
+
+            val signedEvent = Event.fromJson(event)
+            val authEvent = RelayAuthEvent(signedEvent.id, signedEvent.pubKey, signedEvent.createdAt, signedEvent.tags, signedEvent.content, signedEvent.sig)
+
+            RegisterAccounts(LocalPreferences.allSavedAccounts()).postRegistrationEvent(
+                listOf(authEvent)
+            )
+            PushNotificationUtils.hasInit = true
+            ServiceManager.shouldPauseService = true
+        }
+
+        IntentUtils.authActivityResultLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@registerForActivityResult
+            }
+
+            val event = it.data?.getStringExtra("event") ?: ""
+
+            val signedEvent = Event.fromJson(event)
+            val authEvent = RelayAuthEvent(signedEvent.id, signedEvent.pubKey, signedEvent.createdAt, signedEvent.tags, signedEvent.content, signedEvent.sig)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                Client.send(authEvent, authEvent.relay())
+            }
+            ServiceManager.shouldPauseService = true
+        }
+
         super.onCreate(savedInstanceState)
 
         LocalPreferences.migrateSingleUserPrefs()
@@ -94,10 +154,12 @@ class MainActivity : AppCompatActivity() {
 
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.start(this@MainActivity)
+            if (ServiceManager.shouldPauseService) {
+                ServiceManager.start(this@MainActivity)
+            }
         }
 
-        PushNotificationUtils().init(LocalPreferences.allSavedAccounts())
+        PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
     }
 
     override fun onPause() {
@@ -105,7 +167,9 @@ class MainActivity : AppCompatActivity() {
         debugState(this)
         // }
 
-        ServiceManager.pause()
+        if (ServiceManager.shouldPauseService) {
+            ServiceManager.pause()
+        }
         super.onPause()
     }
 
@@ -137,8 +201,10 @@ class MainActivity : AppCompatActivity() {
             Log.d("NETWORKCALLBACK", "onAvailable: Disconnecting and connecting again")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
-                ServiceManager.start(this@MainActivity)
+                if (ServiceManager.shouldPauseService) {
+                    ServiceManager.pause()
+                    ServiceManager.start(this@MainActivity)
+                }
             }
         }
 
@@ -167,7 +233,9 @@ class MainActivity : AppCompatActivity() {
             Log.d("NETWORKCALLBACK", "onLost: Disconnecting and pausing relay's connection")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
+                if (ServiceManager.shouldPauseService) {
+                    ServiceManager.pause()
+                }
             }
         }
     }

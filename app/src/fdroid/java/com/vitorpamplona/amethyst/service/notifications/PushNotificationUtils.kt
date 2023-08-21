@@ -2,7 +2,8 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import com.vitorpamplona.amethyst.AccountInfo
 
-class PushNotificationUtils {
+object PushNotificationUtils {
+    var hasInit: Boolean = true
     fun init(accounts: List<AccountInfo>) {
     }
 }

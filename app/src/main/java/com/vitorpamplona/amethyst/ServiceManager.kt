@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 import java.io.File
 
 object ServiceManager {
+    var shouldPauseService: Boolean = true // to not open amber in a loop trying to use auth relays and registering for notifications
+    private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
 
     fun start(account: Account, context: Context) {
@@ -43,6 +45,9 @@ object ServiceManager {
 
     @Synchronized
     fun start(context: Context) {
+        if (isStarted && account != null) {
+            return
+        }
         Log.d("ServiceManager", "Starting Relay Services")
 
         val myAccount = account
@@ -87,6 +92,7 @@ object ServiceManager {
             NostrSingleEventDataSource.start()
             NostrSingleChannelDataSource.start()
             NostrSingleUserDataSource.start()
+            isStarted = true
         }
     }
 
@@ -112,6 +118,7 @@ object ServiceManager {
         NostrVideoDataSource.stop()
 
         Client.disconnect()
+        isStarted = false
     }
 
     fun cleanUp() {
