@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.quartz.events.ChatroomKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -228,8 +227,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     private fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             refreshSuspended()
         }
     }
@@ -251,8 +249,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     private fun updateFeed(notes: ImmutableList<Note>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { FeedState.Empty }

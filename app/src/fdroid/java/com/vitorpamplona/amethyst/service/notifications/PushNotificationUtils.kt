@@ -4,6 +4,6 @@ import com.vitorpamplona.amethyst.AccountInfo
 
 object PushNotificationUtils {
     var hasInit: Boolean = true
-    fun init(accounts: List<AccountInfo>) {
+    suspend fun init(accounts: List<AccountInfo>) {
     }
 }

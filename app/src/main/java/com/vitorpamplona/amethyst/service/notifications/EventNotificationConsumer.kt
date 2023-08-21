@@ -20,26 +20,20 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 class EventNotificationConsumer(private val applicationContext: Context) {
-    fun consume(event: Event) {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            if (LocalCache.notes[event.id] == null) {
-                if (LocalCache.justVerify(event)) {
-                    LocalCache.justConsume(event, null)
 
-                    val manager = notificationManager()
-                    if (manager.areNotificationsEnabled()) {
-                        when (event) {
-                            is PrivateDmEvent -> notify(event)
-                            is LnZapEvent -> notify(event)
-                            is GiftWrapEvent -> unwrapAndNotify(event)
-                        }
+    fun consume(event: Event) {
+        if (LocalCache.notes[event.id] == null) {
+            if (LocalCache.justVerify(event)) {
+                LocalCache.justConsume(event, null)
+
+                val manager = notificationManager()
+                if (manager.areNotificationsEnabled()) {
+                    when (event) {
+                        is PrivateDmEvent -> notify(event)
+                        is LnZapEvent -> notify(event)
+                        is GiftWrapEvent -> unwrapAndNotify(event)
                     }
                 }
             }

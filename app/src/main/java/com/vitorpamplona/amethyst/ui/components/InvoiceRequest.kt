@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -152,23 +153,25 @@ fun InvoiceRequest(
     Button(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         onClick = {
-            val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType)
+            scope.launch(Dispatchers.IO) {
+                val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType)
 
-            LightningAddressResolver().lnAddressInvoice(
-                lud16,
-                amount * 1000,
-                message,
-                zapRequest?.toJson(),
-                onSuccess = onSuccess,
-                onError = {
-                    scope.launch {
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                        onClose()
+                LightningAddressResolver().lnAddressInvoice(
+                    lud16,
+                    amount * 1000,
+                    message,
+                    zapRequest?.toJson(),
+                    onSuccess = onSuccess,
+                    onError = {
+                        scope.launch {
+                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                            onClose()
+                        }
+                    },
+                    onProgress = {
                     }
-                },
-                onProgress = {
-                }
-            )
+                )
+            }
         },
         shape = QuoteBorder,
         colors = ButtonDefaults.buttonColors(

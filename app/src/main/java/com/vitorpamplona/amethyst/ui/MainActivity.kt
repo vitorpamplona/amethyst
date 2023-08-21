@@ -159,7 +159,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
+        GlobalScope.launch(Dispatchers.IO) {
+            PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
+        }
     }
 
     override fun onPause() {

@@ -13,11 +13,9 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.hexToByteArray
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -89,8 +87,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
+        GlobalScope.launch(Dispatchers.IO) {
             ServiceManager.start(account, context)
         }
         GlobalScope.launch(Dispatchers.Main) {

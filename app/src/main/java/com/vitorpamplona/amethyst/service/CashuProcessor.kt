@@ -45,7 +45,7 @@ class CashuProcessor {
         }
     }
 
-    fun melt(token: CashuToken, lud16: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    suspend fun melt(token: CashuToken, lud16: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         checkNotInMainThread()
 
         runCatching {
