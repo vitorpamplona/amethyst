@@ -110,7 +110,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPostView(
     onClose: () -> Unit,
