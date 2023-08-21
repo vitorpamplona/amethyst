@@ -10,12 +10,15 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.Error
 
 abstract class NostrDataSource(val debugName: String) {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private var subscriptions = mapOf<String, Subscription>()
     data class Counter(var counter: Int)
 
@@ -76,6 +79,7 @@ abstract class NostrDataSource(val debugName: String) {
     fun destroy() {
         stop()
         Client.unsubscribe(clientListener)
+        scope.cancel()
         bundler.cancel()
     }
 
@@ -117,8 +121,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     fun resetFilters() {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             resetFiltersSuspend()
         }
     }
