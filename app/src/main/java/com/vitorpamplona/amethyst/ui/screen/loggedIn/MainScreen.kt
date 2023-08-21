@@ -259,7 +259,7 @@ fun FloatingButtons(
         when (state) {
             is AccountState.LoggedInViewOnly -> {
                 if (PackageUtils.isAmberInstalled(context)) {
-                    WritePermissionButtons(navEntryState, accountViewModel, nav)
+                    WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
                 }
             }
             is AccountState.LoggedOff -> {
