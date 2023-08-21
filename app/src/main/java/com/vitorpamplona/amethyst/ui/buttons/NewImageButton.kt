@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit, navScrollToTop: (Route, Boolean) -> Unit) {
     var wantsToPost by remember {
         mutableStateOf(false)
     }
@@ -62,11 +62,9 @@ fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val postViewModel: NewMediaModel = viewModel()
     postViewModel.onceUploaded {
         scope.launch(Dispatchers.Default) {
-            // awaits an refresh on the list
-            delay(250)
+            delay(500)
             withContext(Dispatchers.Main) {
-                val route = Route.Video.route.replace("{scrollToTop}", "true")
-                nav(route)
+                navScrollToTop(Route.Video, true)
             }
         }
     }

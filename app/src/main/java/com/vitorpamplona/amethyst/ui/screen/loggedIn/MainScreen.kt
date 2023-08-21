@@ -217,7 +217,7 @@ fun MainScreen(
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navState, accountViewModel, accountStateViewModel, nav)
+                FloatingButtons(navState, accountViewModel, accountStateViewModel, nav, navBottomRow)
             },
             scaffoldState = scaffoldState
         ) {
@@ -247,7 +247,8 @@ fun FloatingButtons(
     navEntryState: State<NavBackStackEntry?>,
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    navScrollToTop: (Route, Boolean) -> Unit
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
 
@@ -260,7 +261,7 @@ fun FloatingButtons(
                 // Does nothing.
             }
             is AccountState.LoggedIn -> {
-                WritePermissionButtons(navEntryState, accountViewModel, nav)
+                WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
             }
         }
     }
@@ -270,7 +271,8 @@ fun FloatingButtons(
 private fun WritePermissionButtons(
     navEntryState: State<NavBackStackEntry?>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    navScrollToTop: (Route, Boolean) -> Unit
 ) {
     val currentRoute by remember(navEntryState.value) {
         derivedStateOf {
@@ -281,7 +283,7 @@ private fun WritePermissionButtons(
     when (currentRoute) {
         Route.Home.base -> NewNoteButton(accountViewModel, nav)
         Route.Message.base -> ChannelFabColumn(accountViewModel, nav)
-        Route.Video.base -> NewImageButton(accountViewModel, nav)
+        Route.Video.base -> NewImageButton(accountViewModel, nav, navScrollToTop)
         Route.Community.base -> {
             val communityId by remember(navEntryState.value) {
                 derivedStateOf {
