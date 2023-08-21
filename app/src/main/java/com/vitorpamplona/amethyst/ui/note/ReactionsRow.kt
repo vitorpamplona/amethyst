@@ -114,7 +114,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import kotlin.math.roundToInt
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 @Composable
@@ -141,7 +140,6 @@ fun ReactionsRow(
     Spacer(modifier = HalfDoubleVertSpacer)
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun InnerReactionRow(
     baseNote: Note,
