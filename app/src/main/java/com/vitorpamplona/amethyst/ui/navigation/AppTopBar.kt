@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.note.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.ShortCommunityHeader
+import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -231,7 +231,7 @@ private fun CommunityTopBar(
                     ShortCommunityHeader(baseNote, fontWeight = FontWeight.Medium, accountViewModel, nav)
                 },
                 extendableRow = {
-                    LongCommunityHeader(baseNote, accountViewModel, nav)
+                    LongCommunityHeader(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
                 },
                 popBack = navPopBack
             )
@@ -297,6 +297,17 @@ private fun RenderRoomTopBar(
                     }
                 }
             },
+            extendableRow = {
+                LoadUser(baseUserHex = room.users.first()) {
+                    if (it != null) {
+                        UserCompose(
+                            baseUser = it,
+                            accountViewModel = accountViewModel,
+                            nav = nav
+                        )
+                    }
+                }
+            },
             popBack = navPopBack
         )
     } else {
@@ -308,10 +319,17 @@ private fun RenderRoomTopBar(
                     size = Size34dp
                 )
 
-                RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp).weight(1f), fontWeight = FontWeight.Medium, accountViewModel.userProfile())
+                RoomNameOnlyDisplay(
+                    room,
+                    Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f),
+                    fontWeight = FontWeight.Medium,
+                    accountViewModel.userProfile()
+                )
             },
             extendableRow = {
-                LongRoomHeader(room, accountViewModel, nav)
+                LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
             },
             popBack = navPopBack
         )
@@ -342,7 +360,7 @@ private fun ChannelTopBar(
                 )
             },
             extendableRow = {
-                LongChannelHeader(baseChannel, accountViewModel, nav)
+                LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
             },
             popBack = navPopBack
         )
@@ -861,9 +879,7 @@ fun MyExtensibleTopAppBar(
 
                 if (expanded.value && extendableRow != null) {
                     Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = Size10dp),
+                        Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

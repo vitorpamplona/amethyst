@@ -13,18 +13,12 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
 fun UserCompose(
     baseUser: User,
-    overallModifier: Modifier = remember {
-        Modifier
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp
-            )
-    },
+    overallModifier: Modifier = StdPadding,
     showDiviser: Boolean = true,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -56,7 +50,6 @@ fun UserCompose(
 
         if (showDiviser) {
             Divider(
-                modifier = Modifier.padding(top = 10.dp),
                 thickness = 0.25.dp
             )
         }

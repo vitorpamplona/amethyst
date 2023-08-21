@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -124,6 +125,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -517,7 +519,7 @@ fun CommunityHeader(
     Column(Modifier.fillMaxWidth()) {
         Column(
             verticalArrangement = Arrangement.Center,
-            modifier = modifier.clickable {
+            modifier = Modifier.clickable {
                 if (sendToCommunity) {
                     routeFor(baseNote, accountViewModel.userProfile())?.let {
                         nav(it)
@@ -534,7 +536,7 @@ fun CommunityHeader(
             )
 
             if (expanded.value) {
-                LongCommunityHeader(baseNote, accountViewModel, nav)
+                LongCommunityHeader(baseNote = baseNote, lineModifier = modifier, accountViewModel = accountViewModel, nav = nav)
             }
         }
 
@@ -547,23 +549,24 @@ fun CommunityHeader(
 }
 
 @Composable
-fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun LongCommunityHeader(
+    baseNote: AddressableNote,
+    lineModifier: Modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
     Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp)
+        lineModifier
     ) {
         val summary = remember(noteState) {
             noteEvent.description()?.ifBlank { null }
         }
 
         Column(
-            Modifier
-                .weight(1f)
-                .padding(start = 10.dp)
+            Modifier.weight(1f)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val defaultBackground = MaterialTheme.colors.background
@@ -598,17 +601,14 @@ fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountView
     }
 
     rules?.let {
-        Spacer(DoubleVertSpacer)
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 10.dp)
+            lineModifier
         ) {
             val defaultBackground = MaterialTheme.colors.background
             val background = remember {
                 mutableStateOf(defaultBackground)
             }
-            val tags = remember(noteEvent) { noteEvent?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+            val tags = remember(noteEvent) { noteEvent.tags().toImmutableListOfLists() }
 
             TranslatableRichTextViewer(
                 content = it,
@@ -621,12 +621,8 @@ fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountView
         }
     }
 
-    Spacer(DoubleVertSpacer)
-
     Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 10.dp),
+        lineModifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -639,8 +635,6 @@ fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountView
         NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
         Spacer(DoubleHorzSpacer)
         NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
-        TimeAgo(baseNote)
-        MoreOptionsButton(baseNote, accountViewModel)
     }
 
     var participantUsers by remember(baseNote) {
@@ -664,12 +658,9 @@ fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountView
 
     participantUsers.forEach {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 10.dp, top = 10.dp)
-                .clickable {
-                    nav("User/${it.second.pubkeyHex}")
-                },
+            lineModifier.clickable {
+                nav("User/${it.second.pubkeyHex}")
+            },
             verticalAlignment = Alignment.CenterVertically
         ) {
             it.first.role?.let { it1 ->
@@ -685,6 +676,21 @@ fun LongCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountView
             Spacer(DoubleHorzSpacer)
             UsernameDisplay(it.second, remember { Modifier.weight(1f) })
         }
+    }
+
+    Row(
+        lineModifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(id = R.string.created_at),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(75.dp)
+        )
+        Spacer(DoubleHorzSpacer)
+        NormalTimeAgo(baseNote = baseNote, Modifier.weight(1f))
+        MoreOptionsButton(baseNote, accountViewModel)
     }
 }
 
@@ -3424,7 +3430,12 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
             }
 
             content?.let {
-                Row(verticalAlignment = CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                Row(
+                    verticalAlignment = CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 5.dp)
+                ) {
                     TranslatableRichTextViewer(
                         content = it,
                         canPreview = true,
