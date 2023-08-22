@@ -35,7 +35,7 @@ class BundledUpdate(
             return
         }
 
-        scope.launch {
+        scope.launch(dispatcher) {
             try {
                 onUpdate()
                 delay(delay)
@@ -77,7 +77,7 @@ class BundledInsert<T>(
             return
         }
 
-        scope.launch(Dispatchers.IO) {
+        scope.launch(dispatcher) {
             try {
                 val mySet = mutableSetOf<T>()
                 queue.drainTo(mySet)
