@@ -1365,8 +1365,8 @@ object LocalCache {
                 // Doesn't need to clean up the replies and mentions.. Too small to matter.
 
                 // Counts the replies
-                it.replyTo?.forEach { _ ->
-                    it.removeReply(it)
+                it.replyTo?.forEach { parent ->
+                    parent.removeReply(it)
                 }
 
                 childrenToBeRemoved.addAll(it.removeAllChildNotes())
@@ -1389,8 +1389,8 @@ object LocalCache {
                     notes.remove(it.idHex)
 
                     // Counts the replies
-                    it.replyTo?.forEach { _ ->
-                        it.removeReply(it)
+                    it.replyTo?.forEach { parent ->
+                        parent.removeReply(it)
                     }
 
                     childrenToBeRemoved.addAll(it.removeAllChildNotes())
@@ -1405,9 +1405,8 @@ object LocalCache {
         }
     }
 
-    fun pruneRepliesAndReactions(account: Account) {
+    fun pruneRepliesAndReactions(accounts: Set<HexKey>) {
         checkNotInMainThread()
-        val user = account.userProfile()
 
         val toBeRemoved = notes.filter {
             (
@@ -1416,8 +1415,8 @@ object LocalCache {
                     it.value.event is ReportEvent || it.value.event is GenericRepostEvent
                 ) &&
                 it.value.liveSet?.isInUse() != true && // don't delete if observing.
-                it.value.author != user && // don't delete if it is the logged in account
-                it.value.event?.isTaggedUser(user.pubkeyHex) != true // don't delete if it's a notification to the logged in user
+                it.value.author?.pubkeyHex !in accounts && // don't delete if it is the logged in account
+                it.value.event?.isTaggedUsers(accounts) != true // don't delete if it's a notification to the logged in user
         }.values
 
         val childrenToBeRemoved = mutableListOf<Note>()
@@ -1491,12 +1490,15 @@ object LocalCache {
         }
     }
 
-    fun pruneContactLists(userAccount: Account) {
+    fun pruneContactLists(loggedIn: Set<HexKey>) {
         checkNotInMainThread()
 
         var removingContactList = 0
         users.values.forEach {
-            if (it != userAccount.userProfile() && (it.liveSet == null || it.liveSet?.isInUse() == false) && it.latestContactList != null) {
+            if (it.pubkeyHex !in loggedIn &&
+                (it.liveSet == null || it.liveSet?.isInUse() == false) &&
+                it.latestContactList != null
+            ) {
                 it.latestContactList = null
                 removingContactList++
             }
