@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -886,19 +887,18 @@ fun DisplayLocationInTitle(geohash: String) {
 fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
     val mentions = baseMentions?.toSet()
 
-    FlowRow(verticalArrangement = Arrangement.Center, modifier = Modifier.padding(horizontal = 10.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         if (!mentions.isNullOrEmpty()) {
             Text(
                 stringResource(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colors.placeholderText,
+                modifier = Modifier.align(CenterVertically)
             )
 
             mentions.forEachIndexed { idx, user ->
                 val innerUserState by user.live().metadata.observeAsState()
                 innerUserState?.user?.let { myUser ->
-                    Spacer(modifier = Modifier.width(5.dp))
-
                     val tags = remember(innerUserState) {
                         myUser.info?.latestMetadata?.tags?.toImmutableListOfLists()
                     }
