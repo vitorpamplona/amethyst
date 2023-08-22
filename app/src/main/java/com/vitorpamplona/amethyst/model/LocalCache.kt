@@ -1192,6 +1192,44 @@ object LocalCache {
         }
     }
 
+    fun prunePastVersionsOfReplaceables() {
+        val toBeRemoved = notes.filter {
+            val noteEvent = it.value.event
+            if (noteEvent is AddressableEvent) {
+                noteEvent.createdAt() < (addressables[noteEvent.address().toTag()]?.event?.createdAt() ?: 0)
+            } else {
+                false
+            }
+        }.values
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        toBeRemoved.forEach {
+            notes.remove(it.idHex)
+
+            val newerVersion = addressables[(it.event as? AddressableEvent)?.address()?.toTag()]
+            if (newerVersion != null) {
+                it.moveAllReferencesTo(newerVersion)
+            }
+
+            it.replyTo?.forEach { masterNote ->
+                masterNote.removeReply(it)
+                masterNote.removeBoost(it)
+                masterNote.removeReaction(it)
+                masterNote.removeZap(it)
+                masterNote.clearEOSE() // allows reloading of these events
+            }
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeChildrenOf(childrenToBeRemoved)
+
+        if (toBeRemoved.size > 1) {
+            println("PRUNE: ${toBeRemoved.size} old version of addressables removed.")
+        }
+    }
+
     fun pruneRepliesAndReactions(accounts: Set<HexKey>) {
         checkNotInMainThread()
 
@@ -1216,11 +1254,14 @@ object LocalCache {
                 masterNote.removeBoost(it)
                 masterNote.removeReaction(it)
                 masterNote.removeZap(it)
+                masterNote.removeReport(it)
                 masterNote.clearEOSE() // allows reloading of these events
             }
 
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
+
+        removeChildrenOf(childrenToBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} thread replies removed.")

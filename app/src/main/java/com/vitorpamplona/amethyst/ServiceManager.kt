@@ -125,6 +125,7 @@ object ServiceManager {
             LocalCache.pruneHiddenMessages(it)
             LocalCache.pruneContactLists(accounts)
             LocalCache.pruneRepliesAndReactions(accounts)
+            LocalCache.prunePastVersionsOfReplaceables()
         }
     }
 }
