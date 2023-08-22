@@ -51,7 +51,7 @@ class GiftWrapEvent(
 
             return when (toDecrypt.v) {
                 Nip44Version.NIP04.versionCode -> CryptoUtils.decryptNIP04(toDecrypt, privKey, pubKey.hexToByteArray())
-                Nip44Version.NIP24.versionCode -> CryptoUtils.decryptNIP24(toDecrypt, privKey, pubKey.hexToByteArray())
+                Nip44Version.NIP44.versionCode -> CryptoUtils.decryptNIP44(toDecrypt, privKey, pubKey.hexToByteArray())
                 else -> null
             }
         } catch (e: Exception) {
@@ -71,10 +71,10 @@ class GiftWrapEvent(
             createdAt: Long = TimeUtils.randomWithinAWeek()
         ): GiftWrapEvent {
             val privateKey = CryptoUtils.privkeyCreate() // GiftWrap is always a random key
-            val sharedSecret = CryptoUtils.getSharedSecretNIP24(privateKey, recipientPubKey.hexToByteArray())
+            val sharedSecret = CryptoUtils.getSharedSecretNIP44(privateKey, recipientPubKey.hexToByteArray())
 
             val content = encodeNIP44(
-                CryptoUtils.encryptNIP24(
+                CryptoUtils.encryptNIP44(
                     toJson(event),
                     sharedSecret
                 )
