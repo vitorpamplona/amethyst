@@ -253,8 +253,7 @@ open class Note(val idHex: String) {
             zaps = zaps.minus(note)
             liveSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
-            val toRemove = zaps.filterValues { it == note }
-            zaps = zaps.minus(toRemove.keys)
+            zaps = zaps.filterValues { it != note }
             liveSet?.zaps?.invalidateData()
         }
     }

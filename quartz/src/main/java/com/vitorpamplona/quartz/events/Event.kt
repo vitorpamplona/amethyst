@@ -98,6 +98,7 @@ open class Event(
     override fun matchTag1With(text: String) = tags.any { it.size > 1 && it[1].contains(text, true) }
 
     override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
+    override fun isTaggedUsers(idHexes: Set<String>) = tags.any { it.size > 1 && it[0] == "p" && it[1] in idHexes }
 
     override fun isTaggedEvent(idHex: String) = tags.any { it.size > 1 && it[0] == "e" && it[1] == idHex }
 
@@ -199,7 +200,7 @@ open class Event(
         return try {
             hasCorrectIDHash() && hasVerifedSignature()
         } catch (e: Exception) {
-            Log.e("Event", "Fail checking if event $id has a valid signature", e)
+            Log.e("Event", "Event $id does not have a valid signature: ${toJson()}", e)
             false
         }
     }

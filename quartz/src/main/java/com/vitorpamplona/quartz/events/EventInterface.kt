@@ -30,6 +30,7 @@ interface EventInterface {
     fun hasValidSignature(): Boolean
 
     fun isTaggedUser(idHex: String): Boolean
+    fun isTaggedUsers(idHex: Set<String>): Boolean
 
     fun isTaggedEvent(idHex: String): Boolean
 
