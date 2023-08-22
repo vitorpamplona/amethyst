@@ -204,46 +204,6 @@ object LocalCache {
         }
     }
 
-    fun consume(event: PeopleListEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        // Already processed this event.
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    private fun consume(event: AdvertisedRelayListEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        // Already processed this event.
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
     fun formattedDateTime(timestamp: Long): String {
         return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
@@ -349,25 +309,6 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    private fun consume(event: CommunityDefinitionEvent, relay: Relay?) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
     private fun consume(event: LiveActivitiesEvent, relay: Relay?) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -392,140 +333,17 @@ object LocalCache {
         }
     }
 
-    fun consume(event: EmojiPackSelectionEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
+    fun consume(event: PeopleListEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: AdvertisedRelayListEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: CommunityDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event) }
+    fun consume(event: EmojiPackSelectionEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: EmojiPackEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: ClassifiedsEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: PinListEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: RelaySetEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: AudioTrackEvent) { consumeBaseReplaceable(event) }
 
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    private fun consume(event: EmojiPackEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    private fun consume(event: ClassifiedsEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    private fun consume(event: PinListEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    private fun consume(event: RelaySetEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    private fun consume(event: AudioTrackEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        // Already processed this event.
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    fun consume(event: BadgeDefinitionEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        // Already processed this event.
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList<Note>())
-
-            refreshObservers(note)
-        }
-    }
+    fun consume(event: BadgeDefinitionEvent) { consumeBaseReplaceable(event) }
 
     fun consume(event: BadgeProfilesEvent) {
         val version = getOrCreateNote(event.id)
@@ -541,7 +359,7 @@ object LocalCache {
         if (note.event?.id() == event.id()) return
 
         val replyTo = event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
-            event.badgeAwardDefinitions().mapNotNull { getOrCreateAddressableNote(it) }
+            event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
@@ -571,7 +389,14 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    private fun comsume(event: NNSEvent) {
+    private fun comsume(event: NNSEvent) { consumeBaseReplaceable(event) }
+    fun consume(event: AppDefinitionEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: CalendarEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: CalendarDateSlotEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: CalendarTimeSlotEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: CalendarRSVPEvent) { consumeBaseReplaceable(event) }
+
+    private fun consumeBaseReplaceable(event: BaseAddressableEvent) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -591,45 +416,7 @@ object LocalCache {
         }
     }
 
-    fun consume(event: AppDefinitionEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        // Already processed this event.
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
-
-    fun consume(event: AppRecommendationEvent) {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
-        val author = getOrCreateUser(event.pubKey)
-
-        if (version.event == null) {
-            version.loadEvent(event, author, emptyList())
-            version.moveAllReferencesTo(note)
-        }
-
-        // Already processed this event.
-        if (note.event?.id() == event.id()) return
-
-        if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-        }
-    }
+    fun consume(event: AppRecommendationEvent) { consumeBaseReplaceable(event) }
 
     @Suppress("UNUSED_PARAMETER")
     fun consume(event: RecommendRelayEvent) {
@@ -1549,6 +1336,10 @@ object LocalCache {
                 is BadgeDefinitionEvent -> consume(event)
                 is BadgeProfilesEvent -> consume(event)
                 is BookmarkListEvent -> consume(event)
+                is CalendarEvent -> consume(event)
+                is CalendarDateSlotEvent -> consume(event)
+                is CalendarTimeSlotEvent -> consume(event)
+                is CalendarRSVPEvent -> consume(event)
                 is ChannelCreateEvent -> consume(event)
                 is ChannelHideMessageEvent -> consume(event)
                 is ChannelMessageEvent -> consume(event, relay)
