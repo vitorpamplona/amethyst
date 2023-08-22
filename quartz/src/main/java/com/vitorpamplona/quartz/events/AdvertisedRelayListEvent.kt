@@ -15,9 +15,8 @@ class AdvertisedRelayListEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     override fun dTag() = fixedDTag
-    override fun address() = ATag(kind, pubKey, dTag(), null)
 
     fun relays(): List<AdvertisedRelayInfo> {
         return tags.mapNotNull {

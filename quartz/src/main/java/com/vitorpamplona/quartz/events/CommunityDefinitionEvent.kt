@@ -15,11 +15,7 @@ class CommunityDefinitionEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
-
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
-    override fun address() = ATag(kind, pubKey, dTag(), null)
-
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
     fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
     fun rules() = tags.firstOrNull { it.size > 1 && it[0] == "rules" }?.get(1)

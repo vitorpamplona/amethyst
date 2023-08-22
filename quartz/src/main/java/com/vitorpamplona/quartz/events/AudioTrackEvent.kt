@@ -15,10 +15,7 @@ class AudioTrackEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
-
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
-    override fun address() = ATag(kind, pubKey, dTag(), null)
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
 
     fun participants() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(2)) }
     fun type() = tags.firstOrNull { it.size > 1 && it[0] == TYPE }?.get(1)

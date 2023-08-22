@@ -385,6 +385,20 @@ interface AddressableEvent {
     fun address(): ATag
 }
 
+@Immutable
+open class BaseAddressableEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    kind: Int,
+    tags: List<List<String>>,
+    content: String,
+    sig: HexKey
+): Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
+    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
+    override fun address() = ATag(kind, pubKey, dTag(), null)
+}
+
 fun String.bytesUsedInMemory(): Int {
     return (8 * ((((this.length) * 2) + 45) / 8))
 }
