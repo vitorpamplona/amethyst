@@ -284,16 +284,36 @@ class Relay(
         checkNotInMainThread()
 
         if (signedEvent is RelayAuthEvent) {
+            // specific protocol for this event.
             val event = """["AUTH",${signedEvent.toJson()}]"""
             socket?.send(event)
             eventUploadCounterInBytes += event.bytesUsedInMemory()
-        }
+        } else {
+            if (write) {
+                if (isConnected()) {
+                    if (isReady) {
+                        val event = """["EVENT",${signedEvent.toJson()}]"""
+                        socket?.send(event)
+                        eventUploadCounterInBytes += event.bytesUsedInMemory()
+                    }
+                } else {
+                    // waits 60 seconds to reconnect after disconnected.
+                    if (TimeUtils.now() > closingTimeInSeconds + RECONNECTING_IN_SECONDS) {
+                        // sends all filters after connection is successful.
+                        connectAndRun {
+                            checkNotInMainThread()
 
-        if (write) {
-            if (signedEvent !is RelayAuthEvent) {
-                val event = """["EVENT",${signedEvent.toJson()}]"""
-                socket?.send(event)
-                eventUploadCounterInBytes += event.bytesUsedInMemory()
+                            val event = """["EVENT",${signedEvent.toJson()}]"""
+                            socket?.send(event)
+                            eventUploadCounterInBytes += event.bytesUsedInMemory()
+
+                            // Sends everything.
+                            Client.allSubscriptions().forEach {
+                                sendFilter(requestId = it)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
