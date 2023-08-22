@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -206,12 +207,14 @@ private fun LoadedState(
 
     WatchScrollToTop(videoFeedView, pagerState)
 
-    SlidingCarousel(
-        state.feed,
-        pagerState,
-        accountViewModel,
-        nav
-    )
+    RefresheableView(viewModel = videoFeedView) {
+        SlidingCarousel(
+            state.feed,
+            pagerState,
+            accountViewModel,
+            nav
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
