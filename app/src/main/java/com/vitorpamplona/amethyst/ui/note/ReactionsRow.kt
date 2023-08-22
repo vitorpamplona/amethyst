@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -695,20 +696,21 @@ fun BoostReaction(
         }
     ) {
         BoostIcon(baseNote, iconSize, grayTint, accountViewModel)
-    }
 
-    if (wantsToBoost) {
-        BoostTypeChoicePopup(
-            baseNote,
-            accountViewModel,
-            onDismiss = {
-                wantsToBoost = false
-            },
-            onQuote = {
-                wantsToBoost = false
-                onQuotePress()
-            }
-        )
+        if (wantsToBoost) {
+            BoostTypeChoicePopup(
+                baseNote,
+                iconSize,
+                accountViewModel,
+                onDismiss = {
+                    wantsToBoost = false
+                },
+                onQuote = {
+                    wantsToBoost = false
+                    onQuotePress()
+                }
+            )
+        }
     }
 
     BoostText(baseNote, grayTint)
@@ -795,6 +797,7 @@ fun LikeReaction(
     if (wantsToReact) {
         ReactionChoicePopup(
             baseNote,
+            iconSize,
             accountViewModel,
             onDismiss = {
                 wantsToReact = false
@@ -1225,10 +1228,14 @@ private fun DrawViewCount(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
+private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow {
@@ -1269,6 +1276,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 @Composable
 fun ReactionChoicePopup(
     baseNote: Note,
+    iconSize: Dp,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit
@@ -1280,9 +1288,13 @@ fun ReactionChoicePopup(
         baseNote.reactedBy(account.userProfile()).toSet()
     }
 
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {

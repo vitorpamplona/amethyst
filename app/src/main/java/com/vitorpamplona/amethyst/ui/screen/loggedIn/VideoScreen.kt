@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
@@ -55,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteComposeReportState
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
+import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -449,13 +451,12 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
-        /*
-        ReplyReaction(baseNote, accountViewModel, iconSize = 40.dp) {
+        ReplyReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToReplyTo = baseNote
         }
-        BoostReaction(baseNote, accountViewModel, iconSize = 40.dp) {
+        BoostReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
-        }*/
+        }
         LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
         ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp)
         ViewCountReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colors.onBackgroundColorFilter)
