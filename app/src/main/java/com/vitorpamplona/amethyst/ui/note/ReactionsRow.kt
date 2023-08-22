@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -610,14 +610,14 @@ private fun SlidingAnimationCount(baseCount: MutableState<Int>, textColor: Color
 private fun SlidingAnimationCount(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
         targetState = baseCount,
-        transitionSpec = AnimatedContentScope<Int>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec
     ) { count ->
         TextCount(count, textColor)
     }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentScope<S>.transitionSpec(): ContentTransform {
+private fun <S> AnimatedContentTransitionScope<S>.transitionSpec(): ContentTransform {
     return slideAnimation
 }
 
@@ -644,7 +644,7 @@ private fun TextCount(count: Int, textColor: Color) {
 private fun SlidingAnimationAmount(amount: MutableState<String>, textColor: Color) {
     AnimatedContent(
         targetState = amount.value,
-        transitionSpec = AnimatedContentScope<String>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec
     ) { count ->
         Text(
             text = count,

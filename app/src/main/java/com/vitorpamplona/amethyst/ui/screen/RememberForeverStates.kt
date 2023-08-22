@@ -3,8 +3,10 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import kotlin.math.roundToInt
@@ -61,17 +63,19 @@ fun rememberForeverLazyListState(
 fun rememberForeverPagerState(
     key: String,
     initialFirstVisibleItemIndex: Int = 0,
-    initialFirstVisibleItemScrollOffset: Float = 0.0f
+    initialFirstVisibleItemScrollOffset: Float = 0.0f,
+    pageCount: () -> Int
 ): PagerState {
-    val scrollState = rememberSaveable(saver = PagerState.Saver) {
-        val savedValue = savedScrollStates[key]
-        val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
-        val savedOffset = savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset
-        PagerState(
-            savedIndex,
-            savedOffset
-        )
-    }
+    val savedValue = savedScrollStates[key]
+    val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+    val savedOffset = savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset
+
+    val scrollState = rememberPagerState(
+        savedIndex,
+        savedOffset,
+        pageCount
+    )
+
     DisposableEffect(scrollState) {
         onDispose {
             val lastIndex = scrollState.currentPage
@@ -79,5 +83,6 @@ fun rememberForeverPagerState(
             savedScrollStates[key] = ScrollState(lastIndex, lastOffset)
         }
     }
+
     return scrollState
 }

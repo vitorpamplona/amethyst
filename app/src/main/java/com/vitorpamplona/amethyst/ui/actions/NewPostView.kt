@@ -886,7 +886,7 @@ fun DisplayLocationInTitle(geohash: String) {
 fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
     val mentions = baseMentions?.toSet()
 
-    FlowRow(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
+    FlowRow(verticalArrangement = Arrangement.Center, modifier = Modifier.padding(horizontal = 10.dp)) {
         if (!mentions.isNullOrEmpty()) {
             Text(
                 stringResource(R.string.reply_notify),

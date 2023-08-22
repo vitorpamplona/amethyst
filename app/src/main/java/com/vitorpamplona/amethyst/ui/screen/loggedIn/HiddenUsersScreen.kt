@@ -78,7 +78,7 @@ fun HiddenUsersScreen(
 
     Column(Modifier.fillMaxHeight()) {
         Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
-            val pagerState = rememberPagerState()
+            val pagerState = rememberPagerState() { 2 }
             val coroutineScope = rememberCoroutineScope()
             var warnAboutReports by remember { mutableStateOf(accountViewModel.account.warnAboutPostsWithReports) }
             var filterSpam by remember { mutableStateOf(accountViewModel.account.filterSpamFromStrangers) }
@@ -129,7 +129,7 @@ fun HiddenUsersScreen(
                     }
                 )
             }
-            HorizontalPager(pageCount = 2, state = pagerState) { page ->
+            HorizontalPager(state = pagerState) { page ->
                 when (page) {
                     0 -> RefreshingUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
                     1 -> RefreshingUserFeedView(spammerFeedViewModel, accountViewModel, nav)

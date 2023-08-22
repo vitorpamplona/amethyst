@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -131,15 +132,7 @@ private fun SaveableFeedState(
     nav: (String) -> Unit,
     scrollStateKey: String? = null
 ) {
-    val pagerState = if (scrollStateKey != null) {
-        rememberForeverPagerState(scrollStateKey)
-    } else {
-        remember { PagerState() }
-    }
-
-    WatchScrollToTop(videoFeedView, pagerState)
-
-    RenderPage(videoFeedView, accountViewModel, pagerState, nav)
+    RenderPage(videoFeedView, accountViewModel, scrollStateKey, nav)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -163,7 +156,7 @@ public fun WatchScrollToTop(
 fun RenderPage(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    pagerState: PagerState,
+    pagerStateKey: String?,
     nav: (String) -> Unit
 ) {
     val feedState by videoFeedView.feedContent.collectAsState()
@@ -184,12 +177,7 @@ fun RenderPage(
                     }
 
                     is FeedState.Loaded -> {
-                        SlidingCarousel(
-                            state.feed,
-                            pagerState,
-                            accountViewModel,
-                            nav
-                        )
+                        LoadedState(state, pagerStateKey, videoFeedView, accountViewModel, nav)
                     }
 
                     is FeedState.Loading -> {
@@ -201,6 +189,31 @@ fun RenderPage(
     }
 }
 
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun LoadedState(
+    state: FeedState.Loaded,
+    pagerStateKey: String?,
+    videoFeedView: NostrVideoFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val pagerState = if (pagerStateKey != null) {
+        rememberForeverPagerState(pagerStateKey) { state.feed.value.size }
+    } else {
+        rememberPagerState { state.feed.value.size }
+    }
+
+    WatchScrollToTop(videoFeedView, pagerState)
+
+    SlidingCarousel(
+        state.feed,
+        pagerState,
+        accountViewModel,
+        nav
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlidingCarousel(
@@ -210,7 +223,6 @@ fun SlidingCarousel(
     nav: (String) -> Unit
 ) {
     VerticalPager(
-        pageCount = feed.value.size,
         state = pagerState,
         beyondBoundsPageCount = 1,
         modifier = Modifier.fillMaxSize(1f),

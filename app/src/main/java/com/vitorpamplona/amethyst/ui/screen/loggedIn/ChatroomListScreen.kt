@@ -57,7 +57,7 @@ fun ChatroomListScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState() { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     var moreActionsExpanded by remember { mutableStateOf(false) }
@@ -136,7 +136,6 @@ fun ChatroomListScreen(
                 }
 
                 HorizontalPager(
-                    pageCount = 2,
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
