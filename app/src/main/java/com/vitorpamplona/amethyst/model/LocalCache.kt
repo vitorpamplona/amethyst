@@ -1088,7 +1088,7 @@ object LocalCache {
         }
 
         return notes.values.filter {
-            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent) &&
+            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent && it.event !is LnZapEvent && it.event !is LnZapRequestEvent) &&
                 (
                     it.event?.content()?.contains(text, true) ?: false ||
                         it.event?.matchTag1With(text) ?: false ||
@@ -1096,7 +1096,7 @@ object LocalCache {
                         it.idNote().startsWith(text, true)
                     )
         } + addressables.values.filter {
-            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent) &&
+            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent && it.event !is LnZapEvent && it.event !is LnZapRequestEvent) &&
                 (
                     it.event?.content()?.contains(text, true) ?: false ||
                         it.event?.matchTag1With(text) ?: false ||
