@@ -791,7 +791,7 @@ private fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
-                    if (PackageUtils.isAmberInstalled(context)) {
+                    if (accountViewModel.loggedInWithAmber()) {
                         event = accountViewModel.account.follow(baseUser, false)
                     } else {
                         scope.launch {
@@ -813,7 +813,7 @@ private fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
-                    if (PackageUtils.isAmberInstalled(context)) {
+                    if (accountViewModel.loggedInWithAmber()) {
                         event = accountViewModel.account.follow(baseUser, false)
                     } else {
                         scope.launch {

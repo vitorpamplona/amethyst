@@ -84,6 +84,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.isWriteable()
     }
 
+    fun loggedInWithAmber(): Boolean {
+        return account.loginWithAmber
+    }
+
     fun userProfile(): User {
         return account.userProfile()
     }

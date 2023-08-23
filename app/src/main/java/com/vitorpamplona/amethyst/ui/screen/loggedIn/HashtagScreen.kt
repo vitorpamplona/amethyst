@@ -32,7 +32,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
@@ -172,7 +171,7 @@ fun HashtagActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     event = accountViewModel.account.unfollowHashtag(tag, false)
                 } else {
                     scope.launch {
@@ -194,7 +193,7 @@ fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     event = accountViewModel.account.followHashtag(tag, false)
                 } else {
                     scope.launch {

@@ -169,8 +169,7 @@ class Account(
             val event = ContactListEvent.updateRelayList(
                 earlierVersion = contactList,
                 relayUse = relays,
-                pubKey = keyPair.pubKey.toHexKey(),
-                privateKey = keyPair.privKey
+                keyPair = keyPair
             )
 
             if (!signEvent) {
@@ -188,8 +187,7 @@ class Account(
                 followCommunities = listOf(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                privateKey = keyPair.privKey!!,
-                publicKey = if (!signEvent) keyPair.pubKey else null
+                keyPair = keyPair
             )
 
             if (!signEvent) {
@@ -511,11 +509,7 @@ class Account(
         if (followingCommunities.isNotEmpty()) {
             followingCommunities.forEach {
                 ATag.parse(it, null)?.let {
-                    returningContactList = if (keyPair.privKey == null) {
-                        ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.pubKey.toHexKey())
-                    } else {
-                        ContactListEvent.followAddressableEvent(returningContactList, it, keyPair.pubKey.toHexKey(), keyPair.privKey)
-                    }
+                    returningContactList = ContactListEvent.followAddressableEvent(returningContactList, it, keyPair)
                 }
             }
             followingCommunities = emptySet()
@@ -523,11 +517,7 @@ class Account(
 
         if (followingChannels.isNotEmpty()) {
             followingChannels.forEach {
-                returningContactList = if (keyPair.privKey == null) {
-                    ContactListEvent.followEvent(returningContactList, it, keyPair.pubKey.toHexKey())
-                } else {
-                    ContactListEvent.followEvent(returningContactList, it, keyPair.pubKey.toHexKey(), keyPair.privKey)
-                }
+                returningContactList = ContactListEvent.followEvent(returningContactList, it, keyPair)
             }
             followingChannels = emptySet()
         }
@@ -541,11 +531,7 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            if (signEvent) {
-                ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair.privKey!!)
-            } else {
-                ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair.pubKey.toHexKey())
-            }
+            ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = listOf(Contact(user.pubkeyHex, null)),
@@ -554,8 +540,7 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey,
-                publicKey = if (signEvent) null else keyPair.pubKey
+                keyPair = keyPair
             )
         }
 
@@ -574,7 +559,7 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followEvent(contactList, channel.idHex, keyPair.pubKey.toHexKey(), keyPair.privKey)
+            ContactListEvent.followEvent(contactList, channel.idHex, keyPair)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
@@ -583,8 +568,7 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList().plus(channel.idHex),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                publicKey = if (!signEvent) keyPair.pubKey else null,
-                privateKey = keyPair.privKey
+                keyPair = keyPair
             )
         }
 
@@ -603,7 +587,7 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            ContactListEvent.followAddressableEvent(contactList, community.address, keyPair.pubKey.toHexKey(), keyPair.privKey)
+            ContactListEvent.followAddressableEvent(contactList, community.address, keyPair)
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
             ContactListEvent.createFromScratch(
@@ -613,8 +597,7 @@ class Account(
                 followCommunities = listOf(community.address),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                publicKey = if (!signEvent) keyPair.pubKey else null,
-                privateKey = keyPair.privKey
+                keyPair = keyPair
             )
         }
 
@@ -633,19 +616,11 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         val event = if (contactList != null) {
-            if (signEvent) {
-                ContactListEvent.followHashtag(
-                    contactList,
-                    tag,
-                    keyPair.privKey!!
-                )
-            } else {
-                ContactListEvent.followHashtag(
-                    contactList,
-                    tag,
-                    keyPair.pubKey.toHexKey()
-                )
-            }
+            ContactListEvent.followHashtag(
+                contactList,
+                tag,
+                keyPair
+            )
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
@@ -654,8 +629,7 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey,
-                publicKey = if (signEvent) null else keyPair.pubKey
+                keyPair = keyPair
             )
         }
 
@@ -668,8 +642,8 @@ class Account(
         return null
     }
 
-    fun followGeohash(geohash: String) {
-        if (!isWriteable()) return
+    fun followGeohash(geohash: String, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -677,7 +651,7 @@ class Account(
             ContactListEvent.followGeohash(
                 contactList,
                 geohash,
-                keyPair.privKey!!
+                keyPair
             )
         } else {
             ContactListEvent.createFromScratch(
@@ -687,12 +661,17 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                privateKey = keyPair.privKey!!
+                keyPair = keyPair
             )
+        }
+
+        if (!signEvent) {
+            return event
         }
 
         Client.send(event)
         LocalCache.consume(event)
+        return null
     }
 
     fun unfollow(user: User, signEvent: Boolean = true): ContactListEvent? {
@@ -701,19 +680,15 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            if (!signEvent) {
-                return ContactListEvent.unfollowUser(
-                    contactList,
-                    user.pubkeyHex,
-                    keyPair.pubKey.toHexKey()
-                )
-            }
-
             val event = ContactListEvent.unfollowUser(
                 contactList,
                 user.pubkeyHex,
-                keyPair.privKey!!
+                keyPair
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             Client.send(event)
             LocalCache.consume(event)
@@ -728,19 +703,15 @@ class Account(
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            if (!signEvent) {
-                return ContactListEvent.unfollowHashtag(
-                    contactList,
-                    tag,
-                    keyPair.pubKey.toHexKey()
-                )
-            }
-
             val event = ContactListEvent.unfollowHashtag(
                 contactList,
                 tag,
-                keyPair.privKey!!
+                keyPair
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             Client.send(event)
             LocalCache.consume(event)
@@ -751,8 +722,8 @@ class Account(
         return null
     }
 
-    fun unfollowGeohash(geohash: String) {
-        if (!isWriteable()) return
+    fun unfollowGeohash(geohash: String, signEvent: Boolean): ContactListEvent? {
+        if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -760,12 +731,18 @@ class Account(
             val event = ContactListEvent.unfollowGeohash(
                 contactList,
                 geohash,
-                keyPair.privKey!!
+                keyPair
             )
+
+            if (!signEvent) {
+                return event
+            }
 
             Client.send(event)
             LocalCache.consume(event)
+            return null
         }
+        return null
     }
 
     fun unfollow(channel: Channel, signEvent: Boolean): ContactListEvent? {
@@ -777,8 +754,7 @@ class Account(
             val event = ContactListEvent.unfollowEvent(
                 contactList,
                 channel.idHex,
-                keyPair.pubKey.toHexKey(),
-                keyPair.privKey
+                keyPair
             )
 
             if (!signEvent) {
@@ -800,8 +776,7 @@ class Account(
             val event = ContactListEvent.unfollowAddressableEvent(
                 contactList,
                 community.address,
-                keyPair.pubKey.toHexKey(),
-                keyPair.privKey
+                keyPair
             )
 
             if (!signEvent) {

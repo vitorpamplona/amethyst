@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -145,7 +144,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
 
                             PostButton(
                                 onPost = {
-                                    if (PackageUtils.isAmberInstalled(context)) {
+                                    if (accountViewModel.loggedInWithAmber()) {
                                         event = postViewModel.create(false)
                                     } else {
                                         postViewModel.create(true)

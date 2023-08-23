@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
@@ -233,7 +232,7 @@ fun ShowFollowingOrUnfollowingButton(
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     event = accountViewModel.account.unfollow(baseAuthor, false)
                 } else {
                     scope.launch {
@@ -255,7 +254,7 @@ fun ShowFollowingOrUnfollowingButton(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     event = accountViewModel.account.follow(baseAuthor, false)
                 } else {
                     scope.launch {

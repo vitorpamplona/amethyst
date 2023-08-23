@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -1131,7 +1130,7 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.follow(channel, !PackageUtils.isAmberInstalled(context))
+                event = accountViewModel.account.follow(channel, !accountViewModel.loggedInWithAmber())
             }
         },
         shape = ButtonBorder,
@@ -1171,7 +1170,7 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.unfollow(channel, !PackageUtils.isAmberInstalled(context))
+                event = accountViewModel.account.unfollow(channel, !accountViewModel.loggedInWithAmber())
             }
         },
         shape = ButtonBorder,
@@ -1211,7 +1210,7 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNot
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.follow(note, !PackageUtils.isAmberInstalled(context))
+                event = accountViewModel.account.follow(note, !accountViewModel.loggedInWithAmber())
             }
         },
         shape = ButtonBorder,
@@ -1251,7 +1250,7 @@ fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNo
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.unfollow(note, !PackageUtils.isAmberInstalled(context))
+                event = accountViewModel.account.unfollow(note, !accountViewModel.loggedInWithAmber())
             }
         },
         shape = ButtonBorder,
