@@ -113,12 +113,12 @@ var hasAlreadyAskedNotificationPermissions = false
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CheckifItNeedsToRequestNotificationPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAlreadyAskedNotificationPermissions) {
         val notificationPermissionState = rememberPermissionState(
             Manifest.permission.POST_NOTIFICATIONS
         )
 
-        if (!notificationPermissionState.status.isGranted && !hasAlreadyAskedNotificationPermissions) {
+        if (!notificationPermissionState.status.isGranted) {
             hasAlreadyAskedNotificationPermissions = true
 
             // This will pause the APP, including the connection with relays.

@@ -22,6 +22,10 @@ class EventFactory {
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.kind -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
             BookmarkListEvent.kind -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarEvent.kind -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarDateSlotEvent.kind -> CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarTimeSlotEvent.kind -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarRSVPEvent.kind -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelCreateEvent.kind -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelHideMessageEvent.kind -> ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMessageEvent.kind -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
@@ -41,9 +45,6 @@ class EventFactory {
             ContactListEvent.kind -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
 
-            // Will never happen.
-            // DirectMessageEvent.kind -> DirectMessageEvent(createdAt, tags, content)
-
             EmojiPackEvent.kind -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackSelectionEvent.kind -> EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
             SealedGossipEvent.kind -> SealedGossipEvent(id, pubKey, createdAt, tags, content, sig)
@@ -59,6 +60,7 @@ class EventFactory {
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
+            LnZapPrivateEvent.kind -> LnZapPrivateEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapRequestEvent.kind -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LongTextNoteEvent.kind -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             MetadataEvent.kind -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)

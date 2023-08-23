@@ -69,7 +69,17 @@ fun DiscoverScreen(
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN)
+    val tabs by remember(discoveryLiveFeedViewModel, discoveryCommunityFeedViewModel, discoveryChatFeedViewModel) {
+        mutableStateOf(
+            listOf(
+                TabItem(R.string.discover_live, discoveryLiveFeedViewModel, Route.Discover.base + "Live", ScrollStateKeys.DISCOVER_LIVE, LiveActivitiesEvent.kind),
+                TabItem(R.string.discover_community, discoveryCommunityFeedViewModel, Route.Discover.base + "Community", ScrollStateKeys.DISCOVER_COMMUNITY, CommunityDefinitionEvent.kind),
+                TabItem(R.string.discover_chat, discoveryChatFeedViewModel, Route.Discover.base + "Chats", ScrollStateKeys.DISCOVER_CHATS, ChannelCreateEvent.kind)
+            ).toImmutableList()
+        )
+    }
+
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
 
     WatchAccountForDiscoveryScreen(
         discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
@@ -90,16 +100,6 @@ fun DiscoverScreen(
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
         }
-    }
-
-    val tabs by remember(discoveryLiveFeedViewModel, discoveryCommunityFeedViewModel, discoveryChatFeedViewModel) {
-        mutableStateOf(
-            listOf(
-                TabItem(R.string.discover_live, discoveryLiveFeedViewModel, Route.Discover.base + "Live", ScrollStateKeys.DISCOVER_LIVE, LiveActivitiesEvent.kind),
-                TabItem(R.string.discover_community, discoveryCommunityFeedViewModel, Route.Discover.base + "Community", ScrollStateKeys.DISCOVER_COMMUNITY, CommunityDefinitionEvent.kind),
-                TabItem(R.string.discover_chat, discoveryChatFeedViewModel, Route.Discover.base + "Chats", ScrollStateKeys.DISCOVER_CHATS, ChannelCreateEvent.kind)
-            ).toImmutableList()
-        )
     }
 
     Column(Modifier.fillMaxHeight()) {
@@ -139,7 +139,7 @@ private fun DiscoverPages(
         }
     }
 
-    HorizontalPager(pageCount = 3, state = pagerState) { page ->
+    HorizontalPager(state = pagerState) { page ->
         RefresheableView(tabs[page].viewModel, true) {
             SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
                 RenderDiscoverFeed(

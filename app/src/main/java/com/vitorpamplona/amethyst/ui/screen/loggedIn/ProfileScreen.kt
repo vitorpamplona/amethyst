@@ -313,7 +313,6 @@ private fun RenderSurface(
                     columnSize = it
                 }
         ) {
-            val pagerState = rememberPagerState()
             val coroutineScope = rememberCoroutineScope()
             val scrollState = rememberScrollState()
 
@@ -352,7 +351,6 @@ private fun RenderSurface(
             ) {
                 RenderScreen(
                     baseUser,
-                    pagerState,
                     tabRowModifier,
                     pagerModifier,
                     threadsViewModel,
@@ -375,7 +373,6 @@ private fun RenderSurface(
 @OptIn(ExperimentalFoundationApi::class)
 private fun RenderScreen(
     baseUser: User,
-    pagerState: PagerState,
     tabRowModifier: Modifier,
     pagerModifier: Modifier,
     threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
@@ -389,6 +386,8 @@ private fun RenderScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val pagerState = rememberPagerState { 9 }
+
     Column() {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
         ScrollableTabRow(
@@ -400,7 +399,6 @@ private fun RenderScreen(
             CreateAndRenderTabs(baseUser, pagerState)
         }
         HorizontalPager(
-            pageCount = 9,
             state = pagerState,
             modifier = pagerModifier
         ) { page ->
@@ -1125,7 +1123,7 @@ private fun DisplayAppRecommendations(
                     Text(stringResource(id = R.string.recommended_apps))
 
                     FlowRow(
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.Center,
                         modifier = Modifier.padding(vertical = 5.dp)
                     ) {
                         state.feed.value.forEach { app ->
@@ -1210,7 +1208,7 @@ private fun RenderBadgeList(
     nav: (String) -> Unit
 ) {
     FlowRow(
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp)
     ) {
         list.forEach { badgeAwardEvent ->

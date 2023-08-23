@@ -205,6 +205,10 @@ object LocalPreferences {
         }
     }
 
+    fun allLocalAccountNPubs(): Set<String> {
+        return savedAccounts().toSet()
+    }
+
     fun saveToEncryptedStorage(account: Account) {
         val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
         prefs.edit().apply {

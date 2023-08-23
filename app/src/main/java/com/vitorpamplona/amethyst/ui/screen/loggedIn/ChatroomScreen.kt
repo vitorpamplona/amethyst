@@ -5,7 +5,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -603,7 +602,7 @@ fun GroupChatroomHeader(
             }
 
             if (expanded.value) {
-                LongRoomHeader(room, accountViewModel, nav)
+                LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
             }
         }
 
@@ -740,15 +739,18 @@ fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room
 }
 
 @Composable
-fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun LongRoomHeader(
+    room: ChatroomKey,
+    lineModifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val list = remember(room) {
         room.users.toPersistentList()
     }
 
     Row(
-        modifier = Modifier
-            .padding(top = 10.dp)
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -765,16 +767,18 @@ fun LongRoomHeader(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxHeight(),
-        contentPadding = PaddingValues(
-            bottom = 10.dp
-        ),
+        modifier = Modifier,
         state = rememberLazyListState()
     ) {
         itemsIndexed(list, key = { _, item -> item }) { _, item ->
             LoadUser(baseUserHex = item) {
                 if (it != null) {
-                    UserCompose(baseUser = it, accountViewModel = accountViewModel, nav = nav)
+                    UserCompose(
+                        baseUser = it,
+                        overallModifier = lineModifier,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
                 }
             }
         }

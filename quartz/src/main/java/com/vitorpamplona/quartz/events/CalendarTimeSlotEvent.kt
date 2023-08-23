@@ -8,7 +8,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
-class CommunityDefinitionEvent(
+class CalendarTimeSlotEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -16,24 +16,30 @@ class CommunityDefinitionEvent(
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
-    fun rules() = tags.firstOrNull { it.size > 1 && it[0] == "rules" }?.get(1)
+    fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
+    fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)?.toLongOrNull()
+    fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)?.toLongOrNull()
 
-    fun moderators() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(3)) }
+    fun startTmz() = tags.firstOrNull { it.size > 1 && it[0] == "start_tzid" }?.get(1)?.toLongOrNull()
+    fun endTmz() = tags.firstOrNull { it.size > 1 && it[0] == "end_tzid" }?.get(1)?.toLongOrNull()
+
+    //    ["start", "<Unix timestamp in seconds>"],
+    //    ["end", "<Unix timestamp in seconds>"],
+    //    ["start_tzid", "<IANA Time Zone Database identifier>"],
+    //    ["end_tzid", "<IANA Time Zone Database identifier>"],
 
     companion object {
-        const val kind = 34550
+        const val kind = 31923
 
         fun create(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
-        ): CommunityDefinitionEvent {
+        ): CalendarTimeSlotEvent {
             val tags = mutableListOf<List<String>>()
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, "")
             val sig = CryptoUtils.sign(id, privateKey)
-            return CommunityDefinitionEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            return CalendarTimeSlotEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
         }
     }
 }

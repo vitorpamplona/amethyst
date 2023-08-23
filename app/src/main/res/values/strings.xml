@@ -548,4 +548,7 @@
 
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
+
+    <string name="created_at">Created at</string>
+    <string name="rules">Rules</string>
 </resources>

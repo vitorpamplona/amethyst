@@ -57,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.time.Instant
@@ -109,26 +110,58 @@ fun UserReactionsRow(
 
 @Composable
 private fun UserZapModel(model: UserReactionsViewModel) {
-    val zaps by model.zaps.collectAsState()
-    UserZapReaction(showAmountAxis(zaps[model.today()]))
+    Icon(
+        imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(R.string.zaps),
+        modifier = Size24Modifier,
+        tint = BitcoinOrange
+    )
+
+    Spacer(modifier = Modifier.width(8.dp))
+
+    UserZapReaction(model)
 }
 
 @Composable
 private fun UserReactionModel(model: UserReactionsViewModel) {
-    val reactions by model.reactions.collectAsState()
-    UserLikeReaction(reactions[model.today()])
+    Icon(
+        painter = painterResource(R.drawable.ic_liked),
+        null,
+        modifier = Size20Modifier,
+        tint = Color.Unspecified
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+
+    UserLikeReaction(model)
 }
 
 @Composable
 private fun UserBoostModel(model: UserReactionsViewModel) {
-    val boosts by model.boosts.collectAsState()
-    UserBoostReaction(boosts[model.today()])
+    Icon(
+        painter = painterResource(R.drawable.ic_retweeted),
+        null,
+        modifier = Size24Modifier,
+        tint = Color.Unspecified
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+
+    UserBoostReaction(model)
 }
 
 @Composable
 private fun UserReplyModel(model: UserReactionsViewModel) {
-    val replies by model.replies.collectAsState()
-    UserReplyReaction(replies[model.today()])
+    Icon(
+        painter = painterResource(R.drawable.ic_comment),
+        null,
+        modifier = Size20Modifier,
+        tint = RoyalBlue
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+
+    UserReplyReaction(model)
 }
 
 @Stable
@@ -153,6 +186,11 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
     private var takenIntoAccount = setOf<HexKey>()
     private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
+
+    val todaysReplyCount = _replies.map { showCount(it[today()]) }
+    val todaysBoostCount = _boosts.map { showCount(it[today()]) }
+    val todaysReactionCount = _reactions.map { showCount(it[today()]) }
+    val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }
 
     fun formatDate(createAt: Long): String {
         return sdf.format(
@@ -339,18 +377,9 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
 @Composable
 fun UserReplyReaction(
-    replyCount: Int?
+    model: UserReactionsViewModel
 ) {
-    val showCounts = remember(replyCount) { showCount(replyCount) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_comment),
-        null,
-        modifier = Size20Modifier,
-        tint = RoyalBlue
-    )
-
-    Spacer(modifier = StdHorzSpacer)
+    val showCounts by model.todaysReplyCount.collectAsState("")
 
     Text(
         showCounts,
@@ -361,21 +390,12 @@ fun UserReplyReaction(
 
 @Composable
 fun UserBoostReaction(
-    boostCount: Int?
+    model: UserReactionsViewModel
 ) {
-    val showCounts = remember(boostCount) { showCount(boostCount) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_retweeted),
-        null,
-        modifier = Size24Modifier,
-        tint = Color.Unspecified
-    )
-
-    Spacer(modifier = StdHorzSpacer)
+    val boosts by model.todaysBoostCount.collectAsState("")
 
     Text(
-        showCounts,
+        boosts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -383,21 +403,12 @@ fun UserBoostReaction(
 
 @Composable
 fun UserLikeReaction(
-    likeCount: Int?
+    model: UserReactionsViewModel
 ) {
-    val showCounts = remember(likeCount) { showCount(likeCount) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_liked),
-        null,
-        modifier = Size20Modifier,
-        tint = Color.Unspecified
-    )
-
-    Spacer(modifier = StdHorzSpacer)
+    val reactions by model.todaysReactionCount.collectAsState("")
 
     Text(
-        text = showCounts,
+        text = reactions,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -405,17 +416,9 @@ fun UserLikeReaction(
 
 @Composable
 fun UserZapReaction(
-    amount: String
+    model: UserReactionsViewModel
 ) {
-    Icon(
-        imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.zaps),
-        modifier = Size24Modifier,
-        tint = BitcoinOrange
-    )
-
-    Spacer(modifier = Modifier.width(8.dp))
-
+    val amount by model.todaysZapAmount.collectAsState("")
     Text(
         amount,
         fontWeight = FontWeight.Bold,

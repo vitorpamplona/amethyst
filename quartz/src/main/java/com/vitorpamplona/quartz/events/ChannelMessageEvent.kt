@@ -71,5 +71,5 @@ class ChannelMessageEvent(
 }
 
 interface IsInPublicChatChannel {
-    open fun channel(): String?
+    fun channel(): String?
 }

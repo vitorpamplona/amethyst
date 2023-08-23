@@ -166,7 +166,7 @@ class GiftWrapReceivingBenchmark {
         val toDecrypt = decodeNIP44(wrappedEvent.content) ?: return
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.decryptNIP24(toDecrypt, sender.privKey!!, wrappedEvent.pubKey.hexToByteArray()))
+            assertNotNull(CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, wrappedEvent.pubKey.hexToByteArray()))
         }
     }
 
@@ -191,7 +191,7 @@ class GiftWrapReceivingBenchmark {
         )
 
         val toDecrypt = decodeNIP44(wrappedEvent.content) ?: return
-        val innerJson = CryptoUtils.decryptNIP24(toDecrypt, sender.privKey!!, wrappedEvent.pubKey.hexToByteArray())
+        val innerJson = CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, wrappedEvent.pubKey.hexToByteArray())
 
         benchmarkRule.measureRepeated {
             assertNotNull(innerJson?.let { Event.fromJson(it) })
@@ -236,7 +236,7 @@ class GiftWrapReceivingBenchmark {
         val toDecrypt = decodeNIP44(seal.content) ?: return
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.decryptNIP24(toDecrypt, sender.privKey!!, seal.pubKey.hexToByteArray()))
+            assertNotNull(CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, seal.pubKey.hexToByteArray()))
         }
     }
 
@@ -256,7 +256,7 @@ class GiftWrapReceivingBenchmark {
         )
 
         val toDecrypt = decodeNIP44(seal.content) ?: return
-        val innerJson = CryptoUtils.decryptNIP24(toDecrypt, sender.privKey!!, seal.pubKey.hexToByteArray())
+        val innerJson = CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, seal.pubKey.hexToByteArray())
 
         benchmarkRule.measureRepeated {
             assertNotNull(innerJson?.let { Gossip.fromJson(it) })

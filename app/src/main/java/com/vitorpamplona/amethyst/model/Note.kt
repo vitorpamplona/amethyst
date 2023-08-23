@@ -72,7 +72,22 @@ open class Note(val idHex: String) {
     open fun idNote() = id().toNote()
 
     open fun toNEvent(): String {
-        return Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+        val myEvent = event
+        return if (myEvent is WrappedEvent) {
+            val host = myEvent.host
+            if (host != null) {
+                Nip19.createNEvent(
+                    host.id,
+                    host.pubKey,
+                    host.kind(),
+                    relays.firstOrNull()
+                )
+            } else {
+                Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+            }
+        } else {
+            Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+        }
     }
 
     fun toNostrUri(): String {
@@ -238,8 +253,7 @@ open class Note(val idHex: String) {
             zaps = zaps.minus(note)
             liveSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
-            val toRemove = zaps.filterValues { it == note }
-            zaps = zaps.minus(toRemove.keys)
+            zaps = zaps.filterValues { it != note }
             liveSet?.zaps?.invalidateData()
         }
     }

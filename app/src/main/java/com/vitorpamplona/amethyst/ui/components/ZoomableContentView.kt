@@ -637,7 +637,7 @@ fun ZoomableImageDialog(
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                val pagerState: PagerState = rememberPagerState()
+                val pagerState: PagerState = rememberPagerState() { allImages.size }
 
                 LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
                     val page = allImages.indexOf(imageUrl)
@@ -648,12 +648,10 @@ fun ZoomableImageDialog(
 
                 if (allImages.size > 1) {
                     SlidingCarousel(
-                        pagerState = pagerState,
-                        itemsCount = allImages.size,
-                        itemContent = { index ->
-                            RenderImageOrVideo(allImages[index], false, accountViewModel)
-                        }
-                    )
+                        pagerState = pagerState
+                    ) { index ->
+                        RenderImageOrVideo(allImages[index], false, accountViewModel)
+                    }
                 } else {
                     RenderImageOrVideo(imageUrl, false, accountViewModel)
                 }

@@ -108,12 +108,12 @@ import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.routeFor
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
@@ -584,7 +584,7 @@ fun ChannelHeader(
             )
 
             if (expanded.value) {
-                LongChannelHeader(baseChannel, accountViewModel, nav)
+                LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
             }
         }
 
@@ -726,6 +726,7 @@ fun ShortChannelHeader(
 @Composable
 fun LongChannelHeader(
     baseChannel: Channel,
+    lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -735,18 +736,14 @@ fun LongChannelHeader(
     } ?: return
 
     Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp)
+        lineModifier
     ) {
         val summary = remember(channelState) {
             channel.summary()?.ifBlank { null }
         }
 
         Column(
-            Modifier
-                .weight(1f)
-                .padding(start = 10.dp)
+            Modifier.weight(1f)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val defaultBackground = MaterialTheme.colors.background
@@ -773,7 +770,9 @@ fun LongChannelHeader(
             }
 
             if (baseChannel is LiveActivitiesChannel) {
-                val hashtags = remember(baseChannel.info) { baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                val hashtags = remember(baseChannel.info) {
+                    baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
+                }
                 DisplayUncitedHashtags(hashtags, summary ?: "", nav)
             }
         }
@@ -788,28 +787,37 @@ fun LongChannelHeader(
         }
     }
 
-    Spacer(DoubleVertSpacer)
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LoadNote(baseNoteHex = channel.idHex) {
-            it?.let {
+    LoadNote(baseNoteHex = channel.idHex) { loadingNote ->
+        loadingNote?.let { note ->
+            Row(
+                lineModifier,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = stringResource(id = R.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.width(55.dp)
+                    modifier = Modifier.width(75.dp)
                 )
                 Spacer(DoubleHorzSpacer)
-                NoteAuthorPicture(it, nav, accountViewModel, Size25dp)
+                NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
                 Spacer(DoubleHorzSpacer)
-                NoteUsernameDisplay(it, remember { Modifier.weight(1f) })
-                TimeAgo(it)
-                MoreOptionsButton(it, accountViewModel)
+                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+            }
+
+            Row(
+                lineModifier,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(id = R.string.created_at),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(75.dp)
+                )
+                Spacer(DoubleHorzSpacer)
+                NormalTimeAgo(note, remember { Modifier.weight(1f) })
+                MoreOptionsButton(note, accountViewModel)
             }
         }
     }
@@ -835,9 +843,7 @@ fun LongChannelHeader(
 
         participantUsers.forEach {
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 10.dp, top = 10.dp)
+                lineModifier
                     .clickable {
                         nav("User/${it.second.pubkeyHex}")
                     },
@@ -858,6 +864,24 @@ fun LongChannelHeader(
             }
         }
     }
+}
+
+@Composable
+fun NormalTimeAgo(baseNote: Note, modifier: Modifier) {
+    val nowStr = stringResource(id = R.string.now)
+
+    val time by remember(baseNote) {
+        derivedStateOf {
+            timeAgoShort(baseNote.createdAt() ?: 0, nowStr)
+        }
+    }
+
+    Text(
+        text = time,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+    )
 }
 
 @Composable

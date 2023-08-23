@@ -15,11 +15,7 @@ class RelaySetEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
-
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
-    override fun address() = ATag(kind, pubKey, dTag(), null)
-
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun relays() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
     fun description() = tags.firstOrNull() { it.size > 1 && it[0] == "description" }?.get(1)
 

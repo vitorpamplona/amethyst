@@ -15,11 +15,7 @@ class EmojiPackSelectionEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
-
-    override fun dTag() = ""
-    override fun address() = ATag(kind, pubKey, dTag(), null)
-
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     companion object {
         const val kind = 10030
 

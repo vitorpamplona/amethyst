@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteComposeReportState
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
+import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -63,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -131,15 +135,7 @@ private fun SaveableFeedState(
     nav: (String) -> Unit,
     scrollStateKey: String? = null
 ) {
-    val pagerState = if (scrollStateKey != null) {
-        rememberForeverPagerState(scrollStateKey)
-    } else {
-        remember { PagerState() }
-    }
-
-    WatchScrollToTop(videoFeedView, pagerState)
-
-    RenderPage(videoFeedView, accountViewModel, pagerState, nav)
+    RenderPage(videoFeedView, accountViewModel, scrollStateKey, nav)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -163,7 +159,7 @@ public fun WatchScrollToTop(
 fun RenderPage(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    pagerState: PagerState,
+    pagerStateKey: String?,
     nav: (String) -> Unit
 ) {
     val feedState by videoFeedView.feedContent.collectAsState()
@@ -184,12 +180,7 @@ fun RenderPage(
                     }
 
                     is FeedState.Loaded -> {
-                        SlidingCarousel(
-                            state.feed,
-                            pagerState,
-                            accountViewModel,
-                            nav
-                        )
+                        LoadedState(state, pagerStateKey, videoFeedView, accountViewModel, nav)
                     }
 
                     is FeedState.Loading -> {
@@ -198,6 +189,33 @@ fun RenderPage(
                 }
             }
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun LoadedState(
+    state: FeedState.Loaded,
+    pagerStateKey: String?,
+    videoFeedView: NostrVideoFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val pagerState = if (pagerStateKey != null) {
+        rememberForeverPagerState(pagerStateKey) { state.feed.value.size }
+    } else {
+        rememberPagerState { state.feed.value.size }
+    }
+
+    WatchScrollToTop(videoFeedView, pagerState)
+
+    RefresheableView(viewModel = videoFeedView) {
+        SlidingCarousel(
+            state.feed,
+            pagerState,
+            accountViewModel,
+            nav
+        )
     }
 }
 
@@ -210,7 +228,6 @@ fun SlidingCarousel(
     nav: (String) -> Unit
 ) {
     VerticalPager(
-        pageCount = feed.value.size,
         state = pagerState,
         beyondBoundsPageCount = 1,
         modifier = Modifier.fillMaxSize(1f),
@@ -434,13 +451,12 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
-        /*
-        ReplyReaction(baseNote, accountViewModel, iconSize = 40.dp) {
+        ReplyReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToReplyTo = baseNote
         }
-        BoostReaction(baseNote, accountViewModel, iconSize = 40.dp) {
+        BoostReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
-        }*/
+        }
         LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
         ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp)
         ViewCountReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colors.onBackgroundColorFilter)

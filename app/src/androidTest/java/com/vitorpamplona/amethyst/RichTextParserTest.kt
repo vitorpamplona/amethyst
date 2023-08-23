@@ -4128,7 +4128,7 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
     }
 
     private fun printStateForDebug(state: RichTextViewerState) {
-        state.paragraphs.forEachIndexed { index, paragraph ->
+        state.paragraphs.forEach { paragraph ->
             paragraph.words.forEach { seg ->
                 println(
                     "\"${

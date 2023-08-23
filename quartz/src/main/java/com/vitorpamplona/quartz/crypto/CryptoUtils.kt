@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec
 
 object CryptoUtils {
     private val sharedKeyCache04 = LruCache<Int, ByteArray>(200)
-    private val sharedKeyCache24 = LruCache<Int, ByteArray>(200)
+    private val sharedKeyCache44 = LruCache<Int, ByteArray>(200)
 
     private val secp256k1 = Secp256k1.get()
     private val libSodium = SodiumAndroid()
@@ -26,7 +26,7 @@ object CryptoUtils {
 
     fun clearCache() {
         sharedKeyCache04.evictAll()
-        sharedKeyCache24.evictAll()
+        sharedKeyCache44.evictAll()
     }
 
     fun randomInt(bound: Int): Int {
@@ -115,12 +115,12 @@ object CryptoUtils {
         return String(cipher.doFinal(encryptedMsg))
     }
 
-    fun encryptNIP24(msg: String, privateKey: ByteArray, pubKey: ByteArray): EncryptedInfo {
-        val sharedSecret = getSharedSecretNIP24(privateKey, pubKey)
-        return encryptNIP24(msg, sharedSecret)
+    fun encryptNIP44(msg: String, privateKey: ByteArray, pubKey: ByteArray): EncryptedInfo {
+        val sharedSecret = getSharedSecretNIP44(privateKey, pubKey)
+        return encryptNIP44(msg, sharedSecret)
     }
 
-    fun encryptNIP24(msg: String, sharedSecret: ByteArray): EncryptedInfo {
+    fun encryptNIP44(msg: String, sharedSecret: ByteArray): EncryptedInfo {
         val nonce = ByteArray(24)
         random.nextBytes(nonce)
 
@@ -134,16 +134,16 @@ object CryptoUtils {
         return EncryptedInfo(
             ciphertext = cipher ?: ByteArray(0),
             nonce = nonce,
-            v = Nip44Version.NIP24.versionCode
+            v = Nip44Version.NIP44.versionCode
         )
     }
 
-    fun decryptNIP24(encryptedInfo: EncryptedInfo, privateKey: ByteArray, pubKey: ByteArray): String? {
-        val sharedSecret = getSharedSecretNIP24(privateKey, pubKey)
-        return decryptNIP24(encryptedInfo, sharedSecret)
+    fun decryptNIP44(encryptedInfo: EncryptedInfo, privateKey: ByteArray, pubKey: ByteArray): String? {
+        val sharedSecret = getSharedSecretNIP44(privateKey, pubKey)
+        return decryptNIP44(encryptedInfo, sharedSecret)
     }
 
-    fun decryptNIP24(encryptedInfo: EncryptedInfo, sharedSecret: ByteArray): String? {
+    fun decryptNIP44(encryptedInfo: EncryptedInfo, sharedSecret: ByteArray): String? {
         return cryptoStreamXChaCha20Xor(
             libSodium = libSodium,
             messageBytes = encryptedInfo.ciphertext,
@@ -174,20 +174,20 @@ object CryptoUtils {
     /**
      * @return 32B shared secret
      */
-    fun getSharedSecretNIP24(privateKey: ByteArray, pubKey: ByteArray): ByteArray {
+    fun getSharedSecretNIP44(privateKey: ByteArray, pubKey: ByteArray): ByteArray {
         val hash = combinedHashCode(privateKey, pubKey)
-        val preComputed = sharedKeyCache24[hash]
+        val preComputed = sharedKeyCache44[hash]
         if (preComputed != null) return preComputed
 
-        val computed = computeSharedSecretNIP24(privateKey, pubKey)
-        sharedKeyCache24.put(hash, computed)
+        val computed = computeSharedSecretNIP44(privateKey, pubKey)
+        sharedKeyCache44.put(hash, computed)
         return computed
     }
 
     /**
      * @return 32B shared secret
      */
-    fun computeSharedSecretNIP24(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
+    fun computeSharedSecretNIP44(privateKey: ByteArray, pubKey: ByteArray): ByteArray =
         sha256(secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33))
 }
 
@@ -196,7 +196,7 @@ data class EncryptedInfoString(val ciphertext: String, val nonce: String, val v:
 
 enum class Nip44Version(val versionCode: Int) {
     NIP04(0),
-    NIP24(1)
+    NIP44(1)
 }
 
 
@@ -234,10 +234,10 @@ fun decodeByteArray(base64: String): EncryptedInfo? {
 fun encodeJackson(info: EncryptedInfo): String {
     return Event.mapper.writeValueAsString(
         EncryptedInfoString(
-        v = info.v,
-        nonce = Base64.getEncoder().encodeToString(info.nonce),
-        ciphertext = Base64.getEncoder().encodeToString(info.ciphertext)
-    )
+            v = info.v,
+            nonce = Base64.getEncoder().encodeToString(info.nonce),
+            ciphertext = Base64.getEncoder().encodeToString(info.ciphertext)
+        )
     )
 }
 

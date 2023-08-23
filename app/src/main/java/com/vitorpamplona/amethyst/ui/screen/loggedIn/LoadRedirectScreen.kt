@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -75,9 +77,17 @@ fun LoadRedirectScreen(baseNote: Note, accountViewModel: AccountViewModel, nav: 
 
     LaunchedEffect(key1 = noteState) {
         scope.launch {
-            val note = noteState?.note
-            val event = note?.event
-            val channelHex = note?.channelHex()
+            val note = noteState?.note ?: return@launch
+            var event = note.event
+            val channelHex = note.channelHex()
+
+            if (event is GiftWrapEvent) {
+                event = accountViewModel.unwrap(event)
+            }
+
+            if (event is SealedGossipEvent) {
+                event = accountViewModel.unseal(event)
+            }
 
             if (event == null) {
                 // stay here, loading
@@ -85,7 +95,7 @@ fun LoadRedirectScreen(baseNote: Note, accountViewModel: AccountViewModel, nav: 
                 nav("Channel/${note.idHex}")
             } else if (event is ChatroomKeyable) {
                 note.author?.let {
-                    val withKey = (note.event as ChatroomKeyable)
+                    val withKey = (event as ChatroomKeyable)
                         .chatroomKey(accountViewModel.userProfile().pubkeyHex)
 
                     withContext(Dispatchers.IO) {

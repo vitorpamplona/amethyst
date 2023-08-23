@@ -15,11 +15,7 @@ class NNSEvent(
     tags: List<List<String>>,
     content: String,
     sig: HexKey
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
-
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
-    override fun address() = ATag(kind, pubKey, dTag(), null)
-
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun ip4() = tags.firstOrNull { it.size > 1 && it[0] == "ip4" }?.get(1)
     fun ip6() = tags.firstOrNull { it.size > 1 && it[0] == "ip6" }?.get(1)
     fun version() = tags.firstOrNull { it.size > 1 && it[0] == "version" }?.get(1)

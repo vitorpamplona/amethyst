@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
+import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import java.io.File
 
 object ServiceManager {
@@ -124,11 +125,14 @@ object ServiceManager {
     fun cleanUp() {
         LocalCache.cleanObservers()
 
+        val accounts = LocalPreferences.allLocalAccountNPubs().mapNotNull { decodePublicKeyAsHexOrNull(it) }.toSet()
+
         account?.let {
             LocalCache.pruneOldAndHiddenMessages(it)
             LocalCache.pruneHiddenMessages(it)
-            LocalCache.pruneContactLists(it)
-            LocalCache.pruneRepliesAndReactions(it)
+            LocalCache.pruneContactLists(accounts)
+            LocalCache.pruneRepliesAndReactions(accounts)
+            LocalCache.prunePastVersionsOfReplaceables()
         }
     }
 }

@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -119,7 +120,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import kotlin.math.roundToInt
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 @Composable
@@ -146,7 +146,6 @@ fun ReactionsRow(
     Spacer(modifier = HalfDoubleVertSpacer)
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun InnerReactionRow(
     baseNote: Note,
@@ -621,14 +620,14 @@ private fun SlidingAnimationCount(baseCount: MutableState<Int>, textColor: Color
 private fun SlidingAnimationCount(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
         targetState = baseCount,
-        transitionSpec = AnimatedContentScope<Int>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec
     ) { count ->
         TextCount(count, textColor)
     }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentScope<S>.transitionSpec(): ContentTransform {
+private fun <S> AnimatedContentTransitionScope<S>.transitionSpec(): ContentTransform {
     return slideAnimation
 }
 
@@ -655,7 +654,7 @@ private fun TextCount(count: Int, textColor: Color) {
 private fun SlidingAnimationAmount(amount: MutableState<String>, textColor: Color) {
     AnimatedContent(
         targetState = amount.value,
-        transitionSpec = AnimatedContentScope<String>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec
     ) { count ->
         Text(
             text = count,
@@ -736,25 +735,26 @@ fun BoostReaction(
         }
     ) {
         BoostIcon(baseNote, iconSize, grayTint, accountViewModel)
-    }
 
-    if (wantsToBoost) {
-        BoostTypeChoicePopup(
-            baseNote,
-            accountViewModel,
-            onDismiss = {
-                wantsToBoost = false
-            },
-            onQuote = {
-                wantsToBoost = false
-                onQuotePress()
-            },
-            onRepost = {
-                scope.launch(Dispatchers.IO) {
-                    event = accountViewModel.boost(baseNote, false)
+        if (wantsToBoost) {
+            BoostTypeChoicePopup(
+                baseNote,
+                iconSize,
+                accountViewModel,
+                onDismiss = {
+                    wantsToBoost = false
+                },
+                onQuote = {
+                    wantsToBoost = false
+                    onQuotePress()
                 }
-            }
-        )
+                onRepost = {
+                    scope.launch(Dispatchers.IO) {
+                        event = accountViewModel.boost(baseNote, false)
+                    }
+                }
+            )
+        }
     }
 
     BoostText(baseNote, grayTint)
@@ -871,6 +871,7 @@ fun LikeReaction(
     if (wantsToReact) {
         ReactionChoicePopup(
             baseNote,
+            iconSize,
             accountViewModel,
             onDismiss = {
                 wantsToReact = false
@@ -1306,10 +1307,14 @@ private fun DrawViewCount(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit, onRepost: () -> Unit) {
+private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit, onRepost: () -> Unit) {
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow {
@@ -1355,6 +1360,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 @Composable
 fun ReactionChoicePopup(
     baseNote: Note,
+    iconSize: Dp,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit
@@ -1366,9 +1372,13 @@ fun ReactionChoicePopup(
         baseNote.reactedBy(account.userProfile()).toSet()
     }
 
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {

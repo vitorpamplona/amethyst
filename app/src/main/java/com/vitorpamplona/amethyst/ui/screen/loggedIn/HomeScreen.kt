@@ -56,7 +56,7 @@ fun HomeScreen(
 ) {
     var wantsToAddNip47 by remember(nip47) { mutableStateOf(nip47) }
 
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN)
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
 
     WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, accountViewModel)
 
@@ -124,7 +124,7 @@ private fun HomePages(
         }
     }
 
-    HorizontalPager(pageCount = 2, state = pagerState) { page ->
+    HorizontalPager(state = pagerState) { page ->
         RefresheableFeedView(
             viewModel = tabs[page].viewModel,
             routeForLastRead = tabs[page].routeForLastRead,
