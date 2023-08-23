@@ -124,7 +124,6 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -465,45 +464,86 @@ fun NormalNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    when (baseNote.event) {
-        is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
-            channelNote = baseNote,
-            showVideo = !makeItShort,
-            showBottomDiviser = true,
-            sendToChannel = true,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-        is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
-            CommunityHeader(
-                baseNote = it,
+    if (isQuotedNote || isBoostedNote) {
+        when (baseNote.event) {
+            is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
+                channelNote = baseNote,
+                showVideo = !makeItShort,
                 showBottomDiviser = true,
-                sendToCommunity = true,
+                sendToChannel = true,
                 accountViewModel = accountViewModel,
                 nav = nav
             )
-        }
-        is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote, isQuotedNote || isBoostedNote, accountViewModel)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, isQuotedNote || isBoostedNote, accountViewModel)
-        else ->
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                CheckNewAndRenderNote(
-                    baseNote,
-                    routeForLastRead,
-                    modifier,
-                    isBoostedNote,
-                    isQuotedNote,
-                    unPackReply,
-                    makeItShort,
-                    addMarginTop,
-                    canPreview,
-                    parentBackgroundColor,
-                    accountViewModel,
-                    showPopup,
-                    nav
+            is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
+                CommunityHeader(
+                    baseNote = it,
+                    showBottomDiviser = true,
+                    sendToCommunity = true,
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            else ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                    CheckNewAndRenderNote(
+                        baseNote,
+                        routeForLastRead,
+                        modifier,
+                        isBoostedNote,
+                        isQuotedNote,
+                        unPackReply,
+                        makeItShort,
+                        addMarginTop,
+                        canPreview,
+                        parentBackgroundColor,
+                        accountViewModel,
+                        showPopup,
+                        nav
+                    )
+                }
+        }
+    } else {
+        when (baseNote.event) {
+            is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
+                channelNote = baseNote,
+                showVideo = !makeItShort,
+                showBottomDiviser = true,
+                sendToChannel = true,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+            is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
+                CommunityHeader(
+                    baseNote = it,
+                    showBottomDiviser = true,
+                    sendToCommunity = true,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
+            is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
+            else ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                    CheckNewAndRenderNote(
+                        baseNote,
+                        routeForLastRead,
+                        modifier,
+                        isBoostedNote,
+                        isQuotedNote,
+                        unPackReply,
+                        makeItShort,
+                        addMarginTop,
+                        canPreview,
+                        parentBackgroundColor,
+                        accountViewModel,
+                        showPopup,
+                        nav
+                    )
+                }
+        }
     }
 }
 
@@ -1014,7 +1054,7 @@ private fun NoteBody(
         )
     }
 
-    Spacer(modifier = HalfVertSpacer)
+    Spacer(modifier = StdVertSpacer)
 
     if (!makeItShort) {
         ReplyRow(
@@ -1142,6 +1182,14 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav
             )
+        }
+
+        is FileHeaderEvent -> {
+            FileHeaderDisplay(baseNote, true, accountViewModel)
+        }
+
+        is FileStorageHeaderEvent -> {
+            FileStorageHeaderDisplay(baseNote, true, accountViewModel)
         }
 
         is CommunityPostApprovalEvent -> {
