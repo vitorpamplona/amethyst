@@ -67,7 +67,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.clear()
                         onClose()
                     })

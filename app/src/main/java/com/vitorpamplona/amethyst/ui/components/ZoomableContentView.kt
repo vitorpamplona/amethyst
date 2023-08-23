@@ -663,7 +663,7 @@ fun ZoomableImageDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = onDismiss)
+                    CloseButton(onPress = onDismiss)
 
                     val myContent = allImages[pagerState.currentPage]
                     if (myContent is ZoomableUrlContent) {

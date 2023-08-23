@@ -616,7 +616,7 @@ fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         onClose()
                     })
 

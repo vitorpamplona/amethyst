@@ -120,7 +120,7 @@ fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () ->
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         searchBarViewModel.clear()
                         NostrSearchEventOrUserDataSource.clear()
                         onClose()

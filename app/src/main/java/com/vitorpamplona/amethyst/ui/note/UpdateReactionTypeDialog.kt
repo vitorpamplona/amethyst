@@ -155,7 +155,7 @@ fun UpdateReactionTypeDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })

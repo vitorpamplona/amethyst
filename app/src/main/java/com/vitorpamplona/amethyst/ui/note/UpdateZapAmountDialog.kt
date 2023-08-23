@@ -250,7 +250,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })

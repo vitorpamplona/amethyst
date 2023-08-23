@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.routeFor
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -451,8 +452,14 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
+        val scope = rememberCoroutineScope()
         ReplyReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
-            wantsToReplyTo = baseNote
+            scope.launch {
+                routeFor(
+                    baseNote,
+                    accountViewModel.userProfile()
+                )?.let { nav(it) }
+            }
         }
         BoostReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote

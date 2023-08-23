@@ -56,7 +56,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         onClose()
                     })
 

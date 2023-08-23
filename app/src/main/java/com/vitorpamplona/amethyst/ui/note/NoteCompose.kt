@@ -484,8 +484,8 @@ fun NormalNote(
             )
         }
         is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote, isQuotedNote, accountViewModel)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, isQuotedNote, accountViewModel)
+        is FileHeaderEvent -> FileHeaderDisplay(baseNote, isQuotedNote || isBoostedNote, accountViewModel)
+        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, isQuotedNote || isBoostedNote, accountViewModel)
         else ->
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                 CheckNewAndRenderNote(
@@ -3199,7 +3199,7 @@ private fun RenderBadge(
 }
 
 @Composable
-fun FileHeaderDisplay(note: Note, isQuotedNote: Boolean, accountViewModel: AccountViewModel) {
+fun FileHeaderDisplay(note: Note, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
 
@@ -3235,18 +3235,18 @@ fun FileHeaderDisplay(note: Note, isQuotedNote: Boolean, accountViewModel: Accou
     }
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-        ZoomableContentView(content = content, roundedCorner = isQuotedNote, accountViewModel = accountViewModel)
+        ZoomableContentView(content = content, roundedCorner = roundedCorner, accountViewModel = accountViewModel)
     }
 }
 
 @Composable
-fun FileStorageHeaderDisplay(baseNote: Note, isQuotedNote: Boolean, accountViewModel: AccountViewModel) {
+fun FileStorageHeaderDisplay(baseNote: Note, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
     val dataEventId = eventHeader.dataEventId() ?: return
 
     LoadNote(baseNoteHex = dataEventId) { contentNote ->
         if (contentNote != null) {
-            ObserverAndRenderNIP95(baseNote, contentNote, isQuotedNote, accountViewModel)
+            ObserverAndRenderNIP95(baseNote, contentNote, roundedCorner, accountViewModel)
         }
     }
 }
@@ -3255,7 +3255,7 @@ fun FileStorageHeaderDisplay(baseNote: Note, isQuotedNote: Boolean, accountViewM
 private fun ObserverAndRenderNIP95(
     header: Note,
     content: Note,
-    isQuotedNote: Boolean,
+    roundedCorner: Boolean,
     accountViewModel: AccountViewModel
 ) {
     val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
@@ -3302,7 +3302,7 @@ private fun ObserverAndRenderNIP95(
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it, roundedCorner = isQuotedNote, accountViewModel = accountViewModel)
+                ZoomableContentView(content = it, roundedCorner = roundedCorner, accountViewModel = accountViewModel)
             }
         }
     }
