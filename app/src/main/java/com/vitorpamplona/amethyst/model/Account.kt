@@ -84,7 +84,8 @@ class Account(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
-    var settings: Settings = Settings()
+    var settings: Settings = Settings(),
+    var loginWithAmber: Boolean = false
 ) {
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 

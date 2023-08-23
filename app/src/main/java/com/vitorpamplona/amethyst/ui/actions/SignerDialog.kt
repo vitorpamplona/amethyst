@@ -52,7 +52,8 @@ enum class SignerType {
     NIP04_ENCRYPT,
     NIP04_DECRYPT,
     NIP44_ENCRYPT,
-    NIP44_DECRYPT
+    NIP44_DECRYPT,
+    GET_PUBLIC_KEY
 }
 
 fun openAmber(
@@ -69,6 +70,7 @@ fun openAmber(
         SignerType.NIP04_DECRYPT -> "nip04_decrypt"
         SignerType.NIP44_ENCRYPT -> "nip44_encrypt"
         SignerType.NIP44_DECRYPT -> "nip44_decrypt"
+        SignerType.GET_PUBLIC_KEY -> "get_public_key"
     }
     intent.putExtra("type", signerType)
     intent.putExtra("pubKey", pubKey)

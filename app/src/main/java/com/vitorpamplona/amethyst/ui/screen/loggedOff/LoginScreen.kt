@@ -37,6 +37,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
@@ -63,6 +65,7 @@ fun LoginPage(
     val useProxy = remember { mutableStateOf(false) }
     val proxyPort = remember { mutableStateOf("9050") }
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
+    var loginWithAmber by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -255,6 +258,37 @@ fun LoginPage(
                 }
             }
 
+            if (loginWithAmber) {
+                SignerDialog(
+                    onClose = {
+                        loginWithAmber = false
+                    },
+                    onPost = {
+                        key.value = TextFieldValue(it)
+                        if (!acceptedTerms.value) {
+                            termsAcceptanceIsRequired =
+                                context.getString(R.string.acceptance_of_terms_is_required)
+                        }
+
+                        if (key.value.text.isBlank()) {
+                            errorMessage = context.getString(R.string.key_is_required)
+                        }
+
+                        if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                            try {
+                                accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt(), true)
+                            } catch (e: Exception) {
+                                Log.e("Login", "Could not sign in", e)
+                                errorMessage = context.getString(R.string.invalid_key)
+                            }
+                        }
+                        loginWithAmber = false
+                    },
+                    data = "",
+                    type = SignerType.GET_PUBLIC_KEY
+                )
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
@@ -288,6 +322,26 @@ fun LoginPage(
                         )
                 ) {
                     Text(text = stringResource(R.string.login))
+                }
+            }
+
+            if (PackageUtils.isAmberInstalled(context)) {
+                Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
+                    Button(
+                        onClick = {
+                            loginWithAmber = true
+                        },
+                        shape = RoundedCornerShape(Size35dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        colors = ButtonDefaults
+                            .buttonColors(
+                                backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
+                            )
+                    ) {
+                        Text(text = stringResource(R.string.login_with_amber))
+                    }
                 }
             }
         }

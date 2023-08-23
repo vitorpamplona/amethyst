@@ -45,21 +45,21 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
         }
     }
 
-    fun startUI(key: String, useProxy: Boolean, proxyPort: Int) {
+    fun startUI(key: String, useProxy: Boolean, proxyPort: Int, loginWithAmber: Boolean = false) {
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort, loginWithAmber = loginWithAmber)
             } else if (pubKeyParsed != null) {
-                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort, loginWithAmber = loginWithAmber)
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort, loginWithAmber = loginWithAmber)
             } else {
-                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort, loginWithAmber = loginWithAmber)
             }
 
         LocalPreferences.updatePrefsForLogin(account)

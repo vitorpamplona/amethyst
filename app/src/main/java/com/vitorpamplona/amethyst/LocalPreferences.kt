@@ -74,6 +74,7 @@ private object PrefKeys {
     const val THEME = "theme"
     const val PREFERRED_LANGUAGE = "preferred_Language"
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
+    const val LOGIN_WITH_AMBER = "login_with_amber"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -245,6 +246,7 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
             }
+            putBoolean(PrefKeys.LOGIN_WITH_AMBER, account.loginWithAmber)
         }.apply()
 
         val globalPrefs = encryptedPreferences()
@@ -363,6 +365,7 @@ object LocalPreferences {
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
             val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+            val loginWithAmber = getBoolean(PrefKeys.LOGIN_WITH_AMBER, false)
 
             val showSensitiveContent = if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
                 getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
@@ -431,7 +434,8 @@ object LocalPreferences {
                 warnAboutPostsWithReports = warnAboutReports,
                 filterSpamFromStrangers = filterSpam,
                 lastReadPerRoute = lastReadPerRoute,
-                settings = settings
+                settings = settings,
+                loginWithAmber = loginWithAmber
             )
 
             return a
