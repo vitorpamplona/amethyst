@@ -747,7 +747,7 @@ fun BoostReaction(
                 onQuote = {
                     wantsToBoost = false
                     onQuotePress()
-                }
+                },
                 onRepost = {
                     scope.launch(Dispatchers.IO) {
                         event = accountViewModel.boost(baseNote, false)
