@@ -60,7 +60,7 @@
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
         android:localeConfig="@xml/locales_config"
-        tools:targetApi="33">
+        tools:targetApi="34">
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
