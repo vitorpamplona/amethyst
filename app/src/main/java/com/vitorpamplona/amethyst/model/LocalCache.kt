@@ -15,7 +15,9 @@ import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.*
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -343,7 +345,27 @@ object LocalCache {
     private fun consume(event: PinListEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: RelaySetEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: AudioTrackEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: StatusEvent, relay: Relay?) { consumeBaseReplaceable(event) }
+    private fun consume(event: StatusEvent, relay: Relay?) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            author.liveSet?.statuses?.invalidateData()
+
+            refreshObservers(note)
+        }
+    }
 
     fun consume(event: BadgeDefinitionEvent) { consumeBaseReplaceable(event) }
 
@@ -1125,6 +1147,18 @@ object LocalCache {
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
         }
+    }
+
+    suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
+        checkNotInMainThread()
+
+        return addressables.filter {
+            val noteEvent = it.value.event
+            (noteEvent is StatusEvent && noteEvent.pubKey == user.pubkeyHex && !noteEvent.isExpired() && noteEvent.content.isNotBlank())
+        }.values
+            .sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt() }, { it.idHex }))
+            .reversed()
+            .toImmutableList()
     }
 
     fun cleanObservers() {

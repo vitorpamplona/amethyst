@@ -1052,7 +1052,7 @@ private fun NoteBody(
         )
     }
 
-    Spacer(modifier = StdVertSpacer)
+    Spacer(modifier = Modifier.height(3.dp))
 
     if (!makeItShort) {
         ReplyRow(
@@ -2504,6 +2504,30 @@ fun SecondUserInfoRow(
             DisplayPoW(pow)
         }
     }
+}
+
+@Composable
+fun LoadAnyAddressableNote(
+    user: User,
+    content: @Composable (ImmutableList<AddressableNote>) -> Unit
+) {
+    var statuses: ImmutableList<AddressableNote> by remember {
+        mutableStateOf(persistentListOf())
+    }
+
+    val userStatus = user.live().statuses.observeAsState()
+
+    LaunchedEffect(key1 = userStatus) {
+        launch(Dispatchers.IO) {
+            val myUser = userStatus.value?.user ?: return@launch
+            val newStatuses = LocalCache.findStatusesForUser(myUser)
+            if (!equalImmutableLists(statuses, newStatuses)) {
+                statuses = newStatuses
+            }
+        }
+    }
+
+    content(statuses)
 }
 
 @Composable

@@ -392,9 +392,14 @@ class UserLiveSet(u: User) {
     val metadata: UserLiveData = UserLiveData(u)
     val zaps: UserLiveData = UserLiveData(u)
     val bookmarks: UserLiveData = UserLiveData(u)
+    val statuses: UserLiveData = UserLiveData(u)
 
     val profilePictureChanges = metadata.map {
         it.user.profilePicture()
+    }.distinctUntilChanged()
+
+    val nip05Changes = metadata.map {
+        it.user.nip05()
     }.distinctUntilChanged()
 
     val userMetadataInfo = metadata.map {

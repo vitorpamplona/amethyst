@@ -5,38 +5,48 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.map
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip05Verifier
+import com.vitorpamplona.amethyst.ui.note.LoadAnyAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String): MutableState<Boolean?> {
@@ -94,12 +104,7 @@ fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String): Mu
 
 @Composable
 fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifier) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val author by remember(noteState) {
-        derivedStateOf {
-            noteState?.note?.author
-        }
-    }
+    val author by baseNote.live().authorChanges.observeAsState()
 
     author?.let {
         ObserveDisplayNip05Status(it, columnModifier)
@@ -108,35 +113,88 @@ fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifie
 
 @Composable
 fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
-    val nip05 by baseUser.live().metadata.map {
-        it.user.nip05()
-    }.observeAsState(baseUser.nip05())
+    val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
-    Crossfade(targetState = nip05, modifier = columnModifier) {
-        if (it != null) {
-            DisplayNIP05Line(it, baseUser, columnModifier)
-        } else {
-            Text(
-                text = baseUser.pubkeyDisplayHex(),
-                color = MaterialTheme.colors.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = columnModifier
-            )
+    LoadAnyAddressableNote(baseUser) { statuses ->
+        Crossfade(targetState = nip05, modifier = columnModifier, label = "ObserveDisplayNip05StatusCrossfade") {
+            if (it != null) {
+                VerifyAndDisplayNIP05OrStatusLine(it, statuses, baseUser, columnModifier)
+            } else {
+                Text(
+                    text = baseUser.pubkeyDisplayHex(),
+                    color = MaterialTheme.colors.placeholderText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = columnModifier
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun DisplayNIP05Line(nip05: String, baseUser: User, columnModifier: Modifier = Modifier) {
+private fun VerifyAndDisplayNIP05OrStatusLine(
+    nip05: String,
+    statuses: ImmutableList<AddressableNote>,
+    baseUser: User,
+    columnModifier: Modifier = Modifier
+) {
+    var displayStatusOrNIP05 by remember {
+        mutableStateOf<Int>(0)
+    }
+
+    val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
+
     Column(modifier = columnModifier) {
-        val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
-        Crossfade(targetState = nip05Verified) {
+        Crossfade(targetState = displayStatusOrNIP05, label = "NIP05StatusRotationCrossfade") {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                DisplayNIP05(nip05, it)
+                if (statuses.isEmpty()) {
+                    DisplayNIP05(nip05, nip05Verified)
+                } else if (nip05Verified.value != true || it < 0 || it >= statuses.size) {
+                    DisplayNIP05(nip05, nip05Verified)
+                } else {
+                    DisplayStatus(statuses[it])
+                }
             }
         }
     }
+
+    if (statuses.size > 1) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(10.seconds)
+                displayStatusOrNIP05 = ((displayStatusOrNIP05 + 1) % (statuses.size + 1))
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayStatus(addressableNote: AddressableNote) {
+    val noteState by addressableNote.live().metadata.observeAsState()
+
+    val content = remember(noteState) { addressableNote.event?.content() ?: "" }
+    val type = remember(noteState) {
+        (addressableNote.event as? AddressableEvent)?.dTag() ?: ""
+    }
+
+    when (type) {
+        "music" -> Icon(
+            painter = painterResource(id = R.drawable.tunestr),
+            null,
+            modifier = Size18Modifier,
+            tint = MaterialTheme.colors.placeholderText
+        )
+        else -> {}
+    }
+
+    Text(
+        text = content,
+        fontSize = Font14SP,
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 @Composable
