@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.StatusEvent
 
 object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     var usersToWatch = setOf<User>()
@@ -21,6 +22,21 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                     kinds = listOf(MetadataEvent.kind),
                     authors = listOf(it.pubkeyHex),
                     limit = 1
+                )
+            )
+        }
+    }
+
+    fun createUserStatusFilter(): List<TypedFilter>? {
+        if (usersToWatch.isEmpty()) return null
+
+        return usersToWatch.map {
+            TypedFilter(
+                types = COMMON_FEED_TYPES,
+                filter = JsonFilter(
+                    kinds = listOf(StatusEvent.kind),
+                    authors = listOf(it.pubkeyHex),
+                    since = it.latestEOSEs
                 )
             )
         }
@@ -59,8 +75,8 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     val userChannelOnce = requestNewChannel()
 
     override fun updateChannelFilters() {
-        userChannel.typedFilters = listOfNotNull(createUserFilter()).flatten().ifEmpty { null }
-        userChannelOnce.typedFilters = listOfNotNull(createUserReportFilter()).flatten().ifEmpty { null }
+        userChannel.typedFilters = listOfNotNull(createUserReportFilter(), createUserStatusFilter()).flatten().ifEmpty { null }
+        userChannelOnce.typedFilters = listOfNotNull(createUserFilter()).flatten().ifEmpty { null }
     }
 
     fun add(user: User) {
