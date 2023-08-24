@@ -342,6 +342,7 @@ object LocalCache {
     private fun consume(event: PinListEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: RelaySetEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: AudioTrackEvent) { consumeBaseReplaceable(event) }
+    private fun consume(event: StatusEvent, relay: Relay?) { consumeBaseReplaceable(event) }
 
     fun consume(event: BadgeDefinitionEvent) { consumeBaseReplaceable(event) }
 
@@ -1423,6 +1424,7 @@ object LocalCache {
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event)
                 is PeopleListEvent -> consume(event)
+                is PollNoteEvent -> consume(event, relay)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
                 is RelaySetEvent -> consume(event)
@@ -1439,8 +1441,9 @@ object LocalCache {
                     }
                     consume(event)
                 }
+                is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
-                is PollNoteEvent -> consume(event, relay)
+
                 else -> {
                     Log.w("Event Not Supported", event.toJson())
                 }
