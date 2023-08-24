@@ -2507,7 +2507,7 @@ fun SecondUserInfoRow(
 }
 
 @Composable
-fun LoadAnyAddressableNote(
+fun LoadStatuses(
     user: User,
     content: @Composable (ImmutableList<AddressableNote>) -> Unit
 ) {

@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,12 +25,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip05Verifier
-import com.vitorpamplona.amethyst.ui.note.LoadAnyAddressableNote
+import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
@@ -115,58 +117,70 @@ fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifie
 fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
     val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
-    LoadAnyAddressableNote(baseUser) { statuses ->
+    LoadStatuses(baseUser) { statuses ->
         Crossfade(targetState = nip05, modifier = columnModifier, label = "ObserveDisplayNip05StatusCrossfade") {
-            if (it != null) {
-                VerifyAndDisplayNIP05OrStatusLine(it, statuses, baseUser, columnModifier)
-            } else {
-                Text(
-                    text = baseUser.pubkeyDisplayHex(),
-                    color = MaterialTheme.colors.placeholderText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = columnModifier
-                )
-            }
+            VerifyAndDisplayNIP05OrStatusLine(it, statuses, baseUser, columnModifier)
         }
     }
 }
 
 @Composable
 private fun VerifyAndDisplayNIP05OrStatusLine(
-    nip05: String,
+    nip05: String?,
     statuses: ImmutableList<AddressableNote>,
     baseUser: User,
     columnModifier: Modifier = Modifier
 ) {
-    var displayStatusOrNIP05 by remember {
-        mutableStateOf<Int>(0)
-    }
-
-    val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
-
     Column(modifier = columnModifier) {
-        Crossfade(targetState = displayStatusOrNIP05, label = "NIP05StatusRotationCrossfade") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (statuses.isEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (nip05 != null) {
+                val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
+
+                if (nip05Verified.value != true) {
                     DisplayNIP05(nip05, nip05Verified)
-                } else if (nip05Verified.value != true || it < 0 || it >= statuses.size) {
-                    DisplayNIP05(nip05, nip05Verified)
+                } else if (!statuses.isEmpty()) {
+                    RotateStatuses(statuses)
                 } else {
-                    DisplayStatus(statuses[it])
+                    DisplayNIP05(nip05, nip05Verified)
+                }
+            } else {
+                if (!statuses.isEmpty()) {
+                    RotateStatuses(statuses)
+                } else {
+                    DisplayUsersNpub(baseUser.pubkeyDisplayHex())
                 }
             }
         }
     }
+}
+
+@Composable
+fun RotateStatuses(statuses: ImmutableList<AddressableNote>) {
+    var indexToDisplay by remember {
+        mutableIntStateOf(0)
+    }
+
+    DisplayStatus(statuses[indexToDisplay])
 
     if (statuses.size > 1) {
         LaunchedEffect(Unit) {
             while (true) {
                 delay(10.seconds)
-                displayStatusOrNIP05 = ((displayStatusOrNIP05 + 1) % (statuses.size + 1))
+                indexToDisplay = ((indexToDisplay + 1) % (statuses.size + 1))
             }
         }
     }
+}
+
+@Composable
+fun DisplayUsersNpub(npub: String) {
+    Text(
+        text = npub,
+        fontSize = 14.sp,
+        color = MaterialTheme.colors.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 @Composable
