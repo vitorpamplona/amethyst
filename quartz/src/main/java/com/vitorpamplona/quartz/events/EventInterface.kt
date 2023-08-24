@@ -68,6 +68,11 @@ interface EventInterface {
     fun taggedEvents(): List<HexKey>
     fun taggedUrls(): List<String>
 
+    fun firstTaggedAddress(): ATag?
+    fun firstTaggedUser(): HexKey?
+    fun firstTaggedEvent(): HexKey?
+    fun firstTaggedUrl(): String?
+
     fun taggedEmojis(): List<EmojiUrl>
     fun matchTag1With(text: String): Boolean
     fun isExpired(): Boolean

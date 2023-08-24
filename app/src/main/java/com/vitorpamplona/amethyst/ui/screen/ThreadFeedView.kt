@@ -328,7 +328,7 @@ fun NoteMaster(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) })
+                        ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) }, accountViewModel, nav)
 
                         val geo = remember { noteEvent.getGeoHash() }
                         if (geo != null) {

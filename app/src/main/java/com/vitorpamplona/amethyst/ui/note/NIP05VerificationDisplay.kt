@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -31,14 +34,19 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip05Verifier
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
+import com.vitorpamplona.amethyst.ui.note.routeFor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.AddressableEvent
@@ -105,21 +113,31 @@ fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String): Mu
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseNote: Note, columnModifier: Modifier = Modifier) {
+fun ObserveDisplayNip05Status(
+    baseNote: Note,
+    columnModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val author by baseNote.live().authorChanges.observeAsState()
 
     author?.let {
-        ObserveDisplayNip05Status(it, columnModifier)
+        ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav)
     }
 }
 
 @Composable
-fun ObserveDisplayNip05Status(baseUser: User, columnModifier: Modifier = Modifier) {
+fun ObserveDisplayNip05Status(
+    baseUser: User,
+    columnModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
     LoadStatuses(baseUser) { statuses ->
         Crossfade(targetState = nip05, modifier = columnModifier, label = "ObserveDisplayNip05StatusCrossfade") {
-            VerifyAndDisplayNIP05OrStatusLine(it, statuses, baseUser, columnModifier)
+            VerifyAndDisplayNIP05OrStatusLine(it, statuses, baseUser, columnModifier, accountViewModel, nav)
         }
     }
 }
@@ -129,7 +147,9 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
     nip05: String?,
     statuses: ImmutableList<AddressableNote>,
     baseUser: User,
-    columnModifier: Modifier = Modifier
+    columnModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     Column(modifier = columnModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,13 +159,13 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
                 if (nip05Verified.value != true) {
                     DisplayNIP05(nip05, nip05Verified)
                 } else if (!statuses.isEmpty()) {
-                    RotateStatuses(statuses)
+                    RotateStatuses(statuses, accountViewModel, nav)
                 } else {
                     DisplayNIP05(nip05, nip05Verified)
                 }
             } else {
                 if (!statuses.isEmpty()) {
-                    RotateStatuses(statuses)
+                    RotateStatuses(statuses, accountViewModel, nav)
                 } else {
                     DisplayUsersNpub(baseUser.pubkeyDisplayHex())
                 }
@@ -155,12 +175,16 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
 }
 
 @Composable
-fun RotateStatuses(statuses: ImmutableList<AddressableNote>) {
+fun RotateStatuses(
+    statuses: ImmutableList<AddressableNote>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     var indexToDisplay by remember {
         mutableIntStateOf(0)
     }
 
-    DisplayStatus(statuses[indexToDisplay])
+    DisplayStatus(statuses[indexToDisplay], accountViewModel, nav)
 
     if (statuses.size > 1) {
         LaunchedEffect(Unit) {
@@ -184,12 +208,25 @@ fun DisplayUsersNpub(npub: String) {
 }
 
 @Composable
-fun DisplayStatus(addressableNote: AddressableNote) {
+fun DisplayStatus(
+    addressableNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val noteState by addressableNote.live().metadata.observeAsState()
 
     val content = remember(noteState) { addressableNote.event?.content() ?: "" }
     val type = remember(noteState) {
         (addressableNote.event as? AddressableEvent)?.dTag() ?: ""
+    }
+    val url = remember(noteState) {
+        addressableNote.event?.firstTaggedUrl()?.ifBlank { null }
+    }
+    val nostrATag = remember(noteState) {
+        addressableNote.event?.firstTaggedAddress()
+    }
+    val nostrHexID = remember(noteState) {
+        addressableNote.event?.firstTaggedEvent()?.ifBlank { null }
     }
 
     when (type) {
@@ -209,6 +246,63 @@ fun DisplayStatus(addressableNote: AddressableNote) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
+
+    if (url != null) {
+        val uri = LocalUriHandler.current
+        IconButton(
+            modifier = Size15Modifier,
+            onClick = { runCatching { uri.openUri(url.trim()) } }
+        ) {
+            Icon(
+                imageVector = Icons.Default.OpenInNew,
+                null,
+                modifier = Size15Modifier,
+                tint = MaterialTheme.colors.lessImportantLink
+            )
+        }
+    } else if (nostrATag != null) {
+        LoadAddressableNote(nostrATag) { note ->
+            if (note != null) {
+                IconButton(
+                    modifier = Size15Modifier,
+                    onClick = {
+                        routeFor(
+                            note,
+                            accountViewModel.userProfile()
+                        )?.let { nav(it) }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        null,
+                        modifier = Size15Modifier,
+                        tint = MaterialTheme.colors.lessImportantLink
+                    )
+                }
+            }
+        }
+    } else if (nostrHexID != null) {
+        LoadNote(baseNoteHex = nostrHexID) {
+            if (it != null) {
+                IconButton(
+                    modifier = Size15Modifier,
+                    onClick = {
+                        routeFor(
+                            it,
+                            accountViewModel.userProfile()
+                        )?.let { nav(it) }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        null,
+                        modifier = Size15Modifier,
+                        tint = MaterialTheme.colors.lessImportantLink
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

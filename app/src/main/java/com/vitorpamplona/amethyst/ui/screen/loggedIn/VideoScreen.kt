@@ -374,7 +374,9 @@ private fun RenderAuthorInformation(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ObserveDisplayNip05Status(
                     remember { note.author!! },
-                    remember { Modifier.weight(1f) }
+                    remember { Modifier.weight(1f) },
+                    accountViewModel,
+                    nav = nav
                 )
             }
             Row(

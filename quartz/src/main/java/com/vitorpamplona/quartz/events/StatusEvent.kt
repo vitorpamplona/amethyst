@@ -44,10 +44,11 @@ class StatusEvent(
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): StatusEvent {
+            val tags = event.tags.plus(listOf(listOf("r", "http://amethyst.social")))
             val pubKey = event.pubKey()
-            val id = generateId(pubKey, createdAt, kind, event.tags, newStatus)
+            val id = generateId(pubKey, createdAt, kind, tags, newStatus)
             val sig = CryptoUtils.sign(id, privateKey)
-            return StatusEvent(id.toHexKey(), pubKey, createdAt, event.tags, newStatus, sig.toHexKey())
+            return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, newStatus, sig.toHexKey())
         }
     }
 }

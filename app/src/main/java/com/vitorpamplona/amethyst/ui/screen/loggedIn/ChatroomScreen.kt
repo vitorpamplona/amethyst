@@ -504,7 +504,7 @@ fun ChatroomHeader(
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     UsernameDisplay(baseUser)
-                    ObserveDisplayNip05Status(baseUser)
+                    ObserveDisplayNip05Status(baseUser, accountViewModel = accountViewModel, nav = nav)
                 }
             }
         }
