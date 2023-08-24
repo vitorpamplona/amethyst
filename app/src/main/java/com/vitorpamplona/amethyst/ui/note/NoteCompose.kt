@@ -2515,11 +2515,11 @@ fun LoadStatuses(
         mutableStateOf(persistentListOf())
     }
 
-    val userStatus = user.live().statuses.observeAsState()
+    val userStatus by user.live().statuses.observeAsState()
 
     LaunchedEffect(key1 = userStatus) {
         launch(Dispatchers.IO) {
-            val myUser = userStatus.value?.user ?: return@launch
+            val myUser = userStatus?.user ?: return@launch
             val newStatuses = LocalCache.findStatusesForUser(myUser)
             if (!equalImmutableLists(statuses, newStatuses)) {
                 statuses = newStatuses

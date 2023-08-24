@@ -415,6 +415,7 @@ class UserLiveSet(u: User) {
             relayInfo.hasObservers() ||
             metadata.hasObservers() ||
             zaps.hasObservers() ||
+            statuses.hasObservers() ||
             bookmarks.hasObservers()
     }
 
@@ -428,6 +429,7 @@ class UserLiveSet(u: User) {
         metadata.destroy()
         zaps.destroy()
         bookmarks.destroy()
+        statuses.destroy()
     }
 }
 

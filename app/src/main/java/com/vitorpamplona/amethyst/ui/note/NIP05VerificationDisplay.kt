@@ -229,6 +229,7 @@ private fun DisplayNIP05(
     if (user != "_") {
         Text(
             text = remember(nip05) { AnnotatedString(user) },
+            fontSize = Font14SP,
             color = MaterialTheme.colors.nip05,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -240,7 +241,7 @@ private fun DisplayNIP05(
     ClickableText(
         text = remember(nip05) { AnnotatedString(domain) },
         onClick = { runCatching { uri.openUri("https://$domain") } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05),
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05, fontSize = Font14SP),
         maxLines = 1,
         overflow = TextOverflow.Visible
     )

@@ -37,5 +37,17 @@ class StatusEvent(
             val sig = CryptoUtils.sign(id, privateKey)
             return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
+
+        fun update(
+            event: StatusEvent,
+            newStatus: String,
+            privateKey: ByteArray,
+            createdAt: Long = TimeUtils.now()
+        ): StatusEvent {
+            val pubKey = event.pubKey()
+            val id = generateId(pubKey, createdAt, kind, event.tags, newStatus)
+            val sig = CryptoUtils.sign(id, privateKey)
+            return StatusEvent(id.toHexKey(), pubKey, createdAt, event.tags, newStatus, sig.toHexKey())
+        }
     }
 }

@@ -1008,6 +1008,25 @@ class Account(
         }
     }
 
+    fun updateStatus(oldStatus: AddressableNote, newStatus: String) {
+        if (!isWriteable()) return
+        val oldEvent = oldStatus.event as? StatusEvent ?: return
+
+        val event = StatusEvent.update(oldEvent, newStatus, keyPair.privKey!!)
+
+        Client.send(event)
+        LocalCache.consume(event, null)
+    }
+
+    fun createStatus(newStatus: String) {
+        if (!isWriteable()) return
+
+        val event = StatusEvent.create(newStatus, "general", expiration = null, keyPair.privKey!!)
+
+        Client.send(event)
+        LocalCache.consume(event, null)
+    }
+
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
         if (!isWriteable()) return
 

@@ -345,7 +345,7 @@ object LocalCache {
     private fun consume(event: PinListEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: RelaySetEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: AudioTrackEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: StatusEvent, relay: Relay?) {
+    fun consume(event: StatusEvent, relay: Relay?) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)

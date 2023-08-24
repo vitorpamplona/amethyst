@@ -549,4 +549,6 @@
 
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>
+
+    <string name="status_update">Update your status</string>
 </resources>
