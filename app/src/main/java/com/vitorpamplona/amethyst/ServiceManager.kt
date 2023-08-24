@@ -126,6 +126,7 @@ object ServiceManager {
             LocalCache.pruneContactLists(accounts)
             LocalCache.pruneRepliesAndReactions(accounts)
             LocalCache.prunePastVersionsOfReplaceables()
+            LocalCache.pruneExpiredEvents()
         }
     }
 }

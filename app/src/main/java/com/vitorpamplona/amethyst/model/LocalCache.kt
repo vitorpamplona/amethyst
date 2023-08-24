@@ -14,6 +14,7 @@ import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.*
@@ -1243,6 +1244,39 @@ object LocalCache {
                 it.value.liveSet?.isInUse() != true && // don't delete if observing.
                 it.value.author?.pubkeyHex !in accounts && // don't delete if it is the logged in account
                 it.value.event?.isTaggedUsers(accounts) != true // don't delete if it's a notification to the logged in user
+        }.values
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        toBeRemoved.forEach {
+            notes.remove(it.idHex)
+
+            it.replyTo?.forEach { masterNote ->
+                masterNote.removeReply(it)
+                masterNote.removeBoost(it)
+                masterNote.removeReaction(it)
+                masterNote.removeZap(it)
+                masterNote.removeReport(it)
+                masterNote.clearEOSE() // allows reloading of these events
+            }
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeChildrenOf(childrenToBeRemoved)
+
+        if (toBeRemoved.size > 1) {
+            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
+        }
+    }
+
+    fun pruneExpiredEvents() {
+        checkNotInMainThread()
+
+        val now = TimeUtils.now()
+
+        val toBeRemoved = notes.filter {
+            (it.value.event?.expiration() ?: Long.MAX_VALUE) < now
         }.values
 
         val childrenToBeRemoved = mutableListOf<Note>()

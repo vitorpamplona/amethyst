@@ -82,13 +82,14 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Private Messages and Small Groups (NIP-24)
 - [x] Gift Wraps & Seals (NIP-59)
 - [x] Versioned Encrypted Payloads (NIP-44)
+- [x] Expiration Support (NIP-40)
+- [x] Status Event (NIP-315)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Workspaces
-- [ ] Expiration Support (NIP-40)
 - [ ] Infinity Scroll
 - [ ] Relay List Metadata (NIP-65)
 - [ ] Signing Requests (NIP-46)
