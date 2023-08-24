@@ -93,24 +93,10 @@ fun ChannelCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.distinctUntilChanged().observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = isBlank) {
+    Crossfade(targetState = hasEvent) {
         if (it) {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                BlankNote(
-                    remember {
-                        modifier.combinedClickable(
-                            onClick = { },
-                            onLongClick = showPopup
-                        )
-                    },
-                    false
-                )
-            }
-        } else {
             if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
                 CheckHiddenChannelCardCompose(
                     baseNote,
@@ -120,6 +106,18 @@ fun ChannelCardCompose(
                     showHidden,
                     accountViewModel,
                     nav
+                )
+            }
+        } else {
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                BlankNote(
+                    remember {
+                        modifier.combinedClickable(
+                            onClick = { },
+                            onLongClick = showPopup
+                        )
+                    },
+                    false
                 )
             }
         }

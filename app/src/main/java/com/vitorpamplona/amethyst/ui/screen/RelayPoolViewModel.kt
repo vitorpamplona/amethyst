@@ -16,5 +16,5 @@ class RelayPoolViewModel : ViewModel() {
 
     val isConnected = RelayPool.live.map {
         it.relays.connectedRelays() > 0
-    }
+    }.distinctUntilChanged()
 }

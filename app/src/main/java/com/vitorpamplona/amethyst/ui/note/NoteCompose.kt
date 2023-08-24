@@ -223,24 +223,10 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.distinctUntilChanged().observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = isBlank) {
+    Crossfade(targetState = hasEvent) {
         if (it) {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                BlankNote(
-                    remember {
-                        modifier.combinedClickable(
-                            onClick = { },
-                            onLongClick = showPopup
-                        )
-                    },
-                    isBoostedNote || isQuotedNote
-                )
-            }
-        } else {
             CheckHiddenNoteCompose(
                 note = baseNote,
                 routeForLastRead = routeForLastRead,
@@ -255,6 +241,18 @@ fun NoteCompose(
                 accountViewModel = accountViewModel,
                 nav = nav
             )
+        } else {
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                BlankNote(
+                    remember {
+                        modifier.combinedClickable(
+                            onClick = { },
+                            onLongClick = showPopup
+                        )
+                    },
+                    isBoostedNote || isQuotedNote
+                )
+            }
         }
     }
 }

@@ -30,8 +30,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.em
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.material.MaterialRichText
@@ -421,9 +419,7 @@ private fun ObserveNIP19Event(
 
 @Composable
 fun ObserveNote(note: Note, onRefresh: () -> Unit) {
-    val loadedNoteId by note.live().metadata.map {
-        it.note.event?.id()
-    }.distinctUntilChanged().observeAsState(note.event?.id())
+    val loadedNoteId by note.live().metadata.observeAsState()
 
     LaunchedEffect(key1 = loadedNoteId) {
         if (loadedNoteId != null) {
@@ -460,9 +456,7 @@ private fun ObserveNIP19User(
 
 @Composable
 private fun ObserveUser(user: User, onRefresh: () -> Unit) {
-    val loadedUserMetaId by user.live().metadata.map {
-        it.user.info?.latestMetadata?.id
-    }.distinctUntilChanged().observeAsState(user.info?.latestMetadata?.id)
+    val loadedUserMetaId by user.live().metadata.observeAsState()
 
     LaunchedEffect(key1 = loadedUserMetaId) {
         if (loadedUserMetaId != null) {
@@ -854,9 +848,7 @@ private fun DisplayUserFromTag(
     val route = remember { "User/${baseUser.pubkeyHex}" }
     val hex = remember { baseUser.pubkeyDisplayHex() }
 
-    val meta by baseUser.live().metadata.map {
-        it.user.info
-    }.distinctUntilChanged().observeAsState(baseUser.info)
+    val meta by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
     Crossfade(targetState = meta) {
         Row() {

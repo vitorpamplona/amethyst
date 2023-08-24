@@ -57,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -187,10 +188,10 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     private var takenIntoAccount = setOf<HexKey>()
     private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
-    val todaysReplyCount = _replies.map { showCount(it[today()]) }
-    val todaysBoostCount = _boosts.map { showCount(it[today()]) }
-    val todaysReactionCount = _reactions.map { showCount(it[today()]) }
-    val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }
+    val todaysReplyCount = _replies.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysBoostCount = _boosts.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysReactionCount = _reactions.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }.distinctUntilChanged()
 
     fun formatDate(createAt: Long): String {
         return sdf.format(

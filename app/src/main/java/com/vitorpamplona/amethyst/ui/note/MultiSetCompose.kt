@@ -41,8 +41,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -579,9 +577,7 @@ private fun WatchNoteAuthor(
     baseNote: Note,
     onContent: @Composable (User?) -> Unit
 ) {
-    val author by baseNote.live().metadata.map {
-        it.note.author
-    }.observeAsState(baseNote.author)
+    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
 
     onContent(author)
 }
@@ -591,9 +587,7 @@ private fun WatchUserMetadata(
     author: User,
     onNewMetadata: @Composable (String?) -> Unit
 ) {
-    val userProfile by author.live().metadata.map {
-        it.user.profilePicture()
-    }.distinctUntilChanged().observeAsState(author.profilePicture())
+    val userProfile by author.live().profilePictureChanges.observeAsState(author.profilePicture())
 
     onNewMetadata(userProfile)
 }

@@ -52,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
@@ -484,7 +483,7 @@ private fun RelayStatus(
     relayViewModel: RelayPoolViewModel
 ) {
     val connectedRelaysText by relayViewModel.connectionStatus.observeAsState("--/--")
-    val isConnected by relayViewModel.isConnected.distinctUntilChanged().observeAsState(false)
+    val isConnected by relayViewModel.isConnected.observeAsState(false)
 
     RenderRelayStatus(connectedRelaysText, isConnected)
 }
