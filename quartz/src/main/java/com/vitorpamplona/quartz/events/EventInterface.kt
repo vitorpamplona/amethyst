@@ -70,4 +70,5 @@ interface EventInterface {
 
     fun taggedEmojis(): List<EmojiUrl>
     fun matchTag1With(text: String): Boolean
+    fun isExpired(): Boolean
 }

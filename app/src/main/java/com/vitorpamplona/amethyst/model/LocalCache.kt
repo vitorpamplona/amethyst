@@ -1276,7 +1276,7 @@ object LocalCache {
         val now = TimeUtils.now()
 
         val toBeRemoved = notes.filter {
-            (it.value.event?.expiration() ?: Long.MAX_VALUE) < now
+            it.value.event?.isExpired() == true
         }.values
 
         val childrenToBeRemoved = mutableListOf<Note>()
