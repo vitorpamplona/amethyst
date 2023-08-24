@@ -21,6 +21,7 @@ class StatusEvent(
         const val kind = 30315
 
         fun create(
+            msg: String,
             type: String,
             expiration: Long?,
             privateKey: ByteArray,
@@ -29,12 +30,12 @@ class StatusEvent(
             val tags = mutableListOf<List<String>>()
 
             tags.add(listOf("d", type))
-            expiration?.let { tags.add(listOf("publishedAt", it.toString())) }
+            expiration?.let { tags.add(listOf("expiration", it.toString())) }
 
             val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, "")
+            val id = generateId(pubKey, createdAt, kind, tags, msg)
             val sig = CryptoUtils.sign(id, privateKey)
-            return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
         }
     }
 }
