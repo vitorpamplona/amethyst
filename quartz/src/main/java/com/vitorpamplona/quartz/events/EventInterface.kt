@@ -49,6 +49,8 @@ interface EventInterface {
     fun isTaggedAddressableKind(kind: Int): Boolean
     fun getTagOfAddressableKind(kind: Int): ATag?
 
+    fun expiration(): Long?
+
     fun hashtags(): List<String>
     fun geohashes(): List<String>
 

@@ -120,6 +120,12 @@ open class Event(
         return tags.any { it.size > 1 && it[0] == "a" && it[1].startsWith(kindStr) }
     }
 
+    override fun expiration() = try {
+        tags.firstOrNull { it.size > 1 && it[0] == "expiration" }?.get(1)?.toLongOrNull()
+    } catch (_: Exception) {
+        null
+    }
+
     override fun getTagOfAddressableKind(kind: Int): ATag? {
         val kindStr = kind.toString()
         val aTag = tags
