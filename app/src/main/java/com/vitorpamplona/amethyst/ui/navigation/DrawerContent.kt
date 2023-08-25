@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
@@ -56,6 +57,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -278,7 +280,16 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                     )
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Send,
                     capitalization = KeyboardCapitalization.Sentences
+                ),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.createStatus(currentStatus.value)
+                            focusManager.clearFocus(true)
+                        }
+                    }
                 ),
                 singleLine = true,
                 trailingIcon = {
@@ -319,7 +330,16 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Send,
                         capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.updateStatus(it, thisStatus.value)
+                                focusManager.clearFocus(true)
+                            }
+                        }
                     ),
                     singleLine = true,
                     trailingIcon = {
