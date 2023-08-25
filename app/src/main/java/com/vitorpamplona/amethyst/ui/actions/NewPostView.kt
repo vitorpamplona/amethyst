@@ -518,6 +518,8 @@ private fun PollField(postViewModel: NewPostViewModel) {
             NewPollOption(postViewModel, index)
         }
 
+        NewPollVoteValueRange(postViewModel)
+
         Button(
             onClick = {
                 postViewModel.pollOptions[postViewModel.pollOptions.size] =

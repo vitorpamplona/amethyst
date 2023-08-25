@@ -73,8 +73,8 @@ open class NewPostViewModel() : ViewModel() {
     var wantsPoll by mutableStateOf(false)
     var zapRecipients = mutableStateListOf<HexKey>()
     var pollOptions = newStateMapPollOptions()
-    var valueMaximum: Int? = null
-    var valueMinimum: Int? = null
+    var valueMaximum by mutableStateOf<Int?>(null)
+    var valueMinimum by mutableStateOf<Int?>(null)
     var consensusThreshold: Int? = null
     var closedAt: Int? = null
 
@@ -494,7 +494,7 @@ open class NewPostViewModel() : ViewModel() {
         return message.text.isNotBlank() && !isUploadingImage && !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
             (!wantsDirectMessage || !toUsers.text.isNullOrBlank()) &&
-            (!wantsPoll || pollOptions.values.all { it.isNotEmpty() }) &&
+            (!wantsPoll || (pollOptions.values.all { it.isNotEmpty() } && isValidvalueMinimum.value && isValidvalueMaximum.value)) &&
             contentToAddUrl == null
     }
 
@@ -610,6 +610,50 @@ open class NewPostViewModel() : ViewModel() {
             nip24 = true
         } else {
             nip24 = !nip24
+        }
+    }
+
+    fun updateMinZapAmountForPoll(textMin: String) {
+        if (textMin.isNotEmpty()) {
+            try {
+                val int = textMin.toInt()
+                if (int < 1) {
+                    valueMinimum = null
+                } else {
+                    valueMinimum = int
+                }
+            } catch (e: Exception) {}
+        } else {
+            valueMinimum = null
+        }
+
+        checkMinMax()
+    }
+
+    fun updateMaxZapAmountForPoll(textMax: String) {
+        if (textMax.isNotEmpty()) {
+            try {
+                val int = textMax.toInt()
+                if (int < 1) {
+                    valueMaximum = null
+                } else {
+                    valueMaximum = int
+                }
+            } catch (e: Exception) {}
+        } else {
+            valueMaximum = null
+        }
+
+        checkMinMax()
+    }
+
+    fun checkMinMax() {
+        if ((valueMinimum ?: 0) > (valueMaximum ?: Int.MAX_VALUE)) {
+            isValidvalueMinimum.value = false
+            isValidvalueMaximum.value = false
+        } else {
+            isValidvalueMinimum.value = true
+            isValidvalueMaximum.value = true
         }
     }
 }
