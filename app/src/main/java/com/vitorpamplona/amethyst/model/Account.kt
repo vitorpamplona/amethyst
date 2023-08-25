@@ -8,6 +8,7 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.OptOutFromFilters
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -1237,6 +1238,96 @@ class Account(
         LocalCache.consume(event)
     }
 
+    fun addPrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        val bookmarks = userProfile().latestBookmarkList
+        val privTags = mutableListOf<List<String>>()
+
+        val privEvents = if (note is AddressableNote) {
+            bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
+        } else {
+            bookmarks?.privateTaggedEvents(decryptedContent)?.plus(note.idHex) ?: listOf(note.idHex)
+        }
+        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
+        val privAddresses = if (note is AddressableNote) {
+            bookmarks?.privateTaggedAddresses(decryptedContent)?.plus(note.address) ?: listOf(note.address)
+        } else {
+            bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
+        }
+
+        privEvents.forEach {
+            privTags.add(listOf("e", it))
+        }
+        privUsers.forEach {
+            privTags.add(listOf("p", it))
+        }
+        privAddresses.forEach {
+            privTags.add(listOf("a", it.toTag()))
+        }
+        val msg = Event.mapper.writeValueAsString(privTags)
+
+        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+
+        if (AmberUtils.content.isBlank()) {
+            return null
+        }
+
+        return BookmarkListEvent.create(
+            "bookmark",
+            bookmarks?.taggedEvents() ?: emptyList(),
+            bookmarks?.taggedUsers() ?: emptyList(),
+            bookmarks?.taggedAddresses() ?: emptyList(),
+
+            AmberUtils.content,
+
+            keyPair.pubKey.toHexKey()
+        )
+    }
+
+    fun removePrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        val bookmarks = userProfile().latestBookmarkList
+        val privTags = mutableListOf<List<String>>()
+
+        val privEvents = if (note is AddressableNote) {
+            bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
+        } else {
+            bookmarks?.privateTaggedEvents(decryptedContent)?.minus(note.idHex) ?: listOf(note.idHex)
+        }
+        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
+        val privAddresses = if (note is AddressableNote) {
+            bookmarks?.privateTaggedAddresses(decryptedContent)?.minus(note.address) ?: listOf(note.address)
+        } else {
+            bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
+        }
+
+        privEvents.forEach {
+            privTags.add(listOf("e", it))
+        }
+        privUsers.forEach {
+            privTags.add(listOf("p", it))
+        }
+        privAddresses.forEach {
+            privTags.add(listOf("a", it.toTag()))
+        }
+        val msg = Event.mapper.writeValueAsString(privTags)
+
+        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+
+        if (AmberUtils.content.isBlank()) {
+            return null
+        }
+
+        return BookmarkListEvent.create(
+            "bookmark",
+            bookmarks?.taggedEvents() ?: emptyList(),
+            bookmarks?.taggedUsers() ?: emptyList(),
+            bookmarks?.taggedAddresses() ?: emptyList(),
+
+            AmberUtils.content,
+
+            keyPair.pubKey.toHexKey()
+        )
+    }
+
     fun addPrivateBookmark(note: Note) {
         if (!isWriteable()) return
 
@@ -1392,14 +1483,24 @@ class Account(
     }
 
     fun isInPrivateBookmarks(note: Note): Boolean {
-        if (!isWriteable()) return false
+        if (!isWriteable() && !loginWithAmber) return false
 
-        if (note is AddressableNote) {
-            return userProfile().latestBookmarkList?.privateTaggedAddresses(keyPair.privKey!!)
-                ?.contains(note.address) == true
+        if (loginWithAmber) {
+            return if (note is AddressableNote) {
+                userProfile().latestBookmarkList?.privateTaggedAddresses(userProfile().latestBookmarkList?.decryptedContent ?: "")
+                    ?.contains(note.address) == true
+            } else {
+                userProfile().latestBookmarkList?.privateTaggedEvents(userProfile().latestBookmarkList?.decryptedContent ?: "")
+                    ?.contains(note.idHex) == true
+            }
         } else {
-            return userProfile().latestBookmarkList?.privateTaggedEvents(keyPair.privKey!!)
-                ?.contains(note.idHex) == true
+            return if (note is AddressableNote) {
+                userProfile().latestBookmarkList?.privateTaggedAddresses(keyPair.privKey!!)
+                    ?.contains(note.address) == true
+            } else {
+                userProfile().latestBookmarkList?.privateTaggedEvents(keyPair.privKey!!)
+                    ?.contains(note.idHex) == true
+            }
         }
     }
 

@@ -4,10 +4,10 @@ import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
-import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -207,7 +207,7 @@ object LocalCache {
                 if (hexKey != null) {
                     val pubKey = Hex.encode(hexKey)
                     if (pubKey == event.pubKey) {
-                        BookmarkPrivateFeedFilter.content = ""
+                        AmberUtils.content = ""
                     }
                 }
                 user.updateBookmark(event)

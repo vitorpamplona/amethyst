@@ -21,6 +21,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -231,8 +232,16 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.addPrivateBookmark(note)
     }
 
+    fun addPrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        return account.addPrivateBookmark(note, decryptedContent)
+    }
+
     fun addPublicBookmark(note: Note) {
         account.addPublicBookmark(note)
+    }
+
+    fun removePrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        return account.removePrivateBookmark(note, decryptedContent)
     }
 
     fun removePrivateBookmark(note: Note) {

@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
@@ -95,7 +96,7 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
 
         DisposableEffect(Unit) {
             onDispose {
-                BookmarkPrivateFeedFilter.content = ""
+                AmberUtils.content = ""
             }
         }
     }

@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.IntentUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
@@ -32,7 +33,6 @@ import com.vitorpamplona.amethyst.service.notifications.RegisterAccounts
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
-import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
 import com.vitorpamplona.amethyst.ui.note.Nip47
@@ -122,13 +122,13 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-                BookmarkPrivateFeedFilter.isActivityRunning = false
+                AmberUtils.isActivityRunning = false
                 return@registerForActivityResult
             }
 
             val event = it.data?.getStringExtra("signature") ?: ""
-            BookmarkPrivateFeedFilter.content = event
-            BookmarkPrivateFeedFilter.isActivityRunning = false
+            AmberUtils.content = event
+            AmberUtils.isActivityRunning = false
         }
 
         super.onCreate(savedInstanceState)

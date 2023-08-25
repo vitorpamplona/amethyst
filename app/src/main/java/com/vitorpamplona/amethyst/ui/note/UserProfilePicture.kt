@@ -41,13 +41,19 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.Event
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -390,6 +396,25 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
 
         val scope = rememberCoroutineScope()
 
+        var event by remember { mutableStateOf<Event?>(null) }
+        if (event != null) {
+            SignerDialog(
+                onClose = {
+                    event = null
+                },
+                onPost = {
+                    scope.launch(Dispatchers.IO) {
+                        val signedEvent = Event.fromJson(it)
+                        Client.send(signedEvent)
+                        LocalCache.verifyAndConsume(signedEvent, null)
+                        event = null
+                        onDismiss()
+                    }
+                },
+                data = event!!.toJson()
+            )
+        }
+
         if (!state.isFollowingAuthor) {
             DropdownMenuItem(onClick = {
                 accountViewModel.follow(
@@ -447,11 +472,47 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         }
         Divider()
         if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decryptBookmark(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.content
+                            AmberUtils.content = ""
+                            event = accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
+                        } else {
+                            accountViewModel.removePrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPrivateBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decryptBookmark(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.content
+                            AmberUtils.content = ""
+                            event = accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
+                        } else {
+                            accountViewModel.addPrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.add_to_private_bookmarks))
             }
         }

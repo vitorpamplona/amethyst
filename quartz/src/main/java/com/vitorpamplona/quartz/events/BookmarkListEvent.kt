@@ -16,8 +16,36 @@ class BookmarkListEvent(
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    var decryptedContent = ""
+
     companion object {
         const val kind = 30001
+
+        fun create(
+            name: String = "",
+            events: List<String>? = null,
+            users: List<String>? = null,
+            addresses: List<ATag>? = null,
+            content: String,
+            pubKey: HexKey,
+            createdAt: Long = TimeUtils.now()
+        ): BookmarkListEvent {
+            val tags = mutableListOf<List<String>>()
+            tags.add(listOf("d", name))
+
+            events?.forEach {
+                tags.add(listOf("e", it))
+            }
+            users?.forEach {
+                tags.add(listOf("p", it))
+            }
+            addresses?.forEach {
+                tags.add(listOf("a", it.toTag()))
+            }
+
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return BookmarkListEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
 
         fun create(
             name: String = "",

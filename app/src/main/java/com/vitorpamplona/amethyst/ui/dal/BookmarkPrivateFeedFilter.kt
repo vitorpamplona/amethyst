@@ -3,15 +3,11 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.IntentUtils
-import com.vitorpamplona.amethyst.ui.actions.SignerType
-import com.vitorpamplona.amethyst.ui.actions.openAmber
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 
 object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
-    var content: String = ""
-    var isActivityRunning: Boolean = false
 
     override fun feedKey(): String {
         return account.userProfile().latestBookmarkList?.id ?: ""
@@ -21,22 +17,14 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
         val bookmarks = account.userProfile().latestBookmarkList
 
         if (account.loginWithAmber) {
-            if (content.isBlank()) {
-                isActivityRunning = true
-                openAmber(
-                    bookmarks?.content ?: "",
-                    SignerType.NIP04_DECRYPT,
-                    IntentUtils.decryptActivityResultLauncher,
-                    account.keyPair.pubKey.toHexKey()
-                )
-                while (isActivityRunning) {
-                    Thread.sleep(250)
-                }
+            if (AmberUtils.content.isBlank()) {
+                AmberUtils.decryptBookmark(bookmarks?.content ?: "", account.keyPair.pubKey.toHexKey())
+                bookmarks?.decryptedContent = AmberUtils.content
             }
 
-            val notes = bookmarks?.privateTaggedEvents(content)
+            val notes = bookmarks?.privateTaggedEvents(bookmarks.decryptedContent)
                 ?.mapNotNull { LocalCache.checkGetOrCreateNote(it) } ?: emptyList()
-            val addresses = bookmarks?.privateTaggedAddresses(content)
+            val addresses = bookmarks?.privateTaggedAddresses(bookmarks.decryptedContent)
                 ?.map { LocalCache.getOrCreateAddressableNote(it) } ?: emptyList()
 
             return notes.plus(addresses).toSet()
