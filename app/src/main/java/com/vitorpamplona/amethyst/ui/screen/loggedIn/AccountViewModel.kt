@@ -264,8 +264,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.broadcast(note)
     }
 
-    fun delete(note: Note) {
-        account.delete(note)
+    fun delete(note: Note, signEvent: Boolean): DeletionEvent? {
+        return account.delete(note, signEvent)
     }
 
     fun decrypt(note: Note): String? {

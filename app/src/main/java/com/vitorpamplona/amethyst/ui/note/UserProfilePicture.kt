@@ -531,7 +531,16 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         }
         Divider()
         if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        event = accountViewModel.delete(note, !accountViewModel.loggedInWithAmber())
+                        if (!accountViewModel.loggedInWithAmber()) {
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.request_deletion))
             }
         } else {

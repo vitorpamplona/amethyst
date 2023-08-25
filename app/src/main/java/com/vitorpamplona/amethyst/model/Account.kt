@@ -432,8 +432,8 @@ class Account(
         LocalCache.consume(event, null)
     }
 
-    fun delete(note: Note) {
-        delete(listOf(note))
+    fun delete(note: Note, signEvent: Boolean = true): DeletionEvent? {
+        return delete(listOf(note), signEvent)
     }
 
     fun delete(notes: List<Note>, signEvent: Boolean = true): DeletionEvent? {
@@ -442,11 +442,10 @@ class Account(
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
+            val event = DeletionEvent.create(myNotes, keyPair)
             if (!signEvent) {
-                return DeletionEvent.create(myNotes, keyPair.pubKey.toHexKey())
+                return event
             }
-
-            val event = DeletionEvent.create(myNotes, keyPair.privKey!!)
             Client.send(event)
             LocalCache.consume(event)
         }

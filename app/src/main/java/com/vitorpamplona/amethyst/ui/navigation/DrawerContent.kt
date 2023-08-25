@@ -334,7 +334,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                             UserStatusDeleteButton() {
                                 scope.launch(Dispatchers.IO) {
                                     accountViewModel.updateStatus(it, "")
-                                    accountViewModel.delete(it)
+                                    accountViewModel.delete(it, true)
                                     focusManager.clearFocus(true)
                                 }
                             }
