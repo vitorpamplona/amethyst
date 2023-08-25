@@ -186,9 +186,12 @@ class AccountViewModel(val account: Account) : ViewModel() {
                         onProgress(0f)
                     }
                 } else {
-                    runCatching {
+                    try {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         ContextCompat.startActivity(context, intent, null)
+                    } catch (e: Exception) {
+                        onError(context.getString(R.string.lightning_wallets_not_found))
                     }
                     onProgress(0f)
                 }
