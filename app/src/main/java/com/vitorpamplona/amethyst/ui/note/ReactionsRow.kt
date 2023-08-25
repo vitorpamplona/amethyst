@@ -419,14 +419,7 @@ private fun ReactionDetailGallery(
     val defaultBackgroundColor = MaterialTheme.colors.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    val hasReactions by baseNote.live().zaps.combineWith(
-        baseNote.live().boosts,
-        baseNote.live().reactions
-    ) { zapState, boostState, reactionState ->
-        zapState?.note?.zaps?.isNotEmpty() ?: false ||
-            boostState?.note?.boosts?.isNotEmpty() ?: false ||
-            reactionState?.note?.reactions?.isNotEmpty() ?: false
-    }.distinctUntilChanged().observeAsState(
+    val hasReactions by baseNote.live().hasReactions.observeAsState(
         baseNote.zaps.isNotEmpty() || baseNote.boosts.isNotEmpty() || baseNote.reactions.isNotEmpty()
     )
 
@@ -603,9 +596,7 @@ fun ReplyReaction(
 
 @Composable
 fun ReplyCounter(baseNote: Note, textColor: Color) {
-    val repliesState by baseNote.live().replies.map {
-        it.note.replies.size
-    }.observeAsState(baseNote.replies.size)
+    val repliesState by baseNote.live().replyCount.observeAsState(baseNote.replies.size)
 
     SlidingAnimationCount(repliesState, textColor)
 }
@@ -775,9 +766,7 @@ fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountV
 
 @Composable
 fun BoostText(baseNote: Note, grayTint: Color) {
-    val boostState by baseNote.live().boosts.map {
-        it.note.boosts.size
-    }.distinctUntilChanged().observeAsState(baseNote.boosts.size)
+    val boostState by baseNote.live().boostCount.observeAsState(baseNote.boosts.size)
 
     SlidingAnimationCount(boostState, grayTint)
 }

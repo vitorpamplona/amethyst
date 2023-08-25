@@ -90,12 +90,20 @@ fun ChatroomMessageCompose(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = isBlank) {
+    Crossfade(targetState = hasEvent) {
         if (it) {
+            CheckHiddenChatMessage(
+                baseNote,
+                routeForLastRead,
+                innerQuote,
+                parentBackgroundColor,
+                accountViewModel,
+                nav,
+                onWantsToReply
+            )
+        } else {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                 BlankNote(
                     remember {
@@ -106,16 +114,6 @@ fun ChatroomMessageCompose(
                     }
                 )
             }
-        } else {
-            CheckHiddenChatMessage(
-                baseNote,
-                routeForLastRead,
-                innerQuote,
-                parentBackgroundColor,
-                accountViewModel,
-                nav,
-                onWantsToReply
-            )
         }
     }
 }

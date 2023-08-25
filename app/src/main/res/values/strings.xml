@@ -551,5 +551,8 @@
 
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>
+
     <string name="login_with_amber">Login with Amber</string>
+
+    <string name="status_update">Update your status</string>
 </resources>

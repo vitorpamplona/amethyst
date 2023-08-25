@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
@@ -27,13 +28,18 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ModalBottomSheetState
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -46,13 +52,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
@@ -65,12 +73,16 @@ import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.CoroutineScope
@@ -97,6 +109,7 @@ fun DrawerContent(
                     .padding(horizontal = 25.dp)
                     .padding(top = 100.dp),
                 scaffoldState,
+                accountViewModel,
                 nav
             )
             Divider(
@@ -123,6 +136,7 @@ fun ProfileContent(
     baseAccountUser: User,
     modifier: Modifier = Modifier,
     scaffoldState: ScaffoldState,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -215,9 +229,14 @@ fun ProfileContent(
                         )
                 )
             }
+
+            Row(Modifier.padding(top = Size10dp)) {
+                EditStatusBox(baseAccountUser, accountViewModel)
+            }
+
             Row(
                 modifier = Modifier
-                    .padding(top = 15.dp)
+                    .padding(top = Size10dp)
                     .clickable(onClick = {
                         nav(route)
                         coroutineScope.launch {
@@ -228,6 +247,132 @@ fun ProfileContent(
                 FollowingAndFollowerCounts(baseAccountUser)
             }
         }
+    }
+}
+
+@Composable
+private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewModel) {
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
+    LoadStatuses(user = baseAccountUser) { statuses ->
+        if (statuses.isEmpty()) {
+            val currentStatus = remember {
+                mutableStateOf("")
+            }
+            val hasChanged by remember {
+                derivedStateOf {
+                    currentStatus.value != ""
+                }
+            }
+
+            OutlinedTextField(
+                value = currentStatus.value,
+                onValueChange = { currentStatus.value = it },
+                label = { Text(text = stringResource(R.string.status_update)) },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.status_update),
+                        color = MaterialTheme.colors.placeholderText
+                    )
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences
+                ),
+                singleLine = true,
+                trailingIcon = {
+                    if (hasChanged) {
+                        UserStatusSendButton() {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.createStatus(currentStatus.value)
+                                focusManager.clearFocus(true)
+                            }
+                        }
+                    }
+                }
+            )
+        } else {
+            statuses.forEach {
+                val originalStatus by it.live().metadata.map {
+                    it.note.event?.content() ?: ""
+                }.observeAsState(it.event?.content() ?: "")
+
+                val thisStatus = remember {
+                    mutableStateOf(originalStatus)
+                }
+                val hasChanged by remember {
+                    derivedStateOf {
+                        thisStatus.value != originalStatus
+                    }
+                }
+
+                OutlinedTextField(
+                    value = thisStatus.value,
+                    onValueChange = { thisStatus.value = it },
+                    label = { Text(text = stringResource(R.string.status_update)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.status_update),
+                            color = MaterialTheme.colors.placeholderText
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    singleLine = true,
+                    trailingIcon = {
+                        if (hasChanged) {
+                            UserStatusSendButton() {
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.updateStatus(it, thisStatus.value)
+                                    focusManager.clearFocus(true)
+                                }
+                            }
+                        } else {
+                            UserStatusDeleteButton() {
+                                scope.launch(Dispatchers.IO) {
+                                    accountViewModel.updateStatus(it, "")
+                                    accountViewModel.delete(it)
+                                    focusManager.clearFocus(true)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun UserStatusSendButton(onClick: () -> Unit) {
+    IconButton(
+        modifier = Size26Modifier,
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Default.Send,
+            null,
+            modifier = Size20Modifier,
+            tint = MaterialTheme.colors.placeholderText
+        )
+    }
+}
+
+@Composable
+fun UserStatusDeleteButton(onClick: () -> Unit) {
+    IconButton(
+        modifier = Size26Modifier,
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            null,
+            modifier = Size20Modifier,
+            tint = MaterialTheme.colors.placeholderText
+        )
     }
 }
 
@@ -484,7 +629,7 @@ private fun RelayStatus(
     relayViewModel: RelayPoolViewModel
 ) {
     val connectedRelaysText by relayViewModel.connectionStatus.observeAsState("--/--")
-    val isConnected by relayViewModel.isConnected.distinctUntilChanged().observeAsState(false)
+    val isConnected by relayViewModel.isConnected.observeAsState(false)
 
     RenderRelayStatus(connectedRelaysText, isConnected)
 }

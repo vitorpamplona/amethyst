@@ -77,14 +77,12 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    if (isBlank) {
-        BlankNote(Modifier)
-    } else {
+    if (hasEvent) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
+    } else {
+        BlankNote(Modifier)
     }
 }
 

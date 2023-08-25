@@ -124,7 +124,6 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -224,24 +223,10 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.distinctUntilChanged().observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = isBlank) {
+    Crossfade(targetState = hasEvent) {
         if (it) {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                BlankNote(
-                    remember {
-                        modifier.combinedClickable(
-                            onClick = { },
-                            onLongClick = showPopup
-                        )
-                    },
-                    isBoostedNote || isQuotedNote
-                )
-            }
-        } else {
             CheckHiddenNoteCompose(
                 note = baseNote,
                 routeForLastRead = routeForLastRead,
@@ -256,6 +241,18 @@ fun NoteCompose(
                 accountViewModel = accountViewModel,
                 nav = nav
             )
+        } else {
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                BlankNote(
+                    remember {
+                        modifier.combinedClickable(
+                            onClick = { },
+                            onLongClick = showPopup
+                        )
+                    },
+                    isBoostedNote || isQuotedNote
+                )
+            }
         }
     }
 }
@@ -465,45 +462,86 @@ fun NormalNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    when (baseNote.event) {
-        is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
-            channelNote = baseNote,
-            showVideo = !makeItShort,
-            showBottomDiviser = true,
-            sendToChannel = true,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-        is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
-            CommunityHeader(
-                baseNote = it,
+    if (isQuotedNote || isBoostedNote) {
+        when (baseNote.event) {
+            is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
+                channelNote = baseNote,
+                showVideo = !makeItShort,
                 showBottomDiviser = true,
-                sendToCommunity = true,
+                sendToChannel = true,
                 accountViewModel = accountViewModel,
                 nav = nav
             )
-        }
-        is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote, isQuotedNote, accountViewModel)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, isQuotedNote, accountViewModel)
-        else ->
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                CheckNewAndRenderNote(
-                    baseNote,
-                    routeForLastRead,
-                    modifier,
-                    isBoostedNote,
-                    isQuotedNote,
-                    unPackReply,
-                    makeItShort,
-                    addMarginTop,
-                    canPreview,
-                    parentBackgroundColor,
-                    accountViewModel,
-                    showPopup,
-                    nav
+            is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
+                CommunityHeader(
+                    baseNote = it,
+                    showBottomDiviser = true,
+                    sendToCommunity = true,
+                    accountViewModel = accountViewModel,
+                    nav = nav
                 )
             }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            else ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                    CheckNewAndRenderNote(
+                        baseNote,
+                        routeForLastRead,
+                        modifier,
+                        isBoostedNote,
+                        isQuotedNote,
+                        unPackReply,
+                        makeItShort,
+                        addMarginTop,
+                        canPreview,
+                        parentBackgroundColor,
+                        accountViewModel,
+                        showPopup,
+                        nav
+                    )
+                }
+        }
+    } else {
+        when (baseNote.event) {
+            is ChannelCreateEvent, is ChannelMetadataEvent -> ChannelHeader(
+                channelNote = baseNote,
+                showVideo = !makeItShort,
+                showBottomDiviser = true,
+                sendToChannel = true,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+            is CommunityDefinitionEvent -> (baseNote as? AddressableNote)?.let {
+                CommunityHeader(
+                    baseNote = it,
+                    showBottomDiviser = true,
+                    sendToCommunity = true,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
+            is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
+            else ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                    CheckNewAndRenderNote(
+                        baseNote,
+                        routeForLastRead,
+                        modifier,
+                        isBoostedNote,
+                        isQuotedNote,
+                        unPackReply,
+                        makeItShort,
+                        addMarginTop,
+                        canPreview,
+                        parentBackgroundColor,
+                        accountViewModel,
+                        showPopup,
+                        nav
+                    )
+                }
+        }
     }
 }
 
@@ -1014,7 +1052,7 @@ private fun NoteBody(
         )
     }
 
-    Spacer(modifier = HalfVertSpacer)
+    Spacer(modifier = Modifier.height(3.dp))
 
     if (!makeItShort) {
         ReplyRow(
@@ -1142,6 +1180,14 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav
             )
+        }
+
+        is FileHeaderEvent -> {
+            FileHeaderDisplay(baseNote, true, accountViewModel)
+        }
+
+        is FileStorageHeaderEvent -> {
+            FileStorageHeaderDisplay(baseNote, true, accountViewModel)
         }
 
         is CommunityPostApprovalEvent -> {
@@ -2441,7 +2487,7 @@ fun SecondUserInfoRow(
     val noteAuthor = remember { note.author } ?: return
 
     Row(verticalAlignment = CenterVertically, modifier = UserNameMaxRowHeight) {
-        ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) })
+        ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) }, accountViewModel, nav)
 
         val geo = remember { noteEvent.getGeoHash() }
         if (geo != null) {
@@ -2458,6 +2504,30 @@ fun SecondUserInfoRow(
             DisplayPoW(pow)
         }
     }
+}
+
+@Composable
+fun LoadStatuses(
+    user: User,
+    content: @Composable (ImmutableList<AddressableNote>) -> Unit
+) {
+    var statuses: ImmutableList<AddressableNote> by remember {
+        mutableStateOf(persistentListOf())
+    }
+
+    val userStatus by user.live().statuses.observeAsState()
+
+    LaunchedEffect(key1 = userStatus) {
+        launch(Dispatchers.IO) {
+            val myUser = userStatus?.user ?: return@launch
+            val newStatuses = LocalCache.findStatusesForUser(myUser)
+            if (!equalImmutableLists(statuses, newStatuses)) {
+                statuses = newStatuses
+            }
+        }
+    }
+
+    content(statuses)
 }
 
 @Composable
@@ -3199,7 +3269,7 @@ private fun RenderBadge(
 }
 
 @Composable
-fun FileHeaderDisplay(note: Note, isQuotedNote: Boolean, accountViewModel: AccountViewModel) {
+fun FileHeaderDisplay(note: Note, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
 
@@ -3235,18 +3305,18 @@ fun FileHeaderDisplay(note: Note, isQuotedNote: Boolean, accountViewModel: Accou
     }
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-        ZoomableContentView(content = content, roundedCorner = isQuotedNote, accountViewModel = accountViewModel)
+        ZoomableContentView(content = content, roundedCorner = roundedCorner, accountViewModel = accountViewModel)
     }
 }
 
 @Composable
-fun FileStorageHeaderDisplay(baseNote: Note, isQuotedNote: Boolean, accountViewModel: AccountViewModel) {
+fun FileStorageHeaderDisplay(baseNote: Note, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
     val dataEventId = eventHeader.dataEventId() ?: return
 
     LoadNote(baseNoteHex = dataEventId) { contentNote ->
         if (contentNote != null) {
-            ObserverAndRenderNIP95(baseNote, contentNote, isQuotedNote, accountViewModel)
+            ObserverAndRenderNIP95(baseNote, contentNote, roundedCorner, accountViewModel)
         }
     }
 }
@@ -3255,7 +3325,7 @@ fun FileStorageHeaderDisplay(baseNote: Note, isQuotedNote: Boolean, accountViewM
 private fun ObserverAndRenderNIP95(
     header: Note,
     content: Note,
-    isQuotedNote: Boolean,
+    roundedCorner: Boolean,
     accountViewModel: AccountViewModel
 ) {
     val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
@@ -3302,7 +3372,7 @@ private fun ObserverAndRenderNIP95(
     Crossfade(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(content = it, roundedCorner = isQuotedNote, accountViewModel = accountViewModel)
+                ZoomableContentView(content = it, roundedCorner = roundedCorner, accountViewModel = accountViewModel)
             }
         }
     }

@@ -69,6 +69,16 @@ open class Event(
 
     override fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
+    override fun firstTaggedUser() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.let { it[1] }
+    override fun firstTaggedEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.let { it[1] }
+    override fun firstTaggedUrl() = tags.firstOrNull { it.size > 1 && it[0] == "r" }?.let { it[1] }
+    override fun firstTaggedAddress() = tags.firstOrNull { it.size > 1 && it[0] == "r" }?.let {
+        val aTagValue = it[1]
+        val relay = it.getOrNull(2)
+
+        ATag.parse(aTagValue, relay)
+    }
+
     override fun taggedEmojis() = tags.filter { it.size > 2 && it[0] == "emoji" }.map { EmojiUrl(it[1], it[2]) }
 
     override fun isSensitive() = tags.any {
@@ -119,6 +129,14 @@ open class Event(
         val kindStr = kind.toString()
         return tags.any { it.size > 1 && it[0] == "a" && it[1].startsWith(kindStr) }
     }
+
+    override fun expiration() = try {
+        tags.firstOrNull { it.size > 1 && it[0] == "expiration" }?.get(1)?.toLongOrNull()
+    } catch (_: Exception) {
+        null
+    }
+
+    override fun isExpired() = (expiration() ?: Long.MAX_VALUE) < TimeUtils.now()
 
     override fun getTagOfAddressableKind(kind: Int): ATag? {
         val kindStr = kind.toString()

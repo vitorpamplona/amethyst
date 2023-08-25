@@ -74,6 +74,7 @@ class EventFactory {
             RelaySetEvent.kind -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.kind -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.kind -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
+            StatusEvent.kind -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.kind -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             else -> Event(id, pubKey, createdAt, kind, tags, content, sig)
         }

@@ -13,6 +13,7 @@ object TimeUtils {
     fun now() = System.currentTimeMillis() / 1000
     fun fiveMinutesAgo() = now() - fiveMinutes
     fun oneHourAgo() = now() - oneHour
+    fun oneHourAhead() = now() + oneHour
     fun oneDayAgo() = now() - oneDay
     fun eightHoursAgo() = now() - eightHours
     fun oneWeekAgo() = now() - oneWeek

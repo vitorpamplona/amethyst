@@ -95,7 +95,7 @@ fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onCl
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })

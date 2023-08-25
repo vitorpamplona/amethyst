@@ -51,7 +51,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.clear()
                         onClose()
                     })

@@ -16,6 +16,7 @@
     <locale android:name="ru"/>
     <locale android:name="sv-SE"/>
     <locale android:name="ta"/>
+    <locale android:name="th"/>
     <locale android:name="tr"/>
     <locale android:name="uk"/>
     <locale android:name="zh"/>

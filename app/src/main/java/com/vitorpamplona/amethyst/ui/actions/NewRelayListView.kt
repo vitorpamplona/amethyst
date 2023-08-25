@@ -157,7 +157,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                     },
                     navigationIcon = {
                         Spacer(modifier = StdHorzSpacer)
-                        CloseButton(onCancel = {
+                        CloseButton(onPress = {
                             postViewModel.clear()
                             onClose()
                         })

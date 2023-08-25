@@ -14,7 +14,10 @@ import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -342,6 +345,27 @@ object LocalCache {
     private fun consume(event: PinListEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: RelaySetEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: AudioTrackEvent) { consumeBaseReplaceable(event) }
+    fun consume(event: StatusEvent, relay: Relay?) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, emptyList())
+
+            author.liveSet?.statuses?.invalidateData()
+
+            refreshObservers(note)
+        }
+    }
 
     fun consume(event: BadgeDefinitionEvent) { consumeBaseReplaceable(event) }
 
@@ -1088,7 +1112,7 @@ object LocalCache {
         }
 
         return notes.values.filter {
-            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent) &&
+            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent && it.event !is LnZapEvent && it.event !is LnZapRequestEvent) &&
                 (
                     it.event?.content()?.contains(text, true) ?: false ||
                         it.event?.matchTag1With(text) ?: false ||
@@ -1096,7 +1120,7 @@ object LocalCache {
                         it.idNote().startsWith(text, true)
                     )
         } + addressables.values.filter {
-            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent) &&
+            (it.event !is GenericRepostEvent && it.event !is RepostEvent && it.event !is CommunityPostApprovalEvent && it.event !is ReactionEvent && it.event !is GiftWrapEvent && it.event !is LnZapEvent && it.event !is LnZapRequestEvent) &&
                 (
                     it.event?.content()?.contains(text, true) ?: false ||
                         it.event?.matchTag1With(text) ?: false ||
@@ -1123,6 +1147,18 @@ object LocalCache {
                 it.idHex.startsWith(text, true) ||
                 it.idNote().startsWith(text, true)
         }
+    }
+
+    suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
+        checkNotInMainThread()
+
+        return addressables.filter {
+            val noteEvent = it.value.event
+            (noteEvent is StatusEvent && noteEvent.pubKey == user.pubkeyHex && !noteEvent.isExpired() && noteEvent.content.isNotBlank())
+        }.values
+            .sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt() }, { it.idHex }))
+            .reversed()
+            .toImmutableList()
     }
 
     fun cleanObservers() {
@@ -1242,6 +1278,39 @@ object LocalCache {
                 it.value.liveSet?.isInUse() != true && // don't delete if observing.
                 it.value.author?.pubkeyHex !in accounts && // don't delete if it is the logged in account
                 it.value.event?.isTaggedUsers(accounts) != true // don't delete if it's a notification to the logged in user
+        }.values
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        toBeRemoved.forEach {
+            notes.remove(it.idHex)
+
+            it.replyTo?.forEach { masterNote ->
+                masterNote.removeReply(it)
+                masterNote.removeBoost(it)
+                masterNote.removeReaction(it)
+                masterNote.removeZap(it)
+                masterNote.removeReport(it)
+                masterNote.clearEOSE() // allows reloading of these events
+            }
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeChildrenOf(childrenToBeRemoved)
+
+        if (toBeRemoved.size > 1) {
+            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
+        }
+    }
+
+    fun pruneExpiredEvents() {
+        checkNotInMainThread()
+
+        val now = TimeUtils.now()
+
+        val toBeRemoved = notes.filter {
+            it.value.event?.isExpired() == true
         }.values
 
         val childrenToBeRemoved = mutableListOf<Note>()
@@ -1423,6 +1492,7 @@ object LocalCache {
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event)
                 is PeopleListEvent -> consume(event)
+                is PollNoteEvent -> consume(event, relay)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
                 is RelaySetEvent -> consume(event)
@@ -1439,8 +1509,9 @@ object LocalCache {
                     }
                     consume(event)
                 }
+                is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
-                is PollNoteEvent -> consume(event, relay)
+
                 else -> {
                     Log.w("Event Not Supported", event.toJson())
                 }

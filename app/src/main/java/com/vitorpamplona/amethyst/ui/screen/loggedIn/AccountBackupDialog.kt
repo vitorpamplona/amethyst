@@ -70,7 +70,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = onClose)
+                    CloseButton(onPress = onClose)
                 }
 
                 Column(

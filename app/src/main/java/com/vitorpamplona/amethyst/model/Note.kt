@@ -3,6 +3,8 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
@@ -10,6 +12,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
@@ -651,9 +654,17 @@ open class Note(val idHex: String) {
     }
 }
 
+@Stable
 class NoteLiveSet(u: Note) {
     // Observers line up here.
     val metadata: NoteLiveData = NoteLiveData(u)
+
+    val authorChanges = metadata.map {
+        it.note.author
+    }
+    val hasEvent = metadata.map {
+        it.note.event != null
+    }.distinctUntilChanged()
 
     val reactions: NoteLiveData = NoteLiveData(u)
     val boosts: NoteLiveData = NoteLiveData(u)
@@ -661,6 +672,20 @@ class NoteLiveSet(u: Note) {
     val reports: NoteLiveData = NoteLiveData(u)
     val relays: NoteLiveData = NoteLiveData(u)
     val zaps: NoteLiveData = NoteLiveData(u)
+
+    val hasReactions = zaps.combineWith(boosts, reactions) { zapState, boostState, reactionState ->
+        zapState?.note?.zaps?.isNotEmpty() ?: false ||
+            boostState?.note?.boosts?.isNotEmpty() ?: false ||
+            reactionState?.note?.reactions?.isNotEmpty() ?: false
+    }.distinctUntilChanged()
+
+    val replyCount = replies.map {
+        it.note.replies.size
+    }.distinctUntilChanged()
+
+    val boostCount = boosts.map {
+        it.note.boosts.size
+    }.distinctUntilChanged()
 
     fun isInUse(): Boolean {
         return metadata.hasObservers() ||

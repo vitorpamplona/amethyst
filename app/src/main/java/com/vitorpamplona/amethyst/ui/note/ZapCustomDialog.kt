@@ -94,7 +94,7 @@ fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, bas
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })

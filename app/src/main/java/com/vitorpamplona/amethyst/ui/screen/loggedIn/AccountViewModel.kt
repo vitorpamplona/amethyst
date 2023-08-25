@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -382,6 +383,14 @@ class AccountViewModel(val account: Account) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             account.showUser(pubkeyHex)
         }
+    }
+
+    fun createStatus(newStatus: String) {
+        account.createStatus(newStatus)
+    }
+
+    fun updateStatus(it: AddressableNote, newStatus: String) {
+        account.updateStatus(it, newStatus)
     }
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

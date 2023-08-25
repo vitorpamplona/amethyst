@@ -3,6 +3,8 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.EOSETime
@@ -378,6 +380,7 @@ class User(val pubkeyHex: String) {
     }
 }
 
+@Stable
 class UserLiveSet(u: User) {
     // UI Observers line up here.
     val follows: UserLiveData = UserLiveData(u)
@@ -389,6 +392,19 @@ class UserLiveSet(u: User) {
     val metadata: UserLiveData = UserLiveData(u)
     val zaps: UserLiveData = UserLiveData(u)
     val bookmarks: UserLiveData = UserLiveData(u)
+    val statuses: UserLiveData = UserLiveData(u)
+
+    val profilePictureChanges = metadata.map {
+        it.user.profilePicture()
+    }.distinctUntilChanged()
+
+    val nip05Changes = metadata.map {
+        it.user.nip05()
+    }.distinctUntilChanged()
+
+    val userMetadataInfo = metadata.map {
+        it.user.info
+    }.distinctUntilChanged()
 
     fun isInUse(): Boolean {
         return follows.hasObservers() ||
@@ -399,6 +415,7 @@ class UserLiveSet(u: User) {
             relayInfo.hasObservers() ||
             metadata.hasObservers() ||
             zaps.hasObservers() ||
+            statuses.hasObservers() ||
             bookmarks.hasObservers()
     }
 
@@ -412,6 +429,7 @@ class UserLiveSet(u: User) {
         metadata.destroy()
         zaps.destroy()
         bookmarks.destroy()
+        statuses.destroy()
     }
 }
 

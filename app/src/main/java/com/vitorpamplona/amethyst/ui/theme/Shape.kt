@@ -126,7 +126,7 @@ val ChatHeadlineBorders = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.
 
 val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
-val NIP05IconSize = Modifier.size(14.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
+val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
 val EditFieldModifier = Modifier
     .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)

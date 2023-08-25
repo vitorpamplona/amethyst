@@ -557,7 +557,7 @@ fun ChatroomHeader(
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     UsernameDisplay(baseUser)
-                    ObserveDisplayNip05Status(baseUser)
+                    ObserveDisplayNip05Status(baseUser, accountViewModel = accountViewModel, nav = nav)
                 }
             }
         }
@@ -669,7 +669,7 @@ fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         onClose()
                     })
 

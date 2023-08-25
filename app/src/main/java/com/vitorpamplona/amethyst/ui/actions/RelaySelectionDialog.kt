@@ -110,7 +110,7 @@ fun RelaySelectionDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CloseButton(
-                        onCancel = {
+                        onPress = {
                             onClose()
                         }
                     )
