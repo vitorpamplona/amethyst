@@ -72,7 +72,7 @@ open class Event(
     override fun firstTaggedUser() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.let { it[1] }
     override fun firstTaggedEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.let { it[1] }
     override fun firstTaggedUrl() = tags.firstOrNull { it.size > 1 && it[0] == "r" }?.let { it[1] }
-    override fun firstTaggedAddress() = tags.firstOrNull { it.size > 1 && it[0] == "r" }?.let {
+    override fun firstTaggedAddress() = tags.firstOrNull { it.size > 1 && it[0] == "a" }?.let {
         val aTagValue = it[1]
         val relay = it.getOrNull(2)
 
