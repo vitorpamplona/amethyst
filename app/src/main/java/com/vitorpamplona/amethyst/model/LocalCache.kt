@@ -14,7 +14,6 @@ import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.*
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -1306,8 +1305,6 @@ object LocalCache {
 
     fun pruneExpiredEvents() {
         checkNotInMainThread()
-
-        val now = TimeUtils.now()
 
         val toBeRemoved = notes.filter {
             it.value.event?.isExpired() == true
