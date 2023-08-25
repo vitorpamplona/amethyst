@@ -441,9 +441,7 @@ fun WatchForReports(
     val noteReportsState by note.live().reports.observeAsState()
 
     LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState) {
-        launch(Dispatchers.Default) {
-            accountViewModel.isNoteAcceptable(note, onChange)
-        }
+        accountViewModel.isNoteAcceptable(note, onChange)
     }
 }
 

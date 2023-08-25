@@ -411,24 +411,26 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun isNoteAcceptable(note: Note, onReady: (Boolean, Boolean, ImmutableSet<Note>) -> Unit) {
-        val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
-        val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
+        viewModelScope.launch {
+            val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+            val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
 
-        if (isFromLoggedIn || isFromLoggedInFollow) {
-            // No need to process if from trusted people
-            onReady(true, true, persistentSetOf())
-        } else {
-            val newCanPreview = !note.hasAnyReports()
-
-            val newIsAcceptable = account.isAcceptable(note)
-
-            if (newCanPreview && newIsAcceptable) {
-                // No need to process reports if nothing is wrong
+            if (isFromLoggedIn || isFromLoggedInFollow) {
+                // No need to process if from trusted people
                 onReady(true, true, persistentSetOf())
             } else {
-                val newRelevantReports = account.getRelevantReports(note)
+                val newCanPreview = !note.hasAnyReports()
 
-                onReady(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+                val newIsAcceptable = account.isAcceptable(note)
+
+                if (newCanPreview && newIsAcceptable) {
+                    // No need to process reports if nothing is wrong
+                    onReady(true, true, persistentSetOf())
+                } else {
+                    val newRelevantReports = account.getRelevantReports(note)
+
+                    onReady(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+                }
             }
         }
     }
