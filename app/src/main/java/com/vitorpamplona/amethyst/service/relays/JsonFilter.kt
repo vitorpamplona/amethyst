@@ -60,7 +60,7 @@ class JsonFilter(
                     } else {
                         val jsonObjectSince = factory.objectNode()
                         entries.forEach { sincePairs ->
-                            put(sincePairs.key, "${sincePairs.value}")
+                            jsonObjectSince.put(sincePairs.key, "${sincePairs.value}")
                         }
                         put("since", jsonObjectSince)
                     }
