@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.nip05
@@ -235,7 +235,7 @@ fun DisplayStatus(
         "music" -> Icon(
             painter = painterResource(id = R.drawable.tunestr),
             null,
-            modifier = Size18Modifier,
+            modifier = Size15Modifier.padding(end = Size5dp),
             tint = MaterialTheme.colors.placeholderText
         )
         else -> {}
