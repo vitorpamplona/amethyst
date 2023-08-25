@@ -66,13 +66,13 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                 eose.time = time
             }
         }
+    }
 
+    val userChannelOnce = requestNewChannel() { time, relayUrl ->
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()
     }
-
-    val userChannelOnce = requestNewChannel()
 
     override fun updateChannelFilters() {
         userChannel.typedFilters = listOfNotNull(createUserReportFilter(), createUserStatusFilter()).flatten().ifEmpty { null }
