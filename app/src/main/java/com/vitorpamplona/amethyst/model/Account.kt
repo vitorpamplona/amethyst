@@ -1027,6 +1027,21 @@ class Account(
         LocalCache.consume(event, null)
     }
 
+    fun deleteStatus(oldStatus: AddressableNote) {
+        if (!isWriteable()) return
+        val oldEvent = oldStatus.event as? StatusEvent ?: return
+
+        val event = StatusEvent.clear(oldEvent, keyPair.privKey!!)
+
+        Client.send(event)
+        LocalCache.consume(event, null)
+
+        val event2 = DeletionEvent.create(listOf(event.id), keyPair.privKey!!)
+
+        Client.send(event2)
+        LocalCache.consume(event2)
+    }
+
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
         if (!isWriteable()) return
 

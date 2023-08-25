@@ -456,11 +456,22 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun createStatus(newStatus: String) {
-        account.createStatus(newStatus)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.createStatus(newStatus)
+        }
     }
 
     fun updateStatus(it: AddressableNote, newStatus: String) {
-        account.updateStatus(it, newStatus)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.updateStatus(it, newStatus)
+        }
+    }
+
+    fun deleteStatus(it: AddressableNote) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.deleteStatus(it)
+        }
+    }
 
     fun checkIfOnline(url: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
