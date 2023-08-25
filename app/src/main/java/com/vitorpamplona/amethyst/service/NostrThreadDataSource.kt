@@ -36,8 +36,10 @@ object NostrThreadDataSource : NostrDataSource("SingleThreadFeed") {
     }
 
     fun loadThread(noteId: String?) {
-        eventToWatch = noteId
+        if (eventToWatch != noteId) {
+            eventToWatch = noteId
 
-        invalidateFilters()
+            invalidateFilters()
+        }
     }
 }

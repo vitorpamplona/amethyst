@@ -26,9 +26,10 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, nav: (Stri
         factory = NostrThreadFeedViewModel.Factory(noteId)
     )
 
+    NostrThreadDataSource.loadThread(noteId)
+
     LaunchedEffect(noteId) {
-        NostrThreadDataSource.loadThread(noteId)
-        feedViewModel.invalidateData()
+        feedViewModel.invalidateData(true)
     }
 
     DisposableEffect(accountViewModel) {
@@ -37,7 +38,7 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, nav: (Stri
                 println("Thread Start")
                 NostrThreadDataSource.loadThread(noteId)
                 NostrThreadDataSource.start()
-                feedViewModel.invalidateData()
+                feedViewModel.invalidateData(true)
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Thread Stop")
