@@ -920,7 +920,7 @@ private fun DrawAdditionalInfo(
 
     DisplayBadges(baseUser, nav)
 
-    DisplayNip05ProfileStatus(user)
+    DisplayNip05ProfileStatus(user, accountViewModel)
 
     val website = user.info?.website
     if (!website.isNullOrEmpty()) {

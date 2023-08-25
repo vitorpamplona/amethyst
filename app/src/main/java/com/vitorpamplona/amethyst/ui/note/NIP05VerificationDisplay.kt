@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
@@ -55,13 +54,11 @@ import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String): MutableState<Boolean?> {
+fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String, accountViewModel: AccountViewModel): MutableState<Boolean?> {
     val nip05Verified = remember(userMetadata.nip05) {
         // starts with null if must verify or already filled in if verified in the last hour
         val default = if ((userMetadata.nip05LastVerificationTime ?: 0) > TimeUtils.oneHourAgo()) {
@@ -75,37 +72,9 @@ fun nip05VerificationAsAState(userMetadata: UserMetadata, pubkeyHex: String): Mu
 
     if (nip05Verified.value == null) {
         LaunchedEffect(key1 = userMetadata.nip05) {
-            launch(Dispatchers.IO) {
-                userMetadata.nip05?.ifBlank { null }?.let { nip05 ->
-                    Nip05Verifier().verifyNip05(
-                        nip05,
-                        onSuccess = {
-                            // Marks user as verified
-                            if (it == pubkeyHex) {
-                                userMetadata.nip05Verified = true
-                                userMetadata.nip05LastVerificationTime = TimeUtils.now()
-
-                                if (nip05Verified.value != true) {
-                                    nip05Verified.value = true
-                                }
-                            } else {
-                                userMetadata.nip05Verified = false
-                                userMetadata.nip05LastVerificationTime = 0
-
-                                if (nip05Verified.value != false) {
-                                    nip05Verified.value = false
-                                }
-                            }
-                        },
-                        onError = {
-                            userMetadata.nip05LastVerificationTime = 0
-                            userMetadata.nip05Verified = false
-
-                            if (nip05Verified.value != false) {
-                                nip05Verified.value = false
-                            }
-                        }
-                    )
+            accountViewModel.verifyNip05(userMetadata, pubkeyHex) { newVerificationStatus ->
+                if (nip05Verified.value != newVerificationStatus) {
+                    nip05Verified.value = newVerificationStatus
                 }
             }
         }
@@ -156,7 +125,7 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
     Column(modifier = columnModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (nip05 != null) {
-                val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex)
+                val nip05Verified = nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
 
                 if (nip05Verified.value != true) {
                     DisplayNIP05(nip05, nip05Verified)
@@ -358,12 +327,12 @@ private fun NIP05VerifiedSymbol(nip05Verified: MutableState<Boolean?>, modifier:
 }
 
 @Composable
-fun DisplayNip05ProfileStatus(user: User) {
+fun DisplayNip05ProfileStatus(user: User, accountViewModel: AccountViewModel) {
     val uri = LocalUriHandler.current
 
     user.nip05()?.let { nip05 ->
         if (nip05.split("@").size <= 2) {
-            val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex)
+            val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NIP05VerifiedSymbol(nip05Verified, Size16Modifier)
                 var domainPadStart = 5.dp

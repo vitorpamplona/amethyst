@@ -21,6 +21,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
@@ -35,6 +36,8 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.UserMetadata
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -491,6 +494,36 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
         viewModelScope.launch(Dispatchers.Default) {
             onNewReactionType(note.getReactionBy(userProfile()))
+        }
+    }
+
+    fun verifyNip05(userMetadata: UserMetadata, pubkeyHex: String, onResult: (Boolean) -> Unit) {
+        val nip05 = userMetadata.nip05?.ifBlank { null } ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            Nip05Verifier().verifyNip05(
+                nip05,
+                onSuccess = {
+                    // Marks user as verified
+                    if (it == pubkeyHex) {
+                        userMetadata.nip05Verified = true
+                        userMetadata.nip05LastVerificationTime = TimeUtils.now()
+
+                        onResult(userMetadata.nip05Verified)
+                    } else {
+                        userMetadata.nip05Verified = false
+                        userMetadata.nip05LastVerificationTime = 0
+
+                        onResult(userMetadata.nip05Verified)
+                    }
+                },
+                onError = {
+                    userMetadata.nip05LastVerificationTime = 0
+                    userMetadata.nip05Verified = false
+
+                    onResult(userMetadata.nip05Verified)
+                }
+            )
         }
     }
 
