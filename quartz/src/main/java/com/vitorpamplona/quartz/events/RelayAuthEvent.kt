@@ -27,9 +27,10 @@ class RelayAuthEvent(
                 listOf("relay", relay),
                 listOf("challenge", challenge)
             )
-            val id = generateId(pubKey, createdAt, kind, tags, content)
+            val localPubKey = if (pubKey.isBlank() && privateKey != null) CryptoUtils.pubkeyCreate(privateKey).toHexKey() else pubKey
+            val id = generateId(localPubKey, createdAt, kind, tags, content)
             val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
-            return RelayAuthEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+            return RelayAuthEvent(id.toHexKey(), localPubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
     }
 }

@@ -34,7 +34,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.Event
@@ -104,9 +103,8 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
 
                     PostButton(
                         onPost = {
-                            if (PackageUtils.isAmberInstalled(context)) {
+                            if (account.loginWithAmber) {
                                 event = postViewModel.create(false)
-                                println(event)
                             } else {
                                 postViewModel.create(true)
                                 onClose()

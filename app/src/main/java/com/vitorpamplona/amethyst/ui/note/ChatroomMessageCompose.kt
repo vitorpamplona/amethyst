@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,7 +44,6 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -639,10 +637,9 @@ private fun RenderRegularTextNote(
     val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
     var eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
-    val context = LocalContext.current
-    val isAmberInstalled = PackageUtils.isAmberInstalled(context)
+    val loggedInWithAmber = accountViewModel.loggedInWithAmber()
     var triedToDecrypt by remember { mutableStateOf(false) }
-    if (isAmberInstalled && !triedToDecrypt && note.event is PrivateDmEvent) {
+    if (loggedInWithAmber && !triedToDecrypt && note.event is PrivateDmEvent) {
         SignerDialog(
             onClose = {
                 triedToDecrypt = true

@@ -202,7 +202,7 @@ class Account(
         return null
     }
 
-    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>, signEvent: Boolean = true): MetadataEvent? {
+    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>, signEvent: Boolean): MetadataEvent? {
         if (!isWriteable() && signEvent) return null
 
         val event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
@@ -1438,8 +1438,8 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun createAuthEvent(relay: Relay, challenge: String, isAmberInstalled: Boolean): RelayAuthEvent? {
-        if (!isWriteable() && !isAmberInstalled) return null
+    fun createAuthEvent(relay: Relay, challenge: String, loggedInWithAmber: Boolean): RelayAuthEvent? {
+        if (!isWriteable() && !loggedInWithAmber) return null
 
         return RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
     }

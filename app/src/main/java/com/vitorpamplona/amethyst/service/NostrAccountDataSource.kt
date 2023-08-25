@@ -193,10 +193,10 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
         if (this::account.isInitialized) {
             val context = Amethyst.instance
-            val isAmberInstalled = PackageUtils.isAmberInstalled(context)
-            val event = account.createAuthEvent(relay, challenge, isAmberInstalled)
+            val loggedInWithAmber = account.loginWithAmber
+            val event = account.createAuthEvent(relay, challenge, loggedInWithAmber)
 
-            if (isAmberInstalled && !account.isWriteable()) {
+            if (loggedInWithAmber && !account.isWriteable()) {
                 if (event != null) {
                     openAmber(
                         event.toJson(),

@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
@@ -768,7 +767,7 @@ private fun DisplayFollowUnfollowButton(
     if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     event = accountViewModel.account.unfollow(baseUser, false)
                 } else {
                     scope.launch {

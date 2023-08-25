@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
@@ -338,7 +337,7 @@ fun ChatroomScreen(
                         wantsToMarkAsSensitive = false
                     )
                 } else {
-                    if (!accountViewModel.isWriteable() && PackageUtils.isAmberInstalled(context)) {
+                    if (!accountViewModel.isWriteable() && accountViewModel.loggedInWithAmber()) {
                         message = newPostModel.message.text
                     } else {
                         accountViewModel.account.sendPrivateMessage(

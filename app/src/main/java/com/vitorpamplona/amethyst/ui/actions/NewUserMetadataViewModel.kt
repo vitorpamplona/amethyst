@@ -124,11 +124,11 @@ class NewUserMetadataViewModel : ViewModel() {
 
         if (signEvent) {
             viewModelScope.launch(Dispatchers.IO) {
-                account.sendNewUserMetadata(writer.buffer.toString(), newClaims, signEvent)
+                account.sendNewUserMetadata(writer.buffer.toString(), newClaims, true)
             }
             clear()
         } else {
-            return account.sendNewUserMetadata(writer.buffer.toString(), newClaims, signEvent)
+            return account.sendNewUserMetadata(writer.buffer.toString(), newClaims, false)
         }
 
         return null

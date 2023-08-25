@@ -2,12 +2,10 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.IntentUtils
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.actions.openAmber
 import com.vitorpamplona.quartz.events.RelayAuthEvent
@@ -25,14 +23,14 @@ class RegisterAccounts(
     private fun signEventsToProveControlOfAccounts(
         accounts: List<AccountInfo>,
         notificationToken: String,
-        isAmberInstalled: Boolean
+        loggedInWithAmber: Boolean
     ): List<RelayAuthEvent> {
         return accounts.mapNotNull {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
             if (acc != null) {
                 val relayToUse = acc.activeRelays()?.firstOrNull { it.read }
                 if (relayToUse != null) {
-                    val event = acc.createAuthEvent(relayToUse, notificationToken, isAmberInstalled)
+                    val event = acc.createAuthEvent(relayToUse, notificationToken, loggedInWithAmber)
                     event
                 } else {
                     null
@@ -70,11 +68,11 @@ class RegisterAccounts(
     }
 
     suspend fun go(notificationToken: String) = withContext(Dispatchers.IO) {
-        val isAmberInstalled = PackageUtils.isAmberInstalled(Amethyst.instance)
         val accountsWithoutPrivKey = accounts.filter { !it.hasPrivKey }
         val accountsWithPrivKey = accounts.filter { it.hasPrivKey }
         accountsWithoutPrivKey.forEach { account ->
-            val events = signEventsToProveControlOfAccounts(listOf(account), notificationToken, isAmberInstalled)
+            Log.d("fcm register", account.npub)
+            val events = signEventsToProveControlOfAccounts(listOf(account), notificationToken, account.loggedInWithAmber)
             if (events.isNotEmpty()) {
                 openAmber(
                     events.first().toJson(),
@@ -87,7 +85,7 @@ class RegisterAccounts(
 
         if (accountsWithPrivKey.isNotEmpty()) {
             postRegistrationEvent(
-                signEventsToProveControlOfAccounts(accountsWithPrivKey, notificationToken, isAmberInstalled)
+                signEventsToProveControlOfAccounts(accountsWithPrivKey, notificationToken, false)
             )
         }
     }

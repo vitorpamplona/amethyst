@@ -35,7 +35,8 @@ private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 @Immutable
 data class AccountInfo(
     val npub: String,
-    val hasPrivKey: Boolean = false
+    val hasPrivKey: Boolean,
+    val loggedInWithAmber: Boolean
 )
 
 private object PrefKeys {
@@ -202,7 +203,11 @@ object LocalPreferences {
 
     fun allSavedAccounts(): List<AccountInfo> {
         return savedAccounts().map { npub ->
-            AccountInfo(npub = npub)
+            AccountInfo(
+                npub,
+                hasPrivKey(npub),
+                getLoggedInWithAmber(npub)
+            )
         }
     }
 
@@ -289,6 +294,22 @@ object LocalPreferences {
             language = getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
         }
         return language
+    }
+
+    private fun getLoggedInWithAmber(npub: String): Boolean {
+        var loggedInWithAmber: Boolean
+        encryptedPreferences(npub).apply {
+            loggedInWithAmber = getBoolean(PrefKeys.LOGIN_WITH_AMBER, false)
+        }
+        return loggedInWithAmber
+    }
+
+    private fun hasPrivKey(npub: String): Boolean {
+        var hasPrivKey: Boolean
+        encryptedPreferences(npub).apply {
+            hasPrivKey = (getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
+        }
+        return hasPrivKey
     }
 
     fun loadFromEncryptedStorage(): Account? {

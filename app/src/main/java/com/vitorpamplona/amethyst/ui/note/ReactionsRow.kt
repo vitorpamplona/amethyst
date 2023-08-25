@@ -78,7 +78,6 @@ import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
@@ -572,7 +571,7 @@ fun ReplyReaction(
             if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     onPress()
                 } else {
                     scope.launch {
@@ -705,7 +704,7 @@ fun BoostReaction(
                     wantsToBoost = true
                 }
             } else {
-                if (PackageUtils.isAmberInstalled(context)) {
+                if (accountViewModel.loggedInWithAmber()) {
                     if (accountViewModel.hasBoosted(baseNote)) {
                         scope.launch(Dispatchers.IO) {
                             event = accountViewModel.deleteBoostsTo(baseNote, false)
@@ -995,7 +994,7 @@ private fun likeClick(
                 .show()
         }
     } else if (!accountViewModel.isWriteable()) {
-        if (PackageUtils.isAmberInstalled(context)) {
+        if (accountViewModel.loggedInWithAmber()) {
             onWantsToSignReaction()
         } else {
             scope.launch {
@@ -1420,14 +1419,14 @@ private fun ActionableReactionButton(
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            val isAmberInstalled = PackageUtils.isAmberInstalled(context)
+            val loggedInWithAmber = accountViewModel.loggedInWithAmber()
             scope.launch(Dispatchers.IO) {
                 event = accountViewModel.reactToOrDelete(
                     baseNote,
                     reactionType,
-                    !isAmberInstalled
+                    !loggedInWithAmber
                 )
-                if (!isAmberInstalled) {
+                if (!loggedInWithAmber) {
                     onDismiss()
                 }
             }
@@ -1441,14 +1440,14 @@ private fun ActionableReactionButton(
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
                 onClick = {
-                    val isAmberInstalled = PackageUtils.isAmberInstalled(context)
+                    val loggedInWithAmber = accountViewModel.loggedInWithAmber()
                     scope.launch(Dispatchers.IO) {
                         event = accountViewModel.reactToOrDelete(
                             baseNote,
                             reactionType,
-                            !isAmberInstalled
+                            !loggedInWithAmber
                         )
-                        if (!isAmberInstalled) {
+                        if (!loggedInWithAmber) {
                             onDismiss()
                         }
                     }
