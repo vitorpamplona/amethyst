@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Icon
@@ -46,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -249,6 +251,7 @@ fun DisplayStatus(
 
     if (url != null) {
         val uri = LocalUriHandler.current
+        Spacer(modifier = StdHorzSpacer)
         IconButton(
             modifier = Size15Modifier,
             onClick = { runCatching { uri.openUri(url.trim()) } }
@@ -263,6 +266,7 @@ fun DisplayStatus(
     } else if (nostrATag != null) {
         LoadAddressableNote(nostrATag) { note ->
             if (note != null) {
+                Spacer(modifier = StdHorzSpacer)
                 IconButton(
                     modifier = Size15Modifier,
                     onClick = {
@@ -284,6 +288,7 @@ fun DisplayStatus(
     } else if (nostrHexID != null) {
         LoadNote(baseNoteHex = nostrHexID) {
             if (it != null) {
+                Spacer(modifier = StdHorzSpacer)
                 IconButton(
                     modifier = Size15Modifier,
                     onClick = {
