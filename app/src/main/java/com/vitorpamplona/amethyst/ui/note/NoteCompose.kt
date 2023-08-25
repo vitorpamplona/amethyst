@@ -2397,9 +2397,9 @@ private fun ReplyRow(
 ) {
     val noteEvent = note.event
 
-    val showReply by remember {
+    val showReply by remember(note) {
         derivedStateOf {
-            noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+            noteEvent is BaseTextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
         }
     }
 
