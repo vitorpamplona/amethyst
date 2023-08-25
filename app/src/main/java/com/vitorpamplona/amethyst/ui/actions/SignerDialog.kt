@@ -143,7 +143,7 @@ fun SignerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CloseButton(
-                        onCancel = {
+                        onPress = {
                             onClose()
                         }
                     )

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {

@@ -234,8 +234,10 @@ fun NewPostView(
                             PostButton(
                                 onPost = {
                                     scope.launch(Dispatchers.IO) {
-                                        postViewModel.sendPost(relayList = relayList)
-                                        onClose()
+                                        event = postViewModel.sendPost(relayList = relayList, !accountViewModel.loggedInWithAmber())
+                                        if (!accountViewModel.loggedInWithAmber()) {
+                                            onClose()
+                                        }
                                     }
                                 },
                                 isActive = postViewModel.canPost()

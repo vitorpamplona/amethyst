@@ -880,8 +880,7 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            pubKey = keyPair.pubKey.toHexKey(),
-            privateKey = keyPair.privKey
+            keyPair = keyPair
         )
 
         if (!signEvent) {

@@ -6,6 +6,7 @@ import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 
@@ -37,8 +38,7 @@ class TextNoteEvent(
             root: String?,
             directMentions: Set<HexKey>,
             geohash: String? = null,
-            pubKey: HexKey,
-            privateKey: ByteArray?,
+            keyPair: KeyPair,
             createdAt: Long = TimeUtils.now()
         ): TextNoteEvent {
             val tags = mutableListOf<List<String>>()
@@ -95,8 +95,9 @@ class TextNoteEvent(
                 tags.add(listOf("g", it))
             }
 
+            val pubKey = keyPair.pubKey.toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
             return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
         }
     }
