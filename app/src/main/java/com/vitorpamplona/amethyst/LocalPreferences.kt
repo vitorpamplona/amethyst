@@ -83,7 +83,7 @@ object LocalPreferences {
 
     private var _currentAccount: String? = null
 
-    private fun currentAccount(): String? {
+    fun currentAccount(): String? {
         if (_currentAccount == null) {
             _currentAccount = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
         }

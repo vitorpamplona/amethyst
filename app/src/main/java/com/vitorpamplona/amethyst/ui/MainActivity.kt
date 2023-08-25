@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.notifications.RegisterAccounts
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
+import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
 import com.vitorpamplona.amethyst.ui.note.Nip47
@@ -108,6 +109,26 @@ class MainActivity : AppCompatActivity() {
                 Client.send(authEvent, authEvent.relay())
             }
             ServiceManager.shouldPauseService = true
+        }
+
+        IntentUtils.decryptActivityResultLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                BookmarkPrivateFeedFilter.isActivityRunning = false
+                return@registerForActivityResult
+            }
+
+            val event = it.data?.getStringExtra("signature") ?: ""
+            BookmarkPrivateFeedFilter.content = event
+            BookmarkPrivateFeedFilter.isActivityRunning = false
         }
 
         super.onCreate(savedInstanceState)

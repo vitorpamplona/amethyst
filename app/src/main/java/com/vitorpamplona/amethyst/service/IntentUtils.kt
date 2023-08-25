@@ -6,4 +6,5 @@ import androidx.activity.result.ActivityResultLauncher
 object IntentUtils {
     lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
     lateinit var authActivityResultLauncher: ActivityResultLauncher<Intent>
+    lateinit var decryptActivityResultLauncher: ActivityResultLauncher<Intent>
 }

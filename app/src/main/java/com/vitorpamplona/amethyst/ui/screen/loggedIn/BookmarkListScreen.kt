@@ -11,6 +11,7 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -89,6 +90,12 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
                         )
                     }
                 }
+            }
+        }
+
+        DisposableEffect(Unit) {
+            onDispose {
+                BookmarkPrivateFeedFilter.content = ""
             }
         }
     }

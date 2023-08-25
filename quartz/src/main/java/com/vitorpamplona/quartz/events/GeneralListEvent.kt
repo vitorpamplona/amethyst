@@ -52,6 +52,20 @@ abstract class GeneralListEvent(
         return privateTagsCache
     }
 
+    fun privateTags(content: String): List<List<String>>? {
+        if (privateTagsCache != null) {
+            return privateTagsCache
+        }
+
+        privateTagsCache = try {
+            content.let { mapper.readValue<List<List<String>>>(it) }
+        } catch (e: Throwable) {
+            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
+            null
+        }
+        return privateTagsCache
+    }
+
     fun privateTagsOrEmpty(privKey: ByteArray): List<List<String>> {
         return privateTags(privKey) ?: emptyList()
     }
@@ -61,7 +75,16 @@ abstract class GeneralListEvent(
     fun privateHashtags(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }
     fun privateGeohashes(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "g" }?.map { it[1] }
     fun privateTaggedEvents(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "e" }?.map { it[1] }
+    fun privateTaggedEvents(content: String) = privateTags(content)?.filter { it.size > 1 && it[0] == "e" }?.map { it[1] }
+
     fun privateTaggedAddresses(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
+        val aTagValue = it.getOrNull(1)
+        val relay = it.getOrNull(2)
+
+        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    }
+
+    fun privateTaggedAddresses(content: String) = privateTags(content)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
         val aTagValue = it.getOrNull(1)
         val relay = it.getOrNull(2)
 
