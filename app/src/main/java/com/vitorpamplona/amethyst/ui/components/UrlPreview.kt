@@ -12,8 +12,6 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel) {
@@ -37,10 +35,8 @@ fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel)
         // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are created).
         if (urlPreviewState == UrlPreviewState.Loading) {
             LaunchedEffect(url) {
-                launch(Dispatchers.IO) {
-                    UrlCachedPreviewer.previewInfo(url) {
-                        urlPreviewState = it
-                    }
+                accountViewModel.urlPreview(url) {
+                    urlPreviewState = it
                 }
             }
         }

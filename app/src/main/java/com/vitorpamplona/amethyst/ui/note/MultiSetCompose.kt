@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
@@ -52,7 +51,6 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
@@ -70,8 +68,6 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -352,8 +348,7 @@ private fun ParseAuthorCommentAndAmount(
     }
 
     LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
-        launch(Dispatchers.IO) {
-            val newState = loadAmountState(zapRequest, zapEvent, accountViewModel)
+        accountViewModel.decryptAmountMessage(zapRequest, zapEvent) { newState ->
             if (newState != null) {
                 content.value = newState
             }
@@ -361,34 +356,6 @@ private fun ParseAuthorCommentAndAmount(
     }
 
     onReady(content)
-}
-
-private suspend fun loadAmountState(
-    zapRequest: Note,
-    zapEvent: Note?,
-    accountViewModel: AccountViewModel
-): ZapAmountCommentNotification? {
-    (zapRequest.event as? LnZapRequestEvent)?.let {
-        val decryptedContent = accountViewModel.decryptZap(zapRequest)
-        val amount = (zapEvent?.event as? LnZapEvent)?.amount
-        if (decryptedContent != null) {
-            val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-            return ZapAmountCommentNotification(
-                newAuthor,
-                decryptedContent.content.ifBlank { null },
-                showAmountAxis(amount)
-            )
-        } else {
-            if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
-                return ZapAmountCommentNotification(
-                    zapRequest.author,
-                    zapRequest.event?.content()?.ifBlank { null },
-                    showAmountAxis(amount)
-                )
-            }
-        }
-    }
-    return null
 }
 
 @Composable

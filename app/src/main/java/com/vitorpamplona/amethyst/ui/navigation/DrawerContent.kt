@@ -285,20 +285,16 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                 ),
                 keyboardActions = KeyboardActions(
                     onSend = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.createStatus(currentStatus.value)
-                            focusManager.clearFocus(true)
-                        }
+                        accountViewModel.createStatus(currentStatus.value)
+                        focusManager.clearFocus(true)
                     }
                 ),
                 singleLine = true,
                 trailingIcon = {
                     if (hasChanged) {
                         UserStatusSendButton() {
-                            scope.launch(Dispatchers.IO) {
-                                accountViewModel.createStatus(currentStatus.value)
-                                focusManager.clearFocus(true)
-                            }
+                            accountViewModel.createStatus(currentStatus.value)
+                            focusManager.clearFocus(true)
                         }
                     }
                 }
@@ -335,28 +331,21 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                     ),
                     keyboardActions = KeyboardActions(
                         onSend = {
-                            scope.launch(Dispatchers.IO) {
-                                accountViewModel.updateStatus(it, thisStatus.value)
-                                focusManager.clearFocus(true)
-                            }
+                            accountViewModel.updateStatus(it, thisStatus.value)
+                            focusManager.clearFocus(true)
                         }
                     ),
                     singleLine = true,
                     trailingIcon = {
                         if (hasChanged) {
                             UserStatusSendButton() {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.updateStatus(it, thisStatus.value)
-                                    focusManager.clearFocus(true)
-                                }
+                                accountViewModel.updateStatus(it, thisStatus.value)
+                                focusManager.clearFocus(true)
                             }
                         } else {
                             UserStatusDeleteButton() {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.updateStatus(it, "")
-                                    accountViewModel.delete(it)
-                                    focusManager.clearFocus(true)
-                                }
+                                accountViewModel.deleteStatus(it)
+                                focusManager.clearFocus(true)
                             }
                         }
                     }

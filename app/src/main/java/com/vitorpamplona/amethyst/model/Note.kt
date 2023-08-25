@@ -463,10 +463,6 @@ open class Note(val idHex: String) {
         }.flatten()
     }
 
-    fun countReactions(): Int {
-        return reactions.values.sumOf { it.size }
-    }
-
     fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
         // Regular Zap Receipts
         val completedZaps = zaps.asSequence()
@@ -681,6 +677,10 @@ class NoteLiveSet(u: Note) {
 
     val replyCount = replies.map {
         it.note.replies.size
+    }.distinctUntilChanged()
+
+    val reactionCount = reactions.map {
+        it.note.reactions.values.sumOf { it.size }
     }.distinctUntilChanged()
 
     val boostCount = boosts.map {

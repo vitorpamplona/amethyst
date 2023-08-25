@@ -98,9 +98,7 @@ private fun WatchZapsAndUpdateTallies(
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            pollViewModel.refreshTallies()
-        }
+        pollViewModel.refreshTallies()
     }
 }
 

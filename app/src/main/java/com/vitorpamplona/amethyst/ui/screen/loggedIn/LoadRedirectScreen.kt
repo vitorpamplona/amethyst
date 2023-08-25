@@ -73,42 +73,38 @@ fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, nav
 fun LoadRedirectScreen(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(key1 = noteState) {
-        scope.launch {
-            val note = noteState?.note ?: return@launch
-            var event = note.event
-            val channelHex = note.channelHex()
+        val note = noteState?.note ?: return@LaunchedEffect
+        var event = note.event
+        val channelHex = note.channelHex()
 
-            if (event is GiftWrapEvent) {
-                event = accountViewModel.unwrap(event)
-            }
+        if (event is GiftWrapEvent) {
+            event = accountViewModel.unwrap(event)
+        }
 
-            if (event is SealedGossipEvent) {
-                event = accountViewModel.unseal(event)
-            }
+        if (event is SealedGossipEvent) {
+            event = accountViewModel.unseal(event)
+        }
 
-            if (event == null) {
-                // stay here, loading
-            } else if (event is ChannelCreateEvent) {
-                nav("Channel/${note.idHex}")
-            } else if (event is ChatroomKeyable) {
-                note.author?.let {
-                    val withKey = (event as ChatroomKeyable)
-                        .chatroomKey(accountViewModel.userProfile().pubkeyHex)
+        if (event == null) {
+            // stay here, loading
+        } else if (event is ChannelCreateEvent) {
+            nav("Channel/${note.idHex}")
+        } else if (event is ChatroomKeyable) {
+            note.author?.let {
+                val withKey = (event as ChatroomKeyable)
+                    .chatroomKey(accountViewModel.userProfile().pubkeyHex)
 
-                    withContext(Dispatchers.IO) {
-                        accountViewModel.userProfile().createChatroom(withKey)
-                    }
-
-                    nav("Room/${withKey.hashCode()}")
+                withContext(Dispatchers.IO) {
+                    accountViewModel.userProfile().createChatroom(withKey)
                 }
-            } else if (channelHex != null) {
-                nav("Channel/$channelHex")
-            } else {
-                nav("Note/${note.idHex}")
+
+                nav("Room/${withKey.hashCode()}")
             }
+        } else if (channelHex != null) {
+            nav("Channel/$channelHex")
+        } else {
+            nav("Note/${note.idHex}")
         }
     }
 

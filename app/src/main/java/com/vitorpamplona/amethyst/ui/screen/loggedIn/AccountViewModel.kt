@@ -16,14 +16,22 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
+import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
@@ -121,12 +129,77 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
-        return account.calculateIfNoteWasZappedByAccount(zappedNote)
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note, onWasZapped: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.Default) {
+            onWasZapped(account.calculateIfNoteWasZappedByAccount(zappedNote))
+        }
     }
 
-    fun calculateZapAmount(zappedNote: Note): BigDecimal {
+    suspend fun calculateZapAmount(zappedNote: Note): BigDecimal {
         return account.calculateZappedAmount(zappedNote)
+    }
+
+    fun calculateZapAmount(zappedNote: Note, onZapAmount: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onZapAmount(showAmount(account.calculateZappedAmount(zappedNote)))
+        }
+    }
+
+    fun calculateZapraiser(zappedNote: Note, onZapraiserStatus: (ZapraiserStatus) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
+            val newZapAmount = calculateZapAmount(zappedNote)
+            var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+
+            if (percentage > 1) {
+                percentage = 1f
+            }
+
+            val newZapraiserProgress = percentage
+            val newZapraiserLeft = if (percentage > 0.99) {
+                "0"
+            } else {
+                showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+            }
+            onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+        }
+    }
+
+    fun decryptAmountMessage(
+        zapRequest: Note,
+        zapEvent: Note?,
+        onNewState: (ZapAmountCommentNotification?) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent))
+        }
+    }
+
+    private suspend fun innerDecryptAmountMessage(
+        zapRequest: Note,
+        zapEvent: Note?
+    ): ZapAmountCommentNotification? {
+        (zapRequest.event as? LnZapRequestEvent)?.let {
+            val decryptedContent = decryptZap(zapRequest)
+            val amount = (zapEvent?.event as? LnZapEvent)?.amount
+            if (decryptedContent != null) {
+                val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                return ZapAmountCommentNotification(
+                    newAuthor,
+                    decryptedContent.content.ifBlank { null },
+                    showAmountAxis(amount)
+                )
+            } else {
+                if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
+                    return ZapAmountCommentNotification(
+                        zapRequest.author,
+                        zapRequest.event?.content()?.ifBlank { null },
+                        showAmountAxis(amount)
+                    )
+                }
+            }
+        }
+        return null
     }
 
     fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
@@ -135,7 +208,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    suspend fun innerZap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
+    private suspend fun innerZap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
         val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -388,6 +461,26 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     fun updateStatus(it: AddressableNote, newStatus: String) {
         account.updateStatus(it, newStatus)
+
+    fun checkIfOnline(url: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isOnline = OnlineChecker.isOnline(url)
+            onResult(isOnline)
+        }
+    }
+
+    fun urlPreview(url: String, onResult: suspend (UrlPreviewState) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            UrlCachedPreviewer.previewInfo(url, onResult)
+        }
+    }
+
+    fun loadReactionTo(note: Note?, onNewReactionType: (String?) -> Unit) {
+        if (note == null) return
+
+        viewModelScope.launch(Dispatchers.Default) {
+            onNewReactionType(note.getReactionBy(userProfile()))
+        }
     }
 
     class Factory(val account: Account) : ViewModelProvider.Factory {

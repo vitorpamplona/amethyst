@@ -623,7 +623,7 @@ fun ShowVideoStreaming(
                 }
 
                 url?.let {
-                    CheckIfUrlIsOnline(url) {
+                    CheckIfUrlIsOnline(url, accountViewModel) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = remember { Modifier.heightIn(max = 300.dp) }

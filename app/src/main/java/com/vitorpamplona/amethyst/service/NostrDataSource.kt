@@ -111,12 +111,14 @@ abstract class NostrDataSource(val debugName: String) {
     private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateFilters() {
-        bundler.invalidate() {
-            // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+        scope.launch(Dispatchers.IO) {
+            bundler.invalidate() {
+                // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            resetFiltersSuspend()
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                resetFiltersSuspend()
+            }
         }
     }
 

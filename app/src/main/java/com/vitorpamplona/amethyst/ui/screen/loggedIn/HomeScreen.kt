@@ -29,7 +29,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
@@ -42,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -136,12 +134,14 @@ private fun HomePages(
 }
 
 @Composable
-fun CheckIfUrlIsOnline(url: String, whenOnline: @Composable () -> Unit) {
+fun CheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnline: @Composable () -> Unit) {
     var online by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = url) {
-        launch(Dispatchers.IO) {
-            online = OnlineChecker.isOnline(url)
+        accountViewModel.checkIfOnline(url) { isOnline ->
+            if (online != isOnline) {
+                online = isOnline
+            }
         }
     }
 
@@ -162,11 +162,9 @@ fun WatchAccountForHomeScreen(
     val followState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
     LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList, followState) {
-        launch(Dispatchers.IO) {
-            NostrHomeDataSource.invalidateFilters()
-            homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-            repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        }
+        NostrHomeDataSource.invalidateFilters()
+        homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

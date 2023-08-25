@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -102,11 +101,9 @@ private fun WatchScrollToTop(
     val scrollToTop by viewModel.scrollToTop.collectAsState()
 
     LaunchedEffect(scrollToTop) {
-        launch {
-            if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-                listState.scrollToItem(index = 0)
-                viewModel.sentToTop()
-            }
+        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+            listState.scrollToItem(index = 0)
+            viewModel.sentToTop()
         }
     }
 }
