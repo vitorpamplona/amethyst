@@ -30,16 +30,28 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     fun createUserStatusFilter(): List<TypedFilter>? {
         if (usersToWatch.isEmpty()) return null
 
-        return usersToWatch.map {
+        val minLatestEOSEs = mutableMapOf<String, EOSETime>()
+        usersToWatch.forEach {
+            it.latestEOSEs.forEach {
+                val minEose = minLatestEOSEs[it.key]
+                if (minEose == null) {
+                    minLatestEOSEs.put(it.key, EOSETime(it.value.time))
+                } else if (it.value.time < minEose.time) {
+                    minEose.time = it.value.time
+                }
+            }
+        }
+
+        return listOf(
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
                     kinds = listOf(StatusEvent.kind),
-                    authors = listOf(it.pubkeyHex),
-                    since = it.latestEOSEs
+                    authors = usersToWatch.map { it.pubkeyHex },
+                    since = minLatestEOSEs
                 )
             )
-        }
+        )
     }
 
     fun createUserReportFilter(): List<TypedFilter>? {
@@ -75,7 +87,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     }
 
     override fun updateChannelFilters() {
-        userChannel.typedFilters = listOfNotNull(createUserReportFilter(), createUserStatusFilter()).flatten().ifEmpty { null }
+        userChannel.typedFilters = listOfNotNull(createUserStatusFilter(), createUserReportFilter()).flatten().ifEmpty { null }
         userChannelOnce.typedFilters = listOfNotNull(createUserFilter()).flatten().ifEmpty { null }
     }
 
