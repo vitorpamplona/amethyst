@@ -893,7 +893,7 @@ private fun ShortChannelActionOptions(
             Spacer(modifier = StdHorzSpacer)
             LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
             Spacer(modifier = StdHorzSpacer)
         }
     }
@@ -968,7 +968,7 @@ private fun LiveChannelActionOptions(
 
         LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
         Spacer(modifier = StdHorzSpacer)
-        ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
     }
 }
 

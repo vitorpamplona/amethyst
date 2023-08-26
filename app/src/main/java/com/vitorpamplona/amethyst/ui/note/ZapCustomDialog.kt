@@ -4,11 +4,14 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Done
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -111,8 +114,7 @@ fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, bas
                             onError = {
                                 zappingProgress = 0f
                                 scope.launch {
-                                    Toast
-                                        .makeText(context, it, Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onProgress = {
@@ -224,4 +226,52 @@ fun ZapButton(isActive: Boolean, onPost: () -> Unit) {
     ) {
         Text(text = "⚡Zap ", color = Color.White)
     }
+}
+
+@Composable
+fun ErrorMessageDialog(
+    title: String,
+    textContent: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickStartMessage: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(title)
+        },
+        text = {
+            Text(textContent)
+        },
+        buttons = {
+            Row(
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(onClick = onClickStartMessage) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_dm),
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.error_dialog_talk_to_user))
+                }
+                Button(onClick = onDismiss, colors = buttonColors) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Done,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.error_dialog_button_ok))
+                    }
+                }
+            }
+        }
+    )
 }

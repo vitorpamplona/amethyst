@@ -211,7 +211,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -909,11 +909,13 @@ fun ZapReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
-    animationSize: Dp = 14.dp
+    animationSize: Dp = 14.dp,
+    nav: (String) -> Unit
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -965,7 +967,7 @@ fun ZapReaction(
                 onError = {
                     scope.launch {
                         zappingProgress = 0f
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                        showErrorMessageDialog = it
                     }
                 },
                 onProgress = {
@@ -973,6 +975,19 @@ fun ZapReaction(
                         zappingProgress = it
                     }
                 }
+            )
+        }
+
+        if (showErrorMessageDialog != null) {
+            ErrorMessageDialog(
+                title = stringResource(id = R.string.error_dialog_zap_error),
+                textContent = showErrorMessageDialog ?: "",
+                onClickStartMessage = {
+                    baseNote.author?.let {
+                        nav(routeToMessage(it, showErrorMessageDialog, accountViewModel))
+                    }
+                },
+                onDismiss = { showErrorMessageDialog = null }
             )
         }
 

@@ -215,6 +215,7 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 ChatroomScreen(
                     roomId = it.arguments?.getString("id"),
+                    draftMessage = it.arguments?.getString("message"),
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

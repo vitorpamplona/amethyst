@@ -101,6 +101,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ChatroomScreen(
     roomId: String?,
+    draftMessage: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -110,6 +111,7 @@ fun ChatroomScreen(
         it?.let {
             PrepareChatroomViewModels(
                 room = it,
+                draftMessage = draftMessage,
                 accountViewModel = accountViewModel,
                 nav = nav
             )
@@ -120,6 +122,7 @@ fun ChatroomScreen(
 @Composable
 fun ChatroomScreenByAuthor(
     authorPubKeyHex: String?,
+    draftMessage: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -129,6 +132,7 @@ fun ChatroomScreenByAuthor(
         it?.let {
             PrepareChatroomViewModels(
                 room = it,
+                draftMessage = draftMessage,
                 accountViewModel = accountViewModel,
                 nav = nav
             )
@@ -166,7 +170,12 @@ fun LoadRoomByAuthor(authorPubKeyHex: String, accountViewModel: AccountViewModel
 }
 
 @Composable
-fun PrepareChatroomViewModels(room: ChatroomKey, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun PrepareChatroomViewModels(
+    room: ChatroomKey,
+    draftMessage: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val feedViewModel: NostrChatroomFeedViewModel = viewModel(
         key = room.hashCode().toString() + "ChatroomViewModels",
         factory = NostrChatroomFeedViewModel.Factory(
@@ -190,6 +199,12 @@ fun PrepareChatroomViewModels(room: ChatroomKey, accountViewModel: AccountViewMo
             if (hasNIP24 == true && newPostModel.nip24 == false) {
                 newPostModel.nip24 = true
             }
+        }
+    }
+
+    if (draftMessage != null) {
+        LaunchedEffect(key1 = draftMessage) {
+            newPostModel.message = TextFieldValue(draftMessage)
         }
     }
 

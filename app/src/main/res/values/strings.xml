@@ -554,4 +554,8 @@
 
     <string name="lightning_wallets_not_found">Error parsing error message</string>
     <string name="poll_zap_value_min_max_explainer">Votes are weighted by the zap amount. You can set a minimum amount to avoid spammers and a maximum amount to avoid a large zappers taking over the poll. Use the same amount in both fields to make sure every vote is valued the same amount. Leave it empty to accept any amount.</string>
+
+    <string name="error_dialog_zap_error">Unable to send zap</string>
+    <string name="error_dialog_talk_to_user">Message the User</string>
+    <string name="error_dialog_button_ok">Ok</string>
 </resources>

@@ -165,6 +165,7 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -782,9 +783,9 @@ private fun ShortCommunityActionOptions(
     nav: (String) -> Unit
 ) {
     Spacer(modifier = StdHorzSpacer)
-    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
     Spacer(modifier = StdHorzSpacer)
-    ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+    ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
 
     WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
         if (!isFollowing) {
@@ -1234,6 +1235,16 @@ fun routeFor(note: Note, loggedIn: User): String? {
     }
 
     return null
+}
+
+fun routeToMessage(user: User, draftMessage: String?, accountViewModel: AccountViewModel): String {
+    val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
+    accountViewModel.account.userProfile().createChatroom(withKey)
+    return if (draftMessage != null) {
+        "Room/${withKey.hashCode()}?message=$draftMessage"
+    } else {
+        "Room/${withKey.hashCode()}"
+    }
 }
 
 fun routeFor(note: Channel): String {
