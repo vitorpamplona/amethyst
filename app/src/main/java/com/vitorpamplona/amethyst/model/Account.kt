@@ -101,14 +101,16 @@ class Account(
         val showSensitiveContent: Boolean?
     )
 
-    val liveHiddenUsers: LiveData<LiveHiddenUsers> = live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
-        val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(keyPair.privKey)
-        LiveHiddenUsers(
-            hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
-            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-            showSensitiveContent = showSensitiveContent
-        )
-    }.distinctUntilChanged()
+    val liveHiddenUsers: LiveData<LiveHiddenUsers> by lazy {
+        live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
+            val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(keyPair.privKey)
+            LiveHiddenUsers(
+                hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
+                spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+                showSensitiveContent = showSensitiveContent
+            )
+        }.distinctUntilChanged()
+    }
 
     var userProfileCache: User? = null
 
