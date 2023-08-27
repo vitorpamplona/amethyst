@@ -218,7 +218,7 @@ open class Event(
         return try {
             hasCorrectIDHash() && hasVerifedSignature()
         } catch (e: Exception) {
-            Log.e("Event", "Event $id does not have a valid signature: ${toJson()}", e)
+            Log.w("Event", "Event $id does not have a valid signature: ${toJson()}", e)
             false
         }
     }
