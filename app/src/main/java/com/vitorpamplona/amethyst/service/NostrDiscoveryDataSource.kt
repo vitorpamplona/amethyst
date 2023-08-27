@@ -18,53 +18,66 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
 
     val latestEOSEs = EOSEAccount()
 
-    fun createLiveStreamFilter(): TypedFilter {
-        val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
+    fun createLiveStreamFilter(): List<TypedFilter> {
+        val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)?.toList()
 
-        val followKeys = follows?.map {
-            it.substring(0, 8)
-        }
-
-        return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
-            filter = JsonFilter(
-                authors = followKeys,
-                kinds = listOf(LiveActivitiesChatMessageEvent.kind, LiveActivitiesEvent.kind),
-                limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
-            )
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter = JsonFilter(
+                    authors = follows,
+                    kinds = listOf(LiveActivitiesChatMessageEvent.kind, LiveActivitiesEvent.kind),
+                    limit = 300,
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+                )
+            ),
+            follows?.let {
+                TypedFilter(
+                    types = setOf(FeedType.GLOBAL),
+                    filter = JsonFilter(
+                        tags = mapOf("p" to it),
+                        kinds = listOf(LiveActivitiesEvent.kind),
+                        limit = 100,
+                        since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+                    )
+                )
+            }
         )
     }
 
-    fun createPublicChatFilter(): TypedFilter {
-        val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
+    fun createPublicChatFilter(): List<TypedFilter> {
+        val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)?.toList()
+        val followChats = account.selectedChatsFollowList().toList()
 
-        val followKeys = follows?.map {
-            it.substring(0, 8)
-        }
-
-        return TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
-            filter = JsonFilter(
-                authors = followKeys,
-                kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
-                limit = 300,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+        return listOf(
+            TypedFilter(
+                types = setOf(FeedType.PUBLIC_CHATS),
+                filter = JsonFilter(
+                    authors = follows,
+                    kinds = listOf(ChannelCreateEvent.kind, ChannelMetadataEvent.kind, ChannelMessageEvent.kind),
+                    limit = 300,
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+                )
+            ),
+            TypedFilter(
+                types = setOf(FeedType.PUBLIC_CHATS),
+                filter = JsonFilter(
+                    ids = followChats,
+                    kinds = listOf(ChannelCreateEvent.kind),
+                    limit = 300,
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
+                )
             )
         )
     }
 
     fun createCommunitiesFilter(): TypedFilter {
-        val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
-
-        val followKeys = follows?.map {
-            it.substring(0, 8)
-        }
+        val follows = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)?.toList()
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter = JsonFilter(
-                authors = followKeys,
+                authors = follows,
                 kinds = listOf(CommunityDefinitionEvent.kind, CommunityPostApprovalEvent.kind),
                 limit = 300,
                 since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList)?.relayList
@@ -197,16 +210,16 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     }
 
     override fun updateChannelFilters() {
-        discoveryFeedChannel.typedFilters = listOfNotNull(
-            createLiveStreamFilter(),
-            createPublicChatFilter(),
-            createCommunitiesFilter(),
-            createLiveStreamTagsFilter(),
-            createPublicChatsTagsFilter(),
-            createCommunitiesTagsFilter(),
-            createCommunitiesGeohashesFilter(),
-            createPublicChatsGeohashesFilter(),
-            createLiveStreamGeohashesFilter()
+        discoveryFeedChannel.typedFilters = createLiveStreamFilter().plus(createPublicChatFilter()).plus(
+            listOfNotNull(
+                createLiveStreamTagsFilter(),
+                createLiveStreamGeohashesFilter(),
+                createCommunitiesFilter(),
+                createPublicChatsTagsFilter(),
+                createCommunitiesTagsFilter(),
+                createCommunitiesGeohashesFilter(),
+                createPublicChatsGeohashesFilter()
+            )
         ).ifEmpty { null }
     }
 }

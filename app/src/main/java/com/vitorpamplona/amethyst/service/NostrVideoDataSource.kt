@@ -14,16 +14,12 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     val latestEOSEs = EOSEAccount()
 
     fun createContextualFilter(): TypedFilter? {
-        val follows = account.selectedUsersFollowList(account.defaultStoriesFollowList)
-
-        val followKeys = follows?.map {
-            it.substring(0, 6)
-        }
+        val follows = account.selectedUsersFollowList(account.defaultStoriesFollowList)?.toList()
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter = JsonFilter(
-                authors = followKeys,
+                authors = follows,
                 kinds = listOf(FileHeaderEvent.kind, FileStorageHeaderEvent.kind),
                 limit = 200,
                 since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultStoriesFollowList)?.relayList
