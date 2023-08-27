@@ -360,7 +360,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
 
-            author.liveSet?.statuses?.invalidateData()
+            author.liveSet?.innerStatuses?.invalidateData()
 
             refreshObservers(note)
         }
@@ -650,7 +650,7 @@ object LocalCache {
 
             mentions.forEach {
                 // doesn't add to reports, but triggers recounts
-                it.liveSet?.reports?.invalidateData()
+                it.liveSet?.innerReports?.invalidateData()
             }
         }
 

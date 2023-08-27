@@ -319,15 +319,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
 
 @Composable
 private fun WatchReactionsZapsBoostsAndDisplayIfExists(baseNote: Note, content: @Composable () -> Unit) {
-    val hasReactions by baseNote.live().zaps.combineWith(
-        liveData1 = baseNote.live().boosts,
-        liveData2 = baseNote.live().reactions,
-        block = { zapsState, boostsState, reactionsState ->
-            zapsState?.note?.zaps?.isNotEmpty() == true ||
-                boostsState?.note?.boosts?.isNotEmpty() == true ||
-                reactionsState?.note?.reactions?.isNotEmpty() == true
-        }
-    ).observeAsState(
+    val hasReactions by baseNote.live().hasReactions.observeAsState(
         baseNote.zaps.isNotEmpty() ||
             baseNote.boosts.isNotEmpty() ||
             baseNote.reactions.isNotEmpty()
@@ -420,17 +412,16 @@ private fun WatchBoostsAndRenderGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val boostsState by baseNote.live().boosts.observeAsState()
-    val boostsEvents by remember(boostsState) {
-        derivedStateOf { baseNote.boosts.toImmutableList() }
-    }
+    val boostsEvents by baseNote.live().boostList.observeAsState()
 
-    if (boostsEvents.isNotEmpty()) {
-        RenderBoostGallery(
-            boostsEvents,
-            nav,
-            accountViewModel
-        )
+    boostsEvents?.let {
+        if (it.isNotEmpty()) {
+            RenderBoostGallery(
+                it,
+                nav,
+                accountViewModel
+            )
+        }
     }
 }
 
