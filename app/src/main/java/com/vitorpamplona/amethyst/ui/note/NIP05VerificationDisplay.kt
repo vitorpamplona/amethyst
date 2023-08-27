@@ -151,7 +151,7 @@ fun RotateStatuses(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var indexToDisplay by remember {
+    var indexToDisplay by remember(statuses) {
         mutableIntStateOf(0)
     }
 
