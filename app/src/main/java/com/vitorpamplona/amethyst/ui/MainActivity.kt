@@ -103,6 +103,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        ServiceManager.cleanObservers()
         // if (BuildConfig.DEBUG) {
         debugState(this)
         // }
@@ -127,7 +128,7 @@ class MainActivity : AppCompatActivity() {
         super.onTrimMemory(level)
         println("Trim Memory $level")
         GlobalScope.launch(Dispatchers.Default) {
-            ServiceManager.cleanUp()
+            ServiceManager.trimMemory()
         }
     }
 
