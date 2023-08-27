@@ -455,8 +455,8 @@
     <string name="add_sensitive_content_label">Érzékeny tartalom</string>
     <string name="add_sensitive_content_description">Megjelenítés előtt egy érzékeny tartalom figyelmeztetés jelenik meg.</string>
     <string name="settings">Beállítások</string>
-    <string name="always">Mindig</string>
-    <string name="wifi_only">Csak WIFI</string>
+    <string name="connectivity_type_always">Mindig</string>
+    <string name="connectivity_type_wifi_only">Csak WIFI</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
