@@ -161,7 +161,7 @@ fun RotateStatuses(
         LaunchedEffect(Unit) {
             while (true) {
                 delay(10.seconds)
-                indexToDisplay = ((indexToDisplay + 1) % (statuses.size))
+                indexToDisplay = (indexToDisplay + 1) % statuses.size
             }
         }
     }
