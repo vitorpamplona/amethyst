@@ -416,11 +416,15 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         }
 
         if (!state.isFollowingAuthor) {
-            DropdownMenuItem(onClick = {
-                accountViewModel.follow(
-                    note.author ?: return@DropdownMenuItem
-                ); onDismiss()
-            }) {
+            DropdownMenuItem(
+                onClick = {
+                    val author = note.author ?: return@DropdownMenuItem
+                    event = accountViewModel.follow(author, !accountViewModel.loggedInWithAmber())
+                    if (!accountViewModel.loggedInWithAmber()) {
+                        onDismiss()
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.follow))
             }
             Divider()

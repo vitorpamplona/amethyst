@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.BookmarkListEvent
+import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -375,8 +376,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.prefer(source, target, preference)
     }
 
-    fun follow(user: User) {
-        account.follow(user)
+    fun follow(user: User, signEvent: Boolean): ContactListEvent? {
+        return account.follow(user, signEvent)
     }
 
     fun unfollow(user: User) {

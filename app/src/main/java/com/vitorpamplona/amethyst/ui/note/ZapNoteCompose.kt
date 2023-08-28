@@ -269,7 +269,7 @@ fun ShowFollowingOrUnfollowingButton(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.follow(baseAuthor)
+                    accountViewModel.follow(baseAuthor, true)
                 }
             }
         }
