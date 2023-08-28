@@ -4,30 +4,25 @@
 "base_url": "https://api.crowdin.com"
 "preserve_hierarchy": true
 
-files: [
-  {
-    "source": "app/src/main/res/values/strings.xml",
-    "translation": "app/src/main/res/values-%android_code%/%original_file_name%",
-    "type": "android",
-    "languages_mapping": {
-      "android_code": {
-        "ar-rSA": "ar",
-        "cs-rCZ": "cs",
-        "de-rDE": "de",
-        "eo-rUY": "eo",
-        "es-rES": "es",
-        "fa": "fa",
-        "fr-rFR": "fr",
-        "hu-rHU": "hu",
-        "ja-rJP": "ja",
-        "nl-rNL": "nl",
-        "ru-rRU": "ru",
-        "ta-rIN": "ta",
-        "th-rTH": "th",
-        "tr-rTR": "tr",
-        "uk-rUA": "uk",
-        "zh-rCN": "zh"
-      }
-    }
-  }
-]
+files:
+  - source: app/src/main/res/values/strings.xml,
+    translation: app/src/main/res/values-%android_code%/%original_file_name%,
+    type: android,
+    languages_mapping:
+      android_code:
+        ar-SA: ar,
+        cs-CZ: cs,
+        de-DE: de,
+        eo-UY: eo,
+        es-ES: es,
+        fa": fa,
+        fr-FR: fr,
+        hu-HU: hu,
+        ja-JP: ja,
+        nl-NL: nl,
+        ru-RU: ru,
+        ta-IN: ta,
+        th-TH: th,
+        tr-TR: tr,
+        uk-UA: uk,
+        zh-CN: zh
