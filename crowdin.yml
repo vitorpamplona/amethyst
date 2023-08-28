@@ -10,12 +10,12 @@ files:
     type: android
     languages_mapping:
       android_code:
-        ar-SA: ar
-        cs-CZ: cs
+        ar: ar
+        cs: cs
         de-DE: de
         eo-UY: eo
         es-ES: es
-        fa": fa
+        fa: fa
         fr-FR: fr
         hu-HU: hu
         ja-JP: ja
