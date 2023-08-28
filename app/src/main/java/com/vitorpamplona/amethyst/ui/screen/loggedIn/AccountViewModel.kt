@@ -315,6 +315,14 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.addPrivateBookmark(note, decryptedContent)
     }
 
+    fun addPublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        return account.addPublicBookmark(note, decryptedContent)
+    }
+
+    fun removePublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        return account.removePublicBookmark(note, decryptedContent)
+    }
+
     fun addPublicBookmark(note: Note) {
         account.addPublicBookmark(note)
     }

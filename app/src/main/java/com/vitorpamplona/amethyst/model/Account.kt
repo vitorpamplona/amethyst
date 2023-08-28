@@ -1381,6 +1381,54 @@ class Account(
         LocalCache.consume(event)
     }
 
+    fun addPublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        val bookmarks = userProfile().latestBookmarkList
+
+        val privTags = mutableListOf<List<String>>()
+
+        val privEvents = bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
+        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
+        val privAddresses = bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
+
+        privEvents.forEach {
+            privTags.add(listOf("e", it))
+        }
+        privUsers.forEach {
+            privTags.add(listOf("p", it))
+        }
+        privAddresses.forEach {
+            privTags.add(listOf("a", it.toTag()))
+        }
+        val msg = Event.mapper.writeValueAsString(privTags)
+
+        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+
+        if (AmberUtils.content.isBlank()) {
+            return null
+        }
+
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
+                AmberUtils.content,
+                keyPair.pubKey.toHexKey()
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+                AmberUtils.content,
+                keyPair.pubKey.toHexKey()
+            )
+        }
+        return event
+    }
+
     fun addPublicBookmark(note: Note) {
         if (!isWriteable()) return
 
@@ -1498,6 +1546,55 @@ class Account(
         LocalCache.consume(event)
     }
 
+    fun removePublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+        val bookmarks = userProfile().latestBookmarkList
+
+        val privTags = mutableListOf<List<String>>()
+
+        val privEvents = bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
+        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
+        val privAddresses = bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
+
+        privEvents.forEach {
+            privTags.add(listOf("e", it))
+        }
+        privUsers.forEach {
+            privTags.add(listOf("p", it))
+        }
+        privAddresses.forEach {
+            privTags.add(listOf("a", it.toTag()))
+        }
+        val msg = Event.mapper.writeValueAsString(privTags)
+
+        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+
+        if (AmberUtils.content.isBlank()) {
+            return null
+        }
+
+        val event = if (note is AddressableNote) {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses()?.minus(note.address),
+                AmberUtils.content,
+                keyPair.pubKey.toHexKey()
+            )
+        } else {
+            BookmarkListEvent.create(
+                "bookmark",
+                bookmarks?.taggedEvents()?.minus(note.idHex),
+                bookmarks?.taggedUsers() ?: emptyList(),
+                bookmarks?.taggedAddresses() ?: emptyList(),
+                AmberUtils.content,
+                keyPair.pubKey.toHexKey()
+            )
+        }
+
+        return event
+    }
+
     fun isInPrivateBookmarks(note: Note): Boolean {
         if (!isWriteable() && !loginWithAmber) return false
 
@@ -1521,7 +1618,7 @@ class Account(
     }
 
     fun isInPublicBookmarks(note: Note): Boolean {
-        if (!isWriteable()) return false
+        if (!isWriteable() && !loginWithAmber) return false
 
         if (note is AddressableNote) {
             return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true

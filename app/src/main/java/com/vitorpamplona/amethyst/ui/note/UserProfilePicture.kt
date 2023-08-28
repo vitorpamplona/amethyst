@@ -517,11 +517,53 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             }
         }
         if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePublicBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decryptBookmark(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.content
+                            AmberUtils.content = ""
+                            event = accountViewModel.removePublicBookmark(
+                                note,
+                                bookmarks?.decryptedContent ?: ""
+                            )
+                        } else {
+                            accountViewModel.removePublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.remove_from_public_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decryptBookmark(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.content
+                            AmberUtils.content = ""
+                            event = accountViewModel.addPublicBookmark(
+                                note,
+                                bookmarks?.decryptedContent ?: ""
+                            )
+                        } else {
+                            accountViewModel.addPublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.add_to_public_bookmarks))
             }
         }
