@@ -83,7 +83,7 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Gift Wraps & Seals (NIP-59)
 - [x] Versioned Encrypted Payloads (NIP-44)
 - [x] Expiration Support (NIP-40)
-- [x] Status Event (NIP-315)
+- [x] Status Event (NIP-38)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database

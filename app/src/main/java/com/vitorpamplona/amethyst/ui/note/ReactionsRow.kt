@@ -40,6 +40,7 @@ import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -214,7 +215,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -245,7 +246,7 @@ private fun LoadAndDisplayZapraiser(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel
 ) {
-    val zapraiserAmount by remember {
+    val zapraiserAmount by remember(baseNote) {
         derivedStateOf {
             baseNote.event?.zapraiserAmount() ?: 0
         }
@@ -265,42 +266,26 @@ private fun LoadAndDisplayZapraiser(
     }
 }
 
+@Immutable
+data class ZapraiserStatus(val progress: Float, val left: String)
+
 @Composable
 fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, accountViewModel: AccountViewModel) {
     val zapsState by baseNote.live().zaps.observeAsState()
 
-    var zapraiserProgress by remember { mutableStateOf(0F) }
-    var zapraiserLeft by remember { mutableStateOf("$zapraiserAmount") }
+    var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            zapsState?.note?.let {
-                val newZapAmount = accountViewModel.calculateZapAmount(it)
-                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
-
-                if (percentage > 1) {
-                    percentage = 1f
-                }
-
-                if (Math.abs(zapraiserProgress - percentage) > 0.001) {
-                    val newZapraiserProgress = percentage
-                    val newZapraiserLeft = if (percentage > 0.99) {
-                        "0"
-                    } else {
-                        showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
-                    }
-                    if (zapraiserLeft != newZapraiserLeft) {
-                        zapraiserLeft = newZapraiserLeft
-                    }
-                    if (zapraiserProgress != newZapraiserProgress) {
-                        zapraiserProgress = newZapraiserProgress
-                    }
+        zapsState?.note?.let {
+            accountViewModel.calculateZapraiser(baseNote) { newStatus ->
+                if (zapraiserStatus != newStatus) {
+                    zapraiserStatus = newStatus
                 }
             }
         }
     }
 
-    val color = if (zapraiserProgress > 0.99) {
+    val color = if (zapraiserStatus.progress > 0.99) {
         DarkerGreen
     } else {
         MaterialTheme.colors.mediumImportanceLink
@@ -311,7 +296,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
             .fillMaxWidth()
             .height(if (details) 24.dp else 4.dp),
         color = color,
-        progress = zapraiserProgress
+        progress = zapraiserStatus.progress
     )
 
     if (details) {
@@ -319,14 +304,14 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
             contentAlignment = Center,
             modifier = TinyBorders
         ) {
-            val totalPercentage by remember(zapraiserProgress) {
+            val totalPercentage by remember(zapraiserStatus) {
                 derivedStateOf {
-                    "${(zapraiserProgress * 100).roundToInt()}%"
+                    "${(zapraiserStatus.progress * 100).roundToInt()}%"
                 }
             }
 
             Text(
-                text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserLeft),
+                text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
                 color = MaterialTheme.colors.placeholderText,
                 fontSize = Font14SP,
@@ -338,15 +323,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
 
 @Composable
 private fun WatchReactionsZapsBoostsAndDisplayIfExists(baseNote: Note, content: @Composable () -> Unit) {
-    val hasReactions by baseNote.live().zaps.combineWith(
-        liveData1 = baseNote.live().boosts,
-        liveData2 = baseNote.live().reactions,
-        block = { zapsState, boostsState, reactionsState ->
-            zapsState?.note?.zaps?.isNotEmpty() == true ||
-                boostsState?.note?.boosts?.isNotEmpty() == true ||
-                reactionsState?.note?.reactions?.isNotEmpty() == true
-        }
-    ).observeAsState(
+    val hasReactions by baseNote.live().hasReactions.observeAsState(
         baseNote.zaps.isNotEmpty() ||
             baseNote.boosts.isNotEmpty() ||
             baseNote.reactions.isNotEmpty()
@@ -439,17 +416,16 @@ private fun WatchBoostsAndRenderGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val boostsState by baseNote.live().boosts.observeAsState()
-    val boostsEvents by remember(boostsState) {
-        derivedStateOf { baseNote.boosts.toImmutableList() }
-    }
+    val boostsEvents by baseNote.live().boostList.observeAsState()
 
-    if (boostsEvents.isNotEmpty()) {
-        RenderBoostGallery(
-            boostsEvents,
-            nav,
-            accountViewModel
-        )
+    boostsEvents?.let {
+        if (it.isNotEmpty()) {
+            RenderBoostGallery(
+                it,
+                nav,
+                accountViewModel
+            )
+        }
     }
 }
 
@@ -909,10 +885,7 @@ private fun WatchReactionTypeForNote(baseNote: Note, accountViewModel: AccountVi
     val reactionsState by baseNote.live().reactions.observeAsState()
 
     LaunchedEffect(key1 = reactionsState) {
-        launch(Dispatchers.Default) {
-            val reactionNote = reactionsState?.note?.getReactionBy(accountViewModel.userProfile())
-            onNewReactionType(reactionNote)
-        }
+        accountViewModel.loadReactionTo(reactionsState?.note, onNewReactionType)
     }
 }
 
@@ -947,32 +920,9 @@ private fun RenderReactionType(
 
 @Composable
 fun LikeText(baseNote: Note, grayTint: Color) {
-    val reactionsCount = remember(baseNote) {
-        mutableStateOf(baseNote.reactions.size)
-    }
+    val reactionCount by baseNote.live().reactionCount.observeAsState(0)
 
-    val scope = rememberCoroutineScope()
-
-    WatchReactionCountForNote(baseNote) { newReactionsCount ->
-        if (reactionsCount.value != newReactionsCount) {
-            scope.launch(Dispatchers.Main) {
-                reactionsCount.value = newReactionsCount
-            }
-        }
-    }
-
-    SlidingAnimationCount(reactionsCount, grayTint)
-}
-
-@Composable
-private fun WatchReactionCountForNote(baseNote: Note, onNewReactionCount: (Int) -> Unit) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
-    LaunchedEffect(key1 = reactionsState) {
-        launch(Dispatchers.Default) {
-            onNewReactionCount(reactionsState?.note?.countReactions() ?: 0)
-        }
-    }
+    SlidingAnimationCount(reactionCount, grayTint)
 }
 
 private fun likeClick(
@@ -1028,11 +978,13 @@ fun ZapReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
-    animationSize: Dp = 14.dp
+    animationSize: Dp = 14.dp,
+    nav: (String) -> Unit
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1084,7 +1036,7 @@ fun ZapReaction(
                 onError = {
                     scope.launch {
                         zappingProgress = 0f
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                        showErrorMessageDialog = it
                     }
                 },
                 onProgress = {
@@ -1092,6 +1044,19 @@ fun ZapReaction(
                         zappingProgress = it
                     }
                 }
+            )
+        }
+
+        if (showErrorMessageDialog != null) {
+            ErrorMessageDialog(
+                title = stringResource(id = R.string.error_dialog_zap_error),
+                textContent = showErrorMessageDialog ?: "",
+                onClickStartMessage = {
+                    baseNote.author?.let {
+                        nav(routeToMessage(it, showErrorMessageDialog, accountViewModel))
+                    }
+                },
+                onDismiss = { showErrorMessageDialog = null }
             )
         }
 
@@ -1217,9 +1182,7 @@ private fun WatchZapsForNote(baseNote: Note, accountViewModel: AccountViewModel,
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            onWasZapped(accountViewModel.calculateIfNoteWasZappedByAccount(baseNote))
-        }
+        accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, onWasZapped)
     }
 }
 
@@ -1249,9 +1212,7 @@ fun WatchZapAmountsForNote(baseNote: Note, accountViewModel: AccountViewModel, o
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            onZapAmount(showAmount(accountViewModel.calculateZapAmount(baseNote)))
-        }
+        accountViewModel.calculateZapAmount(baseNote, onZapAmount)
     }
 }
 

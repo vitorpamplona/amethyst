@@ -3,8 +3,8 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
@@ -22,6 +22,7 @@ import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.*
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
 import java.time.Instant
@@ -126,7 +127,7 @@ open class Note(val idHex: String) {
             this.author = author
             this.replyTo = replyTo
 
-            liveSet?.metadata?.invalidateData()
+            liveSet?.innerMetadata?.invalidateData()
         }
     }
 
@@ -174,21 +175,21 @@ open class Note(val idHex: String) {
     fun addReply(note: Note) {
         if (note !in replies) {
             replies = replies + note
-            liveSet?.replies?.invalidateData()
+            liveSet?.innerReplies?.invalidateData()
         }
     }
 
     fun removeReply(note: Note) {
         if (note in replies) {
             replies = replies - note
-            liveSet?.replies?.invalidateData()
+            liveSet?.innerReplies?.invalidateData()
         }
     }
 
     fun removeBoost(note: Note) {
         if (note in boosts) {
             boosts = boosts - note
-            liveSet?.boosts?.invalidateData()
+            liveSet?.innerBoosts?.invalidateData()
         }
     }
 
@@ -211,11 +212,11 @@ open class Note(val idHex: String) {
         relays = listOf<String>()
         lastReactionsDownloadTime = emptyMap()
 
-        liveSet?.replies?.invalidateData()
-        liveSet?.reactions?.invalidateData()
-        liveSet?.boosts?.invalidateData()
-        liveSet?.reports?.invalidateData()
-        liveSet?.zaps?.invalidateData()
+        liveSet?.innerReplies?.invalidateData()
+        liveSet?.innerReactions?.invalidateData()
+        liveSet?.innerBoosts?.invalidateData()
+        liveSet?.innerReports?.invalidateData()
+        liveSet?.innerZaps?.invalidateData()
 
         return toBeRemoved
     }
@@ -234,7 +235,7 @@ open class Note(val idHex: String) {
                         reactions = reactions + Pair(reaction, newList)
                     }
 
-                    liveSet?.reactions?.invalidateData()
+                    liveSet?.innerReactions?.invalidateData()
                 }
             }
         }
@@ -246,7 +247,7 @@ open class Note(val idHex: String) {
         if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
-                liveSet?.reports?.invalidateData()
+                liveSet?.innerReports?.invalidateData()
             }
         }
     }
@@ -254,28 +255,28 @@ open class Note(val idHex: String) {
     fun removeZap(note: Note) {
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
             zaps = zaps.filterValues { it != note }
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         }
     }
 
     fun removeZapPayment(note: Note) {
         if (zapPayments[note] != null) {
             zapPayments = zapPayments.minus(note)
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         } else if (zapPayments.containsValue(note)) {
             val toRemove = zapPayments.filterValues { it == note }
             zapPayments = zapPayments.minus(toRemove.keys)
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         }
     }
 
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
-            liveSet?.boosts?.invalidateData()
+            liveSet?.innerBoosts?.invalidateData()
         }
     }
 
@@ -297,12 +298,12 @@ open class Note(val idHex: String) {
         if (zapRequest !in zaps.keys) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         } else if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         }
     }
@@ -325,12 +326,12 @@ open class Note(val idHex: String) {
         if (zapPaymentRequest !in zapPayments.keys) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         } else if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         }
     }
@@ -341,10 +342,10 @@ open class Note(val idHex: String) {
 
         if (reaction !in reactions.keys) {
             reactions = reactions + Pair(reaction, listOf(note))
-            liveSet?.reactions?.invalidateData()
+            liveSet?.innerReactions?.invalidateData()
         } else if (reactions[reaction]?.contains(note) == false) {
             reactions = reactions + Pair(reaction, (reactions[reaction] ?: emptySet()) + note)
-            liveSet?.reactions?.invalidateData()
+            liveSet?.innerReactions?.invalidateData()
         }
     }
 
@@ -353,17 +354,17 @@ open class Note(val idHex: String) {
 
         if (author !in reports.keys) {
             reports = reports + Pair(author, listOf(note))
-            liveSet?.reports?.invalidateData()
+            liveSet?.innerReports?.invalidateData()
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
-            liveSet?.reports?.invalidateData()
+            liveSet?.innerReports?.invalidateData()
         }
     }
 
     fun addRelay(relay: Relay) {
         if (relay.url !in relays) {
             relays = relays + relay.url
-            liveSet?.relays?.invalidateData()
+            liveSet?.innerRelays?.invalidateData()
         }
     }
 
@@ -461,10 +462,6 @@ open class Note(val idHex: String) {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()
-    }
-
-    fun countReactions(): Int {
-        return reactions.values.sumOf { it.size }
     }
 
     fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
@@ -657,34 +654,50 @@ open class Note(val idHex: String) {
 @Stable
 class NoteLiveSet(u: Note) {
     // Observers line up here.
-    val metadata: NoteLiveData = NoteLiveData(u)
+    val innerMetadata = NoteBundledRefresherLiveData(u)
+    val innerReactions = NoteBundledRefresherLiveData(u)
+    val innerBoosts = NoteBundledRefresherLiveData(u)
+    val innerReplies = NoteBundledRefresherLiveData(u)
+    val innerReports = NoteBundledRefresherLiveData(u)
+    val innerRelays = NoteBundledRefresherLiveData(u)
+    val innerZaps = NoteBundledRefresherLiveData(u)
 
-    val authorChanges = metadata.map {
+    val metadata = innerMetadata.map { it }
+    val reactions = innerReactions.map { it }
+    val boosts = innerBoosts.map { it }
+    val replies = innerReplies.map { it }
+    val reports = innerReports.map { it }
+    val relays = innerRelays.map { it }
+    val zaps = innerZaps.map { it }
+
+    val authorChanges = innerMetadata.map {
         it.note.author
     }
-    val hasEvent = metadata.map {
+
+    val hasEvent = innerMetadata.map {
         it.note.event != null
     }.distinctUntilChanged()
 
-    val reactions: NoteLiveData = NoteLiveData(u)
-    val boosts: NoteLiveData = NoteLiveData(u)
-    val replies: NoteLiveData = NoteLiveData(u)
-    val reports: NoteLiveData = NoteLiveData(u)
-    val relays: NoteLiveData = NoteLiveData(u)
-    val zaps: NoteLiveData = NoteLiveData(u)
-
-    val hasReactions = zaps.combineWith(boosts, reactions) { zapState, boostState, reactionState ->
+    val hasReactions = innerZaps.combineWith(innerBoosts, innerReactions) { zapState, boostState, reactionState ->
         zapState?.note?.zaps?.isNotEmpty() ?: false ||
             boostState?.note?.boosts?.isNotEmpty() ?: false ||
             reactionState?.note?.reactions?.isNotEmpty() ?: false
     }.distinctUntilChanged()
 
-    val replyCount = replies.map {
+    val replyCount = innerReplies.map {
         it.note.replies.size
     }.distinctUntilChanged()
 
-    val boostCount = boosts.map {
+    val reactionCount = innerReactions.map {
+        it.note.reactions.values.sumOf { it.size }
+    }.distinctUntilChanged()
+
+    val boostCount = innerBoosts.map {
         it.note.boosts.size
+    }.distinctUntilChanged()
+
+    val boostList = innerBoosts.map {
+        it.note.boosts.toImmutableList()
     }.distinctUntilChanged()
 
     fun isInUse(): Boolean {
@@ -694,21 +707,28 @@ class NoteLiveSet(u: Note) {
             replies.hasObservers() ||
             reports.hasObservers() ||
             relays.hasObservers() ||
-            zaps.hasObservers()
+            zaps.hasObservers() ||
+            authorChanges.hasObservers() ||
+            hasEvent.hasObservers() ||
+            hasReactions.hasObservers() ||
+            replyCount.hasObservers() ||
+            reactionCount.hasObservers() ||
+            boostCount.hasObservers() ||
+            boostList.hasObservers()
     }
 
     fun destroy() {
-        metadata.destroy()
-        reactions.destroy()
-        boosts.destroy()
-        replies.destroy()
-        reports.destroy()
-        relays.destroy()
-        zaps.destroy()
+        innerMetadata.destroy()
+        innerReactions.destroy()
+        innerBoosts.destroy()
+        innerReplies.destroy()
+        innerReports.destroy()
+        innerRelays.destroy()
+        innerZaps.destroy()
     }
 }
 
-class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
+class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
 
@@ -730,6 +750,17 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
         }
     }
 
+    fun <Y> map(
+        transform: (NoteState) -> Y
+    ): NoteLoadingLiveData<Y> {
+        val initialValue = this.value?.let { transform(it) }
+        val result = NoteLoadingLiveData(note, initialValue)
+        result.addSource(this) { x -> result.value = transform(x) }
+        return result
+    }
+}
+
+class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveData<Y>(initialValue) {
     override fun onActive() {
         super.onActive()
         if (note is AddressableNote) {

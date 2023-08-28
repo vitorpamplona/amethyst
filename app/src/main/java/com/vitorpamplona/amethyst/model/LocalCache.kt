@@ -17,7 +17,6 @@ import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.*
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -372,7 +371,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
 
-            author.liveSet?.statuses?.invalidateData()
+            author.liveSet?.innerStatuses?.invalidateData()
 
             refreshObservers(note)
         }
@@ -662,7 +661,7 @@ object LocalCache {
 
             mentions.forEach {
                 // doesn't add to reports, but triggers recounts
-                it.liveSet?.reports?.invalidateData()
+                it.liveSet?.innerReports?.invalidateData()
             }
         }
 
@@ -1317,8 +1316,6 @@ object LocalCache {
 
     fun pruneExpiredEvents() {
         checkNotInMainThread()
-
-        val now = TimeUtils.now()
 
         val toBeRemoved = notes.filter {
             it.value.event?.isExpired() == true

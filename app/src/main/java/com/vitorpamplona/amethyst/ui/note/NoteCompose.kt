@@ -165,6 +165,7 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -441,9 +442,7 @@ fun WatchForReports(
     val noteReportsState by note.live().reports.observeAsState()
 
     LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState) {
-        launch(Dispatchers.Default) {
-            accountViewModel.isNoteAcceptable(note, onChange)
-        }
+        accountViewModel.isNoteAcceptable(note, onChange)
     }
 }
 
@@ -784,9 +783,9 @@ private fun ShortCommunityActionOptions(
     nav: (String) -> Unit
 ) {
     Spacer(modifier = StdHorzSpacer)
-    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
     Spacer(modifier = StdHorzSpacer)
-    ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+    ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
 
     WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
         if (!isFollowing) {
@@ -1238,6 +1237,16 @@ fun routeFor(note: Note, loggedIn: User): String? {
     return null
 }
 
+fun routeToMessage(user: User, draftMessage: String?, accountViewModel: AccountViewModel): String {
+    val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
+    accountViewModel.account.userProfile().createChatroom(withKey)
+    return if (draftMessage != null) {
+        "Room/${withKey.hashCode()}?message=$draftMessage"
+    } else {
+        "Room/${withKey.hashCode()}"
+    }
+}
+
 fun routeFor(note: Channel): String {
     return "Channel/${note.idHex}"
 }
@@ -1315,7 +1324,7 @@ fun RenderPoll(
     nav: (String) -> Unit
 ) {
     val noteEvent = note.event as? PollNoteEvent ?: return
-    val eventContent = remember { noteEvent.content() }
+    val eventContent = remember(note) { noteEvent.content() }
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
@@ -2399,9 +2408,9 @@ private fun ReplyRow(
 ) {
     val noteEvent = note.event
 
-    val showReply by remember {
+    val showReply by remember(note) {
         derivedStateOf {
-            noteEvent is TextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+            noteEvent is BaseTextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
         }
     }
 

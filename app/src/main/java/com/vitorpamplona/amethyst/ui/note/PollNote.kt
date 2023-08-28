@@ -98,9 +98,7 @@ private fun WatchZapsAndUpdateTallies(
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            pollViewModel.refreshTallies()
-        }
+        pollViewModel.refreshTallies()
     }
 }
 
@@ -132,8 +130,7 @@ private fun OptionNote(
             ZapVote(
                 baseNote,
                 poolOption,
-                accountViewModel,
-                pollViewModel,
+                pollViewModel = pollViewModel,
                 nonClickablePrepend = {
                     RenderOptionAfterVote(
                         poolOption.descriptor,
@@ -147,18 +144,21 @@ private fun OptionNote(
                     )
                 },
                 clickablePrepend = {
-                }
+                },
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         } else {
             ZapVote(
                 baseNote,
                 poolOption,
-                accountViewModel,
-                pollViewModel,
+                pollViewModel = pollViewModel,
                 nonClickablePrepend = {},
                 clickablePrepend = {
                     RenderOptionBeforeVote(poolOption.descriptor, canPreview, tags, backgroundColor, accountViewModel, nav)
-                }
+                },
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
     }
@@ -269,11 +269,12 @@ private fun RenderOptionBeforeVote(
 fun ZapVote(
     baseNote: Note,
     poolOption: PollOption,
-    accountViewModel: AccountViewModel,
-    pollViewModel: PollNoteViewModel,
     modifier: Modifier = Modifier,
+    pollViewModel: PollNoteViewModel,
     nonClickablePrepend: @Composable () -> Unit,
-    clickablePrepend: @Composable () -> Unit
+    clickablePrepend: @Composable () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val isLoggedUser by remember {
         derivedStateOf {
@@ -283,6 +284,7 @@ fun ZapVote(
 
     var wantsToZap by remember { mutableStateOf(false) }
     var zappingProgress by remember { mutableStateOf(0f) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -384,7 +386,7 @@ fun ZapVote(
                 onError = {
                     scope.launch {
                         zappingProgress = 0f
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                        showErrorMessageDialog = it
                     }
                 },
                 onProgress = {
@@ -392,6 +394,19 @@ fun ZapVote(
                         zappingProgress = it
                     }
                 }
+            )
+        }
+
+        if (showErrorMessageDialog != null) {
+            ErrorMessageDialog(
+                title = stringResource(id = R.string.error_dialog_zap_error),
+                textContent = showErrorMessageDialog ?: "",
+                onClickStartMessage = {
+                    baseNote.author?.let {
+                        nav(routeToMessage(it, showErrorMessageDialog, accountViewModel))
+                    }
+                },
+                onDismiss = { showErrorMessageDialog = null }
             )
         }
 

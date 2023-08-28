@@ -164,20 +164,12 @@ class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelStat
 
     override fun onActive() {
         super.onActive()
-        if (channel is PublicChatChannel) {
-            NostrSingleChannelDataSource.add(channel.idHex)
-        } else {
-            NostrSingleChannelDataSource.add(channel.idHex)
-        }
+        NostrSingleChannelDataSource.add(channel)
     }
 
     override fun onInactive() {
         super.onInactive()
-        if (channel is PublicChatChannel) {
-            NostrSingleChannelDataSource.remove(channel.idHex)
-        } else {
-            NostrSingleChannelDataSource.remove(channel.idHex)
-        }
+        NostrSingleChannelDataSource.remove(channel)
     }
 }
 

@@ -955,7 +955,7 @@ private fun DrawAdditionalInfo(
 
     DisplayBadges(baseUser, nav)
 
-    DisplayNip05ProfileStatus(user)
+    DisplayNip05ProfileStatus(user, accountViewModel)
 
     val website = user.info?.website
     if (!website.isNullOrEmpty()) {
@@ -1085,9 +1085,18 @@ fun DisplayLNAddress(
                                 }
                             }
                         } else {
-                            runCatching {
+                            try {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 ContextCompat.startActivity(context, intent, null)
+                            } catch (e: Exception) {
+                                scope.launch {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.lightning_wallets_not_found),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             }
                         }
                     },

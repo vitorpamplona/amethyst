@@ -6,7 +6,6 @@ import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.PrivateDmEvent
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 class ChatroomListNewFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
@@ -38,7 +37,6 @@ class ChatroomListNewFeedFilter(val account: Account) : AdditiveFeedFilter<Note>
             .reversed()
     }
 
-    @OptIn(ExperimentalTime::class)
     override fun updateListWith(oldList: List<Note>, newItems: Set<Note>): List<Note> {
         val (feed, elapsed) = measureTimedValue {
             val me = account.userProfile()

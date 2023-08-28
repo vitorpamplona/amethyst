@@ -120,9 +120,12 @@ sealed class Route(
     )
 
     object Room : Route(
-        route = "Room/{id}",
+        route = "Room/{id}?message={message}",
         icon = R.drawable.ic_moments,
-        arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
+        arguments = listOf(
+            navArgument("id") { type = NavType.StringType },
+            navArgument("message") { type = NavType.StringType; nullable = true; defaultValue = null }
+        ).toImmutableList()
     )
 
     object RoomByAuthor : Route(

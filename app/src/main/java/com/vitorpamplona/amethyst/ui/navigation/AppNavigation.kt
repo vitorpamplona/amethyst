@@ -3,6 +3,9 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -80,7 +83,12 @@ fun AppNavigation(
         }
     }
 
-    NavHost(navController, startDestination = Route.Home.route) {
+    NavHost(
+        navController,
+        startDestination = Route.Home.route,
+        enterTransition = { fadeIn(animationSpec = tween(200)) },
+        exitTransition = { fadeOut(animationSpec = tween(200)) }
+    ) {
         Route.Home.let { route ->
             composable(route.route, route.arguments, content = { it ->
                 val nip47 = it.arguments?.getString("nip47")
@@ -215,6 +223,7 @@ fun AppNavigation(
             composable(route.route, route.arguments, content = {
                 ChatroomScreen(
                     roomId = it.arguments?.getString("id"),
+                    draftMessage = it.arguments?.getString("message"),
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

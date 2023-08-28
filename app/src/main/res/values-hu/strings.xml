@@ -356,7 +356,7 @@
         \n4. Ha szükséges az Orbot-ban változtasd meg a portot
         \n5. Ezen a felületen állítsd be a Socks portot
         \n6. Kattíts az Aktiválás gombra, hogy az Orbot-ot átjátszóként használd
-    </string>
+    </string>ít
     <string name="orbot_socks_port">Orbot Socks portja</string>
     <string name="invalid_port_number">Érvénytelen Port szám</string>
     <string name="use_orbot">Használd az Orbot-ot</string>
@@ -476,4 +476,48 @@
     <string name="nip05_verified">A Nostr cím ellenőrzésre került</string>
     <string name="nip05_failed">A Nostr cím ellenőrzése sikeretelen</string>
     <string name="nip05_checking">A Nostr cím ellenőrzése</string>
+    <string name="select_deselect_all">Mind kijelölése/kijelölés visszavonása</string>
+    <string name="default_relays">Alapértelmezett</string>
+    <string name="select_a_relay_to_continue">A folytatáshoz válassz egy csomópontot</string>
+
+    <string name="zap_forward_title">Zap-ek továbbítása:</string>
+    <string name="zap_forward_explainer">A funkciót támogató kliensek a Zap-eket az Ön tárcája helyett, az alábbi LN-címre vagy felhasználói profilra továbbítják</string>
+
+    <string name="geohash_title">A Hely megjelenítése mint </string>
+    <string name="geohash_explainer">A bejegyzéshez az Ön tartózkodási helyének Geohash-ét hozzáadja. A közönség tudni fogja, hogy az aktuális helytől 5 km-en (3 mérföldön) belül van</string>
+
+    <string name="add_sensitive_content_explainer">A kényes tartalom miatt, azon megjelenítése előtt figyelmeztetést ad. Ez ideális minden Felnőtt tartalomhoz vagy olyan tartalomhoz, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
+
+    <string name="new_feature_nip24_might_not_be_available_title">Új funkció</string>
+    <string name="new_feature_nip24_might_not_be_available_description">Az Amethystnek ennek a módnak az aktiválásához NIP-24 üzenetet kell küldenie (GiftWrapped, Zárolt direkt és csoportos üzeneteket). A NIP-24 új, és a legtöbb kliens még nem implementálta. Győződj meg arról, hogy a fogadó fél kompatibilis klienst használ.</string>
+    <string name="new_feature_nip24_activate">Aktiválás</string>
+
+    <string name="messages_create_public_chat">Publikus</string>
+    <string name="messages_new_message">Privát</string>
+    <string name="messages_new_message_to">Címzett</string>
+    <string name="messages_new_message_subject">Téma</string>
+    <string name="messages_new_message_subject_caption">A beszélgetés témája</string>
+    <string name="messages_new_message_to_caption">"@Felhasználó1, @Felhasználó2, @UFelhasználó3"</string>
+
+    <string name="messages_group_descriptor">A csoport tagjai</string>
+    <string name="messages_new_subject_message">Magyarázat a csoport tagjainak</string>
+    <string name="messages_new_subject_message_placeholder">Az új célok érdekében, a név megváltoztatása.</string>
+
+    <string name="language_description">Az applikáció felülete</string>
+    <string name="theme_description">Sötét, Világos vagy Rendszer által használt téma</string>
+    <string name="automatically_load_images_gifs_description">Képek és GIF-ek automatikus betöltése</string>
+    <string name="automatically_play_videos_description">A videók és a GIF-ek automatikus lejátszása</string>
+    <string name="automatically_show_url_preview_description">URL előnézetek megjelenítése</string>
+    <string name="load_image_description">Mikor kell a képeket betölteni</string>
+
+    <string name="copy_url_to_clipboard">Az URL vágólapra másolása</string>
+    <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
+
+    <string name="created_at">Létrehozva</string>
+    <string name="rules">Szabályok</string>
+
+    <string name="status_update">Állapotod változtatása</string>
+
+    <string name="lightning_wallets_not_found">Hiba a hibaüzenet elemzésekor</string>
+    <string name="poll_zap_value_min_max_explainer">A szavazatokat a Zap-ek összegével súlyozzuk. Beállíthatsz egy minimális összeget, hogy a kéretlen leveleket elkerüld, és egy maximális összeget annak elkerülésére, hogy a szavazás feletti irányítást a nagy Zapperek vegyék át. Mindkét mezőben ugyanazt az összeget használd, hogy minden szavazat azonos értéket kapjon. Bármilyen összeg elfogadásához, hagyjd üresen.</string>
 </resources>

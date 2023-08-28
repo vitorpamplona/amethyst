@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -11,10 +11,10 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 
 object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
-    private var channelsToWatch = setOf<String>()
+    private var channelsToWatch = setOf<Channel>()
 
-    private fun createRepliesAndReactionsFilter(): TypedFilter? {
-        val reactionsToWatch = channelsToWatch.map { it }
+    private fun createMetadataChangeFilter(): TypedFilter? {
+        val reactionsToWatch = channelsToWatch.filter { it is PublicChatChannel }.map { it.idHex }
 
         if (reactionsToWatch.isEmpty()) {
             return null
@@ -32,7 +32,6 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
 
     fun createLoadEventsIfNotLoadedFilter(): TypedFilter? {
         val directEventsToLoad = channelsToWatch
-            .mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
             .filter { it.notes.isEmpty() && it is PublicChatChannel }
 
         val interestedEvents = (directEventsToLoad).map { it.idHex }.toSet()
@@ -53,7 +52,6 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
 
     fun createLoadStreamingIfNotLoadedFilter(): List<TypedFilter>? {
         val directEventsToLoad = channelsToWatch
-            .mapNotNull { LocalCache.checkGetOrCreateChannel(it) }
             .filterIsInstance<LiveActivitiesChannel>()
             .filter { it.info == null }
 
@@ -81,7 +79,7 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
     val singleChannelChannel = requestNewChannel()
 
     override fun updateChannelFilters() {
-        val reactions = createRepliesAndReactionsFilter()
+        val reactions = createMetadataChangeFilter()
         val missing = createLoadEventsIfNotLoadedFilter()
         val missingStreaming = createLoadStreamingIfNotLoadedFilter()
 
@@ -90,13 +88,17 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
             ).ifEmpty { null }
     }
 
-    fun add(eventId: String) {
-        channelsToWatch = channelsToWatch.plus(eventId)
-        invalidateFilters()
+    fun add(eventId: Channel) {
+        if (eventId !in channelsToWatch) {
+            channelsToWatch = channelsToWatch.plus(eventId)
+            invalidateFilters()
+        }
     }
 
-    fun remove(eventId: String) {
-        channelsToWatch = channelsToWatch.minus(eventId)
-        invalidateFilters()
+    fun remove(eventId: Channel) {
+        if (eventId in channelsToWatch) {
+            channelsToWatch = channelsToWatch.minus(eventId)
+            invalidateFilters()
+        }
     }
 }

@@ -122,7 +122,11 @@ object ServiceManager {
         isStarted = false
     }
 
-    fun cleanUp() {
+    fun cleanObservers() {
+        LocalCache.cleanObservers()
+    }
+
+    fun trimMemory() {
         LocalCache.cleanObservers()
 
         val accounts = LocalPreferences.allLocalAccountNPubs().mapNotNull { decodePublicKeyAsHexOrNull(it) }.toSet()

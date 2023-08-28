@@ -625,7 +625,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 Spacer(modifier = StdHorzSpacer)
                 LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -739,7 +739,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 Spacer(modifier = StdHorzSpacer)
                 LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {

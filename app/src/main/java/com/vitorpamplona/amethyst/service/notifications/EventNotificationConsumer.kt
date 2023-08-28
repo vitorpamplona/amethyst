@@ -23,7 +23,7 @@ import kotlinx.collections.immutable.persistentSetOf
 
 class EventNotificationConsumer(private val applicationContext: Context) {
 
-    fun consume(event: Event) {
+    suspend fun consume(event: Event) {
         if (LocalCache.notes[event.id] == null) {
             if (LocalCache.justVerify(event)) {
                 LocalCache.justConsume(event, null)
@@ -40,7 +40,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         }
     }
 
-    fun unwrapAndConsume(event: Event, account: Account): Event? {
+    suspend fun unwrapAndConsume(event: Event, account: Account): Event? {
         if (!LocalCache.justVerify(event)) return null
 
         return when (event) {
@@ -65,7 +65,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         }
     }
 
-    private fun unwrapAndNotify(giftWrap: GiftWrapEvent) {
+    private suspend fun unwrapAndNotify(giftWrap: GiftWrapEvent) {
         val giftWrapNote = LocalCache.notes[giftWrap.id] ?: return
 
         LocalPreferences.allSavedAccounts().forEach {

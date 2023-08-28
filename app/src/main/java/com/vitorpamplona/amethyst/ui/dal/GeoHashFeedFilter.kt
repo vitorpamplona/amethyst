@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
@@ -34,6 +35,7 @@ class GeoHashFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
                         it.event is LongTextNoteEvent ||
                         it.event is ChannelMessageEvent ||
                         it.event is PrivateDmEvent ||
+                        it.event is PollNoteEvent ||
                         it.event is AudioHeaderEvent
                     ) &&
                     it.event?.isTaggedGeoHash(myTag) == true

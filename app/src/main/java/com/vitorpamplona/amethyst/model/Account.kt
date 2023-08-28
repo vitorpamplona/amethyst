@@ -103,14 +103,16 @@ class Account(
         val showSensitiveContent: Boolean?
     )
 
-    val liveHiddenUsers: LiveData<LiveHiddenUsers> = live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
-        val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(keyPair.privKey)
-        LiveHiddenUsers(
-            hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
-            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-            showSensitiveContent = showSensitiveContent
-        )
-    }.distinctUntilChanged()
+    val liveHiddenUsers: LiveData<LiveHiddenUsers> by lazy {
+        live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
+            val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(keyPair.privKey)
+            LiveHiddenUsers(
+                hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
+                spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+                showSensitiveContent = showSensitiveContent
+            )
+        }.distinctUntilChanged()
+    }
 
     var userProfileCache: User? = null
 
@@ -1190,6 +1192,21 @@ class Account(
 
         Client.send(event)
         LocalCache.consume(event, null)
+    }
+
+    fun deleteStatus(oldStatus: AddressableNote) {
+        if (!isWriteable()) return
+        val oldEvent = oldStatus.event as? StatusEvent ?: return
+
+        val event = StatusEvent.clear(oldEvent, keyPair.privKey!!)
+
+        Client.send(event)
+        LocalCache.consume(event, null)
+
+        val event2 = DeletionEvent.create(listOf(event.id), keyPair.privKey!!)
+
+        Client.send(event2)
+        LocalCache.consume(event2)
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {

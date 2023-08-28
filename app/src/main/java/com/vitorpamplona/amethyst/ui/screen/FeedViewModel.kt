@@ -236,7 +236,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         checkNotInMainThread()
 
         lastFeedKey = localFilter.feedKey()
-        val notes = localFilter.loadTop().toImmutableList()
+        val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
@@ -301,11 +301,13 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
 
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
-            bundler.invalidate(false) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-                sendToTop()
+            viewModelScope.launch(Dispatchers.IO) {
+                bundler.invalidate(false) {
+                    // adds the time to perform the refresh into this delay
+                    // holding off new updates in case of heavy refresh routines.
+                    refreshSuspended()
+                    sendToTop()
+                }
             }
         }
     }

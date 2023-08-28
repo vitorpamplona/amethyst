@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 @Stable
@@ -270,7 +269,6 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val bundler = BundledUpdate(1000, Dispatchers.IO)
     private val bundlerInsert = BundledInsert<Set<Note>>(1000, Dispatchers.IO)
 
-    @OptIn(ExperimentalTime::class)
     fun invalidateData(ignoreIfDoing: Boolean = false) {
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
@@ -282,7 +280,6 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     fun invalidateDataAndSendToTop() {
         clear()
         bundler.invalidate(false) {
@@ -296,7 +293,6 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
             clear()
@@ -312,7 +308,6 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
             val newObjects = it.flatten().toSet()

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.LocalTextStyle
@@ -12,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.quartz.encoders.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,10 +43,7 @@ fun MayBeWithdrawal(lnurlWord: String) {
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
     val context = LocalContext.current
-
-    val uri = remember(withdrawalString) {
-        Uri.parse("lightning:$withdrawalString")
-    }
+    val scope = rememberCoroutineScope()
 
     val withdraw = remember(withdrawalString) {
         AnnotatedString("$withdrawalString ")
@@ -53,9 +52,18 @@ fun ClickableWithdrawal(withdrawalString: String) {
     ClickableText(
         text = withdraw,
         onClick = {
-            runCatching {
-                val intent = Intent(Intent.ACTION_VIEW, uri)
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$withdrawalString"))
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 ContextCompat.startActivity(context, intent, null)
+            } catch (e: Exception) {
+                scope.launch {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.lightning_wallets_not_found),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)

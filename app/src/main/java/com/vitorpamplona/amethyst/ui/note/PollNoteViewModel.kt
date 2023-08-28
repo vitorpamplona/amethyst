@@ -3,13 +3,16 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.events.*
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -52,12 +55,12 @@ class PollNoteViewModel : ViewModel() {
         closedAt = pollEvent?.getTagInt(CLOSED_AT)
     }
 
-    suspend fun refreshTallies() {
-        totalZapped = totalZapped()
-        wasZappedByLoggedInAccount = pollNote?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
+    fun refreshTallies() {
+        viewModelScope.launch(Dispatchers.Default) {
+            totalZapped = totalZapped()
+            wasZappedByLoggedInAccount = pollNote?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
 
-        _tallies.emit(
-            pollOptions?.keys?.map {
+            val newOptions = pollOptions?.keys?.map {
                 val zappedInOption = zappedPollOptionAmount(it)
 
                 val myTally = if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
@@ -71,8 +74,12 @@ class PollNoteViewModel : ViewModel() {
                 val consensus = consensusThreshold != null && myTally >= consensusThreshold!!
 
                 PollOption(it, pollOptions?.get(it) ?: "", zappedInOption, myTally, consensus, zappedByLoggedIn)
-            } ?: emptyList()
-        )
+            }
+
+            _tallies.emit(
+                newOptions ?: emptyList()
+            )
+        }
     }
 
     fun canZap(): Boolean {
