@@ -12,7 +12,6 @@
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
     <string name="group_picture">Obrázek skupiny</string>
     <string name="explicit_content">Explicitní obsah</string>
-    <string name="spam">Spam</string>
     <string name="impersonation">Zneužívání identity</string>
     <string name="illegal_behavior">Nezákonné jednání</string>
     <string name="unknown">Neznámý</string>
@@ -38,7 +37,6 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Přihlaste se pomocí soukromého klíče, abyste mohli zrušit sledování</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Počet zobrazení</string>
-    <string name="boost">Boost</string>
     <string name="boosted">boostováno</string>
     <string name="quote">Citovat</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
@@ -170,9 +168,6 @@
     <string name="nip_05">Nostr Adresa</string>
     <string name="never">nikdy</string>
     <string name="now">nyní</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Nahota</string>
     <string name="profanity_hateful_speech">Neslušnost / Nenávistná řeč</string>
     <string name="report_hateful_speech">Nahlásit nenávistnou řeč</string>
@@ -182,8 +177,7 @@
     <string name="mark_all_new_as_read">Označit všechny nové jako přečtené</string>
     <string name="mark_all_as_read">Označit všechny jako přečtené</string>
     <string name="backup_keys">Zálohovat klíče</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## Tipy na zálohování a bezpečnost účtu
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Tipy na zálohování a bezpečnost účtu
         \n\nVáš účet je zabezpečen tajným klíčem. Klíč je dlouhý náhodný řetězec začínající **nsec1**. Každý, kdo má přístup k vašemu tajnému klíči, může publikovat obsah pod vaší identitou.
         \n\n- **Nepoužívejte** svůj tajný klíč na webových stránkách nebo v softwaru, kterému nedůvěřujete.
         \n- Vývojáři aplikace Amethyst vás **nikdy** nebudou žádat o váš tajný klíč.
@@ -193,8 +187,8 @@
     <string name="copy_my_secret_key">Zkopírovat můj tajný klíč</string>
     <string name="biometric_authentication_failed">Autentizace se nezdařila</string>
     <string name="biometric_error">Chyba</string>
-    <string name="badge_created_by">Vytvořeno uživatelem %1$s</string>
-    <string name="badge_award_image_for">Obrázek ocenění od %1$s</string>
+    <string name="badge_created_by">"Vytvořeno uživatelem %1$s"</string>
+    <string name="badge_award_image_for">"Obrázek ocenění od %1$s"</string>
     <string name="new_badge_award_notif">Obdrželi jste nové ocenění</string>
     <string name="award_granted_to">Ocenění uděleno uživateli</string>
     <string name="copied_note_text_to_clipboard">Text poznámky zkopírován do schránky</string>
@@ -250,7 +244,6 @@
     <string name="add_to_public_bookmarks">Přidat do veřejných záložek</string>
     <string name="remove_from_private_bookmarks">Odebrat ze soukromých záložek</string>
     <string name="remove_from_public_bookmarks">Odebrat z veřejných záložek</string>
-
     <string name="wallet_connect_service">Služba Wallet Connect</string>
     <string name="wallet_connect_service_explainer">Autorizuje Nostr Secret k provedení platby zapsům, aniž byste opustili aplikaci. Uchovávejte tajemství v bezpečí a pokud je to možné, používejte soukromý přepojovač.</string>
     <string name="wallet_connect_service_pubkey">Veřejný klíč Wallet Connect</string>
@@ -258,7 +251,6 @@
     <string name="wallet_connect_service_secret">Tajemství Wallet Connect</string>
     <string name="wallet_connect_service_show_secret">Zobrazit tajný klíč</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex soukromý klíč</string>
-
     <string name="pledge_amount_in_sats">Částka záruky v sats</string>
     <string name="post_poll">Zveřejnit hlasování</string>
     <string name="poll_heading_required">Povinná pole:</string>
@@ -270,99 +262,69 @@
     <string name="poll_zap_value_min">Minimální zaps</string>
     <string name="poll_zap_value_max">Maximální zaps</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Uzavřít po</string>
     <string name="poll_closing_time_days">dnech</string>
     <string name="poll_is_closed">Hlasování je uzavřeno pro nové hlasy</string>
     <string name="poll_zap_amount">Částka zapsu</string>
     <string name="one_vote_per_user_on_atomic_votes">U tohoto typu hlasování je povolen pouze jeden hlas na uživatele</string>
-
     <string name="looking_for_event">"Hledá se událost %1$s"</string>
-
     <string name="custom_zaps_add_a_message">Přidat veřejnou zprávu</string>
     <string name="custom_zaps_add_a_message_private">Přidat soukromou zprávu</string>
     <string name="custom_zaps_add_a_message_nonzap">Přidat fakturu</string>
-
     <string name="custom_zaps_add_a_message_example">Děkuji za veškerou práci!</string>
-
     <string name="lightning_create_and_add_invoice">Vytvořit a přidat</string>
     <string name="poll_author_no_vote">Autoři hlasování nemohou hlasovat ve vlastních hlasováních.</string>
-
     <string name="hash_verification_passed">Obrázek je stejný jako v původním příspěvku</string>
     <string name="hash_verification_failed">Obrázek se změnil. Autor možná změnu nezaznamenal</string>
-
     <string name="content_description_add_image">Přidat obrázek</string>
     <string name="content_description_add_video">Přidat video</string>
     <string name="content_description_add_document">Přidat dokument</string>
-
     <string name="add_content">Přidat do zprávy</string>
     <string name="content_description">Popis obsahu</string>
     <string name="content_description_example">Modrá loď na bílé písčité pláži při západu slunce</string>
-
     <string name="zap_type">Typ zapsu</string>
     <string name="zap_type_explainer">Typ zapsu pro všechny možnosti</string>
-
     <string name="zap_type_public">Veřejný</string>
     <string name="zap_type_public_explainer">Všichni mohou vidět transakci a zprávu</string>
-
     <string name="zap_type_private">Soukromý</string>
     <string name="zap_type_private_explainer">Odesílatel a příjemce si mohou navzájem vidět a číst zprávu</string>
-
     <string name="zap_type_anonymous">Anonymní</string>
     <string name="zap_type_anonymous_explainer">Příjemce a veřejnost neví, kdo platbu poslal</string>
-
-    <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">Žádná stopa v Nostr, pouze v Lightning</string>
-
     <string name="file_server">Souborový server</string>
     <string name="zap_forward_lnAddress">LnAddress nebo @Uživatel</string>
-
     <string name="upload_server_imgur">imgur.com – důvěryhodný</string>
     <string name="upload_server_imgur_explainer">Imgur může upravit soubor</string>
-
     <string name="upload_server_nostrimg">nostrimg.com – důvěryhodný</string>
     <string name="upload_server_nostrimg_explainer">NostrImg může upravit soubor</string>
-
     <string name="upload_server_nostrbuild">nostr.build – důvěryhodný</string>
     <string name="upload_server_nostrbuild_explainer">Nostr.build může upravit soubor</string>
-
     <string name="upload_server_nostrfilesdev">nostrfiles.dev – důvěryhodný</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev může upravit soubor</string>
-
     <string name="upload_server_nostrcheckme">nostrcheck.me - důvěryhodný</string>
     <string name="upload_server_nostrcheckme_explainer">nostrcheck.me může upravit soubor</string>
-
     <string name="upload_server_imgur_nip94">Ověřitelný Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Ověří, zda Imgur upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
-
     <string name="upload_server_nostrimg_nip94">Ověřitelný NostrImg (NIP-94)</string>
     <string name="upload_server_nostrimg_nip94_explainer">Ověří, zda NostrImg upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
-
     <string name="upload_server_nostrbuild_nip94">Ověřitelný Nostr.build (NIP-94)</string>
     <string name="upload_server_nostrbuild_nip94_explainer">Ověří, zda Nostr.build upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
-
     <string name="upload_server_nostrfilesdev_nip94">Ověřitelný Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">Ověří, zda Nostrfiles.dev upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
-
     <string name="upload_server_nostrcheckme_nip94">Ověřitelný Nostrcheck.me (NIP-94)</string>
     <string name="upload_server_nostrcheckme_nip94_explainer">Ověří, zda Nostrcheck.me upravil soubor. Nový NIP: jiní klienti ho možná neuvidí</string>
-
     <string name="upload_server_relays_nip95">Vaše relé (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Soubory jsou hostovány vašimi relé. Nový NIP: zkontrolujte, zda je podporují</string>
-
     <string name="connect_via_tor_short">Nastavení Tor/Orbot</string>
     <string name="connect_via_tor">Připojit se přes váš Orbot</string>
-
     <string name="do_you_really_want_to_disable_tor_title">Odpojit se od Orbotu/Toru?</string>
     <string name="do_you_really_want_to_disable_tor_text">Vaše data budou okamžitě přenesena do běžné sítě</string>
     <string name="yes">Ano</string>
     <string name="no">Ne</string>
-
     <string name="follow_list_selection">Seznam sledovaných</string>
     <string name="follow_list_kind3follows">Všechna sledování</string>
     <string name="follow_list_global">Globální</string>
-    <string name="connect_through_your_orbot_setup_markdown">
-        ## Připojte se přes Tor s Orbotem
+    <string name="connect_through_your_orbot_setup_markdown">        ## Připojte se přes Tor s Orbotem
         \n\n1. Nainstalujte [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Spusťte Orbot
         \n3. V Orbotu zkontrolujte port pro Socks. Výchozí hodnota je 9050
@@ -370,54 +332,40 @@
         \n5. Nastavte port Socks v této obrazovce
         \n6. Stiskněte tlačítko Aktivovat Tor
     </string>
-    <string name="orbot_socks_port">Orbot Socks Port</string>
     <string name="invalid_port_number">Neplatné číslo portu</string>
     <string name="use_orbot">Použít Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Odpojit Tor/Orbot</string>
-
     <string name="app_notification_dms_channel_name">Soukromé zprávy</string>
     <string name="app_notification_dms_channel_description">Upozorní vás, když dorazí soukromá zpráva</string>
-
     <string name="app_notification_zaps_channel_name">Přijaté zapsy</string>
     <string name="app_notification_zaps_channel_description">Upozorní vás, když vás někdo zapsne</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">pro %1$s</string>
-
     <string name="reply_notify">Upozornit: </string>
-
     <string name="channel_list_join_conversation">Připojit se ke konverzaci</string>
     <string name="channel_list_user_or_group_id">ID uživatele nebo skupiny</string>
     <string name="channel_list_user_or_group_id_demo">npub, nevent nebo hex</string>
     <string name="channel_list_create_channel">Vytvořit</string>
     <string name="channel_list_join_channel">Připojit se</string>
-
     <string name="today">Dnes</string>
-
     <string name="content_warning">Upozornění na obsah</string>
     <string name="content_warning_explanation">Tento příspěvek obsahuje citlivý obsah, který může být pro některé lidi urážlivý nebo rušivý</string>
     <string name="content_warning_hide_all_sensitive_content">Vždy skrýt citlivý obsah</string>
     <string name="content_warning_show_all_sensitive_content">Vždy zobrazit citlivý obsah</string>
     <string name="content_warning_see_warnings">Vždy zobrazovat upozornění na obsah</string>
-
     <string name="recommended_apps">Doporučuje: </string>
     <string name="filter_spam_from_strangers">Filtrovat spam od cizinců</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Varovat, když příspěvky obsahují hlášení od vašich sledovaných osob</string>
-
     <string name="new_reaction_symbol">Nový symbol reakce</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nebyly vybrány žádné typy reakcí. Dlouhým stiskem změňte</string>
-
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Přidá cílovou částku sats pro tento příspěvek. Podporované klienty ji mohou zobrazovat jako ukazatel postupu k podněcování darování</string>
     <string name="zapraiser_target_amount_in_sats">Cílová částka v sats</string>
-
     <string name="sats_to_complete">Zapraiser na %1$s. Do cíle zbývá %2$s sats</string>
     <string name="read_from_relay">Číst z Relay</string>
     <string name="write_to_relay">Zapisovat do Relay</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Při pokusu o získání informací z Relay se vyskytla chyba z %1$s</string>
     <string name="owner">Vlastník</string>
     <string name="version">Verze</string>
-    <string name="software">Software</string>
     <string name="contact">Kontakt</string>
     <string name="supports">Podporované NIPs</string>
     <string name="admission_fees">Vstupné</string>
@@ -437,38 +385,29 @@
     <string name="minimum_pow">Minimální PoW</string>
     <string name="auth">Ověření</string>
     <string name="payment">Platba</string>
-    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Vyměnit</string>
     <string name="no_lightning_address_set">Není nastavena žádná Lightning adresa</string>
     <string name="copied_token_to_clipboard">Token zkopírován do schránky</string>
-
     <string name="live_stream_live_tag">ŽIVĚ</string>
-    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">UKONČENO</string>
     <string name="live_stream_planned_tag">PLÁNOVÁNO</string>
-
     <string name="live_stream_is_offline">Živé vysílání je offline</string>
     <string name="live_stream_has_ended">Živé vysílání ukončeno</string>
     <string name="are_you_sure_you_want_to_log_out">Odhlášení vymaže všechny vaše místní informace. Ujistěte se, že máte zálohované své privátní klíče, abyste se vyhnuli ztrátě účtu. Chcete pokračovat?</string>
     <string name="followed_tags">Sledované značky</string>
-
     <string name="relay_setup">Rele</string>
-
     <string name="discover_live">Živě</string>
     <string name="discover_community">Komunita</string>
     <string name="discover_chat">Chaty</string>
     <string name="community_approved_posts">Schválené příspěvky</string>
-
     <string name="groups_no_descriptor">Tato skupina nemá popis ani pravidla. Promluvte si s majitelem, aby je přidal/a.</string>
     <string name="community_no_descriptor">Tato komunita nemá popis. Promluvte si s majitelem, aby ho přidal/a.</string>
-
     <string name="add_sensitive_content_label">Citlivý obsah</string>
     <string name="add_sensitive_content_description">Před zobrazením tohoto obsahu přidá upozornění na citlivý obsah.</string>
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
     <string name="connectivity_type_never">Nikdy</string>
-
     <string name="system">Systém</string>
     <string name="light">Světlý</string>
     <string name="dark">Tmavý</string>
@@ -479,43 +418,33 @@
     <string name="automatically_play_videos">Automaticky přehrávat videa</string>
     <string name="automatically_show_url_preview">Automaticky zobrazit náhled URL</string>
     <string name="load_image">Načíst obrázek</string>
-
     <string name="spamming_users">Spamovací uživatelé</string>
-
     <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>
     <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
     <string name="search_button">Hledat lokální a vzdálené záznamy</string>
-
     <string name="nip05_verified">Adresa Nostr byla ověřena</string>
     <string name="nip05_failed">Ověření adresy Nostr se nezdařilo</string>
     <string name="nip05_checking">Kontrola adresy Nostr</string>
     <string name="select_deselect_all">Vybrat/Zrušit vše</string>
     <string name="default_relays">Výchozí</string>
     <string name="select_a_relay_to_continue">Vyberte relé pro pokračování</string>
-
     <string name="zap_forward_title">Přeposílat Zapy na:</string>
     <string name="zap_forward_explainer">Podporující klienti budou přeposílat Zapy na níže uvedenou LN adresu nebo uživatelský profil místo vaší</string>
-
     <string name="geohash_title">Zveřejnit polohu jako </string>
     <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
-
     <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
-
     <string name="new_feature_nip24_might_not_be_available_title">Nová funkce</string>
     <string name="new_feature_nip24_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-24 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-24 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
     <string name="new_feature_nip24_activate">Aktivovat</string>
-
     <string name="messages_create_public_chat">Veřejné</string>
     <string name="messages_new_message">Soukromé</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject">Předmět</string>
     <string name="messages_new_message_subject_caption">Téma konverzace</string>
-    <string name="messages_new_message_to_caption">"@Uživatel1, @Uživatel2, @Uživatel3"</string>
-
+    <string name="messages_new_message_to_caption">"\@Uživatel1, @Uživatel2, @Uživatel3"</string>
     <string name="messages_group_descriptor">Členové této skupiny</string>
     <string name="messages_new_subject_message">Vysvětlení členům</string>
     <string name="messages_new_subject_message_placeholder">Změna názvu pro nové cíle.</string>
-
     <string name="language_description">Pro rozhraní aplikace</string>
     <string name="theme_description">Tmavé, světlé nebo systémové téma</string>
     <string name="automatically_load_images_gifs_description">Automaticky načítat obrázky a GIFy</string>
