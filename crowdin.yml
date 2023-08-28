@@ -5,24 +5,24 @@
 "preserve_hierarchy": true
 
 files:
-  - source: app/src/main/res/values/strings.xml,
-    translation: app/src/main/res/values-%android_code%/%original_file_name%,
-    type: android,
+  - source: app/src/main/res/values/strings.xml
+    translation: app/src/main/res/values-%android_code%/%original_file_name%
+    type: android
     languages_mapping:
       android_code:
-        ar-SA: ar,
-        cs-CZ: cs,
-        de-DE: de,
-        eo-UY: eo,
-        es-ES: es,
-        fa": fa,
-        fr-FR: fr,
-        hu-HU: hu,
-        ja-JP: ja,
-        nl-NL: nl,
-        ru-RU: ru,
-        ta-IN: ta,
-        th-TH: th,
-        tr-TR: tr,
-        uk-UA: uk,
+        ar-SA: ar
+        cs-CZ: cs
+        de-DE: de
+        eo-UY: eo
+        es-ES: es
+        fa": fa
+        fr-FR: fr
+        hu-HU: hu
+        ja-JP: ja
+        nl-NL: nl
+        ru-RU: ru
+        ta-IN: ta
+        th-TH: th
+        tr-TR: tr
+        uk-UA: uk
         zh-CN: zh
