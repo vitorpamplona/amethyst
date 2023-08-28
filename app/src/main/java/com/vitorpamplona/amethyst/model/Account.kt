@@ -1203,7 +1203,7 @@ class Account(
         Client.send(event)
         LocalCache.consume(event, null)
 
-        val event2 = DeletionEvent.create(listOf(event.id), keyPair.privKey!!)
+        val event2 = DeletionEvent.create(listOf(event.id), keyPair)
 
         Client.send(event2)
         LocalCache.consume(event2)
