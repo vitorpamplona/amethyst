@@ -12,17 +12,17 @@ files:
       android_code:
         ar: ar
         cs: cs
-        de-DE: de
-        eo-UY: eo
-        es-ES: es
+        de: de
+        eo: eo
+        es: es
         fa: fa
-        fr-FR: fr
-        hu-HU: hu
-        ja-JP: ja
-        nl-NL: nl
-        ru-RU: ru
-        ta-IN: ta
-        th-TH: th
-        tr-TR: tr
-        uk-UA: uk
-        zh-CN: zh
+        fr: fr
+        hu: hu
+        ja: ja
+        nl: nl
+        ru: ru
+        ta: ta
+        th: th
+        tr: tr
+        uk: uk
+        zh: zh
