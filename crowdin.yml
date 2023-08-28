@@ -8,6 +8,26 @@ files: [
   {
     "source": "app/src/main/res/values/strings.xml",
     "translation": "app/src/main/res/values-%android_code%/%original_file_name%",
-    "type": "android"
+    "type": "android",
+    "languages_mapping": {
+      "android_code": {
+        "ar-rSA": "ar",
+        "cs-rCZ": "cs",
+        "de-rDE": "de",
+        "eo-rUY": "eo",
+        "es-rES": "es",
+        "fa": "fa",
+        "fr-rFR": "fr",
+        "hu-rHU": "hu",
+        "ja-rJP": "ja",
+        "nl-rNL": "nl",
+        "ru-rRU": "ru",
+        "ta-rIN": "ta",
+        "th-rTH": "th",
+        "tr-rTR": "tr",
+        "uk-rUA": "uk",
+        "zh-rCN": "zh"
+      }
+    }
   }
 ]
