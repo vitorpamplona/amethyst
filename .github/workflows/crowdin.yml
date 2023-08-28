@@ -2,7 +2,7 @@ name: Crowdin Action
 
 on:
   push:
-    paths: ["app/src/main/res/**/strings.xml"]
+    # paths: ["app/src/main/res/**/strings.xml"] // removes filter to allow downloads at any moment.
     branches: [ main ]
 
 jobs:
