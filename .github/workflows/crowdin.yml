@@ -2,6 +2,7 @@ name: Crowdin Action
 
 on:
   push:
+    paths: ["app/src/main/res/values/strings.xml"]
     branches: [ main ]
 
 jobs:
