@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Montri al la QR-Kodo</string> 
-    <string name="show_qr">Montri QR</string> 
-    <string name="profile_image">Profila Bildo</string> 
-    <string name="scan_qr">Skani QR</string> 
-    <string name="show_anyway">Montri Ĉiukaze</string> 
+    <string name="point_to_the_qr_code">Montri al la QR-Kodo</string>
+    <string name="show_qr">Montri QR</string>
+    <string name="profile_image">Profila Bildo</string>
+    <string name="scan_qr">Skani QR</string>
+    <string name="show_anyway">Montri Ĉiukaze</string>
     <string name="post_was_flagged_as_inappropriate_by">La afiŝo estis markita kiel netaŭga per</string>
     <string name="post_not_found">Afiŝo netrovita</string>
     <string name="channel_image">Kanala Bildo</string>
@@ -33,7 +34,6 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Ensaluti per sekreta ŝlosilo por sendi zapojn</string>
     <string name="zaps">Zapoj</string>
     <string name="view_count">Nombro da Vidoj</string>
-    <string name="boost">Boost</string>
     <string name="boosted">impulsita</string>
     <string name="quote">Citi</string>
     <string name="new_amount_in_sats">Nova Kvanto da Satoj</string>
@@ -55,7 +55,6 @@
     <string name="thank_you_so_much">Dankegon!</string>
     <string name="amount_in_sats">Kvanto en Satoj</string>
     <string name="send_sats">Sendi Satojn</string>
-    <string name="translations_never_translate_from_lang">"Neniam traduki el "</string>
     <string name="error_parsing_preview_for">"Eraro anazilante antaŭrigardon por %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Antaŭrigardi Bildon por %1$s"</string>
     <string name="new_channel">Nova Kanalo</string>
@@ -158,12 +157,9 @@
     <string name="translations_to">al</string>
     <string name="translations_show_in_lang_first">Montri en %1$s unua</string>
     <string name="translations_always_translate_to_lang">Ĉiam traduki al</string>
-    <string name="nip_05">Nostr Address</string>
-    <string name="lnurl" translatable="false">LNURL...</string>
+    <string name="translations_never_translate_from_lang">Neniam traduki el </string>
     <string name="never">neniam</string>
     <string name="now">nun</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
     <string name="d">t</string>
     <string name="nudity">Nudeco</string>
     <string name="profanity_hateful_speech">Blasfemo / Malama Parolado</string>
@@ -174,8 +170,7 @@
     <string name="mark_all_new_as_read">Marki ĉiujn Novajn legitaj</string>
     <string name="mark_all_as_read">Marki ĉiujn legitajn</string>
     <string name="backup_keys">Sekurkopii Ŝlosilojn</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## Sekurkopio de Ŝlosiloj kaj Rekomendoj de Sekureco
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Sekurkopio de Ŝlosiloj kaj Rekomendoj de Sekureco
         \n\nVia konto estas sekurigita per sekreta ŝlosilo. La ŝlosilo estas longa hazarda literĉeno komencata kun **nsec1**. Ĉiu, kiu havas aliron al via sekreta ŝlosilo, povas publikigi enhavon per via identeco.
          \n\n- **Ne** metu vian sekretan ŝlosilon en ajna retejo aŭ programaro, kiun vi ne fidas.
          \n- La programistoj de Amethyst **neniam** petos de vi vian sekretan ŝlosilon.
@@ -193,6 +188,7 @@
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Kopiita @npub de aŭtoro al tondujo</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Kopiita ID de noto (@note1) al tondujo</string>
     <string name="select_text_dialog_top">Elekti Tekston</string>
+    <string name="private_conversation_notification">"&lt;Privata mesaĝo nemalĉifrebla.&gt;\n\nVi estis citita en privata konversacio inter %1$s kaj %2$s."</string>
     <string name="quick_action_select">Elekti</string>
     <string name="quick_action_share_browser_link">Kunhavigi Ligilon</string>
     <string name="quick_action_share">Kunhavigi</string>
@@ -204,6 +200,4 @@
     <string name="quick_action_follow">Sekvi</string>
     <string name="quick_action_request_deletion_alert_title">Peti Forigiton</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst petos, ke via noto estu forigita el la plusendiloj al kiuj vi estas aktuale konektita. Ne estas garantio, ke via noto estos porĉiame forigita el tiuj plusendiloj, aŭ el aliaj plusendiloj, kie ĝi povus esti konservita.</string>
-    <string name="private_conversation_notification">"&lt;Privata mesaĝo nemalĉifrebla.&gt;\n\nVi estis citita en privata konversacio inter %1$s kaj %2$s."</string>
-
 </resources>

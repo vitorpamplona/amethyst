@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">QR Code\'a yönlendir</string>
     <string name="show_qr">QR Göster</string>
     <string name="profile_image">Profil Resmi</string>
     <string name="scan_qr">QR Tara</string>
     <string name="show_anyway">Yine De Göster</string>
-    <string name="post_was_flagged_as_inappropriate_by">"Gönderi uygun değil olarak işaretlendi tarafından: "</string>
+    <string name="post_was_flagged_as_inappropriate_by">Gönderi uygun değil olarak işaretlendi tarafından: </string>
     <string name="post_not_found">Gönderi bulunamadı</string>
     <string name="channel_image">Kanal Resmi</string>
     <string name="referenced_event_not_found">Referanslı etkinlik bulunamadı</string>
@@ -22,7 +22,7 @@
     <string name="copy_user_pubkey">Kullanıcı PubKey\'ini Kopyala</string>
     <string name="copy_note_id">Not ID\'sini Kopyala</string>
     <string name="broadcast">Yayın</string>
-    <string name="block_hide_user">Blokla Ve Engelle</string>
+    <string name="block_hide_user"><![CDATA[Blokla Ve Engelle]]></string>
     <string name="report_spam_scam">İstenmeyen Raporla</string>
     <string name="report_impersonation">Taklit Etme Raporla</string>
     <string name="report_explicit_content">Müstehcen İçerik Raporla</string>
@@ -39,12 +39,12 @@
     <string name="quote">Alıntı</string>
     <string name="new_amount_in_sats">Satlarda Yeni Miktar</string>
     <string name="add">Ekle</string>
-    <string name="replying_to">yanıtlanıyor</string>
-    <string name="and">ve</string>
-    <string name="in_channel">kanalda</string>
+    <string name="replying_to">"yanıtlanıyor"</string>
+    <string name="and">"ve"</string>
+    <string name="in_channel">"kanalda"</string>
     <string name="profile_banner">Profil Bayrağı</string>
-    <string name="following">Takip edilenler</string>
-    <string name="followers">Takipçiler</string>
+    <string name="following">"Takip edilenler"</string>
+    <string name="followers">"Takipçiler"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Güvenlik Filtreleri</string>
     <string name="log_out">Çıkış Yap</string>
@@ -61,7 +61,7 @@
     <string name="my_awesome_group">Benim Harika Grubum</string>
     <string name="picture_url">Resim URL\'si</string>
     <string name="description">Açıklama</string>
-    <string name="about_us">Hakkımızda</string>
+    <string name="about_us">"Hakkımızda"</string>
     <string name="what_s_on_your_mind">Aklında ne var?</string>
     <string name="post">Gönder</string>
     <string name="save">Kaydet</string>
@@ -92,7 +92,7 @@
     <string name="upload_image">Resim Yükle</string>
     <string name="uploading">Yükleniyor...</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Kullanıcının sats alabileceği bir lightning adresi kurulu değil</string>
-    <string name="reply_here">buraya yanıtlayın...</string>
+    <string name="reply_here">"buraya yanıtlayın..."</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Paylaşmak için Not ID\'sini panoya kopyalar</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kanal ID\'sini (Not) panoya kopyala</string>
     <string name="edits_the_channel_metadata">Kanal Üstveri\'sini Editle</string>
@@ -104,11 +104,10 @@
     <string name="conversations">Diyaloglar</string>
     <string name="notes">Notlar</string>
     <string name="replies">Yanıtlar</string>
-    <string name="follows">Takipler</string>
-    <string name="reports">Raporlar</string>
+    <string name="follows">"Takipler"</string>
+    <string name="reports">"Raporlar"</string>
     <string name="more_options">Daha Fazla Seçenek</string>
-    <string name="relays">Relaylar</string>
-    <string name="website">Website</string>
+    <string name="relays">"Relaylar"</string>
     <string name="lightning_address">Lİghtning Adresi</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Yedekleme için Nsec ID\'yi (sizin şifreniz) panoya kopyalar</string>
     <string name="copy_private_key_to_the_clipboard">Gizli Anahtarı Panoya Kopyala</string>
@@ -120,14 +119,14 @@
     <string name="unblock">Engelleme</string>
     <string name="copy_user_id">Kullanıcı ID\'sini Kopyala</string>
     <string name="unblock_user">Kullanıcıyı Engelleme</string>
-    <string name="npub_hex_username">npub, hex, kullanıcı adı</string>
+    <string name="npub_hex_username">"npub, hex, kullanıcı adı"</string>
     <string name="clear">Temizle</string>
     <string name="app_logo">Uygulama Logosu</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex gizli anahtarı</string>
     <string name="show_password">Şifreyi Göster</string>
     <string name="hide_password">Şifreyi Gizle</string>
     <string name="invalid_key">Geçersiz Anahtar</string>
-    <string name="i_accept_the">Kabul ediyorum</string>
+    <string name="i_accept_the">"Kabul ediyorum"</string>
     <string name="terms_of_use">kullanım şartlarını</string>
     <string name="acceptance_of_terms_is_required">Kullanım şartlarını kabul etmeniz gerekiyor</string>
     <string name="key_is_required">Anahtar gerekiyor</string>
@@ -147,7 +146,7 @@
     <string name="leave">Ayrıl</string>
     <string name="unfollow">Takip Etme</string>
     <string name="channel_created">Kanal oluşturuldu</string>
-    <string name="channel_information_changed_to">Kanal Bilgisi şuna değiştirildi</string>
+    <string name="channel_information_changed_to">"Kanal Bilgisi şuna değiştirildi"</string>
     <string name="public_chat">Herkese Açık Chat</string>
     <string name="posts_received">alınan gönderiler</string>
     <string name="remove">Kaldır</string>
@@ -159,9 +158,6 @@
     <string name="translations_never_translate_from_lang">Asla çevirme %1$s</string>
     <string name="never">asla</string>
     <string name="now">şimdi</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Çıplaklık</string>
     <string name="profanity_hateful_speech">Küfür / Nefret dolu konuşma</string>
     <string name="report_hateful_speech">Nefret dolu konuşmayı raporla</string>

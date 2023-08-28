@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">對準 QR</string>
     <string name="show_qr">顯示 QR</string>
@@ -31,7 +32,6 @@
     <string name="login_with_a_private_key_to_like_posts">使用私鑰登錄以便點贊貼文</string>
     <string name="no_zap_amount_setup_long_press_to_change">沒有設置Zap金額。長按以更改</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">使用私鑰登錄以便發送Zaps</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">瀏覽次數</string>
     <string name="boost">提升</string>
     <string name="boosted">已提升</string>
@@ -105,10 +105,10 @@
     <string name="conversations">會話</string>
     <string name="notes">動態</string>
     <string name="replies">回覆</string>
-    <string name="follows">關注</string>
-    <string name="reports">舉報</string>
+    <string name="follows">"關注"</string>
+    <string name="reports">"舉報"</string>
     <string name="more_options">更多選項</string>
-    <string name="relays">中繼</string>
+    <string name="relays">"中繼"</string>
     <string name="website">網站</string>
     <string name="lightning_address">閃電地址</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">複製 NSec （私人密鑰）到剪貼板以備備份</string>
@@ -121,21 +121,21 @@
     <string name="unblock">不隱藏</string>
     <string name="copy_user_id">複製用户ID</string>
     <string name="unblock_user">隱藏該用户</string>
-    <string name="npub_hex_username">npub，hex，用户名 </string>
+    <string name="npub_hex_username">"npub，hex，用户名 "</string>
     <string name="clear">清除</string>
     <string name="app_logo">應用標誌</string>
     <string name="nsec_npub_hex_private_key">nsec/ npub/ hex 私鑰</string>
     <string name="show_password">顯示密碼</string>
     <string name="hide_password">隱藏密碼</string>
     <string name="invalid_key">無效密鑰</string>
-    <string name="i_accept_the">我接受</string>
+    <string name="i_accept_the">"我接受"</string>
     <string name="terms_of_use">使用條款</string>
     <string name="acceptance_of_terms_is_required">需要接受條款</string>
     <string name="key_is_required">需要密鑰</string>
     <string name="login">登錄</string>
     <string name="generate_a_new_key">生成新密鑰</string>
     <string name="loading_feed">正在加載</string>
-    <string name="error_loading_replies">加載回覆出錯：</string>
+    <string name="error_loading_replies">"加載回覆出錯："</string>
     <string name="try_again">重試</string>
     <string name="feed_is_empty">信息流為空。</string>
     <string name="refresh">刷新</string>
@@ -148,7 +148,7 @@
     <string name="leave">離開</string>
     <string name="unfollow">取關</string>
     <string name="channel_created">頻道已創建</string>
-    <string name="channel_information_changed_to">頻道信息已更改為</string>
+    <string name="channel_information_changed_to">"頻道信息已更改為"</string>
     <string name="public_chat">公共聊天</string>
     <string name="posts_received">收到文章</string>
     <string name="remove">移除</string>
@@ -171,8 +171,7 @@
     <string name="mark_all_known_as_read">將所有已知內容標記為已讀</string>
     <string name="mark_all_new_as_read">將所有新內容標記為已讀</string>
     <string name="mark_all_as_read">將所有內容標記為已讀</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## 備份與安全提示
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## 備份與安全提示
         \n\n您的帳户由一個私人密鑰保護。 密鑰是以**nsec1**開頭的長隨機字符串。任何擁有您的私人密鑰的人都可以使用您的身份發佈內容。
         \n\n- **不要**將您的私人密鑰添加到您不信任的任何網站或軟件，亦不要在網上公開。
         \n- Amethyst 開發人員**永遠不會**要求您提供私人密鑰。
