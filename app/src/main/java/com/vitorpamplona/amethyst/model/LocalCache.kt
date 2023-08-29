@@ -1378,7 +1378,7 @@ object LocalCache {
                 (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull { getUserIfExists(it)?.removeZap(note) }
             }
             if (note.event is ReportEvent) {
-                (note.event as ReportEvent).reportedAuthor().mapNotNull { getUserIfExists(it.key)?.removeZap(note) }
+                (note.event as ReportEvent).reportedAuthor().mapNotNull { getUserIfExists(it.key)?.removeReport(note) }
             }
             notes.remove(note.idHex)
         }
