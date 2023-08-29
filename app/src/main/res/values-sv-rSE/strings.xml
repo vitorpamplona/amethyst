@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="point_to_the_qr_code">Peka på QR-koden</string>
     <string name="show_qr">Visa QR</string>
     <string name="profile_image">Profilbild</string>
     <string name="scan_qr">Scanna QR</string>
@@ -11,6 +12,7 @@
     <string name="could_not_decrypt_the_message">Kunde inte dekryptera meddelandet</string>
     <string name="group_picture">Grupp bild</string>
     <string name="explicit_content">Explicit Innehåll</string>
+    <string name="spam">Spam</string>
     <string name="impersonation">Imitation</string>
     <string name="illegal_behavior">Olagligt beteende</string>
     <string name="unknown">Okänd</string>
@@ -34,7 +36,10 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Logga in med en privat nyckel för att kunna skicka Zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Logga in med en privat nyckel för att kunna följa</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Logga in med en privat nyckel för att kunna sluta följa</string>
+    <string name="zaps">Zaps</string>
     <string name="view_count">Antal visningar</string>
+    <string name="boost">Boosta</string>
+    <string name="boosted">boostad</string>
     <string name="quote">Citera</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
     <string name="add">Lägg till</string>
@@ -73,6 +78,8 @@
     <string name="failed_to_upload_the_image">Det gick inte att ladda upp bilden</string>
     <string name="relay_address">Relä Adress</string>
     <string name="posts">Inlägg</string>
+    <string name="bytes">Bytes</string>
+    <string name="errors">Fel</string>
     <string name="home_feed">Hem Flöde</string>
     <string name="private_message_feed">Privata Meddelande Flöde</string>
     <string name="public_chat_feed">Publik Chat Flöde</string>
@@ -84,6 +91,8 @@
     <string name="username">Användarnamn</string>
     <string name="my_username">Mitt användarnamn</string>
     <string name="about_me">Om mig</string>
+    <string name="avatar_url">Avatar URL</string>
+    <string name="banner_url">Banner URL</string>
     <string name="website_url">Websida URL</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
@@ -123,6 +132,7 @@
     <string name="unblock_user">Sluta blockera Användare</string>
     <string name="npub_hex_username">"npub, hex, användarnamn "</string>
     <string name="clear">Rensa</string>
+    <string name="app_logo">App Logo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privat nyckel</string>
     <string name="show_password">Visa lösenord</string>
     <string name="hide_password">Göm lösenord</string>
@@ -151,6 +161,7 @@
     <string name="public_chat">Publik Chat</string>
     <string name="posts_received">mottagna inlägg</string>
     <string name="remove">Ta bort</string>
+    <string name="translations_auto">Automatiskt</string>
     <string name="translations_translated_from">översatt från</string>
     <string name="translations_to">till</string>
     <string name="translations_show_in_lang_first">Visa i %1$s first</string>
@@ -159,6 +170,9 @@
     <string name="nip_05">Nostr-adress</string>
     <string name="never">aldrig</string>
     <string name="now">nu</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
     <string name="nudity">Naket</string>
     <string name="profanity_hateful_speech">Svordomar / Hatiskt tal</string>
     <string name="report_hateful_speech">Anmäl hattal</string>
@@ -176,6 +190,7 @@
     <string name="secret_key_copied_to_clipboard">Hemlig nyckel (nsec) kopierad till urklipp</string>
     <string name="copy_my_secret_key">Kopiera min hemliga nyckel</string>
     <string name="biometric_authentication_failed">Autentisering misslyckades</string>
+    <string name="biometric_error">Fel</string>
     <string name="badge_created_by">"Skapad av %1$s"</string>
     <string name="badge_award_image_for">"Tilldelad Badge för %1$s"</string>
     <string name="new_badge_award_notif">Du har blivit tilldelad en ny Badge </string>
@@ -192,6 +207,7 @@
     <string name="account_switch_active_account">Aktivt konto</string>
     <string name="account_switch_has_private_key">Har privat nyckel</string>
     <string name="account_switch_pubkey_only">Läs bara, ingen privat nyckel</string>
+    <string name="back">Tillbaka</string>
     <string name="quick_action_select">Välj</string>
     <string name="quick_action_share_browser_link">Dela webbläsarlänk</string>
     <string name="quick_action_share">Dela</string>
@@ -234,6 +250,7 @@
     <string name="remove_from_public_bookmarks">Ta bort från Publika Bokmärken</string>
     <string name="wallet_connect_service">Wallet Connect Tjänst</string>
     <string name="wallet_connect_service_explainer">Tillåter en Nostr Secret att betala zaps utan att lämna appen. Håll hemligheten säker och använd ett privat relä om möjligt</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect relä</string>
     <string name="wallet_connect_service_secret">Wallet Connect hemlighet</string>
     <string name="wallet_connect_service_show_secret">Visa secret key</string>
@@ -249,6 +266,7 @@
     <string name="poll_zap_value_min">Minsta Zap</string>
     <string name="poll_zap_value_max">Maximal Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Avsluta efter</string>
     <string name="poll_closing_time_days">dagar</string>
     <string name="poll_is_closed">Omröstningen är stängd för nya röster</string>
@@ -311,6 +329,7 @@
     <string name="no">Nej</string>
     <string name="follow_list_selection">Följ lista</string>
     <string name="follow_list_kind3follows">Alla följare</string>
+    <string name="follow_list_global">Global</string>
     <string name="connect_through_your_orbot_setup_markdown">            ## Anslut genom Tor med Orbot
             \n\n1. Installera [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
             \n2. Starta Orbot
@@ -318,6 +337,7 @@
             \n4. Ändra vid behov porten i Orbot
             \n5. Konfigurera Socks-porten på den här skärmen
             \n6. Tryck på knappen Aktivera för att använda Orbot som proxy</string>
+    <string name="orbot_socks_port">Orbot Socks Port</string>
     <string name="invalid_port_number">Ogiltigt portnummer</string>
     <string name="use_orbot">Använd Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Koppla ifrån Tor/Orbot</string>
@@ -325,6 +345,7 @@
     <string name="app_notification_dms_channel_description">Meddelar dig när ett privat meddelande kommer</string>
     <string name="app_notification_zaps_channel_name">Zaps Mottaget</string>
     <string name="app_notification_zaps_channel_description">Meddela dig när någon zappar dig</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Från %1$s</string>
     <string name="app_notification_zaps_channel_message_for">till %1$s</string>
     <string name="reply_notify">Meddela: </string>
@@ -344,6 +365,7 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Varna när inlägg har rapporter från dina följare</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
+    <string name="zapraiser">Zap insamling</string>
     <string name="zapraiser_explainer">Lägger till en målsumma av sats för detta inlägg. Stödjande klienter kan visa detta som en framstegsindikator för att stimulera donationer</string>
     <string name="zapraiser_target_amount_in_sats">Målsumma i sats</string>
     <string name="sats_to_complete">Zapraiser på %1$s. %2$s sats kvar till målet</string>
@@ -351,6 +373,7 @@
     <string name="write_to_relay">Skriv till Relay</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ett fel inträffade vid försök att hämta information från Relay %1$s</string>
     <string name="owner">Ägare</string>
+    <string name="version">Version</string>
     <string name="software">Programvara</string>
     <string name="contact">Kontakt</string>
     <string name="supports">Stödda NIPs</string>
@@ -371,9 +394,12 @@
     <string name="minimum_pow">Minsta PoW</string>
     <string name="auth">Autentisering</string>
     <string name="payment">Betalning</string>
+    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Inlösen</string>
     <string name="no_lightning_address_set">Ingen Lightning-adress angiven</string>
     <string name="copied_token_to_clipboard">Kopierade token till urklipp</string>
+    <string name="live_stream_live_tag">LIVE</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">SLUTADE</string>
     <string name="live_stream_planned_tag">PLANERAD</string>
     <string name="live_stream_is_offline">Direktsändning är offline</string>
@@ -381,6 +407,7 @@
     <string name="are_you_sure_you_want_to_log_out">Att logga ut raderar all din lokala information. Se till att ha dina privata nycklar säkerhetskopierade för att undvika att förlora ditt konto. Vill du fortsätta?</string>
     <string name="followed_tags">Följda taggar</string>
     <string name="relay_setup">Reläer</string>
+    <string name="discover_live">Live</string>
     <string name="discover_community">Gemenskap</string>
     <string name="discover_chat">Chattar</string>
     <string name="community_approved_posts">Godkända Inlägg</string>
@@ -392,6 +419,7 @@
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
     <string name="connectivity_type_never">Aldrig</string>
+    <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
     <string name="application_preferences">Applikationsinställningar</string>
@@ -434,4 +462,14 @@
     <string name="automatically_play_videos_description">Spela upp videor och GIFs automatiskt</string>
     <string name="automatically_show_url_preview_description">Visa förhandsgranskning av URL</string>
     <string name="load_image_description">När bilder ska laddas</string>
+    <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
+    <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
+    <string name="created_at">Skapad den</string>
+    <string name="rules">Regler</string>
+    <string name="status_update">Uppdatera din status</string>
+    <string name="lightning_wallets_not_found">Fel vid tolkning av felmeddelande</string>
+    <string name="poll_zap_value_min_max_explainer">Röster viktas av zap-beloppet. Du kan ställa in en minsta mängd för att undvika spammare och en maximal mängd för att undvika att en stor zapper tar över omröstningen. Använd samma belopp i båda fälten för att se till att varje röst värderas till samma belopp. Lämna tomt för att acceptera valfritt belopp.</string>
+    <string name="error_dialog_zap_error">Kunde inte skicka zap</string>
+    <string name="error_dialog_talk_to_user">Meddela användaren</string>
+    <string name="error_dialog_button_ok">Ok</string>
 </resources>
