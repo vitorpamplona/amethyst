@@ -1248,11 +1248,7 @@ object LocalCache {
             }
 
             it.replyTo?.forEach { masterNote ->
-                masterNote.removeReply(it)
-                masterNote.removeBoost(it)
-                masterNote.removeReaction(it)
-                masterNote.removeZap(it)
-                masterNote.clearEOSE() // allows reloading of these events
+                removeLinkFromParentNote(it)
             }
 
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
@@ -1274,6 +1270,7 @@ object LocalCache {
                     it.value.event is ReactionEvent || it.value.event is LnZapEvent || it.value.event is LnZapRequestEvent ||
                     it.value.event is ReportEvent || it.value.event is GenericRepostEvent
                 ) &&
+                it.value.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
                 it.value.liveSet?.isInUse() != true && // don't delete if observing.
                 it.value.author?.pubkeyHex !in accounts && // don't delete if it is the logged in account
                 it.value.event?.isTaggedUsers(accounts) != true // don't delete if it's a notification to the logged in user
@@ -1284,22 +1281,33 @@ object LocalCache {
         toBeRemoved.forEach {
             notes.remove(it.idHex)
 
-            it.replyTo?.forEach { masterNote ->
-                masterNote.removeReply(it)
-                masterNote.removeBoost(it)
-                masterNote.removeReaction(it)
-                masterNote.removeZap(it)
-                masterNote.removeReport(it)
-                masterNote.clearEOSE() // allows reloading of these events
-            }
+            removeLinkFromParentNote(it)
+            removeAuthorLinkTo(it)
 
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
         removeChildrenOf(childrenToBeRemoved)
 
+        toBeRemoved.forEach {
+            it.replyTo?.forEach { masterNote ->
+                masterNote.clearEOSE() // allows reloading of these events
+            }
+        }
+
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} thread replies removed.")
+        }
+    }
+
+    fun removeLinkFromParentNote(it: Note) {
+        it.replyTo?.forEach { masterNote ->
+            masterNote.removeReply(it)
+            masterNote.removeBoost(it)
+            masterNote.removeReaction(it)
+            masterNote.removeZap(it)
+            masterNote.removeReport(it)
+            masterNote.clearEOSE() // allows reloading of these events if needed
         }
     }
 
@@ -1315,14 +1323,8 @@ object LocalCache {
         toBeRemoved.forEach {
             notes.remove(it.idHex)
 
-            it.replyTo?.forEach { masterNote ->
-                masterNote.removeReply(it)
-                masterNote.removeBoost(it)
-                masterNote.removeReaction(it)
-                masterNote.removeZap(it)
-                masterNote.removeReport(it)
-                masterNote.clearEOSE() // allows reloading of these events
-            }
+            removeLinkFromParentNote(it)
+            removeAuthorLinkTo(it)
 
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
@@ -1352,14 +1354,12 @@ object LocalCache {
         toBeRemoved.forEach {
             // Counts the replies
             it.replyTo?.forEach { masterNote ->
-                masterNote.removeReply(it)
-                masterNote.removeBoost(it)
-                masterNote.removeReaction(it)
-                masterNote.removeZap(it)
-                masterNote.removeReport(it)
+                removeLinkFromParentNote(it)
             }
 
             notes.remove(it.idHex)
+
+            removeAuthorLinkTo(it)
 
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
@@ -1369,17 +1369,33 @@ object LocalCache {
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
 
+    fun removeAuthorLinkTo(note: Note) {
+        if (note.event is LnZapEvent) {
+            (note.event as LnZapEvent).zappedAuthor().mapNotNull {
+                val author = getUserIfExists(it)
+                author?.removeZap(note)
+                author?.clearEOSE()
+            }
+        }
+        if (note.event is LnZapRequestEvent) {
+            (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull {
+                val author = getUserIfExists(it)
+                author?.removeZap(note)
+                author?.clearEOSE()
+            }
+        }
+        if (note.event is ReportEvent) {
+            (note.event as ReportEvent).reportedAuthor().mapNotNull {
+                val author = getUserIfExists(it.key)
+                author?.removeReport(note)
+                author?.clearEOSE()
+            }
+        }
+    }
+
     fun removeChildrenOf(nextToBeRemoved: List<Note>) {
         nextToBeRemoved.forEach { note ->
-            if (note.event is LnZapEvent) {
-                (note.event as LnZapEvent).zappedAuthor().mapNotNull { getUserIfExists(it)?.removeZap(note) }
-            }
-            if (note.event is LnZapRequestEvent) {
-                (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull { getUserIfExists(it)?.removeZap(note) }
-            }
-            if (note.event is ReportEvent) {
-                (note.event as ReportEvent).reportedAuthor().mapNotNull { getUserIfExists(it.key)?.removeReport(note) }
-            }
+            removeAuthorLinkTo(note)
             notes.remove(note.idHex)
         }
     }

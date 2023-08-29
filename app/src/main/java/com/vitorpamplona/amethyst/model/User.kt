@@ -104,6 +104,10 @@ class User(val pubkeyHex: String) {
         liveSet?.innerBookmarks?.invalidateData()
     }
 
+    fun clearEOSE() {
+        latestEOSEs = emptyMap()
+    }
+
     fun updateContactList(event: ContactListEvent) {
         if (event.id == latestContactList?.id) return
 
