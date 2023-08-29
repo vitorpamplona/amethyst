@@ -469,15 +469,12 @@ class UserBundledRefresherLiveData(val user: User) : LiveData<UserState>(UserSta
     }
 
     fun invalidateData() {
-        if (!hasObservers()) return
         checkNotInMainThread()
 
         bundler.invalidate() {
             checkNotInMainThread()
 
-            if (hasActiveObservers()) {
-                postValue(UserState(user))
-            }
+            postValue(UserState(user))
         }
     }
 
