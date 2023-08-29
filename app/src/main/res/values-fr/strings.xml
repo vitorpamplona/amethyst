@@ -21,7 +21,7 @@
     <string name="copy_user_pubkey">Copier la clé publique de l\'utilisateur</string>
     <string name="copy_note_id">Copier l\'ID de la note</string>
     <string name="broadcast">Diffuser</string>
-    <string name="block_hide_user"><![CDATA[Bloquer et cacher l'utilisateur]]></string>
+    <string name="block_hide_user"><![CDATA[Bloquer et cacher l\'utilisateur]]></string>
     <string name="report_spam_scam">Signaler un Spam / Scam</string>
     <string name="report_impersonation">Signaler une falsification d\'identité</string>
     <string name="report_explicit_content">Signaler un contenu choquant</string>
