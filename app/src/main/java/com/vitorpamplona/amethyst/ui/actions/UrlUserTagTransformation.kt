@@ -59,37 +59,37 @@ fun buildAnnotatedStringWithUrlHighlighting(text: AnnotatedString, color: Color)
                                 )
                             )
                             newWord + restOfWord
+                        } else if (Patterns.WEB_URL.matcher(word).matches()) {
+                            val startIndex = builderBefore.toString().length
+                            val endIndex = startIndex + word.length
+
+                            val startNew = builderAfter.toString().length
+                            val endNew = startNew + word.length
+
+                            substitutions.add(
+                                RangesChanges(
+                                    TextRange(startIndex, endIndex),
+                                    TextRange(startNew, endNew)
+                                )
+                            )
+
+                            builderBefore.append("$word ")
+                            builderAfter.append("$word ")
+                            word
                         } else {
-                            builderBefore.append(word + " ")
-                            builderAfter.append(word + " ")
+                            builderBefore.append("$word ")
+                            builderAfter.append("$word ")
                             word
                         }
                     } catch (e: Exception) {
                         // if it can't parse the key, don't try to change.
-                        builderBefore.append(word + " ")
-                        builderAfter.append(word + " ")
+                        builderBefore.append("$word ")
+                        builderAfter.append("$word ")
                         word
                     }
                 }.joinToString(" ")
             }.joinToString("\n")
         )
-
-        val newText = toAnnotatedString()
-
-        newText.split("\\s+".toRegex()).filter { word ->
-            Patterns.WEB_URL.matcher(word).matches()
-        }.forEach {
-            val startIndex = text.indexOf(it)
-            val endIndex = startIndex + it.length
-            addStyle(
-                style = SpanStyle(
-                    color = color,
-                    textDecoration = TextDecoration.None
-                ),
-                start = startIndex,
-                end = endIndex
-            )
-        }
 
         substitutions.forEach {
             addStyle(
