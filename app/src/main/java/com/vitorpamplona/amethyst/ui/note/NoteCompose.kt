@@ -90,12 +90,12 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.SignerType
-import com.vitorpamplona.amethyst.ui.actions.openAmber
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -1608,7 +1608,7 @@ private fun RenderPrivateMessage(
         if (accountViewModel.loggedInWithAmber()) {
             val event = note.event
             SideEffect {
-                openAmber(
+                AmberUtils.openAmber(
                     event?.content() ?: "",
                     SignerType.NIP04_DECRYPT,
                     activityLauncher,

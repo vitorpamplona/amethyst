@@ -1,11 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.app.Activity.RESULT_OK
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,6 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -54,28 +52,6 @@ enum class SignerType {
     NIP44_ENCRYPT,
     NIP44_DECRYPT,
     GET_PUBLIC_KEY
-}
-
-fun openAmber(
-    data: String,
-    type: SignerType,
-    intentResult: ActivityResultLauncher<Intent>,
-    pubKey: HexKey
-) {
-    ServiceManager.shouldPauseService = false
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
-    val signerType = when (type) {
-        SignerType.SIGN_EVENT -> "sign_event"
-        SignerType.NIP04_ENCRYPT -> "nip04_encrypt"
-        SignerType.NIP04_DECRYPT -> "nip04_decrypt"
-        SignerType.NIP44_ENCRYPT -> "nip44_encrypt"
-        SignerType.NIP44_DECRYPT -> "nip44_decrypt"
-        SignerType.GET_PUBLIC_KEY -> "get_public_key"
-    }
-    intent.putExtra("type", signerType)
-    intent.putExtra("pubKey", pubKey)
-    intent.`package` = "com.greenart7c3.nostrsigner.debug"
-    intentResult.launch(intent)
 }
 
 @Composable
@@ -114,7 +90,7 @@ fun SignerDialog(
     )
 
     LaunchedEffect(Unit) {
-        openAmber(data, type, intentResult, pubKey)
+        AmberUtils.openAmber(data, type, intentResult, pubKey)
     }
 
     Dialog(
@@ -205,7 +181,7 @@ fun SignerDialog(
                 )
                 Button(
                     shape = ButtonBorder,
-                    onClick = { openAmber(data, type, intentResult, pubKey) }
+                    onClick = { AmberUtils.openAmber(data, type, intentResult, pubKey) }
                 ) {
                     Text("Open Amber")
                 }

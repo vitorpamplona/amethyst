@@ -4,10 +4,10 @@ import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.IntentUtils
 import com.vitorpamplona.amethyst.ui.actions.SignerType
-import com.vitorpamplona.amethyst.ui.actions.openAmber
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -74,7 +74,7 @@ class RegisterAccounts(
             Log.d("fcm register", account.npub)
             val events = signEventsToProveControlOfAccounts(listOf(account), notificationToken, account.loggedInWithAmber)
             if (events.isNotEmpty()) {
-                openAmber(
+                AmberUtils.openAmber(
                     events.first().toJson(),
                     SignerType.SIGN_EVENT,
                     IntentUtils.activityResultLauncher,

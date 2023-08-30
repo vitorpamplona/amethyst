@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
@@ -10,7 +9,6 @@ import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.amethyst.ui.actions.SignerType
-import com.vitorpamplona.amethyst.ui.actions.openAmber
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -192,13 +190,12 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         super.auth(relay, challenge)
 
         if (this::account.isInitialized) {
-            val context = Amethyst.instance
             val loggedInWithAmber = account.loginWithAmber
             val event = account.createAuthEvent(relay, challenge, loggedInWithAmber)
 
             if (loggedInWithAmber && !account.isWriteable()) {
                 if (event != null) {
-                    openAmber(
+                    AmberUtils.openAmber(
                         event.toJson(),
                         SignerType.SIGN_EVENT,
                         IntentUtils.authActivityResultLauncher,
