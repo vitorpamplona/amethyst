@@ -481,7 +481,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithAmber()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decryptBookmark(
+                            AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey()
                             )
@@ -503,7 +503,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithAmber()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decryptBookmark(
+                            AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey()
                             )
@@ -526,7 +526,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithAmber()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decryptBookmark(
+                            AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey()
                             )
@@ -551,7 +551,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithAmber()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decryptBookmark(
+                            AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey()
                             )

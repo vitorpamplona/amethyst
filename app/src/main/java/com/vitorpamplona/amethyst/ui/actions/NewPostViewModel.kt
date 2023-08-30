@@ -285,7 +285,14 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
+    fun upload(
+        galleryUri: Uri,
+        description: String,
+        sensitiveContent: Boolean,
+        server: ServersAvailable,
+        context: Context,
+        relayList: List<Relay>? = null
+    ) {
         isUploadingImage = true
         contentToAddUrl = null
 

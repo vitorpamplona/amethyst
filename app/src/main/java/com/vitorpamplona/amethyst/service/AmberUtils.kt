@@ -6,6 +6,7 @@ import androidx.activity.result.ActivityResultLauncher
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.EventInterface
 
 object AmberUtils {
     var content: String = ""
@@ -33,7 +34,20 @@ object AmberUtils {
         intentResult.launch(intent)
     }
 
-    fun decryptBookmark(encryptedContent: String, pubKey: HexKey) {
+    fun openAmber(event: EventInterface) {
+        isActivityRunning = true
+        openAmber(
+            event.toJson(),
+            SignerType.SIGN_EVENT,
+            IntentUtils.decryptActivityResultLauncher,
+            ""
+        )
+        while (isActivityRunning) {
+            Thread.sleep(250)
+        }
+    }
+
+    fun decrypt(encryptedContent: String, pubKey: HexKey) {
         if (content.isBlank()) {
             isActivityRunning = true
             openAmber(
@@ -48,7 +62,7 @@ object AmberUtils {
         }
     }
 
-    fun encryptBookmark(decryptedContent: String, pubKey: HexKey) {
+    fun encrypt(decryptedContent: String, pubKey: HexKey) {
         if (content.isBlank()) {
             isActivityRunning = true
             openAmber(

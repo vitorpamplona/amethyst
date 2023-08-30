@@ -43,6 +43,21 @@ class FileStorageEvent(
         fun create(
             mimeType: String,
             data: ByteArray,
+            pubKey: HexKey,
+            createdAt: Long = TimeUtils.now()
+        ): FileStorageEvent {
+            val tags = listOfNotNull(
+                listOf(TYPE, mimeType)
+            )
+
+            val content = encode(data)
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return FileStorageEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
+        fun create(
+            mimeType: String,
+            data: ByteArray,
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now()
         ): FileStorageEvent {

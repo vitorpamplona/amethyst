@@ -112,7 +112,7 @@ class Account(
                         val content = blockList?.content ?: ""
                         if (content.isEmpty()) return@launch
                         AmberUtils.content = ""
-                        AmberUtils.decryptBookmark(
+                        AmberUtils.decrypt(
                             content,
                             keyPair.pubKey.toHexKey()
                         )
@@ -823,31 +823,75 @@ class Account(
     }
 
     fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
 
-        val data = FileStorageEvent.create(
-            mimeType = headerInfo.mimeType ?: "",
-            data = byteArray,
-            privateKey = keyPair.privKey!!
-        )
+        if (loginWithAmber) {
+            val unsignedData = FileStorageEvent.create(
+                mimeType = headerInfo.mimeType ?: "",
+                data = byteArray,
+                pubKey = keyPair.pubKey.toHexKey()
+            )
 
-        val signedEvent = FileStorageHeaderEvent.create(
-            data,
-            mimeType = headerInfo.mimeType,
-            hash = headerInfo.hash,
-            size = headerInfo.size.toString(),
-            dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
-            description = headerInfo.description,
-            sensitiveContent = headerInfo.sensitiveContent,
-            privateKey = keyPair.privKey!!
-        )
+            AmberUtils.openAmber(unsignedData)
+            if (AmberUtils.content.isBlank()) return null
+            val data = FileStorageEvent(
+                unsignedData.id,
+                unsignedData.pubKey,
+                unsignedData.createdAt,
+                unsignedData.tags,
+                unsignedData.content,
+                AmberUtils.content
+            )
 
-        return Pair(data, signedEvent)
+            val unsignedEvent = FileStorageHeaderEvent.create(
+                data,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toString(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash,
+                description = headerInfo.description,
+                sensitiveContent = headerInfo.sensitiveContent,
+                pubKey = keyPair.pubKey.toHexKey()
+            )
+
+            AmberUtils.openAmber(unsignedEvent)
+            if (AmberUtils.content.isBlank()) return null
+            val signedEvent = FileStorageHeaderEvent(
+                unsignedEvent.id,
+                unsignedEvent.pubKey,
+                unsignedEvent.createdAt,
+                unsignedEvent.tags,
+                unsignedEvent.content,
+                AmberUtils.content
+            )
+
+            return Pair(data, signedEvent)
+        } else {
+            val data = FileStorageEvent.create(
+                mimeType = headerInfo.mimeType ?: "",
+                data = byteArray,
+                privateKey = keyPair.privKey!!
+            )
+
+            val signedEvent = FileStorageHeaderEvent.create(
+                data,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toString(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash,
+                description = headerInfo.description,
+                sensitiveContent = headerInfo.sensitiveContent,
+                privateKey = keyPair.privKey!!
+            )
+
+            return Pair(data, signedEvent)
+        }
     }
 
     fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
 
         Client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
@@ -1312,7 +1356,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
             return null
@@ -1357,7 +1401,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
             return null
@@ -1432,7 +1476,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
             return null
@@ -1597,7 +1641,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encryptBookmark(msg, keyPair.pubKey.toHexKey())
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
             return null
