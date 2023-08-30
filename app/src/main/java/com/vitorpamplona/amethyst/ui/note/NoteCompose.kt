@@ -1,7 +1,11 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.app.Activity
 import android.graphics.Bitmap
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -41,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -77,6 +82,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
 import com.fonfon.kgeohash.toGeoHash
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
@@ -88,6 +94,8 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.SignerType
+import com.vitorpamplona.amethyst.ui.actions.openAmber
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -1576,9 +1584,38 @@ private fun RenderPrivateMessage(
     val noteEvent = note.event as? PrivateDmEvent ?: return
 
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
+    val scope = rememberCoroutineScope()
 
     if (withMe) {
-        val eventContent = remember { accountViewModel.decrypt(note) }
+        var eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
+        val activityLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = {
+                if (it.resultCode != Activity.RESULT_OK) {
+                    scope.launch(Dispatchers.Main) {
+                        Toast.makeText(
+                            Amethyst.instance,
+                            "Sign request rejected",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@rememberLauncherForActivityResult
+                }
+
+                eventContent = it.data?.getStringExtra("signature") ?: ""
+            }
+        )
+        if (accountViewModel.loggedInWithAmber()) {
+            val event = note.event
+            SideEffect {
+                openAmber(
+                    event?.content() ?: "",
+                    SignerType.NIP04_DECRYPT,
+                    activityLauncher,
+                    (event as PrivateDmEvent).talkingWith(accountViewModel.userProfile().pubkeyHex)
+                )
+            }
+        }
 
         val hashtags = remember(note.event?.id()) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
@@ -1589,7 +1626,7 @@ private fun RenderPrivateMessage(
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
                 Text(
-                    text = eventContent,
+                    text = eventContent!!,
                     color = MaterialTheme.colors.placeholderText,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -1600,7 +1637,7 @@ private fun RenderPrivateMessage(
                     accountViewModel = accountViewModel
                 ) {
                     TranslatableRichTextViewer(
-                        content = eventContent,
+                        content = eventContent!!,
                         canPreview = canPreview && !makeItShort,
                         modifier = modifier,
                         tags = tags,
@@ -1610,7 +1647,7 @@ private fun RenderPrivateMessage(
                     )
                 }
 
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                DisplayUncitedHashtags(hashtags, eventContent!!, nav)
             }
         }
     } else {
