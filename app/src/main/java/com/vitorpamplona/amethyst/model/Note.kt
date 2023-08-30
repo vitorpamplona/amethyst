@@ -737,16 +737,12 @@ class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteSta
     }
 
     fun invalidateData() {
-        if (!hasObservers()) return
-
         checkNotInMainThread()
 
         bundler.invalidate() {
             checkNotInMainThread()
 
-            if (hasActiveObservers()) {
-                postValue(NoteState(note))
-            }
+            postValue(NoteState(note))
         }
     }
 

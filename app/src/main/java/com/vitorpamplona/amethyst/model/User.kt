@@ -104,6 +104,10 @@ class User(val pubkeyHex: String) {
         liveSet?.innerBookmarks?.invalidateData()
     }
 
+    fun clearEOSE() {
+        latestEOSEs = emptyMap()
+    }
+
     fun updateContactList(event: ContactListEvent) {
         if (event.id == latestContactList?.id) return
 
@@ -465,15 +469,12 @@ class UserBundledRefresherLiveData(val user: User) : LiveData<UserState>(UserSta
     }
 
     fun invalidateData() {
-        if (!hasObservers()) return
         checkNotInMainThread()
 
         bundler.invalidate() {
             checkNotInMainThread()
 
-            if (hasActiveObservers()) {
-                postValue(UserState(user))
-            }
+            postValue(UserState(user))
         }
     }
 

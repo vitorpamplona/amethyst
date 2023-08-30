@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">Aponte para o código QR</string>
     <string name="show_qr">Mostrar QR</string>
     <string name="profile_image">Imagem de perfil</string>
@@ -12,7 +12,6 @@
     <string name="could_not_decrypt_the_message">Não foi possível descriptografar a mensagem</string>
     <string name="group_picture">Imagem do grupo</string>
     <string name="explicit_content">Conteúdo explícito</string>
-    <string name="spam">Spam</string>
     <string name="impersonation">Representação</string>
     <string name="illegal_behavior">Comportamento ilegal</string>
     <string name="unknown">Desconhecido</string>
@@ -24,7 +23,7 @@
     <string name="broadcast">Transmitir</string>
     <string name="request_deletion">Pedir para excluir</string>
     <string name="block_report">Bloquear / Denunciar</string>
-    <string name="block_hide_user">Bloquear e ocultar usuário</string>
+    <string name="block_hide_user"><![CDATA[Bloquear e ocultar usuário]]></string>
     <string name="report_spam_scam">Denunciar spam/fraude</string>
     <string name="report_impersonation">Denunciar representação</string>
     <string name="report_explicit_content">Denunciar conteúdo explícito</string>
@@ -36,10 +35,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Faça login com uma chave privada para poder enviar Zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Faça login com uma chave privada para poder seguir</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Faça login com uma chave privada para poder remover seguidores</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Contagem de visualizações</string>
     <string name="boost">Impulsionar</string>
-    <string name="boosted">boosted</string>
     <string name="quote">Citar</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
     <string name="add">Adicionar</string>
@@ -60,8 +57,8 @@
     <string name="thank_you_so_much">Obrigado!</string>
     <string name="amount_in_sats">Quantidade em Sats</string>
     <string name="send_sats">Enviar Sats</string>
-    <string name="error_parsing_preview_for">Erro ao analisar a visualização para %1$s: %2$s</string>
-    <string name="preview_card_image_for">Visualize a imagem do cartão para %1$s</string>
+    <string name="error_parsing_preview_for">"Erro ao analisar a visualização para %1$s: %2$s"</string>
+    <string name="preview_card_image_for">"Visualize a imagem do cartão para %1$s"</string>
     <string name="new_channel">Novo Canal</string>
     <string name="channel_name">Nome do Canal</string>
     <string name="my_awesome_group">Meu grupo</string>
@@ -75,8 +72,6 @@
     <string name="cancel">Cancelar</string>
     <string name="failed_to_upload_the_image">Falha ao enviar imagem</string>
     <string name="relay_address">Endereço do Relay</string>
-    <string name="posts">Posts</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">Erros</string>
     <string name="home_feed">Feed principal</string>
     <string name="private_message_feed">Feed de mensagens privadas</string>
@@ -111,10 +106,9 @@
     <string name="conversations">Conversas</string>
     <string name="notes">Notas</string>
     <string name="replies">Respostas</string>
-    <string name="follows">Seguindo</string>
-    <string name="reports">Denúncias</string>
+    <string name="follows">"Seguindo"</string>
+    <string name="reports">"Denúncias"</string>
     <string name="more_options">Mais opções</string>
-    <string name="relays">" Relays"</string>
     <string name="website">Site</string>
     <string name="lightning_address">Endereço Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copiar a chave Nsec (sua senha) para backup</string>
@@ -142,7 +136,7 @@
     <string name="login">Entrar</string>
     <string name="generate_a_new_key">Gerar uma nova chave</string>
     <string name="loading_feed">Carregando feed</string>
-    <string name="error_loading_replies">Erro ao carregar respostas</string>
+    <string name="error_loading_replies">"Erro ao carregar respostas"</string>
     <string name="try_again">Tente novamente</string>
     <string name="feed_is_empty">Feed está vazio</string>
     <string name="refresh">Atualizar</string>
@@ -155,21 +149,18 @@
     <string name="leave">Sair</string>
     <string name="unfollow">Desseguir</string>
     <string name="channel_created">Canal criado</string>
-    <string name="channel_information_changed_to">Informação do canal mudou para</string>
+    <string name="channel_information_changed_to">"Informação do canal mudou para"</string>
     <string name="public_chat">Chat público</string>
     <string name="posts_received">postagens recebidas</string>
     <string name="remove">Remover</string>
-    <string name="translations_auto">"Automaticamente "</string>
-    <string name="translations_translated_from">"traduzido de "</string>
+    <string name="translations_auto">Automaticamente </string>
+    <string name="translations_translated_from">traduzido de </string>
     <string name="translations_to">para</string>
     <string name="translations_show_in_lang_first">Mostrar em %1$s primeiro</string>
     <string name="translations_always_translate_to_lang">Sempre traduzir para %1$s</string>
     <string name="translations_never_translate_from_lang">Nunca traduzir de %1$s</string>
     <string name="never">nunca</string>
     <string name="now">agora</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Nudez</string>
     <string name="profanity_hateful_speech">Palavrões / Discurso de ódio</string>
     <string name="report_hateful_speech">Denunciar discurso de ódio</string>
@@ -178,9 +169,8 @@
     <string name="mark_all_known_as_read">Marcar todos conhecidos como lidos</string>
     <string name="mark_all_new_as_read">Marcar todas novas solicitações como lidas</string>
     <string name="mark_all_as_read">Marcar todas como lidas</string>
-    <string name="biometric_error">Erro</string>
-    <string name="account_backup_tips_md">
-        ## Backup de chaves e dicas de segurança
+    <string name="backup_keys">Copia de segurança das chaves</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Backup de chaves e dicas de segurança
         \n\nSua conta é protegida por uma chave secreta. A chave é uma string aleatória longa começando com **nsec1**. Qualquer pessoa que tenha acesso à sua chave secreta pode publicar conteúdo usando sua identidade.
         \n\n- **Não** coloque sua chave secreta em qualquer site ou software em que não confie.
         \n- Os desenvolvedores do Amethyst **nunca** pedirão sua chave secreta.
@@ -189,14 +179,16 @@
     <string name="secret_key_copied_to_clipboard">Chave secreta (nsec) copiada</string>
     <string name="copy_my_secret_key">Copiar minha chave secreta</string>
     <string name="biometric_authentication_failed">Autenticação falhou</string>
-    <string name="badge_created_by">Criado por %1$s</string>
-    <string name="badge_award_image_for">Imagem da medalha para %1$s</string>
+    <string name="biometric_error">Erro</string>
+    <string name="badge_created_by">"Criado por %1$s"</string>
+    <string name="badge_award_image_for">"Imagem da medalha para %1$s"</string>
     <string name="new_badge_award_notif">Você recebeu uma nova medalha</string>
     <string name="award_granted_to">Medalha concedida para</string>
     <string name="copied_note_text_to_clipboard">Texto copiado</string>
-    <string name="copied_user_id_to_clipboard">Copiado @npub do autor</string>
-    <string name="copied_note_id_to_clipboard">Copiado ID da nota (@note1)</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copiado @npub do autor</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copiado ID da nota (@note1)</string>
     <string name="select_text_dialog_top">Selecionar texto</string>
+    <string name="private_conversation_notification">"&lt;Não foi possível descriptografar a mensagem privada&gt;\\n\\nVocê foi citado em uma conversa privada/criptografada entre %1$s and %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Adicionar Nova Conta</string>
     <string name="drawer_accounts">Contas</string>
     <string name="account_switch_select_account">Selecionar Conta</string>
@@ -216,8 +208,6 @@
     <string name="quick_action_follow">Seguir</string>
     <string name="quick_action_request_deletion_alert_title">Pedir para excluir</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que sua nota seja excluída dos relays aos quais você está conectado no momento. Não há garantia de que sua nota será excluída permanentemente desses relays ou de outros relays onde possa estar armazenada.</string>
-    <string name="backup_keys">Copia de segurança das chaves</string>
-    <string name="private_conversation_notification">&lt;Não foi possível descriptografar a mensagem privada&gt;\\n\\nVocê foi citado em uma conversa privada/criptografada entre %1$s and %2$s.</string>
     <string name="quick_action_block_dialog_btn">Bloquear</string>
     <string name="quick_action_delete_dialog_btn">Excluir</string>
     <string name="quick_action_block">Bloquear</string>
@@ -249,9 +239,6 @@
     <string name="remove_from_public_bookmarks">Remover dos Itens Salvos Públicos</string>
     <string name="wallet_connect_service">Serviço Wallet Connect</string>
     <string name="wallet_connect_service_explainer">Use sua chave privada para pagar zaps sem sair do app. Qualquer pessoa com acesso à sua chave privada Nostr poderá gastar o saldo da sua carteira. Guarde apenas os fundos que você pode perder e use um retransmissor privado, se possível. O operador de Relay pode ver seus metadados de pagamentos.</string>
-    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
-    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
-    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
     <string name="wallet_connect_service_show_secret">Mostrar chave secreta</string>
     <string name="wallet_connect_service_secret_placeholder">chave privada nsec / hex</string>
     <string name="pledge_amount_in_sats">Valor em Sats</string>
@@ -265,13 +252,12 @@
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Fechar depois</string>
     <string name="poll_closing_time_days">dias</string>
     <string name="poll_is_closed">Enquete está fechada para novos votos</string>
     <string name="poll_zap_amount">Valor do Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">Apenas um voto por usuário é permitido neste tipo de enquete</string>
-    <string name="looking_for_event">Procurando o evento %1$s</string>
+    <string name="looking_for_event">"Procurando o evento %1$s"</string>
     <string name="custom_zaps_add_a_message">Adicionar uma mensagem pública</string>
     <string name="custom_zaps_add_a_message_private">Adicionar uma mensagem privada</string>
     <string name="custom_zaps_add_a_message_nonzap">Adicionar uma mensagem</string>
@@ -328,9 +314,7 @@
     <string name="no">Não</string>
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
-    <string name="follow_list_global">Global</string>
-    <string name="connect_through_your_orbot_setup_markdown">
-        ## Conecte-se através do Tor com o Orbot
+    <string name="connect_through_your_orbot_setup_markdown">        ## Conecte-se através do Tor com o Orbot
         \n\n1. Instale o [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Iniciar Orbot
         \n3. No Orbot, verifique a porta Socks. O padrão usa 9050
@@ -346,10 +330,9 @@
     <string name="app_notification_dms_channel_description">Notifica você quando chega uma mensagem privada</string>
     <string name="app_notification_zaps_channel_name">Zaps Recebidos</string>
     <string name="app_notification_zaps_channel_description">Notifica quando alguém te manda um zap</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
-    <string name="reply_notify">"Notificar: "</string>
+    <string name="reply_notify">Notificar: </string>
     <string name="channel_list_join_conversation">Entrar na conversa</string>
     <string name="channel_list_user_or_group_id">ID do usuário ou grupo</string>
     <string name="channel_list_user_or_group_id_demo">npub, nevent ou hex</string>
@@ -361,7 +344,7 @@
     <string name="content_warning_hide_all_sensitive_content">Sempre ocultar conteúdo sensível</string>
     <string name="content_warning_show_all_sensitive_content">Sempre mostrar conteúdo sensível</string>
     <string name="content_warning_see_warnings">Sempre mostrar avisos de conteúdo</string>
-    <string name="recommended_apps">"Recomenda: "</string>
+    <string name="recommended_apps">Recomenda: </string>
     <string name="filter_spam_from_strangers">Filtrar spam de estranhos</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Avise quando as postagens tiverem denuncias de seus seguidores</string>
     <string name="new_reaction_symbol">Novo símbolo de reação</string>
@@ -382,7 +365,6 @@
     <string name="limitations">Limitações</string>
     <string name="countries">Países</string>
     <string name="languages">Línguas</string>
-    <string name="tags">Tags</string>
     <string name="posting_policy">Política de postagem</string>
     <string name="message_length">Tamanho da mensagem</string>
     <string name="subscriptions">Assinaturas</string>
@@ -404,10 +386,8 @@
     <string name="live_stream_has_ended">Transmissão ao vivo encerrada</string>
     <string name="are_you_sure_you_want_to_log_out">Sair exclui todas as suas informações locais. Certifique-se de fazer backup de suas chaves privadas para evitar a perda de sua conta. Você quer continuar?</string>
     <string name="followed_tags">Tags Seguidas</string>
-    <string name="relay_setup">Relays</string>
     <string name="discover_live">Ao vivo</string>
     <string name="discover_community">Comunidade</string>
-    <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Postagens Aprovadas</string>
     <string name="groups_no_descriptor">Este grupo não tem uma descrição ou regras. Fale com o proprietário para adicionar</string>
     <string name="community_no_descriptor">Esta comunidade não tem uma descrição. Fale com o proprietário para adicionar</string>
@@ -426,4 +406,5 @@
     <string name="automatically_play_videos">Reproduzir vídeos automaticamente</string>
     <string name="automatically_show_url_preview">Mostrar automaticamente a visualização da URL</string>
     <string name="load_image">Carregar imagem</string>
+    <string name="new_feature_nip24_might_not_be_available_description">Ativando este modo requer o Amethyst para enviar uma mensagem de NIP-24 (GiftWrapped, Sealed Direct and Group Messages). NIP-24 é novo e a maioria dos clientes ainda não o implementaram. Certifique-se de que o destinatário está usando um cliente compatível.</string>
 </resources>

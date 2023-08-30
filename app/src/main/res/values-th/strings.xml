@@ -1,21 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name_release" translatable="false">Amethyst</string>
-    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
-    <string name="point_to_the_qr_code">สแกน Qr Code</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="point_to_the_qr_code">สแกน Qr Code</string>
     <string name="show_qr">โชว์ QR</string>
     <string name="profile_image">รูปโปรไฟล์</string>
     <string name="scan_qr">แสกน QR</string>
     <string name="show_anyway">แสดง</string>
     <string name="post_was_flagged_as_inappropriate_by">โพสต์ถูกรายงานว่าไม่เหมาะสมโดย</string>
     <string name="post_not_found">ไม่พบโพสต์นี้</string>
-    <string name="channel_image">รูปของ channel</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="channel_image">รูปของ channel</string>
     <string name="referenced_event_not_found">ไม่พบ event ที่อ้างอิง</string>
     <string name="could_not_decrypt_the_message">ไม่สามารถเข้ารหัสข้อความได้</string>
-    <string name="group_picture">รูปภาพกลุ่ม</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="group_picture">รูปภาพกลุ่ม</string>
     <string name="explicit_content">เนื้อหาที่มีความรุนแรง</string>
     <string name="spam">สแปม</string>
-    <string name="impersonation">เลียนแบบ</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
-    <string name="illegal_behavior">พฤติกรรมที่ผิดกฎหมาย</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="impersonation">เลียนแบบ</string>
+    <string name="illegal_behavior">พฤติกรรมที่ผิดกฎหมาย</string>
     <string name="unknown">ไม่ทราบ</string>
     <string name="relay_icon">รีเลย์ไอคอน</string>
     <string name="unknown_author">ไม่ทราบผู้เขียน</string>
@@ -39,26 +38,26 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">เข้าสู่ระบบด้วย private key เพื่อเลิกติดตาม</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">ยอดเข้าชม</string>
-    <string name="boost">Boost</string>
-    <string name="boosted">boosted</string>
+    <string name="boost">แชร์</string>
+    <string name="boosted">แชร์</string>
     <string name="quote">โควท</string>
     <string name="new_amount_in_sats">ตั้งค่าจำนวนในหน่วย sat</string>
     <string name="add">เพิ่ม</string>
     <string name="replying_to">"ตอบกลับถึง "</string>
     <string name="and">" และ "</string>
-    <string name="in_channel">" ในช่อง "</string> <!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="in_channel">" ในช่อง "</string>
     <string name="profile_banner">หน้าปกโปรไฟล์</string>
     <string name="payment_successful">การชำรพเงินเสร็จสมบูรณ์</string>
     <string name="error_parsing_error_message">เกิดข้อผิดพลาดในการวิเคราะห์ข้อความแสดงข้อผิดพลาด</string>
     <string name="following">" กำลังติดตาม"</string>
     <string name="followers">" ผู้ติดตาม"</string>
     <string name="profile">โปรไฟล์</string>
-    <string name="security_filters">ตัวกรอกความปลอดภัย</string>
+    <string name="security_filters">ตัวกรองความปลอดภัย</string>
     <string name="log_out">ออกจากระบบ</string>
     <string name="show_more">แสดงเพิ่มเติม</string>
-    <string name="lightning_invoice">Lightning Invoice</string>
+    <string name="lightning_invoice">ใบเสร็จ Lighning</string>
     <string name="pay">จ่าย</string>
-    <string name="lightning_tips">Lightning Tips</string>
+    <string name="lightning_tips">ส่งทิปให้เบา ๆ </string>
     <string name="note_to_receiver">โน้ตถึงผู้รับ</string>
     <string name="thank_you_so_much">ขอบคุณมาก!</string>
     <string name="amount_in_sats">จำนวนในหน่วย sat</string>
@@ -67,8 +66,8 @@
     <string name="preview_card_image_for">"รูปตัวอย่างสำหรับ %1$s"</string>
     <string name="new_channel">Channel ใหม่</string>
     <string name="channel_name">ชื่อ Channel</string>
-    <string name="my_awesome_group">กลุ่มที่ยอดเยี่ยมของฉัน!</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
-    <string name="picture_url">Picture Url</string>
+    <string name="my_awesome_group">กลุ่มที่ยอดเยี่ยมของฉัน!</string>
+    <string name="picture_url">ที่อยู่ URL รูปภาพ</string>
     <string name="description">รายละเอียด</string>
     <string name="about_us">"เกี่ยวกับเรา.. "</string>
     <string name="what_s_on_your_mind">คุณคิดอะไรอยู่ ?</string>
@@ -77,9 +76,9 @@
     <string name="create">สร้าง</string>
     <string name="cancel">ยกเลิก</string>
     <string name="failed_to_upload_the_image">ไม่สามารถโหลดรูปภาพได้</string>
-    <string name="relay_address">Relay Address</string>
+    <string name="relay_address">ที่อยู่รีเลย์</string>
     <string name="posts">โพสต์</string>
-    <string name="bytes">Bytes</string>
+    <string name="bytes">ไบต์</string>
     <string name="errors">ข้อผิดพลาด</string>
     <string name="home_feed">ฟีดเริ่มต้น</string>
     <string name="private_message_feed">ฟีดข้อความส่วนตัว</string>
@@ -92,10 +91,10 @@
     <string name="username">ชื่อผู้ใช้</string>
     <string name="my_username">ชื่อผู้ใช้ของฉัน</string>
     <string name="about_me">เกี่ยวกับฉัน</string>
-    <string name="avatar_url">Avatar URL</string>
-    <string name="banner_url">Banner URL</string>
-    <string name="website_url">Website URL</string>
-    <string name="ln_address">LN Address</string>
+    <string name="avatar_url">ที่อยู่ URL รูปโปรไฟล์</string>
+    <string name="banner_url">ที่อยู่ URL รูปหน้าปก</string>
+    <string name="website_url">ที่อยู่ URL เว็บไซต์</string>
+    <string name="ln_address">Lightning Address</string>
     <string name="ln_url_outdated">LN URL (หมดอายุ)</string>
     <string name="image_saved_to_the_gallery">บันทึกรูปภาพลงแกลเลอรี</string>
     <string name="failed_to_save_the_image">เกิดข้อผิดพลาดในการบันทึกรูปภาพ</string>
@@ -107,7 +106,7 @@
     <string name="copy_channel_id_note_to_the_clipboard">คัดลอก Channel ID (โน้ต) ลงคลิปบอร์ด</string>
     <string name="edits_the_channel_metadata">แก้ไข Channel Metadata</string>
     <string name="join">เข้าร่วม</string>
-    <string name="known">รู้</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="known">รู้</string>
     <string name="new_requests">ส่งคำขอใหม่</string>
     <string name="blocked_users">ผู้ใช้ที่ถูกบล็อก</string>
     <string name="new_threads">เธรดใหม่</string>
@@ -119,7 +118,7 @@
     <string name="more_options">ตัวเลือกเพิ่มเติม</string>
     <string name="relays">" รีเลย์"</string>
     <string name="website">เว็บไซต์</string>
-    <string name="lightning_address">Lightning Address</string>
+    <string name="lightning_address">ไม่ได้ตั้งค่า Lightning Address</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">คัดลอก Nsec ID (รหัสผ่านของคุณ) ลงคลิปบอร์ดเพื่อสำรองข้อมูล</string>
     <string name="copy_private_key_to_the_clipboard">คัดลอก Secret Key ลงคลิปบอร์ด</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">คัดลอก public key ลงคลิปบอร์ดเพื่อแชร์</string>
@@ -133,7 +132,7 @@
     <string name="unblock_user">เลิกบล๊อกผู้ใช้</string>
     <string name="npub_hex_username">"npub, ชื่อผู้ใช้, ข้อความ"</string>
     <string name="clear">เคลียร์</string>
-    <string name="app_logo">App Logo</string>
+    <string name="app_logo">โลโก้</string>
     <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
     <string name="show_password">แสดงรหัสผ่าน</string>
     <string name="hide_password">ซ่อนรหัสผ่าน</string>
@@ -155,27 +154,25 @@
     <string name="changed_chat_name_to">เปลี่ยนชื่อ chat เป็น</string>
     <string name="description_to">คําอธิบายของ</string>
     <string name="and_picture_to">และ รูปภาพของ</string>
-    <string name="leave">ออก</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="leave">ออก</string>
     <string name="unfollow">เลิกติดตาม</string>
     <string name="channel_created">สร้าง Channel</string>
     <string name="channel_information_changed_to">"ข้อมูลของ Channel เปลี่ยนเป็น"</string>
     <string name="public_chat">แชทสาธรณะ</string>
     <string name="posts_received">ได้รับโพสต์แล้ว</string>
     <string name="remove">ลบ</string>
-    <string name="sats" translatable="false">sats</string>
     <string name="translations_auto">อัตโนมัติ</string>
     <string name="translations_translated_from">แปลจาก</string>
     <string name="translations_to">ถึง</string>
     <string name="translations_show_in_lang_first">แสดงใน %1$s ก่อน</string>
     <string name="translations_always_translate_to_lang">แปลเป็น %1$s เสมอ</string>
     <string name="translations_never_translate_from_lang">อย่าแปลจาก %1$s</string>
-    <string name="nip_05">Nostr Address</string>
-    <string name="lnurl" translatable="false">LNURL...</string>
+    <string name="nip_05">ที่อยู่ Nostr</string>
     <string name="never">ไม่เคย</string>
     <string name="now">ตอนนี้</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
+    <string name="h">ชม.</string>
+    <string name="m">เดือน</string>
+    <string name="d">วัน</string>
     <string name="nudity">ภาพเปลือย/สื่อลามก</string>
     <string name="profanity_hateful_speech">คําหยาบคาย / คําพูดที่แสดงความเกลียดชัง</string>
     <string name="report_hateful_speech">รายงาน: คําพูดที่แสดงความเกลียดชัง</string>
@@ -184,9 +181,8 @@
     <string name="mark_all_known_as_read">ทำเครื่องหมายอ่านแล้วในแชทที่รู้จักทั้งหมด</string>
     <string name="mark_all_new_as_read">ทำเครื่องหมายว่าอ่านแล้วทั้งหมดสำหรับข้อความใหม่</string>
     <string name="mark_all_as_read">ทพเครื่องหมายว่าอ่านแล้วทั้งหมด</string>
-    <string name="backup_keys">สพรองข้อมูล Keys</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## เคล็ดลับการสํารองข้อมูลและความปลอดภัยที่สําคัญ
+    <string name="backup_keys">สำรองข้อมูลรหัสลับ</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## เคล็ดลับการสํารองข้อมูลและความปลอดภัยที่สําคัญ
         \n\n บัญชีของคุณมีความปลอดภัยด้วยรหัสลับ key คือสตริงสุ่มยาวที่ขึ้นต้นด้วย **nsec1**  ทุกคนที่มีสิทธิ์เข้าถึงรหัสลับของคุณสามารถเผยแพร่เนื้อหาโดยใช้บัญชีของคุณได้
         \n\n- **อย่า** ใส่รหัสลับของคุณในเว็บไซต์หรือซอฟต์แวร์ที่คุณไม่เชื่อถือ
         \n- นักพัฒนา Amethyst จะ **ไม่เคย** ขอรหัสลับของคุณ
@@ -204,15 +200,7 @@
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">คัดลอก @npub ของผู้เขียนลงคลิปบอร์ด</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">คัดลอกโน้ต ID (@note1)ลงคลิปบอร์ด</string>
     <string name="select_text_dialog_top">เลือกข้อความ</string>
-    <string name="github" translatable="false">Github Gist w/ Proof</string>
-    <string name="telegram" translatable="false">Telegram</string>
-    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
-    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
-    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
-    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
-    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
-    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
-    <string name="private_conversation_notification">"&lt;ไม่สามารถถอดรหัสข้อความส่วนตัวได้&gt;\n\nคุณถูกอ้างถึงในการสนทนาส่วนตัว/เข้ารหัสระหว่าง %1$s และ %2$s."</string><!--ไม่รู้ว่าอยู่ตรงไหน-->
+    <string name="private_conversation_notification">"&lt;ไม่สามารถถอดรหัสข้อความส่วนตัวได้&gt;\n\nคุณถูกอ้างถึงในการสนทนาส่วนตัว/เข้ารหัสระหว่าง %1$s และ %2$s."</string>
     <string name="account_switch_add_account_dialog_title">เพิ่มบัญชีใหม่</string>
     <string name="drawer_accounts">บัญชี</string>
     <string name="account_switch_select_account">เลือกบัญชี</string>
@@ -237,7 +225,7 @@
     <string name="quick_action_block">บล๊อก</string>
     <string name="quick_action_report">รายงาน</string>
     <string name="quick_action_delete_button">ลบ</string>
-    <string name="quick_action_dont_show_again_button">ไม่แสดงข้อความนี้อีก</string><!--ไม่เจอว่าตรงไหน-->
+    <string name="quick_action_dont_show_again_button">ไม่แสดงข้อความนี้อีก</string>
     <string name="report_dialog_spam">สแปม หรือ หลอกลวง</string>
     <string name="report_dialog_profanity">คําหยาบคายหรือการแสดงความเกลียดชัง</string>
     <string name="report_dialog_impersonation">การแอบอ้างบุคคลอื่นที่เป็นอันตราย</string>
@@ -254,7 +242,6 @@
     <string name="report_dialog_post_report_btn">รายงานโพสต์</string>
     <string name="report_dialog_title">บล๊อกและรายงาน</string>
     <string name="block_only">บล๊อก</string>
-
     <string name="bookmarks">บุ๊คมาร์ค</string>
     <string name="private_bookmarks">บุ๊คมาร์คส่วนตัว</string>
     <string name="public_bookmarks">บุ๊คมาร์คสาธรณะ</string>
@@ -262,15 +249,13 @@
     <string name="add_to_public_bookmarks">เพิ่มไปยังบุ๊คมาร์คสาธรณะ</string>
     <string name="remove_from_private_bookmarks">ลบออกจากบุ๊คมาร์คส่วนตัว</string>
     <string name="remove_from_public_bookmarks">ลบออกจากบุ๊คมาร์คสาธรณะ</string>
-
     <string name="wallet_connect_service">บริการเชื่อมต่อ wallet</string>
     <string name="wallet_connect_service_explainer">อนุญาตให้ Nostr Secret จ่าย zaps โดยไม่ต้องออกจากแอป เพื่อรักษาความลับให้ปลอดภัยและใช้รีเลย์ส่วนตัวหากเป็นไปได้</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
-    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_relay">บริการเชื่อมต่อ wallet</string>
     <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
     <string name="wallet_connect_service_show_secret">แสดง secret key</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
-
     <string name="pledge_amount_in_sats">จำนวนเงินที่นำเข้าในหน่วย sat</string>
     <string name="post_poll">สร้างโพลล์</string>
     <string name="poll_heading_required">ส่วนที่จำเป็น:</string>
@@ -288,97 +273,65 @@
     <string name="poll_is_closed">โพลปิดรับการลงคะแนนเพิ่มเติม</string>
     <string name="poll_zap_amount">จำนวน Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">อนุญาตให้โหวตได้เพียงครั้งเดียวต่อผู้ใช้หนึ่งคนสำหรับการสำรวจประเภทนี้</string>
-
     <string name="looking_for_event">"กำลังมองหา Event %1$s"</string>
-
     <string name="custom_zaps_add_a_message">เพิ่มในข้อความสาธรณะ</string>
     <string name="custom_zaps_add_a_message_private">เพิ่มในข้อความส่วนตัว</string>
     <string name="custom_zaps_add_a_message_nonzap">เพิ่มใน invoice message</string>
-
     <string name="custom_zaps_add_a_message_example">ขอบคุณสำหรับทุกงานของคุณ!</string>
-
     <string name="lightning_create_and_add_invoice">สร้างและเพิ่ม</string>
     <string name="poll_author_no_vote">ผู้เขียนโพลล์ไม่สามารถลงคะแนนในโพล์ของตนเองได้</string>
-    <string name="poll_hashtag" translatable="false">#zappoll</string>
-
     <string name="hash_verification_passed">เนื้อหานี้เหมือนเดิมตั้งแต่โพสต์</string>
     <string name="hash_verification_failed">เนื้อหามีการเปลี่ยนแปลง ผู้เขียนอาจไม่เห็นหรืออนุมัติการเปลี่ยนแปลง</string>
-
     <string name="content_description_add_image">เพิ่มรูปภาพ</string>
     <string name="content_description_add_video">เพิ่มวีดีโอ</string>
     <string name="content_description_add_document">เพิ่มเอกสาร</string>
-
     <string name="add_content">เพิ่มไปยังข้อความ</string>
     <string name="content_description">คำอธิบายของเนื้อหา</string>
     <string name="content_description_example">เรือสีฟ้าในหาดทรายสีขาวยามพระอาทิตย์ตก</string>
-
     <string name="zap_type">ประเภทการ Zap</string>
     <string name="zap_type_explainer">ตัวเลือกทั้งหมดสำหรับการ zap</string>
-
     <string name="zap_type_public">สาธรณะ</string>
     <string name="zap_type_public_explainer">ทุกคนสามารถเห็นธุรกรรมและการข้อความ</string>
-
     <string name="zap_type_private">ส่วนตัว</string>
     <string name="zap_type_private_explainer">ผู้ส่งและผู้รับสามารถเห็นธุรกรรมและข้อความ</string>
-
     <string name="zap_type_anonymous">ไม่ระบุตัวตน</string>
     <string name="zap_type_anonymous_explainer">ไม่มีใครรู้ว่าใครเป็นคนทำธุรกรรม</string>
-
-    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap">แอบแซ่บ</string>
     <string name="zap_type_nonzap_explainer">ไม่มีการบันทึกบน Nostr, มีแค่ในระบบ Lightning</string>
-
-
-    <string name="file_server">File Server</string>
-    <string name="zap_forward_lnAddress">LnAddress or @User</string>
-
-    <string name="upload_server_imgur">imgur.com - trusted</string>
+    <string name="file_server">เซิร์ฟเวอร์เก็บข้อมูล</string>
+    <string name="zap_forward_lnAddress">LnAddress หรือ @ชื่อผู้ใช้</string>
+    <string name="upload_server_imgur">imgur.com - เชื่อถือได้</string>
     <string name="upload_server_imgur_explainer">Imgur สามารถแก้ไขไฟล์ได้</string>
-
-    <string name="upload_server_nostrimg">nostrimg.com - trusted</string>
+    <string name="upload_server_nostrimg">nostrimg.com - เชื่อถือได้</string>
     <string name="upload_server_nostrimg_explainer">NostrImg สามารถแก้ไขไฟล์ได้</string>
-
-    <string name="upload_server_nostrbuild">nostr.build - trusted</string>
+    <string name="upload_server_nostrbuild">nostr.build - เชื่อถือได้</string>
     <string name="upload_server_nostrbuild_explainer">Nostr.build สามารถแก้ไขไฟล์ได้</string>
-
-    <string name="upload_server_nostrfilesdev">nostrfiles.dev - trusted</string>
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev - เชื่อถือได้</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev สามารถแก้ไขไฟล์ได้</string>
-
-    <string name="upload_server_nostrcheckme">nostrcheck.me - trusted</string>
+    <string name="upload_server_nostrcheckme">nostrcheck.me - เชื่อถือได้</string>
     <string name="upload_server_nostrcheckme_explainer">nostrcheck.me สามารถแก้ไขไฟล์ได้</string>
-
-
     <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">ตวรจสอบว่า Imgur แก้ไขไฟล์ New NIP: ไคลเอนต์อื่น ๆ จะไม่เห็นมัน</string>
-
     <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
     <string name="upload_server_nostrimg_nip94_explainer">ตวรจสอบว่า NostrImg แก้ไขไฟล์ New NIP: ไคลเอนต์อื่น ๆ จะไม่เห็นมัน</string>
-
     <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
     <string name="upload_server_nostrbuild_nip94_explainer">ตวรจสอบว่า Nostr.build แก้ไขไฟล์ New NIP: ไคลเอนต์อื่น ๆ จะไม่เห็นมัน</string>
-
     <string name="upload_server_nostrfilesdev_nip94">Verifiable Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">ตวรจสอบว่า Nostrfiles.dev แก้ไขไฟล์ New NIP: ไคลเอนต์อื่น ๆ จะไม่เห็นมัน</string>
-
     <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
     <string name="upload_server_nostrcheckme_nip94_explainer">ตวรจสอบว่า Nostrcheck.me แก้ไขไฟล์ New NIP: ไคลเอนต์อื่น ๆ จะไม่เห็นมัน</string>
-
     <string name="upload_server_relays_nip95">รีเลย์ของคุณ (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">ไฟล์อยู่บนรีเลย์ของคุณ New NIP: โปรดตรวจสอบว่ามีการรองรับหรือไม่</string>
-
     <string name="connect_via_tor_short">ตั้งค่า Tor/Orbot</string>
     <string name="connect_via_tor">การตั้งค่าการเชื่อมต่อ Orbot ของคุณ</string>
-
     <string name="do_you_really_want_to_disable_tor_title">ตัดการเชื่อมต่อจาก Orbot/Tor ของคุณ?</string>
     <string name="do_you_really_want_to_disable_tor_text">ข้อมูลของคุณจะถูกถ่ายโอนในเครือข่ายปกติทันที</string>
     <string name="yes">ใช่</string>
     <string name="no">ไม่</string>
-
-
-    <string name="follow_list_selection">รายการผู้ติดตาม</string><!--ไม่เจอว่าตรงไหน-->
-    <string name="follow_list_kind3follows">ติดตามทั้งหมด</string><!--ไม่เจอว่าตรงไหน-->
-    <string name="follow_list_global">Global</string>
-    <string name="connect_through_your_orbot_setup_markdown">
-        ## เชื่อมต่อกัย Tor ด้วย Orbot
+    <string name="follow_list_selection">รายการผู้ติดตาม</string>
+    <string name="follow_list_kind3follows">ติดตามทั้งหมด</string>
+    <string name="follow_list_global">ทั่วโลก</string>
+    <string name="connect_through_your_orbot_setup_markdown">        ## เชื่อมต่อกัย Tor ด้วย Orbot
         \n\n1. ติดตั้ง [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. เริ่มต้นใช้งาน Orbot
         \n3. ใน Orbot, ตรวจสอบe Socks port. ค่าเริ่มต้นเป็น 9050
@@ -386,59 +339,44 @@
         \n5. กําหนดค่า Socks port บนหน้าจอนี้
         \n6. กดปุ่มเปิดใช้งานเพื่อใช้ Orbot เป็น proxy
     </string>
-    <string name="orbot_socks_port">Orbot Socks Port</string>
+    <string name="orbot_socks_port">พอร์ต Orbot Socks</string>
     <string name="invalid_port_number">เลข port ไม่ถูกต้องr</string>
     <string name="use_orbot">ใช้ Orbot</string>
     <string name="disconnect_from_your_orbot_setup">ตัดการเชื่อมต่อจาก Tor/Orbot</string>
-
-    <string name="app_notification_channel_id" translatable="false">DefaultChannelID</string>
-    <string name="app_notification_private_message" translatable="false">New notification arrived</string>
-
-    <string name="app_notification_dms_channel_id" translatable="false">PrivateMessagesID</string>
     <string name="app_notification_dms_channel_name">ข้อความส่วนตัว</string>
     <string name="app_notification_dms_channel_description">แจ้งเตือนฉันเมื่อข้อความส่วนตัวมาถึง</string>
-
-    <string name="app_notification_zaps_channel_id" translatable="false">ZapsID</string>
     <string name="app_notification_zaps_channel_name">ได้รับ Zaps</string>
     <string name="app_notification_zaps_channel_description">แจ้งเตือนเมื่อมีคน zaps</string>
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">จาก %1$s</string>
     <string name="app_notification_zaps_channel_message_for">ถึง %1$s</string>
-
     <string name="reply_notify">การแจ้งเตือน: </string>
-
     <string name="channel_list_join_conversation">เข้าร่วมการสนทนา</string>
     <string name="channel_list_user_or_group_id">ผู้ใช้ หรือ Group\'s ID</string>
-    <string name="channel_list_user_or_group_id_demo">npub, nevent or hex</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent หรือ hex</string>
     <string name="channel_list_create_channel">สร้าง</string>
     <string name="channel_list_join_channel">เข้าร่วม</string>
-
     <string name="today">วันนี้</string>
-
     <string name="content_warning">คําเตือนเนื้อหา</string>
     <string name="content_warning_explanation">โพสต์นี้มีเนื้อหาที่ละเอียดอ่อนซึ่งบางคนอาจพบว่าไม่เหมาะสมหรือรบกวน</string>
     <string name="content_warning_hide_all_sensitive_content">ซ่อนเนื้อหาที่ละเอียดอ่อนเสมอ</string>
     <string name="content_warning_show_all_sensitive_content">แสดงเนื้อหาที่ละเอียดอ่อนเสมอ</string>
     <string name="content_warning_see_warnings">แสดงคำเตือนเนื้อหาเสมอ</string>
-
     <string name="recommended_apps">แนะนำ: </string>
     <string name="filter_spam_from_strangers">กรองสแปมจากคนแปลกหน้า</string>
     <string name="warn_when_posts_have_reports_from_your_follows">เตือนเมื่อมีการรายงานโพสต์จากผู้ติดตามของคุณ</string>
-
     <string name="new_reaction_symbol">สัญลักษณ์ Reaction ใหม่</string>
     <string name="no_reaction_type_setup_long_press_to_change">ไม่มีการเลือกประเภทของ reaction กดค้างเพื่อเปลี่ยน</string>
-
-    <string name="zapraiser">Zapraiser</string>
+    <string name="zapraiser">ระดมทุน</string>
     <string name="zapraiser_explainer">เพิ่มจํานวนเป้าหมายของ sats ที่จะเพิ่มสําหรับโพสต์นี้ การสนับสนุนไคลเอนต์อาจแสดงสิ่งนี้เป็นแถบความคืบหน้าเพื่อจูงใจการบริจาค</string>
     <string name="zapraiser_target_amount_in_sats">จำนวนเป้าหมายในหน่วย Sats</string>
-
     <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats เพื่อไปถึงเป้าหมาย</string>
     <string name="read_from_relay">อ่านจาก Relay</string>
     <string name="write_to_relay">เขียนบน Relay</string>
     <string name="an_error_occurred_trying_to_get_relay_information">เกิดข้อผิดพลาดในการรับข้อมูลจาก %1$s</string>
     <string name="owner">เจ้าของ</string>
-    <string name="version">Version</string>
-    <string name="software">Software</string>
+    <string name="version">เวอร์ชัน</string>
+    <string name="software">ซอฟต์แวร์</string>
     <string name="contact">ติดต่อ</string>
     <string name="supports">รับรอง NIPs</string>
     <string name="admission_fees">ค่าใช้จ่ายสำหรับการใช้งาน</string>
@@ -446,7 +384,7 @@
     <string name="limitations">ข้อจำกัด</string>
     <string name="countries">ประเทศ</string>
     <string name="languages">ภาษา</string>
-    <string name="tags">Tags</string>
+    <string name="tags">แท็ก</string>
     <string name="posting_policy">นโยบายการโพสต์</string>
     <string name="message_length">ความยาวข้อความ</string>
     <string name="subscriptions">การสมัครสมาชิก</string>
@@ -456,40 +394,33 @@
     <string name="maximum_event_tags">event tags สูงสุด</string>
     <string name="content_length">ความยาวของเนื้อหา</string>
     <string name="minimum_pow">PoW ขั้นต่ำ</string>
-    <string name="auth">Auth</string>
+    <string name="auth">ยืนยัน</string>
     <string name="payment">การชำระเงิน</string>
     <string name="cashu">โทเคน Cashu</string>
     <string name="cashu_redeem">แลกคืน</string>
     <string name="no_lightning_address_set">ไม่ได้ตั้งค่า Lightning Address</string>
     <string name="copied_token_to_clipboard">คัดลอกโทเคนลงคลิปบอร์ด</string>
-
-    <string name="live_stream_live_tag">LIVE</string>
-    <string name="live_stream_offline_tag">OFFLINE</string>
-    <string name="live_stream_ended_tag">ENDED</string>
-    <string name="live_stream_planned_tag">SCHEDULED</string>
-
-    <string name="live_stream_is_offline">Livestream is Offline</string>
-    <string name="live_stream_has_ended">Livestream Ended</string>
+    <string name="live_stream_live_tag">ถ่ายทอดสด</string>
+    <string name="live_stream_offline_tag">ออฟไลน์</string>
+    <string name="live_stream_ended_tag">สิ้นสุดแล้ว</string>
+    <string name="live_stream_planned_tag">กำหนดเวลา</string>
+    <string name="live_stream_is_offline">สัญญาณถ่ายทอดสดหายไป</string>
+    <string name="live_stream_has_ended">การถ่ายทอดสดจบแล้ว</string>
     <string name="are_you_sure_you_want_to_log_out">การออกจากระบบจะลบข้อมูลทั้งหมดของคุณ ตรวจสอบให้แน่ใจว่าได้สํารองข้อมูล private key ไว้เพื่อหลีกเลี่ยงการสูญเสียบัญชีของคุณ คุณต้องการดําเนินการต่อหรือไม่?</string>
-    <string name="followed_tags">Followed Tags</string>
-
+    <string name="followed_tags">ติดตามแท็ก</string>
     <string name="relay_setup">รีเลย์</string>
-
-    <string name="discover_live">Live</string>
+    <string name="discover_live">ถ่ายทอดสด</string>
     <string name="discover_community">ชุมชน</string>
     <string name="discover_chat">ช่องสนทนา</string>
     <string name="community_approved_posts">อนุมัติโพสต์</string>
-
     <string name="groups_no_descriptor">ชุมชนนี้ไม่มีคำอธิบายหรือกฏ พูดคุยกับเจ้าของเพื่อเพิ่มเติมสิ่งนี้</string>
     <string name="community_no_descriptor">ชุมชนนี้ไม่มีคำอธิบาย พูดคุยกับเจ้าของเพื่อเพิ่มเติมสิ่งนี้</string>
-
     <string name="add_sensitive_content_label">เนื้อหาที่ละเอียดอ่อน</string>
     <string name="add_sensitive_content_description">เพิ่มการแจ้งเตือนเนื้อหาที่ละเอียดอ่อนก่อนโชว์เนื้อหานี้</string>
     <string name="settings">การตั้งค่า</string>
-    <string name="connectivity_type_always">Aตลอดเวลา</string>
+    <string name="connectivity_type_always">ตลอดเวลา</string>
     <string name="connectivity_type_wifi_only">Wifi เท่านั้น</string>
     <string name="connectivity_type_never">ไม่ต้องแสดง</string>
-
     <string name="system">ระบบ(ค่าพื้นฐาน)</string>
     <string name="light">สว่าง</string>
     <string name="dark">มืด</string>
@@ -500,53 +431,47 @@
     <string name="automatically_play_videos">การเล่นวิดีโอ</string>
     <string name="automatically_show_url_preview">การแสดงตัวอย่าง URL</string>
     <string name="load_image">โหลดรูปภาพ</string>
-
-    <string name="spamming_users">Spammers</string>
-
+    <string name="spamming_users">แสปม</string>
     <string name="muted_button">ปิดการมองเห็น คลิกเพื่อปลดออก</string>
     <string name="mute_button">เปิดการมองเห็นอยู่ คลิกเพื่อปิด</string>
     <string name="search_button">ค้นหาบันทึกการเข้าถึงแบบ local และ remote</string>
-
     <string name="nip05_verified">Nostr address ได้รับการยืนยัน</string>
     <string name="nip05_failed">ไม่สามารถยืนยัน Nostr address ได้</string>
     <string name="nip05_checking">ตรวจสอบ Nostr address</string>
     <string name="select_deselect_all">เลือก/ไม่เลือก ทั้งหมด</string>
     <string name="default_relays">ค่าเริ่มต้น</string>
     <string name="select_a_relay_to_continue">เลือกรีเลย์เพื่อดำเนินการต่อ</string>
-
     <string name="zap_forward_title">ส่งต่อ Zaps ถึง:</string>
     <string name="zap_forward_explainer">ไคลเอนต์ที่สนับสนุนจะส่งต่อ zaps ไปยัง LNAddress หรือโปรไฟล์ผู้ใช้ด้านล่างแทนที่จะเป็นของคุณ</string>
-
     <string name="geohash_title">เปิดเผยตําแหน่งที่ตั้ง </string>
     <string name="geohash_explainer">เพิ่ม Geohash ของตําแหน่งของคุณลงในโพสต์ สาธารณชนจะรู้ว่าคุณอยู่ภายใน 5 กม. (3 ไมล์) จากตําแหน่งปัจจุบัน</string>
-
     <string name="add_sensitive_content_explainer">เพิ่มคําเตือนเนื้อหาที่ละเอียดอ่อนก่อนแสดงเนื้อหาของคุณ สิ่งนี้เหมาะสําหรับเนื้อหา NSFW หรือเนื้อหาใด ๆ ที่บางคนอาจพบว่าไม่เหมาะสมหรือรบกวน</string>
-
     <string name="new_feature_nip24_might_not_be_available_title">ฟีเจอร์ใหม่</string>
     <string name="new_feature_nip24_might_not_be_available_description">การเปิดใช้งานโหมดนี้ต้องใช้ Amethyst เพื่อส่งข้อความ NIP-24 (GiftWrapped, Sealed Direct และ Group Messages) NIP-24 เป็นของใหม่และไคลเอ็นต์ส่วนใหญ่ยังไม่ได้รองรับ ตรวจสอบให้แน่ใจว่าเครื่องรับใช้ไคลเอ็นต์ที่รองรับ</string>
     <string name="new_feature_nip24_activate">เปิดใช้งาน</string>
-
     <string name="messages_create_public_chat">สาธรณะ</string>
     <string name="messages_new_message">ส่วนตัว</string>
     <string name="messages_new_message_to">ถึง</string>
     <string name="messages_new_message_subject">ชื่อเรื่อง</string>
     <string name="messages_new_message_subject_caption">หัวข้อการสนทนา</string>
-    <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
-
+    <string name="messages_new_message_to_caption">"\@User1, @User2, @User3"</string>
     <string name="messages_group_descriptor">ชมาชิกในกลุ่ม</string>
     <string name="messages_new_subject_message">คําอธิบายต่อสมาชิก</string>
     <string name="messages_new_subject_message_placeholder">เปลี่ยนชื่อสําหรับเป้าหมายใหม่</string>
-
     <string name="language_description">สำหรับ App\'s Interface</string>
     <string name="theme_description">ธีม: มืด, สว่าง หรือระบบ</string>
     <string name="automatically_load_images_gifs_description">โหลดรูปภาพและ GIFs โดยอัตโนมัติ</string>
     <string name="automatically_play_videos_description">เล่นวีดีโอและ GIFs โดยอัตโนมัติ</string>
     <string name="automatically_show_url_preview_description">แสดงจัวอย่าง URL</string>
     <string name="load_image_description">ควรโหลดรูปภาพเมื่อใด</string>
-
     <string name="copy_url_to_clipboard">คัดลอก URL ลงคลิปบอร์ด</string>
     <string name="copy_the_note_id_to_the_clipboard">คัดลอก โน้ต ID ลงคลิปบอร์ดd</string>
-
     <string name="created_at">สร้างโดย</string>
     <string name="rules">กฏ</string>
+    <string name="status_update">คุณกำลังทำอะไรอยู่...</string>
+    <string name="lightning_wallets_not_found">เกิดข้อผิดพลาดในการแสดงข้อความ</string>
+    <string name="poll_zap_value_min_max_explainer">โหวตถูกให้น้ำหนักโดยจำนวน Zaps. คุณสามารถตั้งจำนวนเงินต่ำสุด และจำนวนครั้งสูงสุดในการโหวตเพื่อหลีกเลี่ยงการแสปมผลโพล. ใช้จำนวนเงินที่เท่ากันในทุกหัวข้อเพื่อให้การโหวตเป็นไปอย่างเท่าเทียม ปล่อยช่องว่าง หากต้องการให้โหวตเท่าใดก็ได้</string>
+    <string name="error_dialog_zap_error">แย่จัง ส่ง Zaps ไม่ได้</string>
+    <string name="error_dialog_talk_to_user">ส่งข้อความ</string>
+    <string name="error_dialog_button_ok">ตกลง</string>
 </resources>

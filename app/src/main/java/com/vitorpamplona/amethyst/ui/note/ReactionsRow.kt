@@ -1010,6 +1010,12 @@ fun ZapReaction(
                         },
                         onMultipleChoices = {
                             wantsToZap = true
+                        },
+                        onError = {
+                            scope.launch {
+                                zappingProgress = 0f
+                                showErrorMessageDialog = it
+                            }
                         }
                     )
                 },
@@ -1098,7 +1104,8 @@ private fun zapClick(
     scope: CoroutineScope,
     context: Context,
     onZappingProgress: (Float) -> Unit,
-    onMultipleChoices: () -> Unit
+    onMultipleChoices: () -> Unit,
+    onError: (String) -> Unit
 ) {
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
         scope.launch {
@@ -1127,14 +1134,7 @@ private fun zapClick(
             null,
             "",
             context,
-            onError = {
-                scope.launch {
-                    onZappingProgress(0f)
-                    Toast
-                        .makeText(context, it, Toast.LENGTH_SHORT)
-                        .show()
-                }
-            },
+            onError = onError,
             onProgress = {
                 scope.launch(Dispatchers.Main) {
                     onZappingProgress(it)
