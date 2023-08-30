@@ -14,7 +14,18 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
     }
 
     override fun feed(): List<User> {
-        return account.getBlockList()
+        val blockList = account.getBlockList()
+        val decryptedContent = blockList?.decryptedContent ?: ""
+        if (account.loginWithAmber) {
+            if (decryptedContent.isEmpty()) return emptyList()
+
+            return blockList
+                ?.publicAndPrivateUsers(decryptedContent)
+                ?.map { LocalCache.getOrCreateUser(it) }
+                ?: emptyList()
+        }
+
+        return blockList
             ?.publicAndPrivateUsers(account.keyPair.privKey)
             ?.map { LocalCache.getOrCreateUser(it) }
             ?: emptyList()

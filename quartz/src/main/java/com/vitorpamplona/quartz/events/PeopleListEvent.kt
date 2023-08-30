@@ -18,6 +18,7 @@ class PeopleListEvent(
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    var decryptedContent: String? = null
     var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
 
     fun publicAndPrivateUsers(privateKey: ByteArray?): ImmutableSet<HexKey> {
@@ -35,9 +36,31 @@ class PeopleListEvent(
         return publicAndPrivateUserCache ?: persistentSetOf()
     }
 
+    fun publicAndPrivateUsers(decryptedContent: String): ImmutableSet<HexKey> {
+        publicAndPrivateUserCache?.let {
+            return it
+        }
+
+        val privateUserList = privateTagsOrEmpty(decryptedContent).filter { it.size > 1 && it[0] == "p" }.map { it[1] }.toSet()
+
+        val publicUserList = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }.toSet()
+
+        publicAndPrivateUserCache = (privateUserList + publicUserList).toImmutableSet()
+
+        return publicAndPrivateUserCache ?: persistentSetOf()
+    }
+
     fun isTaggedUser(idHex: String, isPrivate: Boolean, privateKey: ByteArray): Boolean {
         return if (isPrivate) {
             privateTagsOrEmpty(privKey = privateKey).any { it.size > 1 && it[0] == "p" && it[1] == idHex }
+        } else {
+            isTaggedUser(idHex)
+        }
+    }
+
+    fun isTaggedUser(idHex: String, isPrivate: Boolean, content: String): Boolean {
+        return if (isPrivate) {
+            privateTagsOrEmpty(content).any { it.size > 1 && it[0] == "p" && it[1] == idHex }
         } else {
             isTaggedUser(idHex)
         }
@@ -60,6 +83,24 @@ class PeopleListEvent(
                     content = "",
                     tags = listOf(listOf("d", name), listOf("p", pubKeyHex)),
                     privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            }
+        }
+
+        fun createListWithUser(name: String, pubKeyHex: String, isPrivate: Boolean, pubKey: HexKey, encryptedContent: String, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            return if (isPrivate) {
+                create(
+                    content = encryptedContent,
+                    tags = listOf(listOf("d", name)),
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = "",
+                    tags = listOf(listOf("d", name), listOf("p", pubKeyHex)),
+                    pubKey = pubKey,
                     createdAt = createdAt
                 )
             }
@@ -89,6 +130,24 @@ class PeopleListEvent(
                         }
                     ),
                     privateKey = privateKey,
+                    createdAt = createdAt
+                )
+            }
+        }
+
+        fun addUser(earlierVersion: PeopleListEvent, pubKeyHex: String, isPrivate: Boolean, pubKey: HexKey, encryptedContent: String, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            return if (isPrivate) {
+                create(
+                    content = encryptedContent,
+                    tags = earlierVersion.tags,
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(element = listOf("p", pubKeyHex)),
+                    pubKey = pubKey,
                     createdAt = createdAt
                 )
             }
@@ -145,6 +204,11 @@ class PeopleListEvent(
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = CryptoUtils.sign(id, privateKey)
             return PeopleListEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+        }
+
+        fun create(content: String, tags: List<List<String>>, pubKey: HexKey, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return PeopleListEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
         }
     }
 }

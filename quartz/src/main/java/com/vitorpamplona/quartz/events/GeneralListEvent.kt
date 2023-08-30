@@ -70,6 +70,10 @@ abstract class GeneralListEvent(
         return privateTags(privKey) ?: emptyList()
     }
 
+    fun privateTagsOrEmpty(content: String): List<List<String>> {
+        return privateTags(content) ?: emptyList()
+    }
+
     fun privateTaggedUsers(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "p" }?.map { it[1] }
     fun privateTaggedUsers(content: String) = privateTags(content)?.filter { it.size > 1 && it[0] == "p" }?.map { it[1] }
     fun privateHashtags(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }

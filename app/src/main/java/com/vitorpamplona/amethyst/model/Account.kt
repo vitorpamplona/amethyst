@@ -105,12 +105,42 @@ class Account(
 
     val liveHiddenUsers: LiveData<LiveHiddenUsers> by lazy {
         live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
-            val liveBlockedUsers = (liveMuteListEvent?.note?.event as? PeopleListEvent)?.publicAndPrivateUsers(keyPair.privKey)
-            LiveHiddenUsers(
-                hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
-                spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-                showSensitiveContent = showSensitiveContent
-            )
+            val blockList = liveMuteListEvent?.note?.event as? PeopleListEvent
+            if (loginWithAmber) {
+                if (blockList?.decryptedContent == null) {
+                    GlobalScope.launch(Dispatchers.IO) {
+                        val content = blockList?.content ?: ""
+                        if (content.isEmpty()) return@launch
+                        AmberUtils.content = ""
+                        AmberUtils.decryptBookmark(
+                            content,
+                            keyPair.pubKey.toHexKey()
+                        )
+                        blockList?.decryptedContent = AmberUtils.content
+                        AmberUtils.content = ""
+                    }
+
+                    LiveHiddenUsers(
+                        hiddenUsers = persistentSetOf(),
+                        spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+                        showSensitiveContent = showSensitiveContent
+                    )
+                } else {
+                    val liveBlockedUsers = blockList.publicAndPrivateUsers(blockList.decryptedContent ?: "")
+                    LiveHiddenUsers(
+                        hiddenUsers = liveBlockedUsers,
+                        spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+                        showSensitiveContent = showSensitiveContent
+                    )
+                }
+            } else {
+                val liveBlockedUsers = blockList?.publicAndPrivateUsers(keyPair.privKey)
+                LiveHiddenUsers(
+                    hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
+                    spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+                    showSensitiveContent = showSensitiveContent
+                )
+            }
         }.distinctUntilChanged()
     }
 
@@ -1654,6 +1684,28 @@ class Account(
         return returningList
     }
 
+    fun hideUser(pubkeyHex: String, encryptedContent: String): PeopleListEvent? {
+        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+
+        return if (blockList != null) {
+            PeopleListEvent.addUser(
+                earlierVersion = blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                pubKey = keyPair.pubKey.toHexKey(),
+                encryptedContent = encryptedContent
+            )
+        } else {
+            PeopleListEvent.createListWithUser(
+                name = PeopleListEvent.blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                pubKey = keyPair.pubKey.toHexKey(),
+                encryptedContent = encryptedContent
+            )
+        }
+    }
+
     fun hideUser(pubkeyHex: String) {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
 
@@ -2065,7 +2117,12 @@ class Account(
 
     fun isHidden(userHex: String): Boolean {
         val blockList = getBlockList()
+        val decryptedContent = blockList?.decryptedContent ?: ""
 
+        if (loginWithAmber) {
+            if (decryptedContent.isBlank()) return false
+            return (blockList?.publicAndPrivateUsers(decryptedContent)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
+        }
         return (blockList?.publicAndPrivateUsers(keyPair.privKey)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
     }
 

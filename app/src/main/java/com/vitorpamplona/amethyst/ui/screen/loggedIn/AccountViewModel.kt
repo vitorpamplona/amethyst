@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
@@ -470,6 +471,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             account.showUser(user.pubkeyHex)
         }
+    }
+
+    fun hide(user: User, encryptedContent: String): PeopleListEvent? {
+        return account.hideUser(user.pubkeyHex, encryptedContent)
     }
 
     fun hide(user: User) {

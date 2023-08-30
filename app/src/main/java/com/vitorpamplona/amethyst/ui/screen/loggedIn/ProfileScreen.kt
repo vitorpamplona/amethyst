@@ -1,8 +1,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
@@ -53,14 +56,17 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.actions.SignerDialog
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequestCard
@@ -95,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -625,7 +632,9 @@ private fun ProfileHeader(
                 modifier = Modifier
                     .size(30.dp)
                     .align(Alignment.Center),
-                onClick = { popupExpanded = true },
+                onClick = {
+                    popupExpanded = true
+                },
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
@@ -1715,6 +1724,80 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
     ) {
         val clipboardManager = LocalClipboardManager.current
         val scope = rememberCoroutineScope()
+        val context = LocalContext.current
+
+        var event by remember { mutableStateOf<Event?>(null) }
+        if (event != null) {
+            SignerDialog(
+                onClose = {
+                    event = null
+                },
+                onPost = {
+                    scope.launch(Dispatchers.IO) {
+                        val signedEvent = Event.fromJson(it)
+                        Client.send(signedEvent)
+                        LocalCache.verifyAndConsume(signedEvent, null)
+                        event = null
+                        accountViewModel.account.live.invalidateData()
+                        accountViewModel.account.saveable.invalidateData()
+                        onDismiss()
+                    }
+                },
+                data = event!!.toJson()
+            )
+        }
+
+        val encryptResult = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = {
+                if (it.resultCode != Activity.RESULT_OK) {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            "Sign request rejected",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@rememberLauncherForActivityResult
+                }
+
+                val encryptedContent = it.data?.getStringExtra("signature") ?: ""
+                event = accountViewModel.hide(user, encryptedContent)
+            }
+        )
+
+        val decryptResult = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = {
+                if (it.resultCode != Activity.RESULT_OK) {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            "Sign request rejected",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@rememberLauncherForActivityResult
+                }
+
+                val decryptedContent = it.data?.getStringExtra("signature") ?: ""
+                val blockList = accountViewModel.account.getBlockList()
+                val privateTags = if (blockList == null) {
+                    listOf(listOf("p", user.pubkeyHex))
+                } else {
+                    blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", user.pubkeyHex))
+                }
+                val msg = Event.mapper.writeValueAsString(privateTags)
+
+                ServiceManager.shouldPauseService = true
+                AmberUtils.openAmber(
+                    msg,
+                    SignerType.NIP04_ENCRYPT,
+                    encryptResult,
+                    accountViewModel.account.keyPair.pubKey.toHexKey()
+                )
+            }
+        )
 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
             Text(stringResource(R.string.copy_user_id))
@@ -1730,10 +1813,37 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
-                DropdownMenuItem(onClick = {
-                    accountViewModel.hide(user)
-                    onDismiss()
-                }) {
+                DropdownMenuItem(
+                    onClick = {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            scope.launch(Dispatchers.IO) {
+                                val blockList = accountViewModel.account.getBlockList()
+                                val content = blockList?.content ?: ""
+                                if (content.isBlank()) {
+                                    val privateTags = listOf(listOf("p", user.pubkeyHex))
+                                    val msg = Event.mapper.writeValueAsString(privateTags)
+
+                                    AmberUtils.openAmber(
+                                        msg,
+                                        SignerType.NIP04_ENCRYPT,
+                                        encryptResult,
+                                        accountViewModel.account.keyPair.pubKey.toHexKey()
+                                    )
+                                } else {
+                                    AmberUtils.openAmber(
+                                        content,
+                                        SignerType.NIP04_DECRYPT,
+                                        decryptResult,
+                                        accountViewModel.account.keyPair.pubKey.toHexKey()
+                                    )
+                                }
+                            }
+                        } else {
+                            accountViewModel.hide(user)
+                            onDismiss()
+                        }
+                    }
+                ) {
                     Text(stringResource(id = R.string.block_hide_user))
                 }
             }
