@@ -32,6 +32,7 @@
     <string name="login_with_a_private_key_to_like_posts">使用私鑰登錄以便點贊貼文</string>
     <string name="no_zap_amount_setup_long_press_to_change">沒有設置Zap金額。長按以更改</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">使用私鑰登錄以便發送Zaps</string>
+    <string name="zaps">打閃</string>
     <string name="view_count">瀏覽次數</string>
     <string name="boost">提升</string>
     <string name="boosted">已提升</string>
@@ -42,6 +43,7 @@
     <string name="and">" 和 "</string>
     <string name="in_channel">" 在頻道 "</string>
     <string name="profile_banner">個人檔案橫幅</string>
+    <string name="payment_successful">付款成功</string>
     <string name="following">" 關注"</string>
     <string name="followers">" 粉絲"</string>
     <string name="profile">個人檔案</string>
@@ -158,6 +160,7 @@
     <string name="translations_show_in_lang_first">顯示 %1$s 在前</string>
     <string name="translations_always_translate_to_lang">總是翻譯為 %1$s</string>
     <string name="translations_never_translate_from_lang">不再翻譯 %1$s</string>
+    <string name="nip_05">Nostr 地址</string>
     <string name="never">從不</string>
     <string name="now">現在</string>
     <string name="h">小時</string>
@@ -171,6 +174,7 @@
     <string name="mark_all_known_as_read">將所有已知內容標記為已讀</string>
     <string name="mark_all_new_as_read">將所有新內容標記為已讀</string>
     <string name="mark_all_as_read">將所有內容標記為已讀</string>
+    <string name="backup_keys">備份密鑰</string>
     <string name="account_backup_tips_md" tools:ignore="Typos">        ## 備份與安全提示
         \n\n您的帳户由一個私人密鑰保護。 密鑰是以**nsec1**開頭的長隨機字符串。任何擁有您的私人密鑰的人都可以使用您的身份發佈內容。
         \n\n- **不要**將您的私人密鑰添加到您不信任的任何網站或軟件，亦不要在網上公開。
@@ -189,6 +193,13 @@
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">複製作者的 @npub 到剪貼板</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">複製文章ID (@note1) 到剪貼板</string>
     <string name="select_text_dialog_top">選擇文本</string>
+    <string name="account_switch_add_account_dialog_title">添加新帳戶</string>
+    <string name="drawer_accounts">帳戶</string>
+    <string name="account_switch_select_account">選擇帳戶</string>
+    <string name="account_switch_add_account_btn">添加新帳戶</string>
+    <string name="account_switch_active_account">活躍帳戶</string>
+    <string name="account_switch_has_private_key">有私鑰</string>
+    <string name="back">返回</string>
     <string name="quick_action_select">選擇</string>
     <string name="quick_action_share_browser_link">分享瀏覽網址</string>
     <string name="quick_action_share">分享</string>
@@ -200,4 +211,22 @@
     <string name="quick_action_follow">關注</string>
     <string name="quick_action_request_deletion_alert_title">請求刪貼</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 將請求您的記錄從當前連接的中繼器中刪除。不能保證您發佈的筆記將被永久從那些中繼器或其他存儲筆記的中繼器中刪除。</string>
+    <string name="quick_action_block_dialog_btn">屏蔽</string>
+    <string name="quick_action_delete_dialog_btn">刪除</string>
+    <string name="quick_action_block">屏蔽</string>
+    <string name="quick_action_report">舉報</string>
+    <string name="quick_action_delete_button">刪除</string>
+    <string name="report_dialog_select_reason_label">原因</string>
+    <string name="report_dialog_select_reason_placeholder">選擇原因...</string>
+    <string name="report_dialog_post_report_btn">發佈舉報</string>
+    <string name="report_dialog_title">屏蔽並舉報</string>
+    <string name="block_only">屏蔽</string>
+    <string name="bookmarks">書籤</string>
+    <string name="private_bookmarks">私人書籤</string>
+    <string name="public_bookmarks">公開書籤</string>
+    <string name="add_to_private_bookmarks">添加到私人書籤</string>
+    <string name="add_to_public_bookmarks">添加到公開書籤</string>
+    <string name="remove_from_private_bookmarks">從私人書籤移除</string>
+    <string name="remove_from_public_bookmarks">從公開書籤移除</string>
+    <string name="lightning_create_and_add_invoice">創建並添加</string>
 </resources>
