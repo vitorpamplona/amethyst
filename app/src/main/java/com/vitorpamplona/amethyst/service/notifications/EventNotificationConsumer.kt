@@ -20,6 +20,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.collections.immutable.persistentSetOf
+import java.math.BigDecimal
 
 class EventNotificationConsumer(private val applicationContext: Context) {
 
@@ -129,15 +130,17 @@ class EventNotificationConsumer(private val applicationContext: Context) {
     private fun notify(event: LnZapEvent) {
         val noteZapEvent = LocalCache.notes[event.id] ?: return
 
-        val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) }
+        val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) }
+
+        if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
         LocalPreferences.allSavedAccounts().forEach {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
 
             if (acc != null && acc.userProfile().pubkeyHex == event.zappedAuthor().firstOrNull()) {
                 val amount = showAmount(event.amount)
-                val senderInfo = (noteZapRequest?.event as? LnZapRequestEvent)?.let {
+                val senderInfo = (noteZapRequest.event as? LnZapRequestEvent)?.let {
                     val decryptedContent = acc.decryptZapContentAuthor(noteZapRequest)
                     if (decryptedContent != null) {
                         val author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
