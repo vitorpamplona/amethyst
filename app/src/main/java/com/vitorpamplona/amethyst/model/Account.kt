@@ -117,6 +117,7 @@ class Account(
                             keyPair.pubKey.toHexKey()
                         )
                         blockList?.decryptedContent = AmberUtils.content
+                        live.invalidateData()
                         AmberUtils.content = ""
                     }
 
@@ -1684,7 +1685,7 @@ class Account(
         return returningList
     }
 
-    fun hideUser(pubkeyHex: String, encryptedContent: String): PeopleListEvent? {
+    fun hideUser(pubkeyHex: String, encryptedContent: String): PeopleListEvent {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
 
         return if (blockList != null) {
@@ -1730,6 +1731,20 @@ class Account(
 
         live.invalidateData()
         saveable.invalidateData()
+    }
+
+    fun showUser(pubkeyHex: String, encryptedContent: String): PeopleListEvent? {
+        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+        if (blockList != null) {
+            return PeopleListEvent.removeUser(
+                earlierVersion = blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                pubKey = keyPair.pubKey.toHexKey(),
+                encryptedContent = encryptedContent
+            )
+        }
+        return null
     }
 
     fun showUser(pubkeyHex: String) {

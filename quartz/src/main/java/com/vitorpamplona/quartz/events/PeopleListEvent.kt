@@ -176,6 +176,24 @@ class PeopleListEvent(
             }
         }
 
+        fun removeUser(earlierVersion: PeopleListEvent, pubKeyHex: String, isPrivate: Boolean, encryptedContent: String, pubKey: HexKey, createdAt: Long = TimeUtils.now()): PeopleListEvent {
+            return if (isPrivate) {
+                create(
+                    content = encryptedContent,
+                    tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                    pubKey = pubKey,
+                    createdAt = createdAt
+                )
+            }
+        }
+
         fun removeUser(earlierVersion: PeopleListEvent, pubKeyHex: String, isPrivate: Boolean, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
             if (!earlierVersion.isTaggedUser(pubKeyHex, isPrivate, privateKey)) return earlierVersion
 

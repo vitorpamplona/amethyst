@@ -467,6 +467,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.unseal(event)
     }
 
+    fun show(user: User, encryptedContent: String): PeopleListEvent? {
+        return account.showUser(user.pubkeyHex, encryptedContent)
+    }
+
     fun show(user: User) {
         viewModelScope.launch(Dispatchers.IO) {
             account.showUser(user.pubkeyHex)

@@ -727,10 +727,114 @@ private fun ProfileActions(
         EditButton(accountViewModel.account)
     }
 
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    var event by remember { mutableStateOf<Event?>(null) }
+    if (event != null) {
+        SignerDialog(
+            onClose = {
+                event = null
+            },
+            onPost = {
+                scope.launch(Dispatchers.IO) {
+                    val signedEvent = Event.fromJson(it)
+                    Client.send(signedEvent)
+                    LocalCache.verifyAndConsume(signedEvent, null)
+                    accountViewModel.account.live.invalidateData()
+                    accountViewModel.account.saveable.invalidateData()
+                    event = null
+                }
+            },
+            data = event!!.toJson()
+        )
+    }
+
+    val encryptResult = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch {
+                    Toast.makeText(
+                        context,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
+            }
+
+            val encryptedContent = it.data?.getStringExtra("signature") ?: ""
+            event = accountViewModel.show(baseUser, encryptedContent)
+        }
+    )
+
+    val decryptResult = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch {
+                    Toast.makeText(
+                        context,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
+            }
+
+            val decryptedContent = it.data?.getStringExtra("signature") ?: ""
+            val blockList = accountViewModel.account.getBlockList()
+            val privateTags = if (blockList == null) {
+                listOf(listOf("p", baseUser.pubkeyHex))
+            } else {
+                if (accountViewModel.account.isHidden(baseUser)) {
+                    blockList.privateTagsOrEmpty(decryptedContent).filter { element -> !element.contains(baseUser.pubkeyHex) }
+                } else {
+                    blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", baseUser.pubkeyHex))
+                }
+            }
+            val msg = Event.mapper.writeValueAsString(privateTags)
+
+            ServiceManager.shouldPauseService = true
+            AmberUtils.openAmber(
+                msg,
+                SignerType.NIP04_ENCRYPT,
+                encryptResult,
+                accountViewModel.account.keyPair.pubKey.toHexKey()
+            )
+        }
+    )
+
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
         if (isHidden) {
             ShowUserButton {
-                accountViewModel.showUser(baseUser.pubkeyHex)
+                if (accountViewModel.loggedInWithAmber()) {
+                    scope.launch(Dispatchers.IO) {
+                        val blockList = accountViewModel.account.getBlockList()
+                        val content = blockList?.content ?: ""
+                        if (content.isBlank()) {
+                            val privateTags = listOf(listOf("p", baseUser.pubkeyHex))
+                            val msg = Event.mapper.writeValueAsString(privateTags)
+
+                            AmberUtils.openAmber(
+                                msg,
+                                SignerType.NIP04_ENCRYPT,
+                                encryptResult,
+                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                            )
+                        } else {
+                            AmberUtils.openAmber(
+                                content,
+                                SignerType.NIP04_DECRYPT,
+                                decryptResult,
+                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                            )
+                        }
+                    }
+                } else {
+                    accountViewModel.showUser(baseUser.pubkeyHex)
+                }
             }
         } else {
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
@@ -1737,9 +1841,9 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                         val signedEvent = Event.fromJson(it)
                         Client.send(signedEvent)
                         LocalCache.verifyAndConsume(signedEvent, null)
-                        event = null
                         accountViewModel.account.live.invalidateData()
                         accountViewModel.account.saveable.invalidateData()
+                        event = null
                         onDismiss()
                     }
                 },
@@ -1762,7 +1866,11 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                 }
 
                 val encryptedContent = it.data?.getStringExtra("signature") ?: ""
-                event = accountViewModel.hide(user, encryptedContent)
+                event = if (accountViewModel.account.isHidden(user)) {
+                    accountViewModel.show(user, encryptedContent)
+                } else {
+                    accountViewModel.hide(user, encryptedContent)
+                }
             }
         )
 
@@ -1785,7 +1893,11 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
                 val privateTags = if (blockList == null) {
                     listOf(listOf("p", user.pubkeyHex))
                 } else {
-                    blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", user.pubkeyHex))
+                    if (accountViewModel.account.isHidden(user)) {
+                        blockList.privateTagsOrEmpty(decryptedContent).filter { element -> !element.contains(user.pubkeyHex) }
+                    } else {
+                        blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", user.pubkeyHex))
+                    }
                 }
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
@@ -1806,10 +1918,37 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         if (accountViewModel.userProfile() != user) {
             Divider()
             if (accountViewModel.account.isHidden(user)) {
-                DropdownMenuItem(onClick = {
-                    accountViewModel.show(user)
-                    onDismiss()
-                }) {
+                DropdownMenuItem(
+                    onClick = {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            scope.launch(Dispatchers.IO) {
+                                val blockList = accountViewModel.account.getBlockList()
+                                val content = blockList?.content ?: ""
+                                if (content.isBlank()) {
+                                    val privateTags = listOf(listOf("p", user.pubkeyHex))
+                                    val msg = Event.mapper.writeValueAsString(privateTags)
+
+                                    AmberUtils.openAmber(
+                                        msg,
+                                        SignerType.NIP04_ENCRYPT,
+                                        encryptResult,
+                                        accountViewModel.account.keyPair.pubKey.toHexKey()
+                                    )
+                                } else {
+                                    AmberUtils.openAmber(
+                                        content,
+                                        SignerType.NIP04_DECRYPT,
+                                        decryptResult,
+                                        accountViewModel.account.keyPair.pubKey.toHexKey()
+                                    )
+                                }
+                            }
+                        } else {
+                            accountViewModel.show(user)
+                            onDismiss()
+                        }
+                    }
+                ) {
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
