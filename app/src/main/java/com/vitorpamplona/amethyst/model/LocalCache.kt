@@ -1492,9 +1492,10 @@ object LocalCache {
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
+                        // must have a valid request
                         verifyAndConsume(it, relay)
+                        consume(event)
                     }
-                    consume(event)
                 }
                 is LnZapRequestEvent -> consume(event)
                 is LnZapPaymentRequestEvent -> consume(event)
