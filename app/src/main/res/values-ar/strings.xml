@@ -16,11 +16,14 @@
     <string name="impersonation">التمثيل</string>
     <string name="illegal_behavior">تصرف غير قانوني</string>
     <string name="unknown">غير معروف</string>
+    <string name="relay_icon">أيقونة الخادم</string>
     <string name="unknown_author">كاتب غير معروف</string>
     <string name="copy_text">نسخ النص</string>
     <string name="copy_user_pubkey">نسخ المفتاح العام</string>
     <string name="copy_note_id">نسخ معرف </string>
     <string name="broadcast">بث</string>
+    <string name="request_deletion">حذف الطلب</string>
+    <string name="block_report">حظر / تبليغ</string>
     <string name="block_hide_user"><![CDATA[حظر و إخفاء المستخدم]]></string>
     <string name="report_spam_scam">الابلاغ عن البريد العشوائي / الاحتيال</string>
     <string name="report_impersonation">الإبلاغ عن التمثيل</string>
@@ -31,6 +34,8 @@
     <string name="login_with_a_private_key_to_like_posts">تسجيل الدخول باستخدام مفتاح خاص لإبداء الإعجاب بالمنشورات</string>
     <string name="no_zap_amount_setup_long_press_to_change">لا يوجد إعداد لمبلغ Zap. اضغط لفترة طويلة للتغيير</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">قم بتسجيل الدخول باستخدام مفتاح خاص لتتمكن من إرسال Zaps</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">قم بتسجيل الدخول باستخدام مفتاح خاص لتتمكن من متابعة المستخدمين</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">قم بتسجيل الدخول بمفتاحك الخاص للتتمكن من إلغاء متابعة المستخدمين </string>
     <string name="view_count">مشاهدة العد</string>
     <string name="boost">تعزيز</string>
     <string name="boosted">معزز</string>
@@ -41,6 +46,8 @@
     <string name="and">" و "</string>
     <string name="in_channel">"في القناة "</string>
     <string name="profile_banner">لافتة الملف الشخصي</string>
+    <string name="payment_successful">تم الدفع بنجاح</string>
+    <string name="error_parsing_error_message">خطأ أثناء تحليل رسالة الخطأ</string>
     <string name="following">"المتابعون"</string>
     <string name="followers">"متابِعاً"</string>
     <string name="profile">الملف الشخصي</string>
@@ -70,6 +77,7 @@
     <string name="failed_to_upload_the_image">فشل تحميل الصورة</string>
     <string name="relay_address">Relay عنوان</string>
     <string name="posts">المنشورات</string>
+    <string name="bytes">Bytes</string>
     <string name="errors">الأخطاء</string>
     <string name="home_feed">المنشورات الرئيسية</string>
     <string name="private_message_feed"> الرسائل الخاصة</string>
@@ -166,4 +174,95 @@
     <string name="report_hateful_speech">أبلغ عن كلام يحض على الكراهية</string>
     <string name="report_nudity_porn">الإبلاغ عن عُري / إباحي</string>
     <string name="others">آخرون</string>
+    <string name="mark_all_known_as_read">ضع علامة على جميع الرسائل/الاشعارات المعروفة كمقروء</string>
+    <string name="mark_all_new_as_read">ضع علامة على جميع الرسائل/الاشعارات الجديدة كمقروء</string>
+    <string name="mark_all_as_read">ضع علامة على جميع الرسائل/الاشعارات كمقروء</string>
+    <string name="backup_keys">قم بعمل نسخة احتياطية للمفاتيح</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## النصائح الرئيسية للنسخ الاحتياطي والسلامة
+        \n\n- يتم تأمين حسابك بمفتاح سري. المفتاح السري هو سلسلة عشوائية طويلة تبدأ بـ **nsec1**. أي شخص لديه حق الوصول إلى مفتاحك السري يمكنه نشر المحتوى باستخدام هويتك.
+        \n\n- لا تقم بوضع مفتاحك السري في أي موقع أو برنامج لا تثق به.
+        \n- مطوري Amethyst لن يطلبوا منك **أبدا** المفتاح السري الخاص بك.
+        \n- حافظ على نسخة احتياطية آمنة لمفتاحك السري لاسترداد الحساب. نوصي باستخدام برنامج لادارة كلمات المرور.
+    </string>
+    <string name="secret_key_copied_to_clipboard">مفتاحك السري (nsec) قد تم نسخه في الحافظة</string>
+    <string name="copy_my_secret_key">إنسخ مفتاحي السري</string>
+    <string name="biometric_authentication_failed">فشلت المصادقة</string>
+    <string name="biometric_error">خطأ</string>
+    <string name="badge_created_by">"تم إنشاؤه بواسطة %1$s"</string>
+    <string name="badge_award_image_for">"صورة شارة مكافئة ل %1$s"</string>
+    <string name="new_badge_award_notif">لقد حصلت على شارة جائزة جديدة</string>
+    <string name="copied_note_text_to_clipboard">تم نسخ نص الملاحظة/المنشور إلى الحافظة</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">تم نسخ عنوان @npub المؤلف إلى الحافظة</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">تم نسخ رمز الملاحظة/المنشور (note ID) إلى الحافظة</string>
+    <string name="select_text_dialog_top">تحديد نص</string>
+    <string name="private_conversation_notification">"&lt;استحالة فك تشفير الرسالة الخاصة&gt;
+\n\n أنت الآن في محادثة خاصة/مشفرة بين %1$s و %2$s ."</string>
+    <string name="account_switch_add_account_dialog_title">إضافة حساب جديد</string>
+    <string name="drawer_accounts">الحسابات</string>
+    <string name="account_switch_select_account">اختر حساب</string>
+    <string name="account_switch_add_account_btn">إضافة حساب جديد</string>
+    <string name="account_switch_active_account">تنشيط الحساب</string>
+    <string name="account_switch_has_private_key">يحتوي على مفتاح خاص</string>
+    <string name="account_switch_pubkey_only">قراءة فقط، لا يوجد مفتاح خاص</string>
+    <string name="back">رجوع</string>
+    <string name="quick_action_select">اختر</string>
+    <string name="quick_action_share_browser_link">شارك رابط المتصفح</string>
+    <string name="quick_action_share">مشاركة</string>
+    <string name="quick_action_copy_user_id">معرف المؤلف (ID)</string>
+    <string name="quick_action_copy_note_id">رمز/معرف الملاحظة (Note ID)</string>
+    <string name="quick_action_copy_text">نسخ النص</string>
+    <string name="quick_action_delete">حذف</string>
+    <string name="quick_action_unfollow">الغاء المتابعة</string>
+    <string name="quick_action_follow">متابعة</string>
+    <string name="quick_action_request_deletion_alert_title">طلب الحذف</string>
+    <string name="quick_action_request_deletion_alert_body">سيطلب Amethyst حذف ملاحظتك من الخوادم (relays) الذي أنت متصل به حاليا. لا يوجد ضمان لحذف ملاحظتك بشكل دائم من تلك الخوادم أو من الخوادم الأخرى التي ربما حفظت فيها.</string>
+    <string name="quick_action_block_dialog_btn">حظر </string>
+    <string name="quick_action_delete_button">حذف</string>
+    <string name="quick_action_dont_show_again_button">لا تظهر مرة أخرى</string>
+    <string name="report_dialog_illegal">تصرف غير قانوني</string>
+    <string name="report_dialog_blocking_a_user">حظر المستخدم سوف يخفي محتواه في التطبيق الخاص بك. ملاحظاتك لا تزال قابلة للعرض علناً، بما في ذلك للأشخاص الذين تقوم بحظرهم. يتم إدراج المستخدمين المحظورين على شاشة مرشحات الأمان (Security Filters screen).</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[حظر و إخفاء المستخدم]]></string>
+    <string name="report_dialog_reminder_public">ستكون جميع التقارير المنشورة مرئية للجمهور.</string>
+    <string name="report_dialog_additional_reason_placeholder">اختياريا تستطيع توفير سياق إضافي حول تقريرك…</string>
+    <string name="report_dialog_additional_reason_label">سياق إضافي</string>
+    <string name="report_dialog_select_reason_placeholder">حدد سببا</string>
+    <string name="report_dialog_post_report_btn">تبليغ المنشور (Report)</string>
+    <string name="report_dialog_title">حظر / تبليغ</string>
+    <string name="block_only">حظر </string>
+    <string name="bookmarks">المفضلة</string>
+    <string name="private_bookmarks">المفضلة الخاصة</string>
+    <string name="public_bookmarks">المفضلة العامة</string>
+    <string name="add_to_private_bookmarks">إضافة إلى المفضلات الخاصة</string>
+    <string name="add_to_public_bookmarks">إضافة إلى المفضلات العامة</string>
+    <string name="remove_from_private_bookmarks">إزالة من المفضلات الخاصة</string>
+    <string name="remove_from_public_bookmarks">إزالة من المفضلات العامة</string>
+    <string name="wallet_connect_service">خدمة Wallet Connect </string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">إغلاق بعد</string>
+    <string name="poll_closing_time_days">أيام</string>
+    <string name="poll_is_closed">تم إغلاق الاستطلاع لأي تصويت جديد</string>
+    <string name="one_vote_per_user_on_atomic_votes">يسمح بصوت واحد فقط لكل مستخدم في هذا النوع من الاستطلاع</string>
+    <string name="looking_for_event">"البحث عن الحدث %1$s"</string>
+    <string name="custom_zaps_add_a_message">أضف رسالة عامة</string>
+    <string name="custom_zaps_add_a_message_private">أضف رسالة خاصة</string>
+    <string name="custom_zaps_add_a_message_nonzap">أضف رسالة مع الفاتورة</string>
+    <string name="custom_zaps_add_a_message_example">شكرا لك على كل مساهمتك!</string>
+    <string name="lightning_create_and_add_invoice">إنشاء وإضافة</string>
+    <string name="poll_author_no_vote">لا يستطيع مؤلف الاستطلاع التصويت في استطلاعه.</string>
+    <string name="hash_verification_passed">هذا المحتوى هو نفسه منذ النشر</string>
+    <string name="hash_verification_failed">لقد تغير هذا المحتوى. ربما لم يشاهد مؤلفه التغيير أو يوافق عليه بعد.</string>
+    <string name="content_description_add_image">أضف صورة</string>
+    <string name="content_description_add_video">اضف فيديو</string>
+    <string name="content_description_add_document">أضف مستند</string>
+    <string name="add_content">أضف إلى الرسالة</string>
+    <string name="content_description">وصف المحتوى/المحتويات</string>
+    <string name="content_description_example">A blue boat in a white sandy beach at sunset
+(قارب أزرق في شاطئ رملي أبيض عند غروب الشمس)</string>
+    <string name="zap_type_public">عام</string>
+    <string name="zap_type_public_explainer">يستطيع الجميع رؤية المعاملة والرسالة</string>
+    <string name="zap_type_private">خاص</string>
+    <string name="zap_type_private_explainer">يمكن للمرسل والمستقبل رؤية بعضهما البعض وقراءة الرسالة</string>
+    <string name="zap_type_anonymous">مجهول الهوية</string>
+    <string name="zap_type_anonymous_explainer">المستقبل والجمهور لا يعرفان من الذي قام بإرسال الدفع</string>
+    <string name="file_server">خادم الملفات</string>
 </resources>
