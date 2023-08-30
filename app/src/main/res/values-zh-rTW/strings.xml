@@ -229,4 +229,12 @@
     <string name="remove_from_private_bookmarks">從私人書籤移除</string>
     <string name="remove_from_public_bookmarks">從公開書籤移除</string>
     <string name="lightning_create_and_add_invoice">創建並添加</string>
+    <string name="content_description_add_image">添加圖像</string>
+    <string name="content_description_add_video">添加視頻</string>
+    <string name="content_description_add_document">添加文件</string>
+    <string name="add_content">添加到消息</string>
+    <string name="zap_type">打閃種類</string>
+    <string name="zap_type_public">公開</string>
+    <string name="zap_type_anonymous">匿名</string>
+    <string name="zap_type_nonzap">非打閃</string>
 </resources>
