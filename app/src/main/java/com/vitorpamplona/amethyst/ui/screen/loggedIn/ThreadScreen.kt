@@ -23,7 +23,7 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, nav: (Stri
 
     val feedViewModel: NostrThreadFeedViewModel = viewModel(
         key = noteId + "NostrThreadFeedViewModel",
-        factory = NostrThreadFeedViewModel.Factory(noteId)
+        factory = NostrThreadFeedViewModel.Factory(accountViewModel.account, noteId)
     )
 
     NostrThreadDataSource.loadThread(noteId)
