@@ -57,20 +57,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
-    val discoveryListLiveData = accountLiveData.map {
+    val discoveryListLiveData = account.live.map {
         it.account.defaultDiscoveryFollowList
     }.distinctUntilChanged()
 
-    val homeListLiveData = accountLiveData.map {
+    val homeListLiveData = account.live.map {
         it.account.defaultHomeFollowList
     }.distinctUntilChanged()
 
-    val notificationListLiveData = accountLiveData.map {
+    val notificationListLiveData = account.live.map {
         it.account.defaultNotificationFollowList
     }.distinctUntilChanged()
 
-    val storiesListLiveData = accountLiveData.map {
+    val storiesListLiveData = account.live.map {
         it.account.defaultStoriesFollowList
+    }.distinctUntilChanged()
+
+    val showSensitiveContentChanges = account.live.map {
+        it.account.showSensitiveContent
     }.distinctUntilChanged()
 
     fun updateAutomaticallyStartPlayback(
