@@ -220,7 +220,6 @@ fun ProfileContent(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
-                        .padding(top = 15.dp)
                         .clickable(
                             onClick = {
                                 nav(route)
