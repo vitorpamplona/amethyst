@@ -49,7 +49,7 @@ abstract class NostrDataSource(val debugName: String) {
             // Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
         }
 
-        override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
+        override fun onRelayStateChange(type: Relay.Type, relay: Relay, subscriptionId: String?) {
             // Log.d("RELAY", "Relay ${relay.url} ${when (type) {
             //  Relay.Type.CONNECT -> "connected."
             //  Relay.Type.DISCONNECT -> "disconnected."
@@ -57,9 +57,9 @@ abstract class NostrDataSource(val debugName: String) {
             //  Relay.Type.EOSE -> "sent all events it had stored."
             // }}")
 
-            if (type == Relay.Type.EOSE && channel != null) {
+            if (type == Relay.Type.EOSE && subscriptionId != null && subscriptionId in subscriptions.keys) {
                 // updates a per subscripton since date
-                subscriptions[channel]?.updateEOSE(TimeUtils.now(), relay.url)
+                subscriptions[subscriptionId]?.updateEOSE(TimeUtils.now(), relay.url)
             }
         }
 
