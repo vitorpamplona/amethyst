@@ -57,12 +57,12 @@ class LightningAddressResolver() {
                 if (it.isSuccessful) {
                     onSuccess(it.body.string())
                 } else {
-                    onError("The receiver's lightning service at $url is not available. It was calculated from the lightning address \"${lnaddress}\". Error: ${it.code}. Check if the server up and if the lightning address is correct")
+                    onError("The receiver's lightning service at $url is not available. It was calculated from the lightning address \"${lnaddress}\". Error: ${it.code}. Check if the server is up and if the lightning address is correct")
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            onError("Could not resolve $url. Check if the server up and if the lightning address $lnaddress is correct")
+            onError("Could not resolve $url. Check if the server is up and if the lightning address $lnaddress is correct")
         }
     }
 

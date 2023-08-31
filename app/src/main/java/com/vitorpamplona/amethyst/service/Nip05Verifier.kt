@@ -47,13 +47,13 @@ class Nip05Verifier() {
                         if (it.isSuccessful) {
                             onSuccess(it.body.string())
                         } else {
-                            onError("Could not resolve $nip05. Error: ${it.code}. Check if the server up and if the address $nip05 is correct")
+                            onError("Could not resolve $nip05. Error: ${it.code}. Check if the server is up and if the address $nip05 is correct")
                         }
                     }
                 }
 
                 override fun onFailure(call: Call, e: java.io.IOException) {
-                    onError("Could not resolve $url. Check if the server up and if the address $nip05 is correct")
+                    onError("Could not resolve $url. Check if the server is up and if the address $nip05 is correct")
                     e.printStackTrace()
                 }
             })
