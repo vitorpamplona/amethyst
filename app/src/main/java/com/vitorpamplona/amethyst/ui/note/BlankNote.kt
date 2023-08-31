@@ -62,57 +62,63 @@ fun BlankNote(modifier: Modifier = Modifier, showDivider: Boolean = false, idHex
 @Composable
 fun HiddenNote(
     reports: ImmutableSet<Note>,
+    isHiddenAuthor: Boolean,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     isQuote: Boolean = false,
     nav: (String) -> Unit,
     onClick: () -> Unit
 ) {
-    Column(modifier = modifier) {
-        Row(modifier = Modifier.padding(horizontal = if (!isQuote) 12.dp else 6.dp)) {
-            Column(modifier = Modifier.padding(start = if (!isQuote) 10.dp else 5.dp)) {
-                Row(
-                    modifier = Modifier.padding(
-                        start = 20.dp,
-                        end = 20.dp
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(30.dp)) {
-                        Text(
-                            text = stringResource(R.string.post_was_flagged_as_inappropriate_by),
-                            color = Color.Gray
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = Modifier.padding(start = if (!isQuote) 30.dp else 25.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(30.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.post_was_flagged_as_inappropriate_by),
+                    color = Color.Gray
+                )
+                FlowRow(modifier = Modifier.padding(top = 10.dp)) {
+                    if (isHiddenAuthor) {
+                        UserPicture(
+                            user = accountViewModel.userProfile(),
+                            size = Size35dp,
+                            nav = nav,
+                            accountViewModel = accountViewModel
                         )
-                        FlowRow(modifier = Modifier.padding(top = 10.dp)) {
-                            reports.forEach {
-                                NoteAuthorPicture(
-                                    baseNote = it,
-                                    nav = nav,
-                                    accountViewModel = accountViewModel,
-                                    size = Size35dp
-                                )
-                            }
-                        }
-
-                        Button(
-                            modifier = Modifier.padding(top = 10.dp),
-                            onClick = onClick,
-                            shape = ButtonBorder,
-                            colors = ButtonDefaults
-                                .buttonColors(
-                                    backgroundColor = MaterialTheme.colors.primary
-                                ),
-                            contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
-                        ) {
-                            Text(text = stringResource(R.string.show_anyway), color = Color.White)
-                        }
+                    }
+                    reports.forEach {
+                        NoteAuthorPicture(
+                            baseNote = it,
+                            size = Size35dp,
+                            nav = nav,
+                            accountViewModel = accountViewModel
+                        )
                     }
                 }
 
-                Divider(
-                    thickness = 0.25.dp
-                )
+                Button(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = onClick,
+                    shape = ButtonBorder,
+                    colors = ButtonDefaults
+                        .buttonColors(
+                            backgroundColor = MaterialTheme.colors.primary
+                        ),
+                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+                ) {
+                    Text(text = stringResource(R.string.show_anyway), color = Color.White)
+                }
             }
         }
+
+        Divider(
+            thickness = 0.25.dp
+        )
     }
 }

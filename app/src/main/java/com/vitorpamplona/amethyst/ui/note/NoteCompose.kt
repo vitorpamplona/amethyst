@@ -38,7 +38,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -196,7 +195,6 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -277,11 +275,7 @@ fun CheckHiddenNoteCompose(
         // Ignores reports as well
         val state by remember {
             mutableStateOf(
-                NoteComposeReportState(
-                    isAcceptable = true,
-                    canPreview = true,
-                    relevantReports = persistentSetOf()
-                )
+                AccountViewModel.NoteComposeReportState()
             )
         }
 
@@ -324,13 +318,6 @@ fun CheckHiddenNoteCompose(
     }
 }
 
-@Immutable
-data class NoteComposeReportState(
-    val isAcceptable: Boolean,
-    val canPreview: Boolean,
-    val relevantReports: ImmutableSet<Note>
-)
-
 @Composable
 fun LoadedNoteCompose(
     note: Note,
@@ -347,19 +334,14 @@ fun LoadedNoteCompose(
 ) {
     var state by remember {
         mutableStateOf(
-            NoteComposeReportState(
-                isAcceptable = true,
-                canPreview = true,
-                relevantReports = persistentSetOf()
-            )
+            AccountViewModel.NoteComposeReportState()
         )
     }
 
     val scope = rememberCoroutineScope()
 
-    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
-        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+    WatchForReports(note, accountViewModel) { newState ->
+        if (state != newState) {
             scope.launch(Dispatchers.Main) {
                 state = newState
             }
@@ -386,7 +368,7 @@ fun LoadedNoteCompose(
 
 @Composable
 fun RenderReportState(
-    state: NoteComposeReportState,
+    state: AccountViewModel.NoteComposeReportState,
     note: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
@@ -405,6 +387,7 @@ fun RenderReportState(
         if (showHiddenNote) {
             HiddenNote(
                 state.relevantReports,
+                state.isHiddenAuthor,
                 accountViewModel,
                 modifier,
                 isBoostedNote,
@@ -436,7 +419,7 @@ fun RenderReportState(
 fun WatchForReports(
     note: Note,
     accountViewModel: AccountViewModel,
-    onChange: (Boolean, Boolean, ImmutableSet<Note>) -> Unit
+    onChange: (AccountViewModel.NoteComposeReportState) -> Unit
 ) {
     val userFollowsState by accountViewModel.userFollows.observeAsState()
     val noteReportsState by note.live().reports.observeAsState()

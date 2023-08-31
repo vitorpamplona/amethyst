@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
@@ -410,14 +411,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.defaultZapType
     }
 
-    fun isNoteAcceptable(note: Note, onReady: (Boolean, Boolean, ImmutableSet<Note>) -> Unit) {
+    @Immutable
+    data class NoteComposeReportState(
+        val isAcceptable: Boolean = true,
+        val canPreview: Boolean = true,
+        val isHiddenAuthor: Boolean = false,
+        val relevantReports: ImmutableSet<Note> = persistentSetOf()
+    )
+
+    fun isNoteAcceptable(note: Note, onReady: (NoteComposeReportState) -> Unit) {
         viewModelScope.launch {
             val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
             val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
 
             if (isFromLoggedIn || isFromLoggedInFollow) {
                 // No need to process if from trusted people
-                onReady(true, true, persistentSetOf())
+                onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
+            } else if (note.author?.let { account.isHidden(it) } == true) {
+                onReady(NoteComposeReportState(false, false, true, persistentSetOf()))
             } else {
                 val newCanPreview = !note.hasAnyReports()
 
@@ -425,11 +436,18 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
                 if (newCanPreview && newIsAcceptable) {
                     // No need to process reports if nothing is wrong
-                    onReady(true, true, persistentSetOf())
+                    onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
                 } else {
                     val newRelevantReports = account.getRelevantReports(note)
 
-                    onReady(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+                    onReady(
+                        NoteComposeReportState(
+                            newIsAcceptable,
+                            newCanPreview,
+                            false,
+                            newRelevantReports.toImmutableSet()
+                        )
+                    )
                 }
             }
         }

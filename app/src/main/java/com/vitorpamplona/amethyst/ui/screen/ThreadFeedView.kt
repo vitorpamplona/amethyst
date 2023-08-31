@@ -262,6 +262,7 @@ fun NoteMaster(
 
         HiddenNote(
             reports,
+            note.author?.let { account.isHidden(it) } ?: false,
             accountViewModel,
             Modifier,
             false,
