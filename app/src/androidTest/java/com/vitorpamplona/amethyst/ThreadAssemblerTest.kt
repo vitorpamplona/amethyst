@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.Event
 import junit.framework.TestCase
@@ -95,7 +97,7 @@ class ThreadAssemblerTest {
 
         val naddr = ATag(30023, "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93", "1680612926599", null)
 
-        val filter = ThreadFeedFilter(naddr.toTag())
+        val filter = ThreadFeedFilter(Account(KeyPair()), naddr.toTag())
         val calculatedFeed = filter.feed()
 
         val expecteedOrder = listOf(
@@ -126,14 +128,14 @@ class ThreadAssemblerTest {
             "6a58f8315af5badb1bdaeb5489417b94621a4d8e192ae2fedcca0c5dcf0c9cd4",
             "6e9bb03c7c40d67fec0d0bb872548ec207ba0ac4533efa137d7bcaca9fb4b191",
             "e2ae784b239cac4bad38136e4bd758b87dd261b659ef460450064bf9073edcb3",
-            "45d4fc726f2cc5b524be862c14fdadc1a24b25b8c6c011eedf2d2909589263e7",
-            "7a4a2419824669f07081abe2132f8cc0027efbce066ccdf187c897bb7ffa5dc3",
             "674c62f84afdc045bc3623ea132d90afdfe4b64249807f65302231115af5406d",
             "d54761f672669ea4f4b7592f3b0a30ee28de340b0a7e46b91af94e66905171c9",
             "00813a18ac9084cd0948c27027a980e34039a3011f30279a8b52ad87da5a3031",
             "87a5bd25aa084cefb3357fc9c2a5b327254fab35fdd7b2d4bd0acddc63d0abe8",
             "512962dbada5fd5015fc727a107d5c3f569662de67eab8e5da5a8065012cf11e",
             "ce6e32e3e17b6901d2cc70b60f3743e24f885bb6e9da6d88cff516079eac1883",
+            "7a4a2419824669f07081abe2132f8cc0027efbce066ccdf187c897bb7ffa5dc3",
+            "45d4fc726f2cc5b524be862c14fdadc1a24b25b8c6c011eedf2d2909589263e7",
             "d4a0b4f08d98d82a04292654ec132723cc2cf3fa24ffb6c0833426cb9372f4d5",
             "8cdc4676aca93bbafcfbe6784f9b2df54e8ca20fbe69ba55fda487736bfdb7f6",
             "7a18dda355525d468b31bba4fa947cba98cc19048d4a3099d5e9ba045d878c26"
