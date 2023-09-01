@@ -75,7 +75,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             if (acc != null && acc.userProfile().pubkeyHex == giftWrap.recipientPubKey()) {
                 val chatEvent = unwrapAndConsume(giftWrap, account = acc)
 
-                if (chatEvent is ChatMessageEvent && acc.keyPair.privKey != null) {
+                if (chatEvent is ChatMessageEvent && acc.keyPair.privKey != null && chatEvent.pubKey != acc.userProfile().pubkeyHex) {
                     val chatNote = LocalCache.notes[chatEvent.id] ?: return
                     val chatRoom = chatEvent.chatroomKey(acc.keyPair.pubKey.toHexKey())
 
