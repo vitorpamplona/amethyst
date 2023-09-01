@@ -19,6 +19,7 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentSetOf
 import java.math.BigDecimal
 
@@ -75,7 +76,11 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             if (acc != null && acc.userProfile().pubkeyHex == giftWrap.recipientPubKey()) {
                 val chatEvent = unwrapAndConsume(giftWrap, account = acc)
 
-                if (chatEvent is ChatMessageEvent && acc.keyPair.privKey != null && chatEvent.pubKey != acc.userProfile().pubkeyHex) {
+                if (chatEvent is ChatMessageEvent && // must be messages, not any other event
+                    acc.keyPair.privKey != null && // can't decrypt
+                    chatEvent.createdAt > TimeUtils.fiveMinutesAgo() && // old event being re-broadcasted
+                    chatEvent.pubKey != acc.userProfile().pubkeyHex // from the user
+                ) {
                     val chatNote = LocalCache.notes[chatEvent.id] ?: return
                     val chatRoom = chatEvent.chatroomKey(acc.keyPair.pubKey.toHexKey())
 
@@ -100,6 +105,9 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
     private fun notify(event: PrivateDmEvent) {
         val note = LocalCache.notes[event.id] ?: return
+
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
 
         LocalPreferences.allSavedAccounts().forEach {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
@@ -129,6 +137,9 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
     private fun notify(event: LnZapEvent) {
         val noteZapEvent = LocalCache.notes[event.id] ?: return
+
+        // old event being re-broadcast
+        if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
 
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) }
