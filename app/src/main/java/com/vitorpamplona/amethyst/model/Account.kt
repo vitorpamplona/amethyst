@@ -264,7 +264,7 @@ class Account(
         return note.hasReacted(userProfile(), reaction)
     }
 
-    fun reactTo(note: Note, reaction: String, signEvent: Boolean = true): ReactionEvent? {
+    fun reactTo(note: Note, reaction: String, signEvent: Boolean): ReactionEvent? {
         if (!isWriteable() && signEvent) return null
 
         if (hasReacted(note, reaction)) {
@@ -465,11 +465,11 @@ class Account(
         LocalCache.consume(event, null)
     }
 
-    fun delete(note: Note, signEvent: Boolean = true): DeletionEvent? {
+    fun delete(note: Note, signEvent: Boolean): DeletionEvent? {
         return delete(listOf(note), signEvent)
     }
 
-    fun delete(notes: List<Note>, signEvent: Boolean = true): DeletionEvent? {
+    fun delete(notes: List<Note>, signEvent: Boolean): DeletionEvent? {
         if (!isWriteable() && signEvent) return null
 
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
@@ -491,7 +491,7 @@ class Account(
         return HTTPAuthorizationEvent.create(url, method, body, keyPair.privKey!!)
     }
 
-    fun boost(note: Note, signEvent: Boolean = true): Event? {
+    fun boost(note: Note, signEvent: Boolean): Event? {
         if (!isWriteable() && signEvent) return null
 
         if (note.hasBoostedInTheLast5Minutes(userProfile())) {
@@ -558,7 +558,7 @@ class Account(
         return returningContactList
     }
 
-    fun follow(user: User, signEvent: Boolean = true): ContactListEvent? {
+    fun follow(user: User, signEvent: Boolean): ContactListEvent? {
         if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -643,7 +643,7 @@ class Account(
         return null
     }
 
-    fun followHashtag(tag: String, signEvent: Boolean = true): ContactListEvent? {
+    fun followHashtag(tag: String, signEvent: Boolean): ContactListEvent? {
         if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -707,7 +707,7 @@ class Account(
         return null
     }
 
-    fun unfollow(user: User, signEvent: Boolean = true): ContactListEvent? {
+    fun unfollow(user: User, signEvent: Boolean): ContactListEvent? {
         if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -730,7 +730,7 @@ class Account(
         return null
     }
 
-    fun unfollowHashtag(tag: String, signEvent: Boolean = true): ContactListEvent? {
+    fun unfollowHashtag(tag: String, signEvent: Boolean): ContactListEvent? {
         if (!isWriteable() && signEvent) return null
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -936,7 +936,7 @@ class Account(
         directMentions: Set<HexKey>,
         relayList: List<Relay>? = null,
         geohash: String? = null,
-        signEvent: Boolean = true
+        signEvent: Boolean
     ): TextNoteEvent? {
         if (!isWriteable() && signEvent) return null
 
@@ -1000,7 +1000,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
         geohash: String? = null,
-        signEvent: Boolean = true
+        signEvent: Boolean
     ): PollNoteEvent? {
         if (!isWriteable() && signEvent) return null
 
@@ -1056,7 +1056,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        signEvent: Boolean = true
+        signEvent: Boolean
     ): ChannelMessageEvent? {
         if (!isWriteable() && signEvent) return null
 
@@ -1095,7 +1095,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        signEvent: Boolean = true
+        signEvent: Boolean
     ): LiveActivitiesChatMessageEvent? {
         if (!isWriteable() && signEvent) return null
 
@@ -1126,7 +1126,7 @@ class Account(
     }
 
     fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null): PrivateDmEvent? {
-        return sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash)
+        return sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash, true)
     }
 
     fun sendPrivateMessage(
@@ -1138,7 +1138,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        signEvent: Boolean = true
+        signEvent: Boolean
     ): PrivateDmEvent? {
         if (!isWriteable() && signEvent) return null
 
@@ -1179,7 +1179,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        signEvent: Boolean = true
+        signEvent: Boolean
     ): List<GiftWrapEvent>? {
         if (!isWriteable() && signEvent) return null
 

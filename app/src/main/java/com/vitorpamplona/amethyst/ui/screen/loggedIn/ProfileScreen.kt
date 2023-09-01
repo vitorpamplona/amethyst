@@ -895,7 +895,7 @@ private fun DisplayFollowUnfollowButton(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollow(baseUser)
+                    accountViewModel.account.unfollow(baseUser, true)
                 }
             }
         }
@@ -918,7 +918,7 @@ private fun DisplayFollowUnfollowButton(
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.follow(baseUser)
+                        accountViewModel.account.follow(baseUser, true)
                     }
                 }
             }
@@ -940,7 +940,7 @@ private fun DisplayFollowUnfollowButton(
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.follow(baseUser)
+                        accountViewModel.account.follow(baseUser, true)
                     }
                 }
             }

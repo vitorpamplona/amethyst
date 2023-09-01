@@ -263,6 +263,24 @@ fun ChannelScreen(
 
         val scope = rememberCoroutineScope()
 
+        var event by remember { mutableStateOf<Event?>(null) }
+        if (event != null) {
+            SignerDialog(
+                onClose = {
+                    event = null
+                },
+                onPost = {
+                    scope.launch(Dispatchers.IO) {
+                        val signedEvent = Event.fromJson(it)
+                        Client.send(signedEvent)
+                        LocalCache.verifyAndConsume(signedEvent, null)
+                        event = null
+                    }
+                },
+                data = event!!.toJson()
+            )
+        }
+
         // LAST ROW
         EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
             scope.launch(Dispatchers.IO) {
@@ -274,20 +292,22 @@ fun ChannelScreen(
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {
-                    accountViewModel.account.sendChannelMessage(
+                    event = accountViewModel.account.sendChannelMessage(
                         message = tagger.message,
                         toChannel = channel.idHex,
                         replyTo = tagger.replyTos,
                         mentions = tagger.mentions,
-                        wantsToMarkAsSensitive = false
+                        wantsToMarkAsSensitive = false,
+                        signEvent = !accountViewModel.loggedInWithAmber()
                     )
                 } else if (channel is LiveActivitiesChannel) {
-                    accountViewModel.account.sendLiveMessage(
+                    event = accountViewModel.account.sendLiveMessage(
                         message = tagger.message,
                         toChannel = channel.address,
                         replyTo = tagger.replyTos,
                         mentions = tagger.mentions,
-                        wantsToMarkAsSensitive = false
+                        wantsToMarkAsSensitive = false,
+                        signEvent = !accountViewModel.loggedInWithAmber()
                     )
                 }
                 newPostModel.message = TextFieldValue("")

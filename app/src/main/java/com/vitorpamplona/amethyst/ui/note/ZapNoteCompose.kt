@@ -344,7 +344,7 @@ fun ShowFollowingOrUnfollowingButton(
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.account.unfollow(baseAuthor, false)
+                    event = accountViewModel.unfollow(baseAuthor, false)
                 } else {
                     scope.launch {
                         Toast
@@ -358,7 +358,7 @@ fun ShowFollowingOrUnfollowingButton(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.unfollow(baseAuthor)
+                    accountViewModel.unfollow(baseAuthor, true)
                 }
             }
         }

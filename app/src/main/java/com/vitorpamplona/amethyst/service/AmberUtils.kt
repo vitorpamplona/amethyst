@@ -43,7 +43,7 @@ object AmberUtils {
             ""
         )
         while (isActivityRunning) {
-            Thread.sleep(250)
+            // do nothing
         }
     }
 
@@ -57,7 +57,7 @@ object AmberUtils {
                 pubKey
             )
             while (isActivityRunning) {
-                Thread.sleep(250)
+                // do nothing
             }
         }
     }
@@ -72,7 +72,7 @@ object AmberUtils {
                 pubKey
             )
             while (isActivityRunning) {
-                Thread.sleep(250)
+                // do nothing
             }
         }
     }

@@ -112,11 +112,11 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.userProfile()
     }
 
-    fun reactTo(note: Note, reaction: String, signEvent: Boolean = true): ReactionEvent? {
+    fun reactTo(note: Note, reaction: String, signEvent: Boolean): ReactionEvent? {
         return account.reactTo(note, reaction, signEvent)
     }
 
-    fun reactToOrDelete(note: Note, reaction: String, signEvent: Boolean = true): Event? {
+    fun reactToOrDelete(note: Note, reaction: String, signEvent: Boolean): Event? {
         val currentReactions = account.reactionTo(note, reaction)
         if (currentReactions.isNotEmpty()) {
             return account.delete(currentReactions, signEvent)
@@ -134,7 +134,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.hasReacted(baseNote, reaction)
     }
 
-    fun deleteReactionTo(note: Note, reaction: String, signEvent: Boolean = true): DeletionEvent? {
+    fun deleteReactionTo(note: Note, reaction: String, signEvent: Boolean): DeletionEvent? {
         return account.delete(account.reactionTo(note, reaction), signEvent)
     }
 
@@ -142,7 +142,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.hasBoosted(baseNote)
     }
 
-    fun deleteBoostsTo(note: Note, signEvent: Boolean = true): DeletionEvent? {
+    fun deleteBoostsTo(note: Note, signEvent: Boolean): DeletionEvent? {
         return account.delete(account.boostsTo(note), signEvent)
     }
 
@@ -302,7 +302,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    fun boost(note: Note, signEvent: Boolean = true): Event? {
+    fun boost(note: Note, signEvent: Boolean): Event? {
         return account.boost(note, signEvent)
     }
 
@@ -386,8 +386,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.follow(user, signEvent)
     }
 
-    fun unfollow(user: User) {
-        account.unfollow(user)
+    fun unfollow(user: User, signEvent: Boolean): ContactListEvent? {
+        return account.unfollow(user, signEvent)
     }
 
     fun isLoggedUser(user: User?): Boolean {

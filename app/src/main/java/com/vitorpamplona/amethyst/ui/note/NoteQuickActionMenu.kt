@@ -315,8 +315,10 @@ private fun RenderMainPopup(
                             stringResource(R.string.quick_action_unfollow)
                         ) {
                             scope.launch(Dispatchers.IO) {
-                                accountViewModel.unfollow(note.author!!)
-                                onDismiss()
+                                event = accountViewModel.unfollow(note.author!!, !accountViewModel.loggedInWithAmber())
+                                if (!accountViewModel.loggedInWithAmber()) {
+                                    onDismiss()
+                                }
                             }
                         }
                     } else {

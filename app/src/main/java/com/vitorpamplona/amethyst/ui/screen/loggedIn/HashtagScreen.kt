@@ -186,7 +186,7 @@ fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollowHashtag(tag)
+                    accountViewModel.account.unfollowHashtag(tag, true)
                 }
             }
         }
@@ -208,7 +208,7 @@ fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.followHashtag(tag)
+                    accountViewModel.account.followHashtag(tag, true)
                 }
             }
         }

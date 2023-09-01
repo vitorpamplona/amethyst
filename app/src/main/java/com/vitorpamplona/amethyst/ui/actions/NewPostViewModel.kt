@@ -158,7 +158,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = account
     }
 
-    fun sendPost(relayList: List<Relay>? = null, signEvent: Boolean = true): Event? {
+    fun sendPost(relayList: List<Relay>? = null, signEvent: Boolean): Event? {
         try {
             val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
             tagger.run()
@@ -207,7 +207,8 @@ open class NewPostViewModel() : ViewModel() {
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
-                    geohash = geoHash
+                    geohash = geoHash,
+                    signEvent = signEvent
                 )
                 return null
             } else if (!dmUsers.isNullOrEmpty()) {
@@ -221,7 +222,8 @@ open class NewPostViewModel() : ViewModel() {
                         wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                         zapReceiver = zapReceiver,
                         zapRaiserAmount = localZapRaiserAmount,
-                        geohash = geoHash
+                        geohash = geoHash,
+                        signEvent = signEvent
                     )
                     return null
                 } else {
@@ -233,7 +235,8 @@ open class NewPostViewModel() : ViewModel() {
                         wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                         zapReceiver = zapReceiver,
                         zapRaiserAmount = localZapRaiserAmount,
-                        geohash = geoHash
+                        geohash = geoHash,
+                        signEvent = signEvent
                     )
                     return null
                 }

@@ -674,7 +674,7 @@ fun BoostReaction(
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.deleteBoostsTo(baseNote)
+                        accountViewModel.deleteBoostsTo(baseNote, true)
                     }
                 } else {
                     wantsToBoost = true
@@ -961,9 +961,9 @@ private fun likeClick(
         scope.launch(Dispatchers.IO) {
             val reaction = accountViewModel.account.reactionChoices.first()
             if (accountViewModel.hasReactedTo(baseNote, reaction)) {
-                accountViewModel.deleteReactionTo(baseNote, reaction)
+                accountViewModel.deleteReactionTo(baseNote, reaction, true)
             } else {
-                accountViewModel.reactTo(baseNote, reaction)
+                accountViewModel.reactTo(baseNote, reaction, true)
             }
         }
     } else if (accountViewModel.account.reactionChoices.size > 1) {
@@ -1273,7 +1273,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
                 onClick = {
                     if (accountViewModel.isWriteable()) {
                         scope.launch(Dispatchers.IO) {
-                            accountViewModel.boost(baseNote)
+                            accountViewModel.boost(baseNote, true)
                             onDismiss()
                         }
                     } else {
