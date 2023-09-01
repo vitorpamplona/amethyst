@@ -1118,14 +1118,35 @@ private fun zapClick(
                 .show()
         }
     } else if (!accountViewModel.isWriteable()) {
-        scope.launch {
-            Toast
-                .makeText(
+        if (accountViewModel.loggedInWithAmber()) {
+            if (accountViewModel.account.zapAmountChoices.size == 1) {
+                accountViewModel.zap(
+                    baseNote,
+                    accountViewModel.account.zapAmountChoices.first() * 1000,
+                    null,
+                    "",
                     context,
-                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-                    Toast.LENGTH_SHORT
+                    onError = onError,
+                    onProgress = {
+                        scope.launch(Dispatchers.Main) {
+                            onZappingProgress(it)
+                        }
+                    },
+                    zapType = accountViewModel.account.defaultZapType
                 )
-                .show()
+            } else if (accountViewModel.account.zapAmountChoices.size > 1) {
+                onMultipleChoices()
+            }
+        } else {
+            scope.launch {
+                Toast
+                    .makeText(
+                        context,
+                        context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
+            }
         }
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
         accountViewModel.zap(

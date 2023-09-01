@@ -337,18 +337,54 @@ class Account(
     }
 
     fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
 
         note.event?.let { event ->
-            return LnZapRequestEvent.create(
-                event,
-                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                    ?: localRelays.map { it.url }.toSet(),
-                keyPair.privKey!!,
-                pollOption,
-                message,
-                zapType
-            )
+            if (loginWithAmber) {
+                when (zapType) {
+                    LnZapEvent.ZapType.ANONYMOUS -> {
+                        return LnZapRequestEvent.createAnonymous(
+                            event,
+                            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                                ?: localRelays.map { it.url }.toSet(),
+                            pollOption,
+                            message
+                        )
+                    }
+                    LnZapEvent.ZapType.PUBLIC -> {
+                        val unsignedEvent = LnZapRequestEvent.createPublic(
+                            event,
+                            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                                ?: localRelays.map { it.url }.toSet(),
+                            keyPair.pubKey.toHexKey(),
+                            pollOption,
+                            message
+                        )
+                        AmberUtils.content = ""
+                        AmberUtils.openAmber(unsignedEvent)
+                        if (AmberUtils.content.isBlank()) return null
+                        return LnZapRequestEvent(
+                            unsignedEvent.id,
+                            unsignedEvent.pubKey,
+                            unsignedEvent.createdAt,
+                            unsignedEvent.tags,
+                            unsignedEvent.content,
+                            AmberUtils.content
+                        )
+                    }
+                    else -> null
+                }
+            } else {
+                return LnZapRequestEvent.create(
+                    event,
+                    userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                        ?: localRelays.map { it.url }.toSet(),
+                    keyPair.privKey!!,
+                    pollOption,
+                    message,
+                    zapType
+                )
+            }
         }
         return null
     }
