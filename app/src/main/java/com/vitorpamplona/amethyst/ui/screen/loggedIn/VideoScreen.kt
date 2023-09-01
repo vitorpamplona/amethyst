@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -52,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteComposeReportState
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
@@ -76,7 +76,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -250,19 +249,14 @@ fun LoadedVideoCompose(
 ) {
     var state by remember {
         mutableStateOf(
-            NoteComposeReportState(
-                isAcceptable = true,
-                canPreview = true,
-                relevantReports = persistentSetOf()
-            )
+            AccountViewModel.NoteComposeReportState()
         )
     }
 
     val scope = rememberCoroutineScope()
 
-    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
-        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+    WatchForReports(note, accountViewModel) { newState ->
+        if (state != newState) {
             scope.launch(Dispatchers.Main) {
                 state = newState
             }
@@ -281,7 +275,7 @@ fun LoadedVideoCompose(
 
 @Composable
 fun RenderReportState(
-    state: NoteComposeReportState,
+    state: AccountViewModel.NoteComposeReportState,
     note: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -290,11 +284,12 @@ fun RenderReportState(
 
     Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
         if (showHiddenNote) {
-            Column(remember { Modifier.fillMaxSize(1f) }, verticalArrangement = Arrangement.Center) {
+            Column(remember { Modifier.fillMaxSize() }, verticalArrangement = Arrangement.Center) {
                 HiddenNote(
                     state.relevantReports,
+                    state.isHiddenAuthor,
                     accountViewModel,
-                    Modifier,
+                    Modifier.fillMaxWidth(),
                     false,
                     nav,
                     onClick = { showReportedNote = true }

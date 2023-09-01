@@ -704,6 +704,7 @@ fun ControlWhenPlayerIsActive(
 
         controller.addListener(listener)
         onDispose {
+            view.keepScreenOn = false
             controller.removeListener(listener)
         }
     }

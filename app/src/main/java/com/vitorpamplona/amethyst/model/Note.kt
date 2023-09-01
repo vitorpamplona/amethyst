@@ -136,26 +136,60 @@ open class Note(val idHex: String) {
             .format(DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss"))
     }
 
+    data class LevelSignature(val signature: String, val createdAt: Long?, val author: User?)
+
     /**
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */
     fun replyLevelSignature(
         eventsToConsider: Set<Note>,
-        cachedSignatures: MutableMap<Note, String>
-    ): String {
+        cachedSignatures: MutableMap<Note, LevelSignature>,
+        account: User,
+        accountFollowingSet: Set<String>,
+        now: Long
+    ): LevelSignature {
         val replyTo = replyTo
         if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
-            return "/" + formattedDateTime(createdAt() ?: 0) + ";"
+            return LevelSignature(
+                signature = "/" + formattedDateTime(createdAt() ?: 0) + ";",
+                createdAt = createdAt(),
+                author = author
+            )
         }
 
-        val mySignature = (
+        val parent = (
             replyTo
                 .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
                 .map {
-                    cachedSignatures[it] ?: it.replyLevelSignature(eventsToConsider, cachedSignatures).apply { cachedSignatures.put(it, this) }
+                    cachedSignatures[it] ?: it.replyLevelSignature(
+                        eventsToConsider,
+                        cachedSignatures,
+                        account,
+                        accountFollowingSet,
+                        now
+                    ).apply { cachedSignatures.put(it, this) }
                 }
-                .maxByOrNull { it.length }?.removeSuffix(";") ?: ""
-            ) + "/" + formattedDateTime(createdAt() ?: 0) + ";"
+                .maxByOrNull { it.signature.length }
+            )
+
+        val parentSignature = parent?.signature?.removeSuffix(";") ?: ""
+
+        val threadOrder = if (parent?.author == author && createdAt() != null) {
+            // author of the thread first, in **ascending** order
+            "9" + formattedDateTime((parent?.createdAt ?: 0) + (now - (createdAt() ?: 0)))
+        } else if (author?.pubkeyHex == account.pubkeyHex) {
+            "8" + formattedDateTime(createdAt() ?: 0) // my replies
+        } else if (author?.pubkeyHex in accountFollowingSet) {
+            "7" + formattedDateTime(createdAt() ?: 0) // my follows replies.
+        } else {
+            "0" + formattedDateTime(createdAt() ?: 0) // everyone else.
+        }
+
+        val mySignature = LevelSignature(
+            signature = parentSignature + "/" + threadOrder + ";",
+            createdAt = createdAt(),
+            author = author
+        )
 
         cachedSignatures[this] = mySignature
         return mySignature

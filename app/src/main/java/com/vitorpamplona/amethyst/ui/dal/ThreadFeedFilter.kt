@@ -1,22 +1,29 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThreadAssembler
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class ThreadFeedFilter(val noteId: String) : FeedFilter<Note>() {
+class ThreadFeedFilter(val account: Account, val noteId: String) : FeedFilter<Note>() {
 
     override fun feedKey(): String {
         return noteId
     }
 
     override fun feed(): List<Note> {
-        val cachedSignatures: MutableMap<Note, String> = mutableMapOf()
-        val eventsToWatch = ThreadAssembler().findThreadFor(noteId) ?: emptySet()
+        val cachedSignatures: MutableMap<Note, Note.LevelSignature> = mutableMapOf()
+        val followingSet = account.selectedUsersFollowList(KIND3_FOLLOWS) ?: emptySet()
+        val eventsToWatch = ThreadAssembler().findThreadFor(noteId)
+        val now = TimeUtils.now()
 
         // Currently orders by date of each event, descending, at each level of the reply stack
-        val order = compareByDescending<Note> { it.replyLevelSignature(eventsToWatch, cachedSignatures) }
+        val order = compareByDescending<Note> {
+            it.replyLevelSignature(eventsToWatch, cachedSignatures, account.userProfile(), followingSet, now).signature
+        }
 
         return eventsToWatch.sortedWith(order)
     }

@@ -95,10 +95,10 @@ class NostrDiscoverChatFeedViewModel(val account: Account) : FeedViewModel(Disco
     }
 }
 
-class NostrThreadFeedViewModel(val noteId: String) : FeedViewModel(ThreadFeedFilter(noteId)) {
-    class Factory(val noteId: String) : ViewModelProvider.Factory {
+class NostrThreadFeedViewModel(account: Account, noteId: String) : FeedViewModel(ThreadFeedFilter(account, noteId)) {
+    class Factory(val account: Account, val noteId: String) : ViewModelProvider.Factory {
         override fun <NostrThreadFeedViewModel : ViewModel> create(modelClass: Class<NostrThreadFeedViewModel>): NostrThreadFeedViewModel {
-            return NostrThreadFeedViewModel(noteId) as NostrThreadFeedViewModel
+            return NostrThreadFeedViewModel(account, noteId) as NostrThreadFeedViewModel
         }
     }
 }

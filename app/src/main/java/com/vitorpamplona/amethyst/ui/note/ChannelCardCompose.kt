@@ -76,7 +76,6 @@ import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -135,13 +134,9 @@ fun CheckHiddenChannelCardCompose(
     nav: (String) -> Unit
 ) {
     if (showHidden) {
-        var state by remember {
+        val state by remember {
             mutableStateOf(
-                NoteComposeReportState(
-                    isAcceptable = true,
-                    canPreview = true,
-                    relevantReports = persistentSetOf()
-                )
+                AccountViewModel.NoteComposeReportState()
             )
         }
 
@@ -185,19 +180,14 @@ fun LoadedChannelCardCompose(
 ) {
     var state by remember {
         mutableStateOf(
-            NoteComposeReportState(
-                isAcceptable = true,
-                canPreview = true,
-                relevantReports = persistentSetOf()
-            )
+            AccountViewModel.NoteComposeReportState()
         )
     }
 
     val scope = rememberCoroutineScope()
 
-    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
-        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+    WatchForReports(note, accountViewModel) { newState ->
+        if (state != newState) {
             scope.launch(Dispatchers.Main) {
                 state = newState
             }
@@ -219,7 +209,7 @@ fun LoadedChannelCardCompose(
 
 @Composable
 fun RenderChannelCardReportState(
-    state: NoteComposeReportState,
+    state: AccountViewModel.NoteComposeReportState,
     note: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
@@ -233,6 +223,7 @@ fun RenderChannelCardReportState(
         if (showHiddenNote) {
             HiddenNote(
                 state.relevantReports,
+                state.isHiddenAuthor,
                 accountViewModel,
                 modifier,
                 false,

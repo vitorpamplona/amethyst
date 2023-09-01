@@ -79,9 +79,7 @@ fun NoteAuthorPicture(
     modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
-    val author by baseNote.live().metadata.map {
-        it.note.author
-    }.distinctUntilChanged().observeAsState(baseNote.author)
+    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
 
     Crossfade(targetState = author) {
         if (it == null) {
@@ -118,13 +116,11 @@ fun UserPicture(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val route by remember {
+    val route by remember(user) {
         derivedStateOf {
             "User/${user.pubkeyHex}"
         }
     }
-
-    val scope = rememberCoroutineScope()
 
     ClickableUserPicture(
         baseUser = user,
@@ -132,9 +128,7 @@ fun UserPicture(
         accountViewModel = accountViewModel,
         modifier = pictureModifier,
         onClick = {
-            scope.launch {
-                nav(route)
-            }
+            nav(route)
         }
     )
 }
@@ -280,9 +274,7 @@ fun InnerBaseUserPicture(
     accountViewModel: AccountViewModel,
     modifier: Modifier
 ) {
-    val userProfile by baseUser.live().metadata.map {
-        it.user.profilePicture()
-    }.distinctUntilChanged().observeAsState(baseUser.profilePicture())
+    val userProfile by baseUser.live().profilePictureChanges.observeAsState(baseUser.profilePicture())
 
     PictureAndFollowingMark(
         userHex = baseUser.pubkeyHex,
@@ -624,9 +616,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
 fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewModel, onNew: (DropDownParams) -> Unit) {
     val followState by accountViewModel.userProfile().live().follows.observeAsState()
     val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
-    val showSensitiveContent by accountViewModel.accountLiveData.map {
-        it.account.showSensitiveContent
-    }.distinctUntilChanged().observeAsState(accountViewModel.account.showSensitiveContent)
+    val showSensitiveContent by accountViewModel.showSensitiveContentChanges.observeAsState(accountViewModel.account.showSensitiveContent)
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
         launch(Dispatchers.IO) {

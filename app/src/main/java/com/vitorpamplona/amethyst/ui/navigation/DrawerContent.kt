@@ -109,7 +109,7 @@ fun DrawerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 25.dp)
-                    .padding(top = 100.dp),
+                    .padding(top = 70.dp),
                 scaffoldState,
                 accountViewModel,
                 nav
@@ -162,7 +162,7 @@ fun ProfileContent(
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(120.dp)
             )
         } else {
             Image(
@@ -171,7 +171,7 @@ fun ProfileContent(
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(120.dp)
             )
         }
 
@@ -220,7 +220,6 @@ fun ProfileContent(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
-                        .padding(top = 15.dp)
                         .clickable(
                             onClick = {
                                 nav(route)

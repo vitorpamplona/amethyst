@@ -1194,13 +1194,7 @@ object LocalCache {
             val childrenToBeRemoved = mutableListOf<Note>()
 
             toBeRemoved.forEach {
-                notes.remove(it.idHex)
-                // Doesn't need to clean up the replies and mentions.. Too small to matter.
-
-                // Counts the replies
-                it.replyTo?.forEach { parent ->
-                    parent.removeReply(it)
-                }
+                removeFromCache(it)
 
                 childrenToBeRemoved.addAll(it.removeAllChildNotes())
             }
@@ -1219,12 +1213,7 @@ object LocalCache {
                 val childrenToBeRemoved = mutableListOf<Note>()
 
                 toBeRemoved.forEach {
-                    notes.remove(it.idHex)
-
-                    // Counts the replies
-                    it.replyTo?.forEach { parent ->
-                        parent.removeReply(it)
-                    }
+                    removeFromCache(it)
 
                     childrenToBeRemoved.addAll(it.removeAllChildNotes())
                 }
@@ -1251,17 +1240,12 @@ object LocalCache {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            notes.remove(it.idHex)
-
             val newerVersion = addressables[(it.event as? AddressableEvent)?.address()?.toTag()]
             if (newerVersion != null) {
                 it.moveAllReferencesTo(newerVersion)
             }
 
-            it.replyTo?.forEach { masterNote ->
-                removeLinkFromParentNote(it)
-            }
-
+            removeFromCache(it)
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
@@ -1290,11 +1274,7 @@ object LocalCache {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            notes.remove(it.idHex)
-
-            removeLinkFromParentNote(it)
-            removeAuthorLinkTo(it)
-
+            removeFromCache(it)
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
@@ -1311,73 +1291,39 @@ object LocalCache {
         }
     }
 
-    fun removeLinkFromParentNote(it: Note) {
-        it.replyTo?.forEach { masterNote ->
-            masterNote.removeReply(it)
-            masterNote.removeBoost(it)
-            masterNote.removeReaction(it)
-            masterNote.removeZap(it)
-            masterNote.removeReport(it)
+    private fun removeFromCache(note: Note) {
+        note.replyTo?.forEach { masterNote ->
+            masterNote.removeReply(note)
+            masterNote.removeBoost(note)
+            masterNote.removeReaction(note)
+            masterNote.removeZap(note)
+            masterNote.removeReport(note)
             masterNote.clearEOSE() // allows reloading of these events if needed
         }
-    }
 
-    fun pruneExpiredEvents() {
-        checkNotInMainThread()
-
-        val toBeRemoved = notes.filter {
-            it.value.event?.isExpired() == true
-        }.values
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            notes.remove(it.idHex)
-
-            removeLinkFromParentNote(it)
-            removeAuthorLinkTo(it)
-
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        removeChildrenOf(childrenToBeRemoved)
-
-        if (toBeRemoved.size > 1) {
-            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
-        }
-    }
-
-    fun pruneHiddenMessages(account: Account) {
-        checkNotInMainThread()
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        val toBeRemoved = account.hiddenUsers.map { userHex ->
-            (
-                notes.values.filter {
-                    it.event?.pubKey() == userHex
-                } + addressables.values.filter {
-                    it.event?.pubKey() == userHex
-                }
-                ).toSet()
-        }.flatten()
-
-        toBeRemoved.forEach {
-            // Counts the replies
-            it.replyTo?.forEach { masterNote ->
-                removeLinkFromParentNote(it)
+        if (note.event is LnZapEvent) {
+            (note.event as LnZapEvent).zappedAuthor().mapNotNull {
+                val author = getUserIfExists(it)
+                author?.removeZap(note)
+                author?.clearEOSE()
             }
-
-            notes.remove(it.idHex)
-
-            removeAuthorLinkTo(it)
-
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+        if (note.event is LnZapRequestEvent) {
+            (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull {
+                val author = getUserIfExists(it)
+                author?.removeZap(note)
+                author?.clearEOSE()
+            }
+        }
+        if (note.event is ReportEvent) {
+            (note.event as ReportEvent).reportedAuthor().mapNotNull {
+                val author = getUserIfExists(it.key)
+                author?.removeReport(note)
+                author?.clearEOSE()
+            }
         }
 
-        removeChildrenOf(childrenToBeRemoved)
-
-        println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
+        notes.remove(note.idHex)
     }
 
     fun removeAuthorLinkTo(note: Note) {
@@ -1406,9 +1352,54 @@ object LocalCache {
 
     fun removeChildrenOf(nextToBeRemoved: List<Note>) {
         nextToBeRemoved.forEach { note ->
-            removeAuthorLinkTo(note)
-            notes.remove(note.idHex)
+            removeFromCache(note)
         }
+    }
+
+    fun pruneExpiredEvents() {
+        checkNotInMainThread()
+
+        val toBeRemoved = notes.filter {
+            it.value.event?.isExpired() == true
+        }.values
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        toBeRemoved.forEach {
+            removeFromCache(it)
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeChildrenOf(childrenToBeRemoved)
+
+        if (toBeRemoved.size > 1) {
+            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
+        }
+    }
+
+    fun pruneHiddenMessages(account: Account) {
+        checkNotInMainThread()
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        val toBeRemoved = account.hiddenUsers.map { userHex ->
+            (
+                notes.values.filter {
+                    it.event?.pubKey() == userHex
+                } + addressables.values.filter {
+                    it.event?.pubKey() == userHex
+                }
+                ).toSet()
+        }.flatten()
+
+        toBeRemoved.forEach {
+            removeFromCache(it)
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeChildrenOf(childrenToBeRemoved)
+
+        println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
 
     fun pruneContactLists(loggedIn: Set<HexKey>) {
@@ -1503,9 +1494,10 @@ object LocalCache {
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
                 is LnZapEvent -> {
                     event.zapRequest?.let {
+                        // must have a valid request
                         verifyAndConsume(it, relay)
+                        consume(event)
                     }
-                    consume(event)
                 }
                 is LnZapRequestEvent -> consume(event)
                 is LnZapPaymentRequestEvent -> consume(event)
