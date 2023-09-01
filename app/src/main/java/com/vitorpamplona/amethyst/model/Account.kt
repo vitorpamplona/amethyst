@@ -902,25 +902,55 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
-        if (!isWriteable()) return null
-
-        val signedEvent = FileHeaderEvent.create(
-            url = headerInfo.url,
-            mimeType = headerInfo.mimeType,
-            hash = headerInfo.hash,
-            size = headerInfo.size.toString(),
-            dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
-            description = headerInfo.description,
-            sensitiveContent = headerInfo.sensitiveContent,
-            privateKey = keyPair.privKey!!
-        )
-
+    private fun sendHeader(signedEvent: FileHeaderEvent, relayList: List<Relay>? = null): Note? {
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.notes[signedEvent.id]
+    }
+
+    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
+        if (!isWriteable() && !loginWithAmber) return null
+
+        if (loginWithAmber) {
+            val unsignedEvent = FileHeaderEvent.create(
+                url = headerInfo.url,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toString(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash,
+                description = headerInfo.description,
+                sensitiveContent = headerInfo.sensitiveContent,
+                keyPair = keyPair
+            )
+            AmberUtils.openAmber(unsignedEvent)
+            if (AmberUtils.content.isBlank()) return null
+            val signedEvent = FileHeaderEvent(
+                unsignedEvent.id,
+                unsignedEvent.pubKey,
+                unsignedEvent.createdAt,
+                unsignedEvent.tags,
+                unsignedEvent.content,
+                AmberUtils.content
+            )
+
+            return sendHeader(signedEvent, relayList = relayList)
+        } else {
+            val signedEvent = FileHeaderEvent.create(
+                url = headerInfo.url,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toString(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash,
+                description = headerInfo.description,
+                sensitiveContent = headerInfo.sensitiveContent,
+                keyPair = keyPair
+            )
+
+            return sendHeader(signedEvent, relayList = relayList)
+        }
     }
 
     fun sendPost(
