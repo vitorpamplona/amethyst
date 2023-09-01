@@ -85,6 +85,9 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
+        // BRB is crashing OkHttp Deflater object :(
+        if (url.contains("brb.io")) return
+
         // If there is a connection, don't wait.
         if (connectingBlock.getAndSet(true)) {
             return
