@@ -272,7 +272,7 @@ class Account(
             return null
         }
 
-        if (note.event is ChatMessageEvent) {
+        if (note.event is ChatMessageEvent && signEvent) {
             val event = note.event as ChatMessageEvent
             val users = event.recipientsPubKey().plus(event.pubKey).toSet().toList()
 
@@ -284,7 +284,7 @@ class Account(
                             emojiUrl = emojiUrl,
                             originalNote = it,
                             to = users,
-                            from = keyPair.privKey!!
+                            from = keyPair
                         )
 
                         broadcastPrivately(giftWraps)
@@ -299,7 +299,7 @@ class Account(
                     content = reaction,
                     originalNote = it,
                     to = users,
-                    from = keyPair.privKey!!
+                    from = keyPair
                 )
 
                 broadcastPrivately(giftWraps)
@@ -310,11 +310,11 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
+                        val event = ReactionEvent.create(emojiUrl, it, keyPair)
                         if (!signEvent) {
-                            return ReactionEvent.create(emojiUrl, it, keyPair.pubKey.toHexKey())
+                            return event
                         }
 
-                        val event = ReactionEvent.create(emojiUrl, it, keyPair.privKey!!)
                         Client.send(event)
                         LocalCache.consume(event)
                     }
@@ -324,11 +324,10 @@ class Account(
             }
 
             note.event?.let {
+                val event = ReactionEvent.create(reaction, it, keyPair)
                 if (!signEvent) {
-                    return ReactionEvent.create(reaction, it, keyPair.pubKey.toHexKey())
+                    return event
                 }
-
-                val event = ReactionEvent.create(reaction, it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
             }
@@ -468,7 +467,7 @@ class Account(
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         if (note.hasReacted(userProfile(), "⚠️")) {
             // has already liked this note
@@ -476,27 +475,66 @@ class Account(
         }
 
         note.event?.let {
-            val event = ReactionEvent.createWarning(it, keyPair.privKey!!)
+            var event = ReactionEvent.createWarning(it, keyPair)
+            if (loginWithAmber) {
+                AmberUtils.content = ""
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) return
+                event = ReactionEvent(
+                    event.id,
+                    event.pubKey,
+                    event.createdAt,
+                    event.tags,
+                    event.content,
+                    AmberUtils.content
+                )
+            }
             Client.send(event)
             LocalCache.consume(event)
         }
 
         note.event?.let {
-            val event = ReportEvent.create(it, type, keyPair.privKey!!, content = content)
+            var event = ReportEvent.create(it, type, keyPair, content = content)
+            if (loginWithAmber) {
+                AmberUtils.content = ""
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) return
+                event = ReportEvent(
+                    event.id,
+                    event.pubKey,
+                    event.createdAt,
+                    event.tags,
+                    event.content,
+                    AmberUtils.content
+                )
+            }
             Client.send(event)
             LocalCache.consume(event, null)
         }
     }
 
     fun report(user: User, type: ReportEvent.ReportType) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         if (user.hasReport(userProfile(), type)) {
             // has already reported this note
             return
         }
 
-        val event = ReportEvent.create(user.pubkeyHex, type, keyPair.privKey!!)
+        var event = ReportEvent.create(user.pubkeyHex, type, keyPair)
+        if (loginWithAmber) {
+            AmberUtils.content = ""
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) return
+            event = ReportEvent(
+                event.id,
+                event.pubKey,
+                event.createdAt,
+                event.tags,
+                event.content,
+                AmberUtils.content
+            )
+        }
         Client.send(event)
         LocalCache.consume(event, null)
     }
@@ -1819,25 +1857,81 @@ class Account(
 
     fun hideUser(pubkeyHex: String) {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+        if (loginWithAmber) {
+            val content = blockList?.content ?: ""
+            val encryptedContent = if (content.isBlank()) {
+                val privateTags = listOf(listOf("p", pubkeyHex))
+                val msg = Event.mapper.writeValueAsString(privateTags)
 
-        val event = if (blockList != null) {
-            PeopleListEvent.addUser(
-                earlierVersion = blockList,
-                pubKeyHex = pubkeyHex,
-                isPrivate = true,
-                privateKey = keyPair.privKey!!
+                AmberUtils.content = ""
+                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
+                if (AmberUtils.content.isBlank()) return
+                AmberUtils.content
+            } else {
+                AmberUtils.content = ""
+                AmberUtils.decrypt(content, keyPair.pubKey.toHexKey())
+                if (AmberUtils.content.isBlank()) return
+                val decryptedContent = AmberUtils.content
+                AmberUtils.content = ""
+                val privateTags = blockList?.privateTagsOrEmpty(decryptedContent)?.plus(element = listOf("p", pubkeyHex))
+                val msg = Event.mapper.writeValueAsString(privateTags)
+                AmberUtils.content = ""
+                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
+                if (AmberUtils.content.isBlank()) return
+                AmberUtils.content
+            }
+
+            var event = if (blockList != null) {
+                PeopleListEvent.addUser(
+                    earlierVersion = blockList,
+                    pubKeyHex = pubkeyHex,
+                    isPrivate = true,
+                    pubKey = keyPair.pubKey.toHexKey(),
+                    encryptedContent
+                )
+            } else {
+                PeopleListEvent.createListWithUser(
+                    name = PeopleListEvent.blockList,
+                    pubKeyHex = pubkeyHex,
+                    isPrivate = true,
+                    pubKey = keyPair.pubKey.toHexKey(),
+                    encryptedContent
+                )
+            }
+
+            AmberUtils.content = ""
+            AmberUtils.openAmber(event)
+            event = PeopleListEvent(
+                event.id,
+                event.pubKey,
+                event.createdAt,
+                event.tags,
+                event.content,
+                AmberUtils.content
             )
+
+            Client.send(event)
+            LocalCache.consume(event)
         } else {
-            PeopleListEvent.createListWithUser(
-                name = PeopleListEvent.blockList,
-                pubKeyHex = pubkeyHex,
-                isPrivate = true,
-                privateKey = keyPair.privKey!!
-            )
-        }
+            val event = if (blockList != null) {
+                PeopleListEvent.addUser(
+                    earlierVersion = blockList,
+                    pubKeyHex = pubkeyHex,
+                    isPrivate = true,
+                    privateKey = keyPair.privKey!!
+                )
+            } else {
+                PeopleListEvent.createListWithUser(
+                    name = PeopleListEvent.blockList,
+                    pubKeyHex = pubkeyHex,
+                    isPrivate = true,
+                    privateKey = keyPair.privKey!!
+                )
+            }
 
-        Client.send(event)
-        LocalCache.consume(event)
+            Client.send(event)
+            LocalCache.consume(event)
+        }
 
         live.invalidateData()
         saveable.invalidateData()

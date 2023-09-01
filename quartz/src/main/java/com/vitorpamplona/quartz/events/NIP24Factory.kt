@@ -2,6 +2,7 @@ package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 
 class NIP24Factory {
@@ -44,8 +45,8 @@ class NIP24Factory {
         }
     }
 
-    fun createReactionWithinGroup(content: String, originalNote: EventInterface, to: List<HexKey>, from: ByteArray): List<GiftWrapEvent> {
-        val senderPublicKey = CryptoUtils.pubkeyCreate(from).toHexKey()
+    fun createReactionWithinGroup(content: String, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): List<GiftWrapEvent> {
+        val senderPublicKey = CryptoUtils.pubkeyCreate(from.privKey!!).toHexKey()
 
         val senderReaction = ReactionEvent.create(
             content,
@@ -58,15 +59,15 @@ class NIP24Factory {
                 event = SealedGossipEvent.create(
                     event = senderReaction,
                     encryptTo = it,
-                    privateKey = from
+                    privateKey = from.privKey
                 ),
                 recipientPubKey = it
             )
         }
     }
 
-    fun createReactionWithinGroup(emojiUrl: EmojiUrl, originalNote: EventInterface, to: List<HexKey>, from: ByteArray): List<GiftWrapEvent> {
-        val senderPublicKey = CryptoUtils.pubkeyCreate(from).toHexKey()
+    fun createReactionWithinGroup(emojiUrl: EmojiUrl, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): List<GiftWrapEvent> {
+        val senderPublicKey = CryptoUtils.pubkeyCreate(from.privKey!!).toHexKey()
 
         val senderReaction = ReactionEvent.create(
             emojiUrl,
@@ -79,7 +80,7 @@ class NIP24Factory {
                 event = SealedGossipEvent.create(
                     event = senderReaction,
                     encryptTo = it,
-                    privateKey = from
+                    privateKey = from.privKey
                 ),
                 recipientPubKey = it
             )
