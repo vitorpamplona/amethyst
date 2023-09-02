@@ -197,7 +197,11 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, accountViewModel: AccountViewModel) {
+fun UpdateZapAmountDialog(
+    onClose: () -> Unit,
+    nip47uri: String? = null,
+    accountViewModel: AccountViewModel
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
