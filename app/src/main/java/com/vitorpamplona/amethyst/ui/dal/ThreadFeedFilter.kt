@@ -18,11 +18,12 @@ class ThreadFeedFilter(val account: Account, val noteId: String) : FeedFilter<No
         val cachedSignatures: MutableMap<Note, Note.LevelSignature> = mutableMapOf()
         val followingSet = account.selectedUsersFollowList(KIND3_FOLLOWS) ?: emptySet()
         val eventsToWatch = ThreadAssembler().findThreadFor(noteId)
+        val eventsInHex = eventsToWatch.map { it.idHex }.toSet()
         val now = TimeUtils.now()
 
         // Currently orders by date of each event, descending, at each level of the reply stack
         val order = compareByDescending<Note> {
-            it.replyLevelSignature(eventsToWatch, cachedSignatures, account.userProfile(), followingSet, now).signature
+            it.replyLevelSignature(eventsInHex, cachedSignatures, account.userProfile(), followingSet, now).signature
         }
 
         return eventsToWatch.sortedWith(order)

@@ -142,7 +142,7 @@ open class Note(val idHex: String) {
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */
     fun replyLevelSignature(
-        eventsToConsider: Set<Note>,
+        eventsToConsider: Set<HexKey>,
         cachedSignatures: MutableMap<Note, LevelSignature>,
         account: User,
         accountFollowingSet: Set<String>,
@@ -159,7 +159,7 @@ open class Note(val idHex: String) {
 
         val parent = (
             replyTo
-                .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
+                .filter { it.idHex in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
                 .map {
                     cachedSignatures[it] ?: it.replyLevelSignature(
                         eventsToConsider,
