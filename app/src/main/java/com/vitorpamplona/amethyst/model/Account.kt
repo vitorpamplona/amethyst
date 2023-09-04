@@ -1453,65 +1453,97 @@ class Account(
     }
 
     fun updateStatus(oldStatus: AddressableNote, newStatus: String) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
-        val event = StatusEvent.update(oldEvent, newStatus, keyPair.privKey!!)
-
+        var event = StatusEvent.update(oldEvent, newStatus, keyPair)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = StatusEvent.create(event, AmberUtils.content)
+        }
         Client.send(event)
         LocalCache.consume(event, null)
     }
 
     fun createStatus(newStatus: String) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
-        val event = StatusEvent.create(newStatus, "general", expiration = null, keyPair.privKey!!)
-
+        var event = StatusEvent.create(newStatus, "general", expiration = null, keyPair)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = StatusEvent.create(event, AmberUtils.content)
+        }
         Client.send(event)
         LocalCache.consume(event, null)
     }
 
     fun deleteStatus(oldStatus: AddressableNote) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
-        val event = StatusEvent.clear(oldEvent, keyPair.privKey!!)
-
+        var event = StatusEvent.clear(oldEvent, keyPair)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = StatusEvent.create(event, AmberUtils.content)
+        }
         Client.send(event)
         LocalCache.consume(event, null)
 
-        val event2 = DeletionEvent.create(listOf(event.id), keyPair)
-
+        var event2 = DeletionEvent.create(listOf(event.id), keyPair)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event2)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event2 = DeletionEvent.create(event2, AmberUtils.content)
+        }
         Client.send(event2)
         LocalCache.consume(event2)
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         val noteEvent = usersEmojiList.event
         if (noteEvent !is EmojiPackSelectionEvent) return
         val emojiListEvent = emojiList.event
         if (emojiListEvent !is EmojiPackEvent) return
 
-        val event = EmojiPackSelectionEvent.create(
+        var event = EmojiPackSelectionEvent.create(
             noteEvent.taggedAddresses().filter { it != emojiListEvent.address() },
-            keyPair.privKey!!
+            keyPair
         )
+
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = EmojiPackSelectionEvent.create(event, AmberUtils.content)
+        }
 
         Client.send(event)
         LocalCache.consume(event)
     }
 
     fun addEmojiPack(usersEmojiList: Note, emojiList: Note) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
         val emojiListEvent = emojiList.event
         if (emojiListEvent !is EmojiPackEvent) return
 
-        val event = if (usersEmojiList.event == null) {
+        var event = if (usersEmojiList.event == null) {
             EmojiPackSelectionEvent.create(
                 listOf(emojiListEvent.address()),
-                keyPair.privKey!!
+                keyPair
             )
         } else {
             val noteEvent = usersEmojiList.event
@@ -1523,8 +1555,16 @@ class Account(
 
             EmojiPackSelectionEvent.create(
                 noteEvent.taggedAddresses().plus(emojiListEvent.address()),
-                keyPair.privKey!!
+                keyPair
             )
+        }
+
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = EmojiPackSelectionEvent.create(event, AmberUtils.content)
         }
 
         Client.send(event)
