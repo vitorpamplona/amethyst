@@ -164,9 +164,16 @@ class LightningAddressResolver() {
                                     onProgress(0.7f)
                                     onSuccess(pr)
                                 } else {
+                                    onProgress(0.0f)
                                     onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from server")
                                 }
-                            } ?: onError("Invoice Not Created (element pr not found in the resulting JSON)")
+                            } ?: lnInvoice?.get("reason")?.asText()?.ifBlank { null }?.let { reason ->
+                                onProgress(0.0f)
+                                onError("Unable to create a lightning invoice before sending the zap. The receiver's lightning wallet sent the following error: $reason")
+                            } ?: run {
+                                onProgress(0.0f)
+                                onError("nable to create a lightning invoice before sending the zap. Element pr not found in the resulting JSON.")
+                            }
                         },
                         onError = onError
                     )

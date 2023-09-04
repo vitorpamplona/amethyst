@@ -101,7 +101,7 @@
     <string name="failed_to_save_the_image">Failed to save the image</string>
     <string name="upload_image">Upload Image</string>
     <string name="uploading">Uploading…</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address setup to receive sats</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
     <string name="reply_here">"reply here.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copy Channel ID (Note) to the Clipboard</string>

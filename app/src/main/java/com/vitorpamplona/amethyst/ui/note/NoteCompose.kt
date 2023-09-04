@@ -2700,14 +2700,14 @@ private fun BadgeBox(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isRepost by remember {
+    val isRepost by remember(baseNote) {
         derivedStateOf {
             baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
         }
     }
 
     if (isRepost) {
-        val baseReply by remember {
+        val baseReply by remember(baseNote) {
             derivedStateOf {
                 baseNote.replyTo?.lastOrNull()
             }

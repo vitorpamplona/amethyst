@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -31,8 +30,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
@@ -61,16 +58,19 @@ class ZapOptionstViewModel : ViewModel() {
 }
 
 @Composable
-fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, baseNote: Note) {
+fun ZapCustomDialog(
+    onClose: () -> Unit,
+    onError: (text: String) -> Unit,
+    onProgress: (percent: Float) -> Unit,
+    accountViewModel: AccountViewModel,
+    baseNote: Note
+) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val postViewModel: ZapOptionstViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) {
         postViewModel.load(accountViewModel.account)
     }
-
-    var zappingProgress by remember { mutableStateOf(0f) }
 
     val zapTypes = listOf(
         Triple(LnZapEvent.ZapType.PUBLIC, stringResource(id = R.string.zap_type_public), stringResource(id = R.string.zap_type_public_explainer)),
@@ -111,17 +111,8 @@ fun ZapCustomDialog(onClose: () -> Unit, accountViewModel: AccountViewModel, bas
                             null,
                             postViewModel.customMessage.text,
                             context,
-                            onError = {
-                                zappingProgress = 0f
-                                scope.launch {
-                                    Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onProgress = {
-                                scope.launch(Dispatchers.Main) {
-                                    zappingProgress = it
-                                }
-                            },
+                            onError = onError,
+                            onProgress = onProgress,
                             zapType = selectedZapType
                         )
                         onClose()

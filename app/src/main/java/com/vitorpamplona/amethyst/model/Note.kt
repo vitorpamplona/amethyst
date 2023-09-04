@@ -142,7 +142,7 @@ open class Note(val idHex: String) {
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */
     fun replyLevelSignature(
-        eventsToConsider: Set<Note>,
+        eventsToConsider: Set<HexKey>,
         cachedSignatures: MutableMap<Note, LevelSignature>,
         account: User,
         accountFollowingSet: Set<String>,
@@ -151,7 +151,7 @@ open class Note(val idHex: String) {
         val replyTo = replyTo
         if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
             return LevelSignature(
-                signature = "/" + formattedDateTime(createdAt() ?: 0) + ";",
+                signature = "/" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) + ";",
                 createdAt = createdAt(),
                 author = author
             )
@@ -159,7 +159,7 @@ open class Note(val idHex: String) {
 
         val parent = (
             replyTo
-                .filter { it in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
+                .filter { it.idHex in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
                 .map {
                     cachedSignatures[it] ?: it.replyLevelSignature(
                         eventsToConsider,
@@ -176,13 +176,13 @@ open class Note(val idHex: String) {
 
         val threadOrder = if (parent?.author == author && createdAt() != null) {
             // author of the thread first, in **ascending** order
-            "9" + formattedDateTime((parent?.createdAt ?: 0) + (now - (createdAt() ?: 0)))
+            "9" + formattedDateTime((parent?.createdAt ?: 0) + (now - (createdAt() ?: 0))) + idHex.substring(0, 8)
         } else if (author?.pubkeyHex == account.pubkeyHex) {
-            "8" + formattedDateTime(createdAt() ?: 0) // my replies
+            "8" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) // my replies
         } else if (author?.pubkeyHex in accountFollowingSet) {
-            "7" + formattedDateTime(createdAt() ?: 0) // my follows replies.
+            "7" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) // my follows replies.
         } else {
-            "0" + formattedDateTime(createdAt() ?: 0) // everyone else.
+            "0" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) // everyone else.
         }
 
         val mySignature = LevelSignature(

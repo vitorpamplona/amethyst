@@ -47,6 +47,7 @@ class Relay(
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
     private var isReady: Boolean = false
+    private var usingCompression: Boolean = false
 
     var eventDownloadCounterInBytes = 0
     var eventUploadCounterInBytes = 0
@@ -85,6 +86,9 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
+        // BRB is crashing OkHttp Deflater object :(
+        if (url.contains("brb.io")) return
+
         // If there is a connection, don't wait.
         if (connectingBlock.getAndSet(true)) {
             return
@@ -115,7 +119,10 @@ class Relay(
         override fun onOpen(webSocket: WebSocket, response: Response) {
             checkNotInMainThread()
 
-            markConnectionAsReady(response.receivedResponseAtMillis - response.sentRequestAtMillis)
+            markConnectionAsReady(
+                pingInMs = response.receivedResponseAtMillis - response.sentRequestAtMillis,
+                usingCompression = response.headers.get("Sec-WebSocket-Extensions")?.contains("permessage-deflate") ?: false
+            )
 
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected(this@Relay)
@@ -175,15 +182,17 @@ class Relay(
         }
     }
 
-    fun markConnectionAsReady(pingInMs: Long) {
+    fun markConnectionAsReady(pingInMs: Long, usingCompression: Boolean) {
         this.afterEOSE = false
         this.isReady = true
         this.pingInMs = pingInMs
+        this.usingCompression = usingCompression
     }
 
     fun markConnectionAsClosed() {
         this.socket = null
         this.isReady = false
+        this.usingCompression = false
         this.afterEOSE = false
         this.closingTimeInSeconds = TimeUtils.now()
     }
@@ -239,6 +248,7 @@ class Relay(
         socket?.close(1000, "Normal close")
         socket = null
         isReady = false
+        usingCompression = false
         afterEOSE = false
     }
 

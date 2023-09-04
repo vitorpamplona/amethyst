@@ -1025,11 +1025,29 @@ fun ZapReaction(
         }
 
         if (wantsToChangeZapAmount) {
-            UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, accountViewModel = accountViewModel)
+            UpdateZapAmountDialog(
+                onClose = { wantsToChangeZapAmount = false },
+                accountViewModel = accountViewModel
+            )
         }
 
         if (wantsToSetCustomZap) {
-            ZapCustomDialog({ wantsToSetCustomZap = false }, accountViewModel, baseNote)
+            ZapCustomDialog(
+                onClose = { wantsToSetCustomZap = false },
+                onError = {
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                },
+                onProgress = {
+                    scope.launch(Dispatchers.Main) {
+                        zappingProgress = it
+                    }
+                },
+                accountViewModel = accountViewModel,
+                baseNote = baseNote
+            )
         }
 
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
