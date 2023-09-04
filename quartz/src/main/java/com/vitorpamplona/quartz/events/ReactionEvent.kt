@@ -61,5 +61,9 @@ class ReactionEvent(
             val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
             return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
+
+        fun create(unsignedEvent: ReactionEvent, signature: String): ReactionEvent {
+            return ReactionEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }

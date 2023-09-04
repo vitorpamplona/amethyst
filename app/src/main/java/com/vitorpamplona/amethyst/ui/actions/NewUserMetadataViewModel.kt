@@ -13,7 +13,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.MastodonIdentity
-import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.TwitterIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -73,7 +72,7 @@ class NewUserMetadataViewModel : ViewModel() {
         }
     }
 
-    fun create(signEvent: Boolean): MetadataEvent? {
+    fun create() {
         // Tries to not delete any existing attribute that we do not work with.
         val latest = account.userProfile().info?.latestMetadata
         val currentJson = if (latest != null) {
@@ -122,16 +121,10 @@ class NewUserMetadataViewModel : ViewModel() {
         val writer = StringWriter()
         ObjectMapper().writeValue(writer, currentJson)
 
-        if (signEvent) {
-            viewModelScope.launch(Dispatchers.IO) {
-                account.sendNewUserMetadata(writer.buffer.toString(), newClaims, true)
-            }
-            clear()
-        } else {
-            return account.sendNewUserMetadata(writer.buffer.toString(), newClaims, false)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
         }
-
-        return null
+        clear()
     }
 
     fun clear() {

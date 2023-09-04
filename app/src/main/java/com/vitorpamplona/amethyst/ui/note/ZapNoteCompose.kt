@@ -1,9 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.app.Activity
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,14 +26,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.AmberUtils
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
@@ -47,9 +39,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.coroutines.Dispatchers
@@ -185,113 +174,11 @@ fun UserActionOptions(
     accountViewModel: AccountViewModel
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    accountViewModel.account.live.invalidateData()
-                    accountViewModel.account.saveable.invalidateData()
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
-
-    val encryptResult = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = {
-            if (it.resultCode != Activity.RESULT_OK) {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                return@rememberLauncherForActivityResult
-            }
-
-            val encryptedContent = it.data?.getStringExtra("signature") ?: ""
-            event = accountViewModel.show(baseAuthor, encryptedContent)
-        }
-    )
-
-    val decryptResult = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = {
-            if (it.resultCode != Activity.RESULT_OK) {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                return@rememberLauncherForActivityResult
-            }
-
-            val decryptedContent = it.data?.getStringExtra("signature") ?: ""
-            val blockList = accountViewModel.account.getBlockList()
-            val privateTags = if (blockList == null) {
-                listOf(listOf("p", baseAuthor.pubkeyHex))
-            } else {
-                if (accountViewModel.account.isHidden(baseAuthor)) {
-                    blockList.privateTagsOrEmpty(decryptedContent).filter { element -> !element.contains(baseAuthor.pubkeyHex) }
-                } else {
-                    blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", baseAuthor.pubkeyHex))
-                }
-            }
-            val msg = Event.mapper.writeValueAsString(privateTags)
-
-            ServiceManager.shouldPauseService = true
-            AmberUtils.openAmber(
-                msg,
-                SignerType.NIP04_ENCRYPT,
-                encryptResult,
-                accountViewModel.account.keyPair.pubKey.toHexKey()
-            )
-        }
-    )
 
     WatchIsHiddenUser(baseAuthor, accountViewModel) { isHidden ->
         if (isHidden) {
             ShowUserButton {
-                if (accountViewModel.loggedInWithAmber()) {
-                    scope.launch(Dispatchers.IO) {
-                        val blockList = accountViewModel.account.getBlockList()
-                        val content = blockList?.content ?: ""
-                        if (content.isBlank()) {
-                            val privateTags = listOf(listOf("p", baseAuthor.pubkeyHex))
-                            val msg = Event.mapper.writeValueAsString(privateTags)
-
-                            AmberUtils.openAmber(
-                                msg,
-                                SignerType.NIP04_ENCRYPT,
-                                encryptResult,
-                                accountViewModel.account.keyPair.pubKey.toHexKey()
-                            )
-                        } else {
-                            AmberUtils.openAmber(
-                                content,
-                                SignerType.NIP04_DECRYPT,
-                                decryptResult,
-                                accountViewModel.account.keyPair.pubKey.toHexKey()
-                            )
-                        }
-                    }
-                } else {
-                    accountViewModel.show(baseAuthor)
-                }
+                accountViewModel.show(baseAuthor)
             }
         } else {
             ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
@@ -321,30 +208,13 @@ fun ShowFollowingOrUnfollowingButton(
         }
     }
 
-    var event by remember { mutableStateOf<ContactListEvent?>(null) }
-
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
-
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.unfollow(baseAuthor, false)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.unfollow(baseAuthor)
+                    }
                 } else {
                     scope.launch {
                         Toast
@@ -358,7 +228,7 @@ fun ShowFollowingOrUnfollowingButton(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.unfollow(baseAuthor, true)
+                    accountViewModel.unfollow(baseAuthor)
                 }
             }
         }
@@ -366,7 +236,9 @@ fun ShowFollowingOrUnfollowingButton(
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.account.follow(baseAuthor, false)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.follow(baseAuthor)
+                    }
                 } else {
                     scope.launch {
                         Toast
@@ -380,7 +252,7 @@ fun ShowFollowingOrUnfollowingButton(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.follow(baseAuthor, true)
+                    accountViewModel.follow(baseAuthor)
                 }
             }
         }

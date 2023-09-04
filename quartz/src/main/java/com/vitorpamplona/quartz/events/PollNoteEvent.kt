@@ -93,6 +93,12 @@ class PollNoteEvent(
             val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
             return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
         }
+
+        fun create(
+            unsignedEvent: PollNoteEvent, signature: String
+        ): PollNoteEvent {
+            return PollNoteEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }
 

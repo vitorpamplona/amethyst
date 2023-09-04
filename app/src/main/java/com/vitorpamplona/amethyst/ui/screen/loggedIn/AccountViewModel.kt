@@ -30,16 +30,11 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.BookmarkListEvent
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.UserMetadata
@@ -112,16 +107,16 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.userProfile()
     }
 
-    fun reactTo(note: Note, reaction: String, signEvent: Boolean): ReactionEvent? {
-        return account.reactTo(note, reaction, signEvent)
+    fun reactTo(note: Note, reaction: String) {
+        account.reactTo(note, reaction)
     }
 
-    fun reactToOrDelete(note: Note, reaction: String, signEvent: Boolean): Event? {
+    fun reactToOrDelete(note: Note, reaction: String) {
         val currentReactions = account.reactionTo(note, reaction)
         if (currentReactions.isNotEmpty()) {
-            return account.delete(currentReactions, signEvent)
+            account.delete(currentReactions)
         } else {
-            return account.reactTo(note, reaction, signEvent)
+            account.reactTo(note, reaction)
         }
     }
 
@@ -134,16 +129,16 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.hasReacted(baseNote, reaction)
     }
 
-    fun deleteReactionTo(note: Note, reaction: String, signEvent: Boolean): DeletionEvent? {
-        return account.delete(account.reactionTo(note, reaction), signEvent)
+    fun deleteReactionTo(note: Note, reaction: String) {
+        account.delete(account.reactionTo(note, reaction))
     }
 
     fun hasBoosted(baseNote: Note): Boolean {
         return account.hasBoosted(baseNote)
     }
 
-    fun deleteBoostsTo(note: Note, signEvent: Boolean): DeletionEvent? {
-        return account.delete(account.boostsTo(note), signEvent)
+    fun deleteBoostsTo(note: Note) {
+        account.delete(account.boostsTo(note))
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note, onWasZapped: (Boolean) -> Unit) {
@@ -302,8 +297,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    fun boost(note: Note, signEvent: Boolean): Event? {
-        return account.boost(note, signEvent)
+    fun boost(note: Note) {
+        account.boost(note)
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
@@ -318,24 +313,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.addPrivateBookmark(note)
     }
 
-    fun addPrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
-        return account.addPrivateBookmark(note, decryptedContent)
+    fun addPrivateBookmark(note: Note, decryptedContent: String) {
+        account.addPrivateBookmark(note, decryptedContent)
     }
 
-    fun addPublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
-        return account.addPublicBookmark(note, decryptedContent)
+    fun addPublicBookmark(note: Note, decryptedContent: String) {
+        account.addPublicBookmark(note, decryptedContent)
     }
 
-    fun removePublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
-        return account.removePublicBookmark(note, decryptedContent)
+    fun removePublicBookmark(note: Note, decryptedContent: String) {
+        account.removePublicBookmark(note, decryptedContent)
     }
 
     fun addPublicBookmark(note: Note) {
         account.addPublicBookmark(note)
     }
 
-    fun removePrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
-        return account.removePrivateBookmark(note, decryptedContent)
+    fun removePrivateBookmark(note: Note, decryptedContent: String) {
+        account.removePrivateBookmark(note, decryptedContent)
     }
 
     fun removePrivateBookmark(note: Note) {
@@ -358,8 +353,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.broadcast(note)
     }
 
-    fun delete(note: Note, signEvent: Boolean): DeletionEvent? {
-        return account.delete(note, signEvent)
+    fun delete(note: Note) {
+        account.delete(note)
     }
 
     fun decrypt(note: Note): String? {
@@ -382,12 +377,12 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.prefer(source, target, preference)
     }
 
-    fun follow(user: User, signEvent: Boolean): ContactListEvent? {
-        return account.follow(user, signEvent)
+    fun follow(user: User) {
+        account.follow(user)
     }
 
-    fun unfollow(user: User, signEvent: Boolean): ContactListEvent? {
-        return account.unfollow(user, signEvent)
+    fun unfollow(user: User) {
+        account.unfollow(user)
     }
 
     fun isLoggedUser(user: User?): Boolean {
@@ -489,18 +484,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.unseal(event)
     }
 
-    fun show(user: User, encryptedContent: String): PeopleListEvent? {
-        return account.showUser(user.pubkeyHex, encryptedContent)
-    }
-
     fun show(user: User) {
         viewModelScope.launch(Dispatchers.IO) {
             account.showUser(user.pubkeyHex)
         }
-    }
-
-    fun hide(user: User, encryptedContent: String): PeopleListEvent? {
-        return account.hideUser(user.pubkeyHex, encryptedContent)
     }
 
     fun hide(user: User) {

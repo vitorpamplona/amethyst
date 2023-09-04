@@ -81,5 +81,11 @@ class BookmarkListEvent(
             val sig = CryptoUtils.sign(id, privateKey)
             return BookmarkListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
         }
+
+        fun create(
+            unsignedEvent: BookmarkListEvent, signature: String
+        ): BookmarkListEvent {
+            return BookmarkListEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }

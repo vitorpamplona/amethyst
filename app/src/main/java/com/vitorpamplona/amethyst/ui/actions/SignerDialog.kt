@@ -30,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -41,8 +40,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 
 enum class SignerType {
@@ -188,16 +185,4 @@ fun SignerDialog(
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun Test() {
-    SignerDialog(
-        onClose = { },
-        onPost = { },
-        data = TextNoteEvent("", "", TimeUtils.now(), emptyList(), "test", "").toJson(),
-        type = SignerType.SIGN_EVENT,
-        pubKey = ""
-    )
 }

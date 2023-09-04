@@ -17,7 +17,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,16 +32,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -57,11 +51,11 @@ class AddBountyAmountViewModel : ViewModel() {
         this.bounty = bounty
     }
 
-    fun sendPost(signEvent: Boolean): TextNoteEvent? {
+    fun sendPost() {
         val newValue = nextAmount.text.trim().toLongOrNull()
 
         if (newValue != null) {
-            val event = account?.sendPost(
+            account?.sendPost(
                 message = newValue.toString(),
                 replyTo = listOfNotNull(bounty),
                 mentions = listOfNotNull(bounty?.author),
@@ -69,14 +63,11 @@ class AddBountyAmountViewModel : ViewModel() {
                 wantsToMarkAsSensitive = false,
                 replyingTo = null,
                 root = null,
-                directMentions = setOf(),
-                signEvent = signEvent
+                directMentions = setOf()
             )
 
             nextAmount = TextFieldValue("")
-            return event
         }
-        return null
     }
 
     fun cancel() {
@@ -93,25 +84,6 @@ fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onCl
     val postViewModel: AddBountyAmountViewModel = viewModel()
     postViewModel.load(accountViewModel.account, bounty)
     val scope = rememberCoroutineScope()
-
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                    onClose()
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -138,8 +110,8 @@ fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onCl
 
                     PostButton(
                         onPost = {
-                            event = postViewModel.sendPost(!accountViewModel.loggedInWithAmber())
-                            if (!accountViewModel.loggedInWithAmber()) {
+                            scope.launch(Dispatchers.IO) {
+                                postViewModel.sendPost()
                                 onClose()
                             }
                         },

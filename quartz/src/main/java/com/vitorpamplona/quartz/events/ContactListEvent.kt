@@ -262,6 +262,20 @@ class ContactListEvent(
         }
 
         fun create(
+            unsignedEvent: Event,
+            signature: String
+        ): ContactListEvent {
+            return ContactListEvent(
+                unsignedEvent.id,
+                unsignedEvent.pubKey,
+                unsignedEvent.createdAt,
+                unsignedEvent.tags,
+                unsignedEvent.content,
+                signature
+            )
+        }
+
+        fun create(
             content: String,
             tags: List<List<String>>,
             keyPair: KeyPair,

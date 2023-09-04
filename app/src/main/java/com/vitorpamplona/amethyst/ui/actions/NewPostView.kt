@@ -75,14 +75,12 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -105,7 +103,6 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -162,25 +159,6 @@ fun NewPostView(
         }
     }
 
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent, relayList = relayList)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                    onClose()
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
-
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
@@ -234,10 +212,8 @@ fun NewPostView(
                             PostButton(
                                 onPost = {
                                     scope.launch(Dispatchers.IO) {
-                                        event = postViewModel.sendPost(relayList = relayList, !accountViewModel.loggedInWithAmber())
-                                        if (!accountViewModel.loggedInWithAmber()) {
-                                            onClose()
-                                        }
+                                        postViewModel.sendPost(relayList = relayList)
+                                        onClose()
                                     }
                                 },
                                 isActive = postViewModel.canPost()

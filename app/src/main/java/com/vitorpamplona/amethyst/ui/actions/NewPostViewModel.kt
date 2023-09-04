@@ -14,7 +14,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
-import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ServersAvailable
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -27,7 +31,6 @@ import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
@@ -158,7 +161,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = account
     }
 
-    fun sendPost(relayList: List<Relay>? = null, signEvent: Boolean): Event? {
+    fun sendPost(relayList: List<Relay>? = null) {
         try {
             val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
             tagger.run()
@@ -188,13 +191,12 @@ open class NewPostViewModel() : ViewModel() {
 
             if (originalNote?.channelHex() != null) {
                 if (originalNote is AddressableEvent && originalNote?.address() != null) {
-                    return account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, signEvent)
+                    account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
                 } else {
-                    return account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, signEvent)
+                    account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
                 }
             } else if (originalNote?.event is PrivateDmEvent) {
                 account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
-                return null
             } else if (originalNote?.event is ChatMessageEvent) {
                 val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
 
@@ -207,10 +209,8 @@ open class NewPostViewModel() : ViewModel() {
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
-                    geohash = geoHash,
-                    signEvent = signEvent
+                    geohash = geoHash
                 )
-                return null
             } else if (!dmUsers.isNullOrEmpty()) {
                 if (nip24 || dmUsers.size > 1) {
                     account?.sendNIP24PrivateMessage(
@@ -222,10 +222,8 @@ open class NewPostViewModel() : ViewModel() {
                         wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                         zapReceiver = zapReceiver,
                         zapRaiserAmount = localZapRaiserAmount,
-                        geohash = geoHash,
-                        signEvent = signEvent
+                        geohash = geoHash
                     )
-                    return null
                 } else {
                     account?.sendPrivateMessage(
                         message = tagger.message,
@@ -235,14 +233,12 @@ open class NewPostViewModel() : ViewModel() {
                         wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                         zapReceiver = zapReceiver,
                         zapRaiserAmount = localZapRaiserAmount,
-                        geohash = geoHash,
-                        signEvent = signEvent
+                        geohash = geoHash
                     )
-                    return null
                 }
             } else {
                 if (wantsPoll) {
-                    return account?.sendPoll(
+                    account?.sendPoll(
                         tagger.message,
                         tagger.replyTos,
                         tagger.mentions,
@@ -255,8 +251,7 @@ open class NewPostViewModel() : ViewModel() {
                         wantsToMarkAsSensitive,
                         localZapRaiserAmount,
                         relayList,
-                        geoHash,
-                        signEvent
+                        geoHash
                     )
                 } else {
                     // adds markers
@@ -266,7 +261,7 @@ open class NewPostViewModel() : ViewModel() {
                             ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
                     val replyId = originalNote?.idHex
 
-                    return account?.sendPost(
+                    account?.sendPost(
                         message = tagger.message,
                         replyTo = tagger.replyTos,
                         mentions = tagger.mentions,
@@ -278,8 +273,7 @@ open class NewPostViewModel() : ViewModel() {
                         root = rootId,
                         directMentions = tagger.directMentions,
                         relayList = relayList,
-                        geohash = geoHash,
-                        signEvent = signEvent
+                        geohash = geoHash
                     )
                 }
             }

@@ -36,15 +36,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.PackageUtils
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -65,7 +66,7 @@ fun LoginPage(
     val useProxy = remember { mutableStateOf(false) }
     val proxyPort = remember { mutableStateOf("9050") }
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
-    var loginWithAmber by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -258,37 +259,6 @@ fun LoginPage(
                 }
             }
 
-            if (loginWithAmber) {
-                SignerDialog(
-                    onClose = {
-                        loginWithAmber = false
-                    },
-                    onPost = {
-                        key.value = TextFieldValue(it)
-                        if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired =
-                                context.getString(R.string.acceptance_of_terms_is_required)
-                        }
-
-                        if (key.value.text.isBlank()) {
-                            errorMessage = context.getString(R.string.key_is_required)
-                        }
-
-                        if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                            try {
-                                accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt(), true)
-                            } catch (e: Exception) {
-                                Log.e("Login", "Could not sign in", e)
-                                errorMessage = context.getString(R.string.invalid_key)
-                            }
-                        }
-                        loginWithAmber = false
-                    },
-                    data = "",
-                    type = SignerType.GET_PUBLIC_KEY
-                )
-            }
-
             Spacer(modifier = Modifier.height(20.dp))
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
@@ -329,7 +299,27 @@ fun LoginPage(
                 Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
                     Button(
                         onClick = {
-                            loginWithAmber = true
+                            scope.launch(Dispatchers.IO) {
+                                AmberUtils.loginWithAmber()
+                                key.value = TextFieldValue(AmberUtils.content)
+                                if (!acceptedTerms.value) {
+                                    termsAcceptanceIsRequired =
+                                        context.getString(R.string.acceptance_of_terms_is_required)
+                                }
+
+                                if (key.value.text.isBlank()) {
+                                    errorMessage = context.getString(R.string.key_is_required)
+                                }
+
+                                if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                                    try {
+                                        accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt(), true)
+                                    } catch (e: Exception) {
+                                        Log.e("Login", "Could not sign in", e)
+                                        errorMessage = context.getString(R.string.invalid_key)
+                                    }
+                                }
+                            }
                         },
                         shape = RoundedCornerShape(Size35dp),
                         modifier = Modifier

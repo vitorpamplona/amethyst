@@ -228,5 +228,9 @@ class PeopleListEvent(
             val id = generateId(pubKey, createdAt, kind, tags, content)
             return PeopleListEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
         }
+
+        fun create(unsignedEvent: PeopleListEvent, signature: String): PeopleListEvent {
+            return PeopleListEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }

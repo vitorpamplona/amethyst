@@ -194,27 +194,30 @@ class Account(
         return keyPair.privKey != null
     }
 
-    fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.updateRelayList(
+            var event = ContactListEvent.updateRelayList(
                 earlierVersion = contactList,
                 relayUse = relays,
                 keyPair = keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             Client.send(event)
             LocalCache.consume(event)
-            return null
         } else {
-            val event = ContactListEvent.createFromScratch(
+            var event = ContactListEvent.createFromScratch(
                 followUsers = listOf(),
                 followTags = listOf(),
                 followGeohashes = listOf(),
@@ -224,28 +227,35 @@ class Account(
                 keyPair = keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             // Keep this local to avoid erasing a good contact list.
             // Client.send(event)
             LocalCache.consume(event)
         }
-        return null
     }
 
-    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>, signEvent: Boolean): MetadataEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
+        if (!isWriteable() && !loginWithAmber) return
 
-        val event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
-        if (!signEvent) {
-            return event
+        var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = MetadataEvent.create(event, AmberUtils.content)
         }
         Client.send(event)
         LocalCache.consume(event)
 
-        return null
+        return
     }
 
     fun reactionTo(note: Note, reaction: String): List<Note> {
@@ -264,15 +274,15 @@ class Account(
         return note.hasReacted(userProfile(), reaction)
     }
 
-    fun reactTo(note: Note, reaction: String, signEvent: Boolean): ReactionEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun reactTo(note: Note, reaction: String) {
+        if (!isWriteable() && !loginWithAmber) return
 
         if (hasReacted(note, reaction)) {
             // has already liked this note
-            return null
+            return
         }
 
-        if (note.event is ChatMessageEvent && signEvent) {
+        if (note.event is ChatMessageEvent && !loginWithAmber) {
             val event = note.event as ChatMessageEvent
             val users = event.recipientsPubKey().plus(event.pubKey).toSet().toList()
 
@@ -290,7 +300,7 @@ class Account(
                         broadcastPrivately(giftWraps)
                     }
 
-                    return null
+                    return
                 }
             }
 
@@ -304,35 +314,42 @@ class Account(
 
                 broadcastPrivately(giftWraps)
             }
-            return null
+            return
         } else {
             if (reaction.startsWith(":")) {
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        val event = ReactionEvent.create(emojiUrl, it, keyPair)
-                        if (!signEvent) {
-                            return event
+                        var event = ReactionEvent.create(emojiUrl, it, keyPair)
+                        if (loginWithAmber) {
+                            AmberUtils.openAmber(event)
+                            if (AmberUtils.content.isBlank()) {
+                                return
+                            }
+                            event = ReactionEvent.create(event, AmberUtils.content)
                         }
 
                         Client.send(event)
                         LocalCache.consume(event)
                     }
 
-                    return null
+                    return
                 }
             }
 
             note.event?.let {
-                val event = ReactionEvent.create(reaction, it, keyPair)
-                if (!signEvent) {
-                    return event
+                var event = ReactionEvent.create(reaction, it, keyPair)
+                if (loginWithAmber) {
+                    AmberUtils.openAmber(event)
+                    if (AmberUtils.content.isBlank()) {
+                        return
+                    }
+                    event = ReactionEvent.create(event, AmberUtils.content)
                 }
                 Client.send(event)
                 LocalCache.consume(event)
             }
         }
-        return null
     }
 
     fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
@@ -539,61 +556,76 @@ class Account(
         LocalCache.consume(event, null)
     }
 
-    fun delete(note: Note, signEvent: Boolean): DeletionEvent? {
-        return delete(listOf(note), signEvent)
+    fun delete(note: Note) {
+        return delete(listOf(note))
     }
 
-    fun delete(notes: List<Note>, signEvent: Boolean): DeletionEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun delete(notes: List<Note>) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
-            val event = DeletionEvent.create(myNotes, keyPair)
-            if (!signEvent) {
-                return event
+            var event = DeletionEvent.create(myNotes, keyPair)
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = DeletionEvent.create(event, AmberUtils.content)
             }
             Client.send(event)
             LocalCache.consume(event)
         }
-        return null
     }
 
     fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
 
-        return HTTPAuthorizationEvent.create(url, method, body, keyPair.privKey!!)
+        var event = HTTPAuthorizationEvent.create(url, method, body, keyPair)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return null
+            }
+            event = HTTPAuthorizationEvent.create(event, AmberUtils.content)
+        }
+        return event
     }
 
-    fun boost(note: Note, signEvent: Boolean): Event? {
-        if (!isWriteable() && signEvent) return null
+    fun boost(note: Note) {
+        if (!isWriteable() && !loginWithAmber) return
 
         if (note.hasBoostedInTheLast5Minutes(userProfile())) {
             // has already bosted in the past 5mins
-            return null
+            return
         }
 
         note.event?.let {
             if (it.kind() == 1) {
-                if (!signEvent) {
-                    return RepostEvent.create(it, keyPair.pubKey.toHexKey())
+                var event = RepostEvent.create(it, keyPair)
+                if (loginWithAmber) {
+                    AmberUtils.openAmber(event)
+                    if (AmberUtils.content.isBlank()) {
+                        return
+                    }
+                    event = RepostEvent.create(event, AmberUtils.content)
                 }
-
-                val event = RepostEvent.create(it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
-                return null
             } else {
-                if (!signEvent) {
-                    return GenericRepostEvent.create(it, keyPair.pubKey.toHexKey())
+                var event = GenericRepostEvent.create(it, keyPair)
+                if (loginWithAmber) {
+                    AmberUtils.openAmber(event)
+                    if (AmberUtils.content.isBlank()) {
+                        return
+                    }
+                    event = GenericRepostEvent.create(event, AmberUtils.content)
                 }
-                val event = GenericRepostEvent.create(it, keyPair.privKey!!)
                 Client.send(event)
                 LocalCache.consume(event)
-                return null
             }
         }
-        return null
     }
 
     fun broadcast(note: Note) {
@@ -616,7 +648,25 @@ class Account(
         if (followingCommunities.isNotEmpty()) {
             followingCommunities.forEach {
                 ATag.parse(it, null)?.let {
-                    returningContactList = ContactListEvent.followAddressableEvent(returningContactList, it, keyPair)
+                    if (loginWithAmber) {
+                        val unsignedEvent = ContactListEvent.followAddressableEvent(
+                            returningContactList,
+                            it,
+                            keyPair
+                        )
+                        AmberUtils.openAmber(unsignedEvent)
+                        returningContactList = if (AmberUtils.content.isBlank()) {
+                            latestContactList
+                        } else {
+                            ContactListEvent.create(unsignedEvent, AmberUtils.content)
+                        }
+                    } else {
+                        returningContactList = ContactListEvent.followAddressableEvent(
+                            returningContactList,
+                            it,
+                            keyPair
+                        )
+                    }
                 }
             }
             followingCommunities = emptySet()
@@ -632,12 +682,12 @@ class Account(
         return returningContactList
     }
 
-    fun follow(user: User, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun follow(user: User) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        val event = if (contactList != null) {
+        var event = if (contactList != null) {
             ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair)
         } else {
             ContactListEvent.createFromScratch(
@@ -651,21 +701,24 @@ class Account(
             )
         }
 
-        if (!signEvent) {
-            return event
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = ContactListEvent.create(event, AmberUtils.content)
         }
 
         Client.send(event)
         LocalCache.consume(event)
-        return null
     }
 
-    fun follow(channel: Channel, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun follow(channel: Channel) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        val event = if (contactList != null) {
+        var event = if (contactList != null) {
             ContactListEvent.followEvent(contactList, channel.idHex, keyPair)
         } else {
             ContactListEvent.createFromScratch(
@@ -679,21 +732,24 @@ class Account(
             )
         }
 
-        if (!signEvent) {
-            return event
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = ContactListEvent.create(event, AmberUtils.content)
         }
 
         Client.send(event)
         LocalCache.consume(event)
-        return null
     }
 
-    fun follow(community: AddressableNote, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun follow(community: AddressableNote) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        val event = if (contactList != null) {
+        var event = if (contactList != null) {
             ContactListEvent.followAddressableEvent(contactList, community.address, keyPair)
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
@@ -708,21 +764,24 @@ class Account(
             )
         }
 
-        if (!signEvent) {
-            return event
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = ContactListEvent.create(event, AmberUtils.content)
         }
 
         Client.send(event)
         LocalCache.consume(event)
-        return null
     }
 
-    fun followHashtag(tag: String, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun followHashtag(tag: String) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        val event = if (contactList != null) {
+        var event = if (contactList != null) {
             ContactListEvent.followHashtag(
                 contactList,
                 tag,
@@ -740,21 +799,24 @@ class Account(
             )
         }
 
-        if (!signEvent) {
-            return event
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = ContactListEvent.create(event, AmberUtils.content)
         }
 
         Client.send(event)
         LocalCache.consume(event)
-        return null
     }
 
-    fun followGeohash(geohash: String, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun followGeohash(geohash: String) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
-        val event = if (contactList != null) {
+        var event = if (contactList != null) {
             ContactListEvent.followGeohash(
                 contactList,
                 geohash,
@@ -772,128 +834,141 @@ class Account(
             )
         }
 
-        if (!signEvent) {
-            return event
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = ContactListEvent.create(event, AmberUtils.content)
         }
 
         Client.send(event)
         LocalCache.consume(event)
-        return null
     }
 
-    fun unfollow(user: User, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun unfollow(user: User) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.unfollowUser(
+            var event = ContactListEvent.unfollowUser(
                 contactList,
                 user.pubkeyHex,
                 keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             Client.send(event)
             LocalCache.consume(event)
         }
-
-        return null
     }
 
-    fun unfollowHashtag(tag: String, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun unfollowHashtag(tag: String) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.unfollowHashtag(
+            var event = ContactListEvent.unfollowHashtag(
                 contactList,
                 tag,
                 keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             Client.send(event)
             LocalCache.consume(event)
-
-            return null
         }
-
-        return null
     }
 
-    fun unfollowGeohash(geohash: String, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun unfollowGeohash(geohash: String) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.unfollowGeohash(
+            var event = ContactListEvent.unfollowGeohash(
                 contactList,
                 geohash,
                 keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             Client.send(event)
             LocalCache.consume(event)
-            return null
         }
-        return null
     }
 
-    fun unfollow(channel: Channel, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun unfollow(channel: Channel) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.unfollowEvent(
+            var event = ContactListEvent.unfollowEvent(
                 contactList,
                 channel.idHex,
                 keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             Client.send(event)
             LocalCache.consume(event)
         }
-        return null
     }
 
-    fun unfollow(community: AddressableNote, signEvent: Boolean): ContactListEvent? {
-        if (!isWriteable() && signEvent) return null
+    fun unfollow(community: AddressableNote) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.unfollowAddressableEvent(
+            var event = ContactListEvent.unfollowAddressableEvent(
                 contactList,
                 community.address,
                 keyPair
             )
 
-            if (!signEvent) {
-                return event
+            if (loginWithAmber) {
+                AmberUtils.openAmber(event)
+                if (AmberUtils.content.isBlank()) {
+                    return
+                }
+                event = ContactListEvent.create(event, AmberUtils.content)
             }
 
             Client.send(event)
             LocalCache.consume(event)
         }
-        return null
     }
 
     fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
@@ -1039,16 +1114,15 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         relayList: List<Relay>? = null,
-        geohash: String? = null,
-        signEvent: Boolean
-    ): TextNoteEvent? {
-        if (!isWriteable() && signEvent) return null
+        geohash: String? = null
+    ) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
         val addresses = replyTo?.mapNotNull { it.address() }
 
-        val signedEvent = TextNoteEvent.create(
+        var signedEvent = TextNoteEvent.create(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
@@ -1064,8 +1138,12 @@ class Account(
             keyPair = keyPair
         )
 
-        if (!signEvent) {
-            return signedEvent
+        if (loginWithAmber) {
+            AmberUtils.openAmber(signedEvent)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            signedEvent = TextNoteEvent.create(signedEvent, AmberUtils.content)
         }
 
         Client.send(signedEvent, relayList = relayList)
@@ -1087,7 +1165,6 @@ class Account(
                 Client.send(it, relayList = relayList)
             }
         }
-        return null
     }
 
     fun sendPoll(
@@ -1103,16 +1180,15 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
-        geohash: String? = null,
-        signEvent: Boolean
-    ): PollNoteEvent? {
-        if (!isWriteable() && signEvent) return null
+        geohash: String? = null
+    ) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
         val addresses = replyTo?.mapNotNull { it.address() }
 
-        val signedEvent = PollNoteEvent.create(
+        var signedEvent = PollNoteEvent.create(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
@@ -1131,8 +1207,12 @@ class Account(
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
 
-        if (!signEvent) {
-            return signedEvent
+        if (loginWithAmber) {
+            AmberUtils.openAmber(signedEvent)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            signedEvent = PollNoteEvent.create(signedEvent, AmberUtils.content)
         }
 
         Client.send(signedEvent, relayList = relayList)
@@ -1148,7 +1228,6 @@ class Account(
                 Client.send(it, relayList = relayList)
             }
         }
-        return null
     }
 
     fun sendChannelMessage(
@@ -1159,16 +1238,15 @@ class Account(
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        geohash: String? = null,
-        signEvent: Boolean
-    ): ChannelMessageEvent? {
-        if (!isWriteable() && signEvent) return null
+        geohash: String? = null
+    ) {
+        if (!isWriteable() && !loginWithAmber) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        val signedEvent = ChannelMessageEvent.create(
+        var signedEvent = ChannelMessageEvent.create(
             message = message,
             channel = toChannel,
             replyTos = repliesToHex,
@@ -1177,17 +1255,19 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            pubKey = keyPair.pubKey.toHexKey(),
-            privateKey = keyPair.privKey
+            keyPair = keyPair
         )
 
-        if (!signEvent) {
-            return signedEvent
+        if (loginWithAmber) {
+            AmberUtils.openAmber(signedEvent)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            signedEvent = ChannelMessageEvent.create(signedEvent, AmberUtils.content)
         }
 
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
-        return null
     }
 
     fun sendLiveMessage(
@@ -1198,16 +1278,15 @@ class Account(
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        geohash: String? = null,
-        signEvent: Boolean
-    ): LiveActivitiesChatMessageEvent? {
-        if (!isWriteable() && signEvent) return null
+        geohash: String? = null
+    ) {
+        if (!isWriteable() && !loginWithAmber) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        val signedEvent = LiveActivitiesChatMessageEvent.create(
+        var signedEvent = LiveActivitiesChatMessageEvent.create(
             message = message,
             activity = toChannel,
             replyTos = repliesToHex,
@@ -1216,21 +1295,23 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            pubKey = keyPair.pubKey.toHexKey(),
-            privateKey = keyPair.privKey
+            keyPair = keyPair
         )
 
-        if (!signEvent) {
-            return signedEvent
+        if (loginWithAmber) {
+            AmberUtils.openAmber(signedEvent)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            signedEvent = LiveActivitiesChatMessageEvent.create(signedEvent, AmberUtils.content)
         }
 
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
-        return null
     }
 
-    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null): PrivateDmEvent? {
-        return sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash, true)
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+        sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash)
     }
 
     fun sendPrivateMessage(
@@ -1241,36 +1322,45 @@ class Account(
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        geohash: String? = null,
-        signEvent: Boolean
-    ): PrivateDmEvent? {
-        if (!isWriteable() && signEvent) return null
+        geohash: String? = null
+    ) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        val signedEvent = PrivateDmEvent.create(
+        var localMessage = message
+        if (loginWithAmber) {
+            AmberUtils.content = ""
+            AmberUtils.encrypt(localMessage, toUser)
+            if (AmberUtils.content.isBlank()) return
+            localMessage = AmberUtils.content
+        }
+
+        var signedEvent = PrivateDmEvent.create(
             recipientPubKey = toUser.hexToByteArray(),
             publishedRecipientPubKey = toUser.hexToByteArray(),
-            msg = message,
+            msg = localMessage,
             replyTos = repliesToHex,
             mentions = mentionsHex,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            pubKey = keyPair.pubKey.toHexKey(),
-            privateKey = keyPair.privKey,
+            keyPair = keyPair,
             advertiseNip18 = false
         )
 
-        if (!signEvent) {
-            return signedEvent
+        if (loginWithAmber) {
+            AmberUtils.openAmber(signedEvent)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            signedEvent = PrivateDmEvent.create(signedEvent, AmberUtils.content)
         }
 
         Client.send(signedEvent)
         LocalCache.consume(signedEvent, null)
-        return null
     }
 
     fun sendNIP24PrivateMessage(
@@ -1282,10 +1372,10 @@ class Account(
         zapReceiver: String? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        geohash: String? = null,
-        signEvent: Boolean
+        geohash: String? = null
     ): List<GiftWrapEvent>? {
-        if (!isWriteable() && signEvent) return null
+        // TODO: add support for amber
+        if (!isWriteable() && !loginWithAmber) return null
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -1303,7 +1393,7 @@ class Account(
             from = keyPair.privKey!!
         )
 
-        if (!signEvent) {
+        if (loginWithAmber) {
             return signedEvents
         }
 
@@ -1333,7 +1423,7 @@ class Account(
     }
 
     fun sendCreateNewChannel(name: String, about: String, picture: String) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         val metadata = ChannelCreateEvent.ChannelData(
             name,
@@ -1341,16 +1431,24 @@ class Account(
             picture
         )
 
-        val event = ChannelCreateEvent.create(
+        var event = ChannelCreateEvent.create(
             channelInfo = metadata,
-            privateKey = keyPair.privKey!!
+            keyPair = keyPair
         )
+
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return
+            }
+            event = ChannelCreateEvent.create(event, AmberUtils.content)
+        }
 
         Client.send(event)
         LocalCache.consume(event)
 
         LocalCache.getChannelIfExists(event.id)?.let {
-            follow(it, true)
+            follow(it)
         }
     }
 
@@ -1433,7 +1531,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun addPrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+    fun addPrivateBookmark(note: Note, decryptedContent: String) {
         val bookmarks = userProfile().latestBookmarkList
         val privTags = mutableListOf<List<String>>()
 
@@ -1463,10 +1561,10 @@ class Account(
         AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
-            return null
+            return
         }
 
-        return BookmarkListEvent.create(
+        var event = BookmarkListEvent.create(
             "bookmark",
             bookmarks?.taggedEvents() ?: emptyList(),
             bookmarks?.taggedUsers() ?: emptyList(),
@@ -1476,9 +1574,18 @@ class Account(
 
             keyPair.pubKey.toHexKey()
         )
+
+        AmberUtils.openAmber(event)
+        if (AmberUtils.content.isBlank()) {
+            return
+        }
+        event = BookmarkListEvent.create(event, AmberUtils.content)
+
+        Client.send(event)
+        LocalCache.consume(event)
     }
 
-    fun removePrivateBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+    fun removePrivateBookmark(note: Note, decryptedContent: String) {
         val bookmarks = userProfile().latestBookmarkList
         val privTags = mutableListOf<List<String>>()
 
@@ -1508,10 +1615,10 @@ class Account(
         AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
-            return null
+            return
         }
 
-        return BookmarkListEvent.create(
+        var event = BookmarkListEvent.create(
             "bookmark",
             bookmarks?.taggedEvents() ?: emptyList(),
             bookmarks?.taggedUsers() ?: emptyList(),
@@ -1521,6 +1628,15 @@ class Account(
 
             keyPair.pubKey.toHexKey()
         )
+
+        AmberUtils.openAmber(event)
+        if (AmberUtils.content.isBlank()) {
+            return
+        }
+        event = BookmarkListEvent.create(event, AmberUtils.content)
+
+        Client.send(event)
+        LocalCache.consume(event)
     }
 
     fun addPrivateBookmark(note: Note) {
@@ -1560,7 +1676,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun addPublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+    fun addPublicBookmark(note: Note, decryptedContent: String) {
         val bookmarks = userProfile().latestBookmarkList
 
         val privTags = mutableListOf<List<String>>()
@@ -1583,10 +1699,10 @@ class Account(
         AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
-            return null
+            return
         }
 
-        val event = if (note is AddressableNote) {
+        var event = if (note is AddressableNote) {
             BookmarkListEvent.create(
                 "bookmark",
                 bookmarks?.taggedEvents() ?: emptyList(),
@@ -1605,7 +1721,14 @@ class Account(
                 keyPair.pubKey.toHexKey()
             )
         }
-        return event
+        AmberUtils.openAmber(event)
+        if (AmberUtils.content.isBlank()) {
+            return
+        }
+        event = BookmarkListEvent.create(event, AmberUtils.content)
+
+        Client.send(event)
+        LocalCache.consume(event)
     }
 
     fun addPublicBookmark(note: Note) {
@@ -1682,10 +1805,19 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun createAuthEvent(relay: Relay, challenge: String, loggedInWithAmber: Boolean): RelayAuthEvent? {
-        if (!isWriteable() && !loggedInWithAmber) return null
+    fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
+        if (!isWriteable() && !loginWithAmber) return null
 
-        return RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
+        var event = RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) {
+                return null
+            }
+            event = RelayAuthEvent.create(event, AmberUtils.content)
+        }
+
+        return event
     }
 
     fun removePublicBookmark(note: Note) {
@@ -1725,7 +1857,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun removePublicBookmark(note: Note, decryptedContent: String): BookmarkListEvent? {
+    fun removePublicBookmark(note: Note, decryptedContent: String) {
         val bookmarks = userProfile().latestBookmarkList
 
         val privTags = mutableListOf<List<String>>()
@@ -1748,10 +1880,10 @@ class Account(
         AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
 
         if (AmberUtils.content.isBlank()) {
-            return null
+            return
         }
 
-        val event = if (note is AddressableNote) {
+        var event = if (note is AddressableNote) {
             BookmarkListEvent.create(
                 "bookmark",
                 bookmarks?.taggedEvents() ?: emptyList(),
@@ -1771,7 +1903,14 @@ class Account(
             )
         }
 
-        return event
+        AmberUtils.openAmber(event)
+        if (AmberUtils.content.isBlank()) {
+            return
+        }
+        event = BookmarkListEvent.create(event, AmberUtils.content)
+
+        Client.send(event)
+        LocalCache.consume(event)
     }
 
     fun isInPrivateBookmarks(note: Note): Boolean {
@@ -1831,28 +1970,6 @@ class Account(
         }
 
         return returningList
-    }
-
-    fun hideUser(pubkeyHex: String, encryptedContent: String): PeopleListEvent {
-        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
-
-        return if (blockList != null) {
-            PeopleListEvent.addUser(
-                earlierVersion = blockList,
-                pubKeyHex = pubkeyHex,
-                isPrivate = true,
-                pubKey = keyPair.pubKey.toHexKey(),
-                encryptedContent = encryptedContent
-            )
-        } else {
-            PeopleListEvent.createListWithUser(
-                name = PeopleListEvent.blockList,
-                pubKeyHex = pubkeyHex,
-                isPrivate = true,
-                pubKey = keyPair.pubKey.toHexKey(),
-                encryptedContent = encryptedContent
-            )
-        }
     }
 
     fun hideUser(pubkeyHex: String) {
@@ -1937,33 +2054,59 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun showUser(pubkeyHex: String, encryptedContent: String): PeopleListEvent? {
-        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
-        if (blockList != null) {
-            return PeopleListEvent.removeUser(
-                earlierVersion = blockList,
-                pubKeyHex = pubkeyHex,
-                isPrivate = true,
-                pubKey = keyPair.pubKey.toHexKey(),
-                encryptedContent = encryptedContent
-            )
-        }
-        return null
-    }
-
     fun showUser(pubkeyHex: String) {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
 
         if (blockList != null) {
-            val event = PeopleListEvent.removeUser(
-                earlierVersion = blockList,
-                pubKeyHex = pubkeyHex,
-                isPrivate = true,
-                privateKey = keyPair.privKey!!
-            )
+            if (loginWithAmber) {
+                val content = blockList.content ?: ""
+                val encryptedContent = if (content.isBlank()) {
+                    val privateTags = listOf(listOf("p", pubkeyHex))
+                    val msg = Event.mapper.writeValueAsString(privateTags)
 
-            Client.send(event)
-            LocalCache.consume(event)
+                    AmberUtils.content = ""
+                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
+                    if (AmberUtils.content.isBlank()) return
+                    AmberUtils.content
+                } else {
+                    AmberUtils.content = ""
+                    AmberUtils.decrypt(content, keyPair.pubKey.toHexKey())
+                    if (AmberUtils.content.isBlank()) return
+                    val decryptedContent = AmberUtils.content
+                    AmberUtils.content = ""
+                    val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("p", pubkeyHex))
+                    val msg = Event.mapper.writeValueAsString(privateTags)
+                    AmberUtils.content = ""
+                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
+                    if (AmberUtils.content.isBlank()) return
+                    AmberUtils.content
+                }
+
+                var event = PeopleListEvent.addUser(
+                    earlierVersion = blockList,
+                    pubKeyHex = pubkeyHex,
+                    isPrivate = true,
+                    pubKey = keyPair.pubKey.toHexKey(),
+                    encryptedContent
+                )
+
+                AmberUtils.content = ""
+                AmberUtils.openAmber(event)
+                event = PeopleListEvent.create(event, AmberUtils.content)
+
+                Client.send(event)
+                LocalCache.consume(event)
+            } else {
+                val event = PeopleListEvent.removeUser(
+                    earlierVersion = blockList,
+                    pubKeyHex = pubkeyHex,
+                    isPrivate = true,
+                    privateKey = keyPair.privKey!!
+                )
+
+                Client.send(event)
+                LocalCache.consume(event)
+            }
         }
 
         transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
@@ -2147,7 +2290,7 @@ class Account(
     }
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         val metadata = ChannelCreateEvent.ChannelData(
             name,
@@ -2155,16 +2298,21 @@ class Account(
             picture
         )
 
-        val event = ChannelMetadataEvent.create(
+        var event = ChannelMetadataEvent.create(
             newChannelInfo = metadata,
             originalChannelIdHex = channel.idHex,
-            privateKey = keyPair.privKey!!
+            keyPair = keyPair
         )
+        if (loginWithAmber) {
+            AmberUtils.openAmber(event)
+            if (AmberUtils.content.isBlank()) return
+            event = ChannelMetadataEvent.create(event, AmberUtils.content)
+        }
 
         Client.send(event)
         LocalCache.consume(event)
 
-        follow(channel, true)
+        follow(channel)
     }
 
     fun unwrap(event: GiftWrapEvent): Event? {
@@ -2405,10 +2553,10 @@ class Account(
             ).toSet()
     }
 
-    fun saveRelayList(value: List<RelaySetupInfo>, signEvent: Boolean): ContactListEvent? {
+    fun saveRelayList(value: List<RelaySetupInfo>) {
         try {
             localRelays = value.toSet()
-            return sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }, signEvent)
+            return sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) })
         } finally {
             saveable.invalidateData()
         }

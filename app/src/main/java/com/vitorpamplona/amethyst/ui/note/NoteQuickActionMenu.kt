@@ -37,11 +37,9 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -62,17 +60,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.AudioTrackEvent
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.coroutines.Dispatchers
@@ -206,25 +200,6 @@ private fun RenderMainPopup(
     val isOwnNote = accountViewModel.isLoggedUser(note.author)
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                    onDismiss()
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
-
     Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
         Card(
             modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
@@ -300,10 +275,8 @@ private fun RenderMainPopup(
                         ) {
                             if (accountViewModel.hideDeleteRequestDialog) {
                                 scope.launch(Dispatchers.IO) {
-                                    event = accountViewModel.delete(note, !accountViewModel.loggedInWithAmber())
-                                    if (!accountViewModel.loggedInWithAmber()) {
-                                        onDismiss()
-                                    }
+                                    accountViewModel.delete(note)
+                                    onDismiss()
                                 }
                             } else {
                                 showDeleteAlertDialog.value = true
@@ -315,10 +288,8 @@ private fun RenderMainPopup(
                             stringResource(R.string.quick_action_unfollow)
                         ) {
                             scope.launch(Dispatchers.IO) {
-                                event = accountViewModel.unfollow(note.author!!, !accountViewModel.loggedInWithAmber())
-                                if (!accountViewModel.loggedInWithAmber()) {
-                                    onDismiss()
-                                }
+                                accountViewModel.unfollow(note.author!!)
+                                onDismiss()
                             }
                         }
                     } else {
@@ -327,10 +298,8 @@ private fun RenderMainPopup(
                             stringResource(R.string.quick_action_follow)
                         ) {
                             scope.launch(Dispatchers.IO) {
-                                event = accountViewModel.follow(note.author!!, !accountViewModel.loggedInWithAmber())
-                                if (!accountViewModel.loggedInWithAmber()) {
-                                    onDismiss()
-                                }
+                                accountViewModel.follow(note.author!!)
+                                onDismiss()
                             }
                         }
                     }
@@ -413,25 +382,6 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
 
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                    onDismiss()
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
-
     QuickActionAlertDialog(
         title = stringResource(R.string.quick_action_request_deletion_alert_title),
         textContent = stringResource(R.string.quick_action_request_deletion_alert_body),
@@ -439,20 +389,16 @@ fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss:
         buttonText = stringResource(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.delete(note, !accountViewModel.loggedInWithAmber())
+                accountViewModel.delete(note)
             }
-            if (!accountViewModel.loggedInWithAmber()) {
-                onDismiss()
-            }
+            onDismiss()
         },
         onClickDontShowAgain = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.delete(note, !accountViewModel.loggedInWithAmber())
+                accountViewModel.delete(note)
                 accountViewModel.dontShowDeleteRequestDialog()
             }
-            if (!accountViewModel.loggedInWithAmber()) {
-                onDismiss()
-            }
+            onDismiss()
         },
         onDismiss = onDismiss
     )

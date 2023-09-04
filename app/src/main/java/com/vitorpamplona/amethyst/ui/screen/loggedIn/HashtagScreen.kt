@@ -16,10 +16,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,14 +28,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -149,30 +143,14 @@ fun HashtagActionOptions(
             userState?.user?.isFollowingHashtagCached(tag) ?: false
         }
     }
-    var event by remember { mutableStateOf<Event?>(null) }
-
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.account.unfollowHashtag(tag, false)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollowHashtag(tag)
+                    }
                 } else {
                     scope.launch {
                         Toast
@@ -186,7 +164,7 @@ fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollowHashtag(tag, true)
+                    accountViewModel.account.unfollowHashtag(tag)
                 }
             }
         }
@@ -194,7 +172,9 @@ fun HashtagActionOptions(
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.account.followHashtag(tag, false)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.followHashtag(tag)
+                    }
                 } else {
                     scope.launch {
                         Toast
@@ -208,7 +188,7 @@ fun HashtagActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.followHashtag(tag, true)
+                    accountViewModel.account.followHashtag(tag)
                 }
             }
         }

@@ -35,11 +35,29 @@ object AmberUtils {
     }
 
     fun openAmber(event: EventInterface) {
+        checkNotInMainThread()
+        ServiceManager.shouldPauseService = false
+        content = ""
         isActivityRunning = true
         openAmber(
             event.toJson(),
             SignerType.SIGN_EVENT,
-            IntentUtils.decryptActivityResultLauncher,
+            IntentUtils.activityResultLauncher,
+            ""
+        )
+        while (isActivityRunning) {
+            // do nothing
+        }
+    }
+
+    fun loginWithAmber() {
+        checkNotInMainThread()
+        content = ""
+        isActivityRunning = true
+        openAmber(
+            "",
+            SignerType.GET_PUBLIC_KEY,
+            IntentUtils.activityResultLauncher,
             ""
         )
         while (isActivityRunning) {
@@ -53,7 +71,7 @@ object AmberUtils {
             openAmber(
                 encryptedContent,
                 SignerType.NIP04_DECRYPT,
-                IntentUtils.decryptActivityResultLauncher,
+                IntentUtils.activityResultLauncher,
                 pubKey
             )
             while (isActivityRunning) {
@@ -68,7 +86,7 @@ object AmberUtils {
             openAmber(
                 decryptedContent,
                 SignerType.NIP04_ENCRYPT,
-                IntentUtils.decryptActivityResultLauncher,
+                IntentUtils.activityResultLauncher,
                 pubKey
             )
             while (isActivityRunning) {

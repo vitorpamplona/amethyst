@@ -160,5 +160,9 @@ class MetadataEvent(
             val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
             return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, contactMetaData, sig?.toHexKey() ?: "")
         }
+
+        fun create(unsignedEvent: MetadataEvent, signature: String): MetadataEvent {
+            return MetadataEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }

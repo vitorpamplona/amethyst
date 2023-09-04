@@ -8,7 +8,6 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -190,25 +189,13 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         super.auth(relay, challenge)
 
         if (this::account.isInitialized) {
-            val loggedInWithAmber = account.loginWithAmber
-            val event = account.createAuthEvent(relay, challenge, loggedInWithAmber)
+            val event = account.createAuthEvent(relay, challenge)
 
-            if (loggedInWithAmber && !account.isWriteable()) {
-                if (event != null) {
-                    AmberUtils.openAmber(
-                        event.toJson(),
-                        SignerType.SIGN_EVENT,
-                        IntentUtils.authActivityResultLauncher,
-                        ""
-                    )
-                }
-            } else {
-                if (event != null) {
-                    Client.send(
-                        event,
-                        relay.url
-                    )
-                }
+            if (event != null) {
+                Client.send(
+                    event,
+                    relay.url
+                )
             }
         }
     }

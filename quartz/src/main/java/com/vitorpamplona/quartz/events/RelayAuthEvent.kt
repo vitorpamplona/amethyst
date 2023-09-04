@@ -32,5 +32,9 @@ class RelayAuthEvent(
             val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
             return RelayAuthEvent(id.toHexKey(), localPubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
+
+        fun create(unsignedEvent: RelayAuthEvent, signature: String): RelayAuthEvent {
+            return RelayAuthEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }

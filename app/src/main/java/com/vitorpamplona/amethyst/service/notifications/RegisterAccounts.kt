@@ -4,10 +4,7 @@ import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.IntentUtils
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,16 +19,14 @@ class RegisterAccounts(
     // creates proof that it controls all accounts
     private fun signEventsToProveControlOfAccounts(
         accounts: List<AccountInfo>,
-        notificationToken: String,
-        loggedInWithAmber: Boolean
+        notificationToken: String
     ): List<RelayAuthEvent> {
         return accounts.mapNotNull {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
             if (acc != null) {
                 val relayToUse = acc.activeRelays()?.firstOrNull { it.read }
                 if (relayToUse != null) {
-                    val event = acc.createAuthEvent(relayToUse, notificationToken, loggedInWithAmber)
-                    event
+                    acc.createAuthEvent(relayToUse, notificationToken)
                 } else {
                     null
                 }
@@ -68,25 +63,8 @@ class RegisterAccounts(
     }
 
     suspend fun go(notificationToken: String) = withContext(Dispatchers.IO) {
-        val accountsWithoutPrivKey = accounts.filter { !it.hasPrivKey }
-        val accountsWithPrivKey = accounts.filter { it.hasPrivKey }
-        accountsWithoutPrivKey.forEach { account ->
-            Log.d("fcm register", account.npub)
-            val events = signEventsToProveControlOfAccounts(listOf(account), notificationToken, account.loggedInWithAmber)
-            if (events.isNotEmpty()) {
-                AmberUtils.openAmber(
-                    events.first().toJson(),
-                    SignerType.SIGN_EVENT,
-                    IntentUtils.activityResultLauncher,
-                    ""
-                )
-            }
-        }
-
-        if (accountsWithPrivKey.isNotEmpty()) {
-            postRegistrationEvent(
-                signEventsToProveControlOfAccounts(accountsWithPrivKey, notificationToken, false)
-            )
-        }
+        postRegistrationEvent(
+            signEventsToProveControlOfAccounts(accounts, notificationToken)
+        )
     }
 }

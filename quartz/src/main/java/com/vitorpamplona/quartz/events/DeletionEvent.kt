@@ -29,5 +29,9 @@ class DeletionEvent(
             val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
             return DeletionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
+
+        fun create(unsignedEvent: DeletionEvent, signature: String): DeletionEvent {
+            return DeletionEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }

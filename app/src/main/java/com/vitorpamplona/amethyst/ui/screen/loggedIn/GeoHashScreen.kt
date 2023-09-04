@@ -31,15 +31,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -171,29 +167,14 @@ fun GeoHashActionOptions(
             userState?.user?.isFollowingGeohashCached(tag) ?: false
         }
     }
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.account.unfollowGeohash(tag, false)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollowGeohash(tag)
+                    }
                 } else {
                     scope.launch {
                         Toast
@@ -207,7 +188,7 @@ fun GeoHashActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollowGeohash(tag, true)
+                    accountViewModel.account.unfollowGeohash(tag)
                 }
             }
         }
@@ -215,7 +196,9 @@ fun GeoHashActionOptions(
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithAmber()) {
-                    event = accountViewModel.account.followGeohash(tag, false)
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.followGeohash(tag)
+                    }
                 } else {
                     scope.launch {
                         Toast
@@ -229,7 +212,7 @@ fun GeoHashActionOptions(
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.followGeohash(tag, true)
+                    accountViewModel.account.followGeohash(tag)
                 }
             }
         }

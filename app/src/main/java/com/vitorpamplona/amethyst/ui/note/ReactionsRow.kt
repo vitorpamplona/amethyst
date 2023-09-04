@@ -77,11 +77,8 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
@@ -110,7 +107,6 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
-import com.vitorpamplona.quartz.events.Event
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
@@ -647,26 +643,6 @@ fun BoostReaction(
     val iconButtonModifier = remember {
         Modifier.size(iconSize)
     }
-    var event by remember {
-        mutableStateOf<Event?>(null)
-    }
-
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     IconButton(
         modifier = iconButtonModifier,
@@ -674,7 +650,7 @@ fun BoostReaction(
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.deleteBoostsTo(baseNote, true)
+                        accountViewModel.deleteBoostsTo(baseNote)
                     }
                 } else {
                     wantsToBoost = true
@@ -683,7 +659,7 @@ fun BoostReaction(
                 if (accountViewModel.loggedInWithAmber()) {
                     if (accountViewModel.hasBoosted(baseNote)) {
                         scope.launch(Dispatchers.IO) {
-                            event = accountViewModel.deleteBoostsTo(baseNote, false)
+                            accountViewModel.deleteBoostsTo(baseNote)
                         }
                     } else {
                         wantsToBoost = true
@@ -716,7 +692,7 @@ fun BoostReaction(
                 },
                 onRepost = {
                     scope.launch(Dispatchers.IO) {
-                        event = accountViewModel.boost(baseNote, false)
+                        accountViewModel.boost(baseNote)
                     }
                 }
             )
@@ -766,24 +742,6 @@ fun LikeReaction(
 
     var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
     var wantsToReact by remember { mutableStateOf(false) }
-    var event by remember { mutableStateOf<Event?>(null) }
-
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Box(
         contentAlignment = Center,
@@ -804,9 +762,9 @@ fun LikeReaction(
                         if (accountViewModel.account.reactionChoices.size == 1) {
                             val reaction = accountViewModel.account.reactionChoices.first()
                             if (accountViewModel.hasReactedTo(baseNote, reaction)) {
-                                event = accountViewModel.deleteReactionTo(baseNote, reaction, false)
+                                accountViewModel.deleteReactionTo(baseNote, reaction)
                             } else {
-                                event = accountViewModel.reactTo(baseNote, reaction, false)
+                                accountViewModel.reactTo(baseNote, reaction)
                             }
                         } else if (accountViewModel.account.reactionChoices.size > 1) {
                             wantsToReact = true
@@ -961,9 +919,9 @@ private fun likeClick(
         scope.launch(Dispatchers.IO) {
             val reaction = accountViewModel.account.reactionChoices.first()
             if (accountViewModel.hasReactedTo(baseNote, reaction)) {
-                accountViewModel.deleteReactionTo(baseNote, reaction, true)
+                accountViewModel.deleteReactionTo(baseNote, reaction)
             } else {
-                accountViewModel.reactTo(baseNote, reaction, true)
+                accountViewModel.reactTo(baseNote, reaction)
             }
         }
     } else if (accountViewModel.account.reactionChoices.size > 1) {
@@ -1294,7 +1252,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
                 onClick = {
                     if (accountViewModel.isWriteable()) {
                         scope.launch(Dispatchers.IO) {
-                            accountViewModel.boost(baseNote, true)
+                            accountViewModel.boost(baseNote)
                             onDismiss()
                         }
                     } else {
@@ -1377,40 +1335,16 @@ private fun ActionableReactionButton(
     toRemove: Set<String>
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-                onDismiss()
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                    onDismiss()
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            val loggedInWithAmber = accountViewModel.loggedInWithAmber()
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.reactToOrDelete(
+                accountViewModel.reactToOrDelete(
                     baseNote,
-                    reactionType,
-                    !loggedInWithAmber
+                    reactionType
                 )
-                if (!loggedInWithAmber) {
-                    onDismiss()
-                }
+                onDismiss()
             }
         },
         shape = ButtonBorder,
@@ -1422,16 +1356,12 @@ private fun ActionableReactionButton(
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
                 onClick = {
-                    val loggedInWithAmber = accountViewModel.loggedInWithAmber()
                     scope.launch(Dispatchers.IO) {
-                        event = accountViewModel.reactToOrDelete(
+                        accountViewModel.reactToOrDelete(
                             baseNote,
-                            reactionType,
-                            !loggedInWithAmber
+                            reactionType
                         )
-                        if (!loggedInWithAmber) {
-                            onDismiss()
-                        }
+                        onDismiss()
                     }
                 },
                 onLongClick = {

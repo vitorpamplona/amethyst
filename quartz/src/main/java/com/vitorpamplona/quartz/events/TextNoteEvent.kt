@@ -100,6 +100,13 @@ class TextNoteEvent(
             val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
             return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
         }
+
+        fun create(
+            unsignedEvent: TextNoteEvent, signature: String
+        ): TextNoteEvent {
+
+            return TextNoteEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
     }
 }
 

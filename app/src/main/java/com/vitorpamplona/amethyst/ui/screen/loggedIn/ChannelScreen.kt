@@ -86,12 +86,10 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -131,7 +129,6 @@ import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.Participant
@@ -263,24 +260,6 @@ fun ChannelScreen(
 
         val scope = rememberCoroutineScope()
 
-        var event by remember { mutableStateOf<Event?>(null) }
-        if (event != null) {
-            SignerDialog(
-                onClose = {
-                    event = null
-                },
-                onPost = {
-                    scope.launch(Dispatchers.IO) {
-                        val signedEvent = Event.fromJson(it)
-                        Client.send(signedEvent)
-                        LocalCache.verifyAndConsume(signedEvent, null)
-                        event = null
-                    }
-                },
-                data = event!!.toJson()
-            )
-        }
-
         // LAST ROW
         EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
             scope.launch(Dispatchers.IO) {
@@ -292,22 +271,20 @@ fun ChannelScreen(
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {
-                    event = accountViewModel.account.sendChannelMessage(
+                    accountViewModel.account.sendChannelMessage(
                         message = tagger.message,
                         toChannel = channel.idHex,
                         replyTo = tagger.replyTos,
                         mentions = tagger.mentions,
-                        wantsToMarkAsSensitive = false,
-                        signEvent = !accountViewModel.loggedInWithAmber()
+                        wantsToMarkAsSensitive = false
                     )
                 } else if (channel is LiveActivitiesChannel) {
-                    event = accountViewModel.account.sendLiveMessage(
+                    accountViewModel.account.sendLiveMessage(
                         message = tagger.message,
                         toChannel = channel.address,
                         replyTo = tagger.replyTos,
                         mentions = tagger.mentions,
-                        wantsToMarkAsSensitive = false,
-                        signEvent = !accountViewModel.loggedInWithAmber()
+                        wantsToMarkAsSensitive = false
                     )
                 }
                 newPostModel.message = TextFieldValue("")
@@ -1127,30 +1104,12 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatCh
 @Composable
 fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.follow(channel, !accountViewModel.loggedInWithAmber())
+                accountViewModel.account.follow(channel)
             }
         },
         shape = ButtonBorder,
@@ -1167,30 +1126,12 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
 @Composable
 fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.unfollow(channel, !accountViewModel.loggedInWithAmber())
+                accountViewModel.account.unfollow(channel)
             }
         },
         shape = ButtonBorder,
@@ -1207,30 +1148,12 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
 @Composable
 fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNote, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.follow(note, !accountViewModel.loggedInWithAmber())
+                accountViewModel.account.follow(note)
             }
         },
         shape = ButtonBorder,
@@ -1247,30 +1170,12 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNot
 @Composable
 fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNote, nav: (String) -> Unit) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    var event by remember { mutableStateOf<Event?>(null) }
-    if (event != null) {
-        SignerDialog(
-            onClose = {
-                event = null
-            },
-            onPost = {
-                scope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(it)
-                    Client.send(signedEvent)
-                    LocalCache.verifyAndConsume(signedEvent, null)
-                    event = null
-                }
-            },
-            data = event!!.toJson()
-        )
-    }
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                event = accountViewModel.account.unfollow(note, !accountViewModel.loggedInWithAmber())
+                accountViewModel.account.unfollow(note)
             }
         },
         shape = ButtonBorder,
