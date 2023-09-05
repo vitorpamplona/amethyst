@@ -112,6 +112,28 @@ jobs:
           asset_name: amethyst-googleplay-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
+      - name: Upload Play APK arm64-v8a Asset
+        id: upload-release-asset-play-arm64-v8a-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/play/release/app-play-arm64-v8a-release-unsigned-signed.apk
+          asset_name: amethyst-googleplay-arm64-v8a-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      - name: Upload Play APK armeabi-v7a Asset
+        id: upload-release-asset-play-armeabi-v7a-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/play/release/app-play-armeabi-v7a-release-unsigned-signed.apk
+          asset_name: amethyst-googleplay-armeabi-v7a-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
       # F-Droid APK
       - name: Upload F-Droid APK Universal Asset
         id: upload-release-asset-fdroid-universal-apk
@@ -144,6 +166,28 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-x86_64-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      - name: Upload F-Droid APK arm64-v8a Asset
+        id: upload-release-asset-fdroid-arm64-v8a-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-unsigned-signed.apk
+          asset_name: amethyst-fdroid-arm64-v8a-${{ github.ref_name }}.apk
+          asset_content_type: application/zip
+
+      - name: Upload F-Droid APK armeabi-v7a Asset
+        id: upload-release-asset-fdroid-armeabi-v7a-apk
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-unsigned-signed.apk
+          asset_name: amethyst-fdroid-armeabi-v7a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
 
