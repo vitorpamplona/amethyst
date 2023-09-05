@@ -134,6 +134,9 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     }
 
     val singleEventChannel = requestNewChannel { time, relayUrl ->
+        // Ignores EOSE if it is in the middle of a filter change.
+        if (changingFilters.get()) return@requestNewChannel
+
         checkNotInMainThread()
 
         eventsToWatch.forEach {
