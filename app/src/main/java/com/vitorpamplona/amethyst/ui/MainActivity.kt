@@ -23,7 +23,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
-import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -95,10 +94,6 @@ class MainActivity : AppCompatActivity() {
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
             ServiceManager.start(this@MainActivity)
-        }
-
-        GlobalScope.launch(Dispatchers.IO) {
-            PushNotificationUtils().init(LocalPreferences.allSavedAccounts())
         }
     }
 
