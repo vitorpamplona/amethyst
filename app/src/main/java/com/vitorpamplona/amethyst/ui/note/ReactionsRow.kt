@@ -760,11 +760,13 @@ fun LikeReaction(
                     },
                     onWantsToSignReaction = {
                         if (accountViewModel.account.reactionChoices.size == 1) {
-                            val reaction = accountViewModel.account.reactionChoices.first()
-                            if (accountViewModel.hasReactedTo(baseNote, reaction)) {
-                                accountViewModel.deleteReactionTo(baseNote, reaction)
-                            } else {
-                                accountViewModel.reactTo(baseNote, reaction)
+                            scope.launch(Dispatchers.IO) {
+                                val reaction = accountViewModel.account.reactionChoices.first()
+                                if (accountViewModel.hasReactedTo(baseNote, reaction)) {
+                                    accountViewModel.deleteReactionTo(baseNote, reaction)
+                                } else {
+                                    accountViewModel.reactTo(baseNote, reaction)
+                                }
                             }
                         } else if (accountViewModel.account.reactionChoices.size > 1) {
                             wantsToReact = true
