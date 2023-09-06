@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -29,6 +30,10 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
@@ -144,6 +149,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun consume(event: Event, relay: Relay) {
         if (LocalCache.justVerify(event)) {
             if (event is GiftWrapEvent) {
@@ -151,6 +157,17 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 if (privateKey != null) {
                     event.cachedGift(privateKey)?.let {
                         this.consume(it, relay)
+                    }
+                } else if (account.loginWithAmber) {
+                    GlobalScope.launch(Dispatchers.IO) {
+                        AmberUtils.content = ""
+                        AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+                        val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                        if (decryptedContent.isNotBlank()) {
+                            event.cachedGift(account.keyPair.pubKey, decryptedContent)?.let {
+                                consume(it, relay)
+                            }
+                        }
                     }
                 }
             }
@@ -160,6 +177,22 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 if (privateKey != null) {
                     event.cachedGossip(privateKey)?.let {
                         LocalCache.justConsume(it, relay)
+                    }
+                } else if (account.loginWithAmber) {
+                    GlobalScope.launch(Dispatchers.IO) {
+                        AmberUtils.content = ""
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                        if (decryptedContent.isNotBlank()) {
+                            event.cachedGossip(account.keyPair.pubKey, decryptedContent)?.let {
+                                LocalCache.justConsume(it, relay)
+                            }
+                        }
                     }
                 }
 

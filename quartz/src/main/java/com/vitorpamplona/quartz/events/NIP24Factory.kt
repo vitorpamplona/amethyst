@@ -9,7 +9,7 @@ class NIP24Factory {
     fun createMsgNIP24(
         msg: String,
         to: List<HexKey>,
-        from: ByteArray,
+        keyPair: KeyPair,
         subject: String? = null,
         replyTos: List<String>? = null,
         mentions: List<String>? = null,
@@ -18,12 +18,12 @@ class NIP24Factory {
         zapRaiserAmount: Long? = null,
         geohash: String? = null
     ): List<GiftWrapEvent> {
-        val senderPublicKey = CryptoUtils.pubkeyCreate(from).toHexKey()
+        val senderPublicKey = keyPair.pubKey.toHexKey()
 
         val senderMessage = ChatMessageEvent.create(
             msg = msg,
             to = to,
-            privateKey = from,
+            keyPair = keyPair,
             subject = subject,
             replyTos = replyTos,
             mentions = mentions,
@@ -38,7 +38,7 @@ class NIP24Factory {
                 event = SealedGossipEvent.create(
                     event = senderMessage,
                     encryptTo = it,
-                    privateKey = from
+                    privateKey = keyPair.privKey!!
                 ),
                 recipientPubKey = it
             )
@@ -46,7 +46,7 @@ class NIP24Factory {
     }
 
     fun createReactionWithinGroup(content: String, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): List<GiftWrapEvent> {
-        val senderPublicKey = CryptoUtils.pubkeyCreate(from.privKey!!).toHexKey()
+        val senderPublicKey = from.pubKey.toHexKey()
 
         val senderReaction = ReactionEvent.create(
             content,
@@ -59,7 +59,7 @@ class NIP24Factory {
                 event = SealedGossipEvent.create(
                     event = senderReaction,
                     encryptTo = it,
-                    privateKey = from.privKey
+                    privateKey = from.privKey!!
                 ),
                 recipientPubKey = it
             )
@@ -67,7 +67,7 @@ class NIP24Factory {
     }
 
     fun createReactionWithinGroup(emojiUrl: EmojiUrl, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): List<GiftWrapEvent> {
-        val senderPublicKey = CryptoUtils.pubkeyCreate(from.privKey!!).toHexKey()
+        val senderPublicKey = from.pubKey.toHexKey()
 
         val senderReaction = ReactionEvent.create(
             emojiUrl,
@@ -80,7 +80,7 @@ class NIP24Factory {
                 event = SealedGossipEvent.create(
                     event = senderReaction,
                     encryptTo = it,
-                    privateKey = from.privKey
+                    privateKey = from.privKey!!
                 ),
                 recipientPubKey = it
             )

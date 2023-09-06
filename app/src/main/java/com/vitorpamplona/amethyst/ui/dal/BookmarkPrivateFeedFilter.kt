@@ -18,7 +18,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
 
         if (account.loginWithAmber) {
             if (AmberUtils.content.isBlank()) {
-                AmberUtils.decrypt(bookmarks?.content ?: "", account.keyPair.pubKey.toHexKey())
+                AmberUtils.decrypt(bookmarks?.content ?: "", account.keyPair.pubKey.toHexKey(), "")
                 bookmarks?.decryptedContent = AmberUtils.content
             }
 

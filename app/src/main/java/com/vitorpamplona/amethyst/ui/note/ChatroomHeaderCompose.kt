@@ -301,7 +301,8 @@ private fun UserRoomCompose(
                 event?.content() ?: "",
                 SignerType.NIP04_DECRYPT,
                 activityLauncher,
-                (event as PrivateDmEvent).talkingWith(accountViewModel.userProfile().pubkeyHex)
+                (event as PrivateDmEvent).talkingWith(accountViewModel.userProfile().pubkeyHex),
+                event.id
             )
         }
     }

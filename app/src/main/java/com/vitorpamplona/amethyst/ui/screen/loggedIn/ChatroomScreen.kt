@@ -296,7 +296,6 @@ fun ChatroomScreen(
         PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
                 if (newPostModel.nip24 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
-                    // TODO: add support for amber
                     accountViewModel.account.sendNIP24PrivateMessage(
                         message = newPostModel.message.text,
                         toUsers = room.users.toList(),
@@ -639,7 +638,6 @@ fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room
                     PostButton(
                         onPost = {
                             scope.launch(Dispatchers.IO) {
-                                // TODO: add support for amber
                                 accountViewModel.account.sendNIP24PrivateMessage(
                                     message = message.value,
                                     toUsers = room.users.toList(),

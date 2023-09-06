@@ -17,7 +17,8 @@ object AmberUtils {
         data: String,
         type: SignerType,
         intentResult: ActivityResultLauncher<Intent>,
-        pubKey: HexKey
+        pubKey: HexKey,
+        id: String
     ) {
         ServiceManager.shouldPauseService = false
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
@@ -31,6 +32,7 @@ object AmberUtils {
         }
         intent.putExtra("type", signerType)
         intent.putExtra("pubKey", pubKey)
+        intent.putExtra("id", id)
         intent.`package` = "com.greenart7c3.nostrsigner.debug"
         intentResult.launch(intent)
     }
@@ -44,7 +46,8 @@ object AmberUtils {
             event.toJson(),
             SignerType.SIGN_EVENT,
             IntentUtils.activityResultLauncher,
-            ""
+            "",
+            event.id()
         )
         while (isActivityRunning) {
             // do nothing
@@ -59,6 +62,7 @@ object AmberUtils {
             "",
             SignerType.GET_PUBLIC_KEY,
             IntentUtils.activityResultLauncher,
+            "",
             ""
         )
         while (isActivityRunning) {
@@ -66,14 +70,15 @@ object AmberUtils {
         }
     }
 
-    fun decrypt(encryptedContent: String, pubKey: HexKey) {
+    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
         if (content.isBlank()) {
             isActivityRunning = true
             openAmber(
                 encryptedContent,
-                SignerType.NIP04_DECRYPT,
+                signerType,
                 IntentUtils.activityResultLauncher,
-                pubKey
+                pubKey,
+                id
             )
             while (isActivityRunning) {
                 // do nothing
@@ -81,14 +86,15 @@ object AmberUtils {
         }
     }
 
-    fun encrypt(decryptedContent: String, pubKey: HexKey) {
+    fun encrypt(decryptedContent: String, pubKey: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
         if (content.isBlank()) {
             isActivityRunning = true
             openAmber(
                 decryptedContent,
-                SignerType.NIP04_ENCRYPT,
+                signerType,
                 IntentUtils.activityResultLauncher,
-                pubKey
+                pubKey,
+                ""
             )
             while (isActivityRunning) {
                 // do nothing

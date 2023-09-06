@@ -452,7 +452,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.content
                             AmberUtils.content = ""
@@ -474,7 +475,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.content
                             AmberUtils.content = ""
@@ -497,7 +499,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.content
                             AmberUtils.content = ""
@@ -522,7 +525,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey()
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.content
                             AmberUtils.content = ""

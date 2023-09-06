@@ -34,6 +34,10 @@ object IntentUtils {
             }
 
             val event = it.data?.getStringExtra("signature") ?: ""
+            val id = it.data?.getStringExtra("id") ?: ""
+            if (id.isNotBlank()) {
+                AmberUtils.cachedDecryptedContent[id] = event
+            }
             AmberUtils.content = event
             AmberUtils.isActivityRunning = false
             ServiceManager.shouldPauseService = true

@@ -87,7 +87,7 @@ fun SignerDialog(
     )
 
     LaunchedEffect(Unit) {
-        AmberUtils.openAmber(data, type, intentResult, pubKey)
+        AmberUtils.openAmber(data, type, intentResult, pubKey, "")
     }
 
     Dialog(
@@ -178,7 +178,7 @@ fun SignerDialog(
                 )
                 Button(
                     shape = ButtonBorder,
-                    onClick = { AmberUtils.openAmber(data, type, intentResult, pubKey) }
+                    onClick = { AmberUtils.openAmber(data, type, intentResult, pubKey, "") }
                 ) {
                     Text("Open Amber")
                 }

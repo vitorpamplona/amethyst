@@ -16,6 +16,7 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -114,7 +115,8 @@ class Account(
                         AmberUtils.content = ""
                         AmberUtils.decrypt(
                             content,
-                            keyPair.pubKey.toHexKey()
+                            keyPair.pubKey.toHexKey(),
+                            blockList?.id() ?: ""
                         )
                         blockList?.decryptedContent = AmberUtils.content
                         live.invalidateData()
@@ -282,7 +284,7 @@ class Account(
             return
         }
 
-        if (note.event is ChatMessageEvent && !loginWithAmber) {
+        if (note.event is ChatMessageEvent) {
             val event = note.event as ChatMessageEvent
             val users = event.recipientsPubKey().plus(event.pubKey).toSet().toList()
 
@@ -290,14 +292,48 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        val giftWraps = NIP24Factory().createReactionWithinGroup(
-                            emojiUrl = emojiUrl,
-                            originalNote = it,
-                            to = users,
-                            from = keyPair
-                        )
+                        if (loginWithAmber) {
+                            val senderPublicKey = keyPair.pubKey.toHexKey()
 
-                        broadcastPrivately(giftWraps)
+                            var senderReaction = ReactionEvent.create(
+                                emojiUrl,
+                                it,
+                                keyPair
+                            )
+
+                            AmberUtils.openAmber(senderReaction)
+                            if (AmberUtils.content.isBlank()) return
+                            senderReaction = ReactionEvent.create(senderReaction, AmberUtils.content)
+
+                            val giftWraps = users.plus(senderPublicKey).map {
+                                val gossip = Gossip.create(senderReaction)
+                                val content = Gossip.toJson(gossip)
+                                AmberUtils.encrypt(content, it, SignerType.NIP44_ENCRYPT)
+
+                                var sealedEvent = SealedGossipEvent.create(
+                                    encryptedContent = AmberUtils.content,
+                                    pubKey = senderPublicKey
+                                )
+                                AmberUtils.openAmber(sealedEvent)
+                                if (AmberUtils.content.isBlank()) return
+                                sealedEvent = SealedGossipEvent.create(sealedEvent, AmberUtils.content)
+
+                                GiftWrapEvent.create(
+                                    event = sealedEvent,
+                                    recipientPubKey = it
+                                )
+                            }
+
+                            broadcastPrivately(giftWraps)
+                        } else {
+                            val giftWraps = NIP24Factory().createReactionWithinGroup(
+                                emojiUrl = emojiUrl,
+                                originalNote = it,
+                                to = users,
+                                from = keyPair
+                            )
+                            broadcastPrivately(giftWraps)
+                        }
                     }
 
                     return
@@ -305,14 +341,51 @@ class Account(
             }
 
             note.event?.let {
-                val giftWraps = NIP24Factory().createReactionWithinGroup(
-                    content = reaction,
-                    originalNote = it,
-                    to = users,
-                    from = keyPair
-                )
+                if (loginWithAmber) {
+                    val senderPublicKey = keyPair.pubKey.toHexKey()
 
-                broadcastPrivately(giftWraps)
+                    var senderReaction = ReactionEvent.create(
+                        reaction,
+                        it,
+                        keyPair
+                    )
+
+                    AmberUtils.openAmber(senderReaction)
+                    if (AmberUtils.content.isBlank()) return
+                    senderReaction = ReactionEvent.create(senderReaction, AmberUtils.content)
+
+                    val newUsers = users.plus(senderPublicKey)
+                    newUsers.forEach {
+                        val gossip = Gossip.create(senderReaction)
+                        val content = Gossip.toJson(gossip)
+                        AmberUtils.content = ""
+                        AmberUtils.encrypt(content, it, SignerType.NIP44_ENCRYPT)
+
+                        var sealedEvent = SealedGossipEvent.create(
+                            encryptedContent = AmberUtils.content,
+                            pubKey = senderPublicKey
+                        )
+                        AmberUtils.openAmber(sealedEvent)
+                        if (AmberUtils.content.isBlank()) return
+                        sealedEvent = SealedGossipEvent.create(sealedEvent, AmberUtils.content)
+
+                        val giftWraps = GiftWrapEvent.create(
+                            event = sealedEvent,
+                            recipientPubKey = it
+                        )
+
+                        broadcastPrivately(listOf(giftWraps))
+                    }
+                } else {
+                    val giftWraps = NIP24Factory().createReactionWithinGroup(
+                        content = reaction,
+                        originalNote = it,
+                        to = users,
+                        from = keyPair
+                    )
+
+                    broadcastPrivately(giftWraps)
+                }
             }
             return
         } else {
@@ -1373,32 +1446,67 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null
-    ): List<GiftWrapEvent>? {
-        // TODO: add support for amber
-        if (!isWriteable() && !loginWithAmber) return null
+    ) {
+        if (!isWriteable() && !loginWithAmber) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        val signedEvents = NIP24Factory().createMsgNIP24(
-            msg = message,
-            to = toUsers,
-            subject = subject,
-            replyTos = repliesToHex,
-            mentions = mentionsHex,
-            zapReceiver = zapReceiver,
-            markAsSensitive = wantsToMarkAsSensitive,
-            zapRaiserAmount = zapRaiserAmount,
-            geohash = geohash,
-            from = keyPair.privKey!!
-        )
-
         if (loginWithAmber) {
-            return signedEvents
-        }
+            var chatMessageEvent = ChatMessageEvent.create(
+                msg = message,
+                to = toUsers,
+                keyPair = keyPair,
+                subject = subject,
+                replyTos = repliesToHex,
+                mentions = mentionsHex,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                geohash = geohash
+            )
 
-        broadcastPrivately(signedEvents)
-        return null
+            AmberUtils.openAmber(chatMessageEvent)
+            if (AmberUtils.content.isBlank()) return
+            chatMessageEvent = ChatMessageEvent.create(chatMessageEvent, AmberUtils.content)
+            val senderPublicKey = keyPair.pubKey.toHexKey()
+            toUsers.plus(senderPublicKey).toSet().forEach {
+                val gossip = Gossip.create(chatMessageEvent)
+                val content = Gossip.toJson(gossip)
+                AmberUtils.content = ""
+                AmberUtils.encrypt(content, it, SignerType.NIP44_ENCRYPT)
+                if (AmberUtils.content.isNotBlank()) {
+                    var sealedEvent = SealedGossipEvent.create(
+                        encryptedContent = AmberUtils.content,
+                        pubKey = senderPublicKey
+                    )
+                    AmberUtils.openAmber(sealedEvent)
+                    if (AmberUtils.content.isBlank()) return
+                    sealedEvent = SealedGossipEvent.create(sealedEvent, AmberUtils.content)
+
+                    val giftWraps = GiftWrapEvent.create(
+                        event = sealedEvent,
+                        recipientPubKey = it
+                    )
+                    broadcastPrivately(listOf(giftWraps))
+                }
+            }
+        } else {
+            val signedEvents = NIP24Factory().createMsgNIP24(
+                msg = message,
+                to = toUsers,
+                subject = subject,
+                replyTos = repliesToHex,
+                mentions = mentionsHex,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                geohash = geohash,
+                keyPair = keyPair
+            )
+
+            broadcastPrivately(signedEvents)
+        }
     }
 
     fun broadcastPrivately(signedEvents: List<GiftWrapEvent>) {
@@ -1407,13 +1515,33 @@ class Account(
 
             // Only keep in cache the GiftWrap for the account.
             if (it.recipientPubKey() == keyPair.pubKey.toHexKey()) {
-                it.cachedGift(keyPair.privKey!!)?.let {
-                    if (it is SealedGossipEvent) {
-                        it.cachedGossip(keyPair.privKey!!)?.let {
+                if (loginWithAmber) {
+                    AmberUtils.content = ""
+                    AmberUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
+                    val decryptedContent = AmberUtils.cachedDecryptedContent[it.id] ?: ""
+                    if (decryptedContent.isEmpty()) return
+                    it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
+                        if (cached is SealedGossipEvent) {
+                            AmberUtils.content = ""
+                            AmberUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
+                            val localDecryptedContent = AmberUtils.cachedDecryptedContent[cached.id] ?: ""
+                            if (localDecryptedContent.isEmpty()) return
+                            cached.cachedGossip(keyPair.pubKey, localDecryptedContent)?.let { gossip ->
+                                LocalCache.justConsume(gossip, null)
+                            }
+                        } else {
                             LocalCache.justConsume(it, null)
                         }
-                    } else {
-                        LocalCache.justConsume(it, null)
+                    }
+                } else {
+                    it.cachedGift(keyPair.privKey!!)?.let {
+                        if (it is SealedGossipEvent) {
+                            it.cachedGossip(keyPair.privKey!!)?.let {
+                                LocalCache.justConsume(it, null)
+                            }
+                        } else {
+                            LocalCache.justConsume(it, null)
+                        }
                     }
                 }
 
@@ -2026,7 +2154,7 @@ class Account(
                 AmberUtils.content
             } else {
                 AmberUtils.content = ""
-                AmberUtils.decrypt(content, keyPair.pubKey.toHexKey())
+                AmberUtils.decrypt(content, keyPair.pubKey.toHexKey(), blockList?.id ?: "")
                 if (AmberUtils.content.isBlank()) return
                 val decryptedContent = AmberUtils.content
                 AmberUtils.content = ""
@@ -2110,7 +2238,7 @@ class Account(
                     AmberUtils.content
                 } else {
                     AmberUtils.content = ""
-                    AmberUtils.decrypt(content, keyPair.pubKey.toHexKey())
+                    AmberUtils.decrypt(content, keyPair.pubKey.toHexKey(), blockList.id)
                     if (AmberUtils.content.isBlank()) return
                     val decryptedContent = AmberUtils.content
                     AmberUtils.content = ""
@@ -2356,12 +2484,30 @@ class Account(
     }
 
     fun unwrap(event: GiftWrapEvent): Event? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
+
+        if (loginWithAmber) {
+            AmberUtils.content = ""
+            AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+            if (decryptedContent.isEmpty()) return null
+            return event.cachedGift(keyPair.pubKey, decryptedContent)
+        }
+
         return event.cachedGift(keyPair.privKey!!)
     }
 
     fun unseal(event: SealedGossipEvent): Event? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
+
+        if (loginWithAmber) {
+            AmberUtils.content = ""
+            AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+            if (decryptedContent.isEmpty()) return null
+            return event.cachedGossip(keyPair.pubKey, decryptedContent)
+        }
+
         return event.cachedGossip(keyPair.privKey!!)
     }
 
