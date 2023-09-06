@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,11 +25,13 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,11 +51,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,6 +77,7 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -245,6 +255,7 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
     val route = remember(room) {
@@ -256,10 +267,42 @@ private fun UserRoomCompose(
             note.createdAt()
         }
     }
+    val decryptedContent = remember(note) { if (note.event == null) null else AmberUtils.cachedDecryptedContent[note.event!!.id()] }
+    var content by remember(note) {
+        mutableStateOf(
+            decryptedContent ?: accountViewModel.decrypt(note)
+        )
+    }
 
-    val content by remember(note) {
-        derivedStateOf {
-            accountViewModel.decrypt(note)
+    val activityLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
+            }
+            val event = note.event
+
+            AmberUtils.cachedDecryptedContent[event!!.id()] = it.data?.getStringExtra("signature") ?: ""
+            content = AmberUtils.cachedDecryptedContent[event.id()]
+        }
+    )
+
+    if (accountViewModel.loggedInWithAmber() && decryptedContent == null && note.event is PrivateDmEvent) {
+        val event = note.event
+        SideEffect {
+            AmberUtils.openAmber(
+                event?.content() ?: "",
+                SignerType.NIP04_DECRYPT,
+                activityLauncher,
+                (event as PrivateDmEvent).talkingWith(accountViewModel.userProfile().pubkeyHex)
+            )
         }
     }
 

@@ -11,6 +11,7 @@ import com.vitorpamplona.quartz.events.EventInterface
 object AmberUtils {
     var content: String = ""
     var isActivityRunning: Boolean = false
+    val cachedDecryptedContent = mutableMapOf<HexKey, String>()
 
     fun openAmber(
         data: String,

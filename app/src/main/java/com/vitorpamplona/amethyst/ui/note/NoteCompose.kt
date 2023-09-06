@@ -1570,7 +1570,8 @@ private fun RenderPrivateMessage(
     val scope = rememberCoroutineScope()
 
     if (withMe) {
-        var eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
+        val decryptedContent = AmberUtils.cachedDecryptedContent[noteEvent.id]
+        var eventContent by remember { mutableStateOf(decryptedContent ?: accountViewModel.decrypt(note)) }
         val activityLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult(),
             onResult = {
@@ -1584,11 +1585,11 @@ private fun RenderPrivateMessage(
                     }
                     return@rememberLauncherForActivityResult
                 }
-
-                eventContent = it.data?.getStringExtra("signature") ?: ""
+                AmberUtils.cachedDecryptedContent[noteEvent.id] = it.data?.getStringExtra("signature") ?: ""
+                eventContent = AmberUtils.cachedDecryptedContent[noteEvent.id]
             }
         )
-        if (accountViewModel.loggedInWithAmber()) {
+        if (accountViewModel.loggedInWithAmber() && decryptedContent == null) {
             val event = note.event
             SideEffect {
                 AmberUtils.openAmber(

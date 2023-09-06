@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -22,11 +26,13 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,10 +47,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.actions.SignerDialog
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -65,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
@@ -630,24 +636,41 @@ private fun RenderRegularTextNote(
     nav: (String) -> Unit
 ) {
     val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
-    var eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
+    val decryptedContent = remember(note.event) { if (note.event == null) null else AmberUtils.cachedDecryptedContent[note.event!!.id()] }
+    var eventContent by remember { mutableStateOf(decryptedContent ?: accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
-    val loggedInWithAmber = accountViewModel.loggedInWithAmber()
-    var triedToDecrypt by remember { mutableStateOf(false) }
-    if (loggedInWithAmber && !triedToDecrypt && note.event is PrivateDmEvent) {
-        SignerDialog(
-            onClose = {
-                triedToDecrypt = true
-                eventContent = accountViewModel.decrypt(note)
-            },
-            onPost = {
-                eventContent = it
-                triedToDecrypt = true
-            },
-            data = eventContent ?: "",
-            type = SignerType.NIP04_DECRYPT,
-            pubKey = (note.event as PrivateDmEvent).talkingWith(accountViewModel.account.keyPair.pubKey.toHexKey()) ?: ""
-        )
+    val scope = rememberCoroutineScope()
+
+    val activityLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
+            }
+            val event = note.event
+
+            AmberUtils.cachedDecryptedContent[event!!.id()] = it.data?.getStringExtra("signature") ?: ""
+            eventContent = AmberUtils.cachedDecryptedContent[event.id()]
+        }
+    )
+
+    if (accountViewModel.loggedInWithAmber() && decryptedContent == null && note.event is PrivateDmEvent) {
+        val event = note.event
+        SideEffect {
+            AmberUtils.openAmber(
+                event?.content() ?: "",
+                SignerType.NIP04_DECRYPT,
+                activityLauncher,
+                (event as PrivateDmEvent).talkingWith(accountViewModel.userProfile().pubkeyHex)
+            )
+        }
     }
 
     if (eventContent != null) {
