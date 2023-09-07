@@ -31,6 +31,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelayInformation
+import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
@@ -39,6 +40,11 @@ data class RelayList(
     val relay: Relay,
     val relayInfo: RelayBriefInfo,
     val isSelected: Boolean
+)
+
+data class RelayInfoDialog(
+    val relayBriefInfo: RelayBriefInfo,
+    val relayInfo: RelayInformation
 )
 
 @Composable
@@ -63,16 +69,17 @@ fun RelaySelectionDialog(
             }
         )
     }
-    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
+    var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
 
-    if (relayInfo != null) {
+    relayInfo?.let {
         RelayInformationDialog(
             onClose = {
                 relayInfo = null
             },
-            relayInfo = relayInfo!!,
-            accountViewModel,
-            nav
+            relayInfo = it.relayInfo,
+            relayBriefInfo = it.relayBriefInfo,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     }
 
@@ -161,9 +168,30 @@ fun RelaySelectionDialog(
                                 }
                             },
                             onLongPress = {
-                                loadRelayInfo(item.relay.url, context, scope) {
-                                    relayInfo = it
-                                }
+                                accountViewModel.retrieveRelayDocument(
+                                    item.relay.url,
+                                    onInfo = {
+                                        relayInfo = RelayInfoDialog(RelayBriefInfo(item.relay.url), it)
+                                    },
+                                    onError = { url, errorCode, exceptionMessage ->
+                                        val msg = when (errorCode) {
+                                            Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                            Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                            Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                            Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                        }
+
+                                        scope.launch {
+                                            Toast
+                                                .makeText(
+                                                    context,
+                                                    msg,
+                                                    Toast.LENGTH_SHORT
+                                                )
+                                                .show()
+                                        }
+                                    }
+                                )
                             }
                         )
                     }

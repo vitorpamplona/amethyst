@@ -14,4 +14,6 @@ data class RelaySetupInfo(
     val spamCount: Int = 0,
     val feedTypes: Set<FeedType>,
     val paidRelay: Boolean = false
-)
+) {
+    val briefInfo: RelayBriefInfo = RelayBriefInfo(url)
+}

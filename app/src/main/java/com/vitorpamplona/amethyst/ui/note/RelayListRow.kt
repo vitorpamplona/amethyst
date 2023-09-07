@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,14 +29,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelayInformation
+import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
-import com.vitorpamplona.amethyst.ui.actions.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -45,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
 
 @Composable
 public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -112,8 +115,9 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
                 relayInfo = null
             },
             relayInfo = relayInfo!!,
-            accountViewModel,
-            nav
+            relayBriefInfo = relay,
+            accountViewModel = accountViewModel,
+            nav = nav
         )
     }
 
@@ -131,9 +135,30 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
                 interactionSource = interactionSource,
                 indication = ripple,
                 onClick = {
-                    loadRelayInfo(relay.url, context, scope) {
-                        relayInfo = it
-                    }
+                    accountViewModel.retrieveRelayDocument(
+                        relay.url,
+                        onInfo = {
+                            relayInfo = it
+                        },
+                        onError = { url, errorCode, exceptionMessage ->
+                            val msg = when (errorCode) {
+                                Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                                Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
+                            }
+
+                            scope.launch {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        msg,
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            }
+                        }
+                    )
                 }
             )
     }
@@ -146,12 +171,12 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
 }
 
 @Composable
-private fun RenderRelayIcon(iconUrl: String) {
+fun RenderRelayIcon(iconUrl: String, size: Dp = Size13dp) {
     val backgroundColor = MaterialTheme.colors.background
 
     val iconModifier = remember {
         Modifier
-            .size(Size13dp)
+            .size(size)
             .clip(shape = CircleShape)
             .background(backgroundColor)
     }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayPool
@@ -24,6 +25,7 @@ class NewRelayListViewModel : ViewModel() {
     fun load(account: Account) {
         this.account = account
         clear()
+        loadRelayDocuments()
     }
 
     fun create() {
@@ -34,6 +36,21 @@ class NewRelayListViewModel : ViewModel() {
         }
 
         clear()
+    }
+
+    fun loadRelayDocuments() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _relays.value.forEach { item ->
+                Nip11CachedRetriever.loadRelayInfo(
+                    dirtyUrl = item.url,
+                    onInfo = {
+                        togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                    },
+                    onError = { url, errorCode, exceptionMessage ->
+                    }
+                )
+            }
+        }
     }
 
     fun clear() {

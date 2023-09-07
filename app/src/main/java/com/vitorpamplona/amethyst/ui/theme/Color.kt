@@ -24,3 +24,9 @@ val DarkerGreen = Color.Green.copy(alpha = 0.32f)
 val WarningColor = Color(0xFFC62828)
 
 val RelayIconFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
+
+val LightWarningColor = Color(0xFFffcc00)
+val DarkWarningColor = Color(0xFFF8DE22)
+
+val LightAllGoodColor = Color(0xFF339900)
+val DarkAllGoodColor = Color(0xFF99cc33)

@@ -19,10 +19,13 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.Nip05Verifier
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
@@ -548,6 +551,16 @@ class AccountViewModel(val account: Account) : ViewModel() {
                     onResult(userMetadata.nip05Verified)
                 }
             )
+        }
+    }
+
+    fun retrieveRelayDocument(
+        dirtyUrl: String,
+        onInfo: (RelayInformation) -> Unit,
+        onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            Nip11CachedRetriever.loadRelayInfo(dirtyUrl, onInfo, onError)
         }
     }
 
