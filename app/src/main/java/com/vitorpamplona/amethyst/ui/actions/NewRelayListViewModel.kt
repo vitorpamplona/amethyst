@@ -42,11 +42,13 @@ class NewRelayListViewModel : ViewModel() {
 
             // Ugly, but forces nostr.band as the only search-supporting relay today.
             // TODO: Remove when search becomes more available.
-            if (relayFile?.none { it.key == Constants.forcedRelayForSearch.url } == true) {
-                relayFile = relayFile + Pair(
-                    Constants.forcedRelayForSearch.url,
-                    ContactListEvent.ReadWrite(Constants.forcedRelayForSearch.read, Constants.forcedRelayForSearch.write)
-                )
+            if (relayFile?.none { it.key.removeSuffix("/") in Constants.forcedRelaysForSearchSet } == true) {
+                relayFile = relayFile + Constants.forcedRelayForSearch.map {
+                    Pair(
+                        it.url,
+                        ContactListEvent.ReadWrite(it.read, it.write)
+                    )
+                }
             }
 
             if (relayFile != null) {
