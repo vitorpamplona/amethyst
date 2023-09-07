@@ -69,6 +69,9 @@ abstract class NostrDataSource(val debugName: String) {
         }
 
         override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
+            if (success) {
+                markAsSeenOnRelay(eventId, relay)
+            }
         }
 
         override fun onAuth(relay: Relay, challenge: String) {
@@ -180,6 +183,10 @@ abstract class NostrDataSource(val debugName: String) {
 
     open fun consume(event: Event, relay: Relay) {
         LocalCache.verifyAndConsume(event, relay)
+    }
+
+    open fun markAsSeenOnRelay(eventId: String, relay: Relay) {
+        LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
     }
 
     abstract fun updateChannelFilters()
