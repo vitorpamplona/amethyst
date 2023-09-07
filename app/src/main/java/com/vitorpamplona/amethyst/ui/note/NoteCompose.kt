@@ -2397,40 +2397,41 @@ private fun ReplyRow(
         }
     }
 
+    val showChannelInfo by remember(note) {
+        derivedStateOf {
+            if (noteEvent is ChannelMessageEvent || noteEvent is LiveActivitiesChatMessageEvent) {
+                note.channelHex()
+            } else {
+                null
+            }
+        }
+    }
+
+    showChannelInfo?.let {
+        ChannelHeader(
+            channelHex = it,
+            showVideo = false,
+            showBottomDiviser = false,
+            sendToChannel = true,
+            modifier = MaterialTheme.colors.replyModifier.padding(10.dp),
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
+    }
+
     if (showReply) {
         val replyingDirectlyTo = remember { note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.kind } }
         if (replyingDirectlyTo != null && unPackReply) {
             ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)
-        } else {
-            // ReplyInformation(note.replyTo, noteEvent.mentions(), accountViewModel, nav)
-        }
-    } else {
-        val showChannelReply by remember {
-            derivedStateOf {
-                (noteEvent is ChannelMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())) ||
-                    (noteEvent is LiveActivitiesChatMessageEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser()))
+        } else if (showChannelInfo != null) {
+            val replies = remember { note.replyTo?.toImmutableList() }
+            val mentions = remember {
+                (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList()
+                    ?: persistentListOf()
             }
-        }
 
-        if (showChannelReply) {
-            val channelHex = note.channelHex()
-            channelHex?.let {
-                ChannelHeader(
-                    channelHex = channelHex,
-                    showVideo = false,
-                    showBottomDiviser = false,
-                    sendToChannel = true,
-                    modifier = remember { Modifier.padding(vertical = 5.dp) },
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-
-                val replies = remember { note.replyTo?.toImmutableList() }
-                val mentions = remember { (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf() }
-
-                ReplyInformationChannel(replies, mentions, accountViewModel, nav)
-            }
+            ReplyInformationChannel(replies, mentions, accountViewModel, nav)
         }
     }
 }

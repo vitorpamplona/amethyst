@@ -62,7 +62,7 @@ open class Event(
 
     override fun toJson(): String = mapper.writeValueAsString(toJsonObject())
 
-    fun hasAnyTaggedUser() = tags.any { it.size > 1 && it[0] == "p" }
+    override fun hasAnyTaggedUser() = tags.any { it.size > 1 && it[0] == "p" }
 
     override fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     override fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
