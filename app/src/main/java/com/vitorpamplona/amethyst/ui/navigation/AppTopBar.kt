@@ -451,8 +451,6 @@ fun GenericMainTopBar(
     nav: (String) -> Unit,
     content: @Composable (AccountViewModel) -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     Column(modifier = BottomTopHeight) {
         MyTopAppBar(
             elevation = 0.dp,
@@ -476,6 +474,7 @@ fun GenericMainTopBar(
                 }
             },
             navigationIcon = {
+                val coroutineScope = rememberCoroutineScope()
                 LoggedInUserPictureDrawer(accountViewModel) {
                     coroutineScope.launch {
                         scaffoldState.drawerState.open()
@@ -506,10 +505,9 @@ private fun LoggedInUserPictureDrawer(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit
 ) {
-    val accountUserState by accountViewModel.account.userProfile().live().metadata.observeAsState()
+    val profilePicture by accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
 
-    val pubkeyHex = remember { accountUserState?.user?.pubkeyHex ?: "" }
-    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
+    val pubkeyHex = remember { accountViewModel.userProfile().pubkeyHex }
 
     IconButton(
         onClick = onClick
