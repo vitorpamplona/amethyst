@@ -283,6 +283,7 @@
     <string name="follow_list_kind3follows">所有关注</string>
     <string name="follow_list_global">全球</string>
     <string name="orbot_socks_port">Orbot Socks 端口</string>
+    <string name="invalid_port_number">无效端口</string>
     <string name="use_orbot">使用 Orbot</string>
     <string name="disconnect_from_your_orbot_setup">断开 Tor/Orbot 连接</string>
     <string name="app_notification_dms_channel_name">私信</string>
