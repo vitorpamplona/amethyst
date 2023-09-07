@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -36,12 +37,13 @@ import kotlinx.coroutines.launch
 
 data class RelayList(
     val relay: Relay,
+    val relayInfo: RelayBriefInfo,
     val isSelected: Boolean
 )
 
 @Composable
 fun RelaySelectionDialog(
-    list: List<Relay>,
+    preSelectedList: List<Relay>,
     onClose: () -> Unit,
     onPost: (list: List<Relay>) -> Unit,
     accountViewModel: AccountViewModel,
@@ -49,20 +51,14 @@ fun RelaySelectionDialog(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val relayList = accountViewModel.account.activeRelays()?.filter {
-        it.write
-    }?.map {
-        it
-    } ?: accountViewModel.account.convertLocalRelays().filter {
-        it.write
-    }
 
     var relays by remember {
         mutableStateOf(
-            relayList.map {
+            accountViewModel.account.activeWriteRelays().map {
                 RelayList(
-                    it,
-                    list.any { relay -> it.url == relay.url }
+                    relay = it,
+                    relayInfo = RelayBriefInfo(it.url),
+                    isSelected = preSelectedList.any { relay -> it.url == relay.url }
                 )
             }
         )
@@ -115,14 +111,14 @@ fun RelaySelectionDialog(
                         }
                     )
 
-                    PostButton(
+                    SaveButton(
                         onPost = {
                             val selectedRelays = relays.filter { it.isSelected }
                             if (selectedRelays.isEmpty()) {
                                 scope.launch {
                                     Toast.makeText(context, context.getString(R.string.select_a_relay_to_continue), Toast.LENGTH_SHORT).show()
                                 }
-                                return@PostButton
+                                return@SaveButton
                             }
                             onPost(selectedRelays.map { it.relay })
                             onClose()
@@ -153,10 +149,7 @@ fun RelaySelectionDialog(
                         key = { _, item -> item.relay.url }
                     ) { index, item ->
                         RelaySwitch(
-                            text = item.relay.url
-                                .removePrefix("ws://")
-                                .removePrefix("wss://")
-                                .removeSuffix("/"),
+                            text = item.relayInfo.displayUrl,
                             checked = item.isSelected,
                             onClick = {
                                 relays = relays.mapIndexed { j, item ->

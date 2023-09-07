@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
@@ -1624,9 +1625,9 @@ fun DisplayRelaySet(
 ) {
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
-    val relays by remember {
-        mutableStateOf<ImmutableList<String>>(
-            noteEvent.relays().toImmutableList()
+    val relays by remember(baseNote) {
+        mutableStateOf(
+            noteEvent.relays().map { RelayBriefInfo(it) }.toImmutableList()
         )
     }
 
@@ -1681,7 +1682,7 @@ fun DisplayRelaySet(
             toMembersShow.forEach { relay ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
                     Text(
-                        relay.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/"),
+                        text = relay.displayUrl,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1691,7 +1692,7 @@ fun DisplayRelaySet(
                     )
 
                     Column(modifier = Modifier.padding(start = 10.dp)) {
-                        RelayOptionsAction(relay, accountViewModel, nav)
+                        RelayOptionsAction(relay.url, accountViewModel, nav)
                     }
                 }
             }

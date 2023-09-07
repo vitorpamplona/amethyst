@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.actions.loadRelayInfo
@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -59,15 +60,13 @@ public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewMo
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderRelayList(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteRelays by baseNote.live().relays.map {
-        it.note.relays
-    }.observeAsState(baseNote.relays)
+    val noteRelays by baseNote.live().relayInfo.observeAsState()
 
     FlowRow(StdStartPadding) {
         val relaysToDisplay = remember(noteRelays, expanded.value) {
-            if (expanded.value) noteRelays else noteRelays.take(3)
+            if (expanded.value) noteRelays else noteRelays?.take(3)?.toImmutableList()
         }
-        relaysToDisplay.forEach {
+        relaysToDisplay?.forEach {
             RenderRelay(it, accountViewModel, nav)
         }
     }
@@ -104,14 +103,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val iconUrl by remember(dirtyUrl) {
-        derivedStateOf {
-            val cleanUrl = dirtyUrl.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
-            "https://$cleanUrl/favicon.ico"
-        }
-    }
-
+fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
 
     if (relayInfo != null) {
@@ -130,7 +122,7 @@ fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (Stri
     val interactionSource = remember { MutableInteractionSource() }
     val ripple = rememberRipple(bounded = false, radius = Size15dp)
 
-    val clickableModifier = remember(dirtyUrl) {
+    val clickableModifier = remember(relay) {
         Modifier
             .padding(1.dp)
             .size(Size15dp)
@@ -139,7 +131,7 @@ fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (Stri
                 interactionSource = interactionSource,
                 indication = ripple,
                 onClick = {
-                    loadRelayInfo(dirtyUrl, context, scope) {
+                    loadRelayInfo(relay.url, context, scope) {
                         relayInfo = it
                     }
                 }
@@ -149,7 +141,7 @@ fun RenderRelay(dirtyUrl: String, accountViewModel: AccountViewModel, nav: (Stri
     Box(
         modifier = clickableModifier
     ) {
-        RenderRelayIcon(iconUrl)
+        RenderRelayIcon(relay.favIcon)
     }
 }
 

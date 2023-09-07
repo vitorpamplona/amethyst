@@ -133,13 +133,7 @@ fun NewPostView(
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeRelays()?.filter {
-        it.write
-    }?.map {
-        it
-    } ?: account.convertLocalRelays().filter {
-        it.write
-    }
+    var relayList = account.activeWriteRelays()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
@@ -169,7 +163,7 @@ fun NewPostView(
     ) {
         if (showRelaysDialog) {
             RelaySelectionDialog(
-                list = relayList,
+                preSelectedList = relayList,
                 onClose = {
                     showRelaysDialog = false
                 },

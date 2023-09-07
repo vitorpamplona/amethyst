@@ -79,13 +79,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeRelays()?.filter {
-        it.write
-    }?.map {
-        it
-    } ?: account.convertLocalRelays().filter {
-        it.write
-    }
+    var relayList = account.activeWriteRelays()
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -101,7 +95,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
         ) {
             if (showRelaysDialog) {
                 RelaySelectionDialog(
-                    list = relayList,
+                    preSelectedList = relayList,
                     onClose = {
                         showRelaysDialog = false
                     },

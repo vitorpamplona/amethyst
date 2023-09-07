@@ -1686,6 +1686,10 @@ class Account(
             .toTypedArray()
     }
 
+    fun activeWriteRelays(): List<Relay> {
+        return (activeRelays() ?: convertLocalRelays()).filter { it.write }
+    }
+
     fun reconnectIfRelaysHaveChanged() {
         val newRelaySet = activeRelays() ?: convertLocalRelays()
         if (!Client.isSameRelaySetConfig(newRelaySet)) {

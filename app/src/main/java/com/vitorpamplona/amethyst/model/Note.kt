@@ -734,6 +734,12 @@ class NoteLiveSet(u: Note) {
         it.note.boosts.toImmutableList()
     }.distinctUntilChanged()
 
+    val relayInfo = innerRelays.map {
+        it.note.relays.map {
+            RelayBriefInfo(it)
+        }.toImmutableList()
+    }
+
     fun isInUse(): Boolean {
         return metadata.hasObservers() ||
             reactions.hasObservers() ||
@@ -812,3 +818,10 @@ class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveDat
 
 @Immutable
 class NoteState(val note: Note)
+
+@Immutable
+data class RelayBriefInfo(
+    val url: String,
+    val displayUrl: String = url.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/").intern(),
+    val favIcon: String = "https://$displayUrl/favicon.ico".intern()
+)
