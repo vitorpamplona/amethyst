@@ -1370,8 +1370,8 @@ fun ImageVideoDescription(
                             try {
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {
-                                onError("Unable to load file")
-                                Log.e("NewPostView", "Couldn't create thumbnail for $uri")
+                                onError("Unable to load thumbnail")
+                                Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                             }
                         }
                     }

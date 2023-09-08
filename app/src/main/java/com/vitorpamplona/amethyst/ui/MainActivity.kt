@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -65,7 +66,10 @@ class MainActivity : AppCompatActivity() {
             themeViewModel.onChange(LocalPreferences.getTheme())
             AmethystTheme(themeViewModel) {
                 // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colors.background
+                ) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
                         AccountStateViewModel(this@MainActivity)
                     }
@@ -81,7 +85,8 @@ class MainActivity : AppCompatActivity() {
             .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
             .build()
 
-        val connectivityManager = getSystemService(ConnectivityManager::class.java) as ConnectivityManager
+        val connectivityManager =
+            getSystemService(ConnectivityManager::class.java) as ConnectivityManager
         connectivityManager.requestNetwork(networkRequest, networkCallback)
     }
 
@@ -153,7 +158,8 @@ class MainActivity : AppCompatActivity() {
             super.onCapabilitiesChanged(network, networkCapabilities)
 
             GlobalScope.launch(Dispatchers.IO) {
-                val hasMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                val hasMobileData =
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
                 val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                 Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $hasMobileData")
                 Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasWifi $hasWifi")
@@ -178,9 +184,15 @@ class MainActivity : AppCompatActivity() {
 
 class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
 
+    @SuppressLint("MissingSuperCall")
     override fun createIntent(context: Context, input: String): Intent {
-        return super.createIntent(context, input).apply {
+        // Force only images and videos to be selectable
+        // Force OPEN Document because of the resulting URI must be passed to the
+        // Playback service and the picker's permissions only allow the activity to read the URI
+        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
             // Force only images and videos to be selectable
+            type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
         }
     }

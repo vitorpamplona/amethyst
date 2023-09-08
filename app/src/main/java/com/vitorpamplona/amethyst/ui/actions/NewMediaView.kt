@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -215,7 +216,8 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
                         } catch (e: Exception) {
-                            postViewModel.imageUploadingError.emit("Unable to load file")
+                            postViewModel.imageUploadingError.emit("Unable to load thumbnail, but the video can be uploaded")
+                            Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                         }
                     }
                 }
