@@ -20,7 +20,7 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
-        resourceConfigurations += ['ar', 'cs', 'de', 'eo', 'es', 'fa', 'fr', 'hu', 'ja', 'night', 'nl', 'pt-rBR', 'ru', 'sv-rSE', 'ta', 'th', 'tr', 'uk', 'zh', 'sh-rHK', 'zh-rTW']
+        resourceConfigurations += ['ar', 'cs', 'de', 'eo', 'es', 'fa', 'fr', 'hu', 'in', 'ja', 'night', 'nl', 'pt-rBR', 'ru', 'sv-rSE', 'ta', 'th', 'tr', 'uk', 'zh', 'sh-rHK', 'zh-rTW']
     }
 
     buildTypes {
@@ -54,7 +54,7 @@ android {
         abi {
             enable true
             reset()
-            include "x86", "x86_64"
+            include "x86", "x86_64", "arm64-v8a", "armeabi-v7a"
             universalApk true
         }
     }

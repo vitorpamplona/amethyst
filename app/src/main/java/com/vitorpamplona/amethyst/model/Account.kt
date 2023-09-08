@@ -2628,14 +2628,18 @@ class Account(
 
         // Ugly, but forces nostr.band as the only search-supporting relay today.
         // TODO: Remove when search becomes more available.
-        if (usersRelayList.none { it.activeTypes.contains(FeedType.SEARCH) }) {
-            usersRelayList = usersRelayList + Relay(
-                Constants.forcedRelayForSearch.url,
-                Constants.forcedRelayForSearch.read,
-                Constants.forcedRelayForSearch.write,
-                Constants.forcedRelayForSearch.feedTypes,
-                proxy
-            )
+        val searchRelays = usersRelayList.filter { it.url.removeSuffix("/") in Constants.forcedRelaysForSearchSet }
+        val hasSearchRelay = usersRelayList.any { it.activeTypes.contains(FeedType.SEARCH) }
+        if (!hasSearchRelay && searchRelays.isEmpty()) {
+            usersRelayList = usersRelayList + Constants.forcedRelayForSearch.map {
+                Relay(
+                    it.url,
+                    it.read,
+                    it.write,
+                    it.feedTypes,
+                    proxy
+                )
+            }
         }
 
         return usersRelayList.toTypedArray()
@@ -2651,6 +2655,10 @@ class Account(
         return (activeRelays() ?: convertLocalRelays()).filter { it.activeTypes.contains(FeedType.GLOBAL) }
             .map { it.url }
             .toTypedArray()
+    }
+
+    fun activeWriteRelays(): List<Relay> {
+        return (activeRelays() ?: convertLocalRelays()).filter { it.write }
     }
 
     fun reconnectIfRelaysHaveChanged() {

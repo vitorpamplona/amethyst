@@ -1,9 +1,13 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import androidx.lifecycle.LiveData
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
@@ -11,6 +15,11 @@ import com.vitorpamplona.quartz.events.EventInterface
 object RelayPool : Relay.Listener {
     private var relays = listOf<Relay>()
     private var listeners = setOf<Listener>()
+
+    // Backing property to avoid flow emissions from other classes
+    private var _lastStatus = RelayPoolStatus(0, 0)
+    private val _statusFlow = MutableSharedFlow<RelayPoolStatus>(1, 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val statusFlow: SharedFlow<RelayPoolStatus> = _statusFlow.asSharedFlow()
 
     fun availableRelays(): Int {
         return relays.size
@@ -76,11 +85,13 @@ object RelayPool : Relay.Listener {
     fun addRelay(relay: Relay) {
         relay.register(this)
         relays += relay
+        updateStatus()
     }
 
     fun removeRelay(relay: Relay) {
         relay.unregister(this)
         relays = relays.minus(relay)
+        updateStatus()
     }
 
     fun register(listener: Listener) {
@@ -109,12 +120,14 @@ object RelayPool : Relay.Listener {
 
     override fun onError(relay: Relay, subscriptionId: String, error: Error) {
         listeners.forEach { it.onError(error, subscriptionId, relay) }
-        refreshObservers()
+        updateStatus()
     }
 
     override fun onRelayStateChange(relay: Relay, type: Relay.Type, channel: String?) {
         listeners.forEach { it.onRelayStateChange(type, relay, channel) }
-        refreshObservers()
+        if (type != Relay.Type.EOSE) {
+            updateStatus()
+        }
     }
 
     override fun onSendResponse(relay: Relay, eventId: String, success: Boolean, message: String) {
@@ -125,18 +138,15 @@ object RelayPool : Relay.Listener {
         listeners.forEach { it.onAuth(relay, challenge) }
     }
 
-    // Observers line up here.
-    val live: RelayPoolLiveData = RelayPoolLiveData(this)
-
-    private fun refreshObservers() {
-        live.refresh()
+    private fun updateStatus() {
+        val connected = connectedRelays()
+        val available = availableRelays()
+        if (_lastStatus.connected != connected || _lastStatus.available != available) {
+            _lastStatus = RelayPoolStatus(connected, available)
+            _statusFlow.tryEmit(_lastStatus)
+        }
     }
 }
 
-class RelayPoolLiveData(val relays: RelayPool) : LiveData<RelayPoolState>(RelayPoolState(relays)) {
-    fun refresh() {
-        postValue(RelayPoolState(relays))
-    }
-}
-
-class RelayPoolState(val relays: RelayPool)
+@Immutable
+data class RelayPoolStatus(val connected: Int, val available: Int, val isConnected: Boolean = connected > 0)

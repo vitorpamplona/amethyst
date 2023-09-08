@@ -16,9 +16,7 @@ object Constants {
     }
 
     val defaultRelays = arrayOf(
-        // Free relays for DMs and Follows
-        RelaySetupInfo("wss://no.str.cr", read = true, write = true, feedTypes = activeTypes),
-        RelaySetupInfo("wss://relay.snort.social", read = true, write = true, feedTypes = activeTypes),
+        // Free relays for only DMs and Follows due to the amount of spam
         RelaySetupInfo("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
 
         // Chats
@@ -40,6 +38,7 @@ object Constants {
         // NewRelayListViewModel.Relay("wss://brb.io", read = true, write = true, feedTypes = activeTypes),
 
         // Paid relays
+        RelaySetupInfo("wss://relay.snort.social", read = true, write = false, feedTypes = activeTypesGlobalChats),
         RelaySetupInfo("wss://relay.nostr.com.au", read = true, write = false, feedTypes = activeTypesGlobalChats),
         RelaySetupInfo("wss://eden.nostr.land", read = true, write = false, feedTypes = activeTypesGlobalChats),
         RelaySetupInfo("wss://nostr.milou.lol", read = true, write = false, feedTypes = activeTypesGlobalChats),
@@ -51,8 +50,15 @@ object Constants {
         RelaySetupInfo("wss://relay.nostrati.com", read = true, write = false, feedTypes = activeTypesGlobalChats),
 
         // Supporting NIP-50
-        RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch)
+        RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
+        RelaySetupInfo("wss://filter.nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
+        RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch)
     )
 
-    val forcedRelayForSearch = RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch)
+    val forcedRelayForSearch = arrayOf(
+        RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
+        RelaySetupInfo("wss://filter.nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
+        RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch)
+    )
+    val forcedRelaysForSearchSet = forcedRelayForSearch.map { it.url }
 }
