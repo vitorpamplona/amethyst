@@ -154,7 +154,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
-        if (acc != null && acc.userProfile().pubkeyHex == event.zappedAuthor().firstOrNull()) {
+        if (acc.userProfile().pubkeyHex == event.zappedAuthor().firstOrNull()) {
             val amount = showAmount(event.amount)
             val senderInfo = (noteZapRequest.event as? LnZapRequestEvent)?.let {
                 val decryptedContent = acc.decryptZapContentAuthor(noteZapRequest)
