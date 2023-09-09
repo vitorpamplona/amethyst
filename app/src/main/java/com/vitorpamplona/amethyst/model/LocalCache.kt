@@ -98,6 +98,8 @@ object LocalCache {
         checkNotInMainThread()
 
         return notes.get(idHex) ?: run {
+            require(isValidHex(idHex))
+
             val newObject = Note(idHex)
             notes.putIfAbsent(idHex, newObject) ?: newObject
         }
@@ -807,22 +809,22 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val zapRequest = event.zapRequest?.id?.let { getOrCreateNote(it) }
+        val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+
+        if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
+            Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
+            return
+        }
 
         val author = getOrCreateUser(event.pubKey)
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
         val repliesTo = event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
             event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
             (
-                (zapRequest?.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
+                (zapRequest.event as? LnZapRequestEvent)?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptySet<Note>()
                 )
 
         note.loadEvent(event, author, repliesTo)
-
-        if (zapRequest == null) {
-            Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
-            return
-        }
 
         // Log.d("ZP", "New ZapEvent ${event.content} (${notes.size},${users.size}) ${note.author?.toBestDisplayName()} ${formattedDateTime(event.createdAt)}")
 
