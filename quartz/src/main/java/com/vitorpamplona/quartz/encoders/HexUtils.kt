@@ -12,18 +12,19 @@ fun HexKey.hexToByteArray(): ByteArray {
 }
 
 object HexValidator {
-    private fun isHex2(c: Char): Boolean {
+    private fun isHexChar(c: Char): Boolean {
         return when (c) {
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F', ' ' -> true
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F' -> true
             else -> false
         }
     }
 
     fun isHex(hex: String?): Boolean {
         if (hex == null) return false
+        if (hex.length % 2 != 0) return false // must be even
         var isHex = true
         for (c in hex.toCharArray()) {
-            if (!isHex2(c)) {
+            if (!isHexChar(c)) {
                 isHex = false
                 break
             }
