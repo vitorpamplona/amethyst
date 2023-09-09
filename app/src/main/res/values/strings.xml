@@ -558,4 +558,16 @@
     <string name="error_dialog_zap_error">Unable to send zap</string>
     <string name="error_dialog_talk_to_user">Message the User</string>
     <string name="error_dialog_button_ok">Ok</string>
+
+    <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Failed to parse result from %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s failed with code %2$s</string>
+    <string name="active_for">Active for: </string>
+
+    <string name="active_for_home">Home</string>
+    <string name="active_for_msg">DMs</string>
+    <string name="active_for_chats">Chats</string>
+    <string name="active_for_global">Global</string>
+    <string name="active_for_search">Search</string>
 </resources>

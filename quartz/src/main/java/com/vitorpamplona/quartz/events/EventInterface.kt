@@ -63,6 +63,8 @@ interface EventInterface {
     fun subject(): String?
     fun zapraiserAmount(): Long?
 
+    fun hasAnyTaggedUser(): Boolean
+
     fun taggedAddresses(): List<ATag>
     fun taggedUsers(): List<HexKey>
     fun taggedEvents(): List<HexKey>

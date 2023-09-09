@@ -416,14 +416,11 @@ private fun VideoUserOptionAction(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = remember(noteRelaysState) {
-        noteRelaysState?.note?.relays ?: emptySet()
-    }
+    val noteRelays by baseNote.live().relayInfo.observeAsState()
 
     FlowRow() {
-        noteRelays.forEach { dirtyUrl ->
-            RenderRelay(dirtyUrl, accountViewModel, nav)
+        noteRelays?.forEach { relayInfo ->
+            RenderRelay(relayInfo, accountViewModel, nav)
         }
     }
 }

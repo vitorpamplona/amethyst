@@ -36,6 +36,7 @@
     <string name="login_with_a_private_key_to_be_able_to_follow">Melden Sie sich mit einem privaten Schlüssel an, um zu folgen</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Melden Sie sich mit einem privaten Schlüssel an, um nicht mehr zu folgen</string>
     <string name="view_count">Aufrufe</string>
+    <string name="boost">Verstärken</string>
     <string name="boosted">Verstärkt</string>
     <string name="quote">Zitat</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
@@ -169,6 +170,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nip_05">Nostr-Adresse</string>
     <string name="never">nie</string>
     <string name="now">jetzt</string>
+    <string name="h">s</string>
+    <string name="d">t</string>
     <string name="nudity">Nacktheit</string>
     <string name="profanity_hateful_speech">Beleidigungen / Hassrede</string>
     <string name="report_hateful_speech">Hassrede melden</string>
@@ -246,8 +249,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_to_public_bookmarks">Zu den öffentlichen Lesezeichen hinzufügen</string>
     <string name="remove_from_private_bookmarks">Aus den privaten Lesezeichen entfernen</string>
     <string name="remove_from_public_bookmarks">Aus den öffentlichen Lesezeichen entfernen</string>
+    <string name="wallet_connect_service">Wallet-Verbindungsdienst</string>
     <string name="wallet_connect_service_explainer">Autorisiert einen Nostr Secret, Zaps ohne Verlassen der App zu bezahlen. Bewahren Sie den geheimen Schlüssel sicher auf und verwenden Sie nach Möglichkeit ein privates Relay</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Public Key</string>
+    <string name="wallet_connect_service_relay">Wallet-Verbindungs-Relay</string>
+    <string name="wallet_connect_service_secret">Wallet-Verbindungs-Geheimnis</string>
     <string name="wallet_connect_service_show_secret">Geheimen Schlüssel anzeigen</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hexadezimaler privater Schlüssel</string>
     <string name="pledge_amount_in_sats">Spendenbetrag in Sats</string>
@@ -288,6 +294,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_type_private_explainer">Absender und Empfänger können einander sehen und die Nachricht lesen</string>
     <string name="zap_type_anonymous">Anonym</string>
     <string name="zap_type_anonymous_explainer">Empfänger und die Öffentlichkeit wissen nicht, wer die Zahlung gesendet hat</string>
+    <string name="zap_type_nonzap">Keine Zap</string>
     <string name="zap_type_nonzap_explainer">Keine Spur in Nostr, nur in Lightning</string>
     <string name="file_server">Dateiserver</string>
     <string name="zap_forward_lnAddress">LnAddress oder @Benutzer</string>
@@ -321,6 +328,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="no">Nein</string>
     <string name="follow_list_selection">Folgen-Liste</string>
     <string name="follow_list_kind3follows">Alle Folgen</string>
+    <string name="follow_list_global">Weltweit</string>
     <string name="connect_through_your_orbot_setup_markdown">    ## Über Tor mit Orbot verbinden
     \n\n1. Installiere [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
     \n2. Starte Orbot
@@ -356,6 +364,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Warnung bei Meldungen von deinen Abonnements</string>
     <string name="new_reaction_symbol">Neues Reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Keine Reaktionstypen ausgewählt. Lange drücken, um zu ändern</string>
+    <string name="zapraiser">Zap-Sammlung</string>
     <string name="zapraiser_explainer">Fügt einen Zielbetrag in Sats für diesen Beitrag hinzu. Unterstützende Clients können dies als Fortschrittsbalken anzeigen, um Spenden zu fördern</string>
     <string name="zapraiser_target_amount_in_sats">Zielbetrag in Sats</string>
     <string name="sats_to_complete">Zapraiser bei %1$s. %2$s Sats bis zum Ziel</string>
@@ -443,4 +452,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_play_videos_description">Videos und GIFs automatisch abspielen</string>
     <string name="automatically_show_url_preview_description">URL-Vorschauen anzeigen</string>
     <string name="load_image_description">Wann Bilder geladen werden sollen</string>
+    <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
+    <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
+    <string name="created_at">Erstellt am</string>
+    <string name="rules">Regeln</string>
+    <string name="status_update">Status aktualisieren</string>
+    <string name="lightning_wallets_not_found">Fehler beim Verarbeiten der Fehlermeldung</string>
+    <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
+    <string name="error_dialog_zap_error">Zap konnte nicht gesendet werden</string>
+    <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
 </resources>

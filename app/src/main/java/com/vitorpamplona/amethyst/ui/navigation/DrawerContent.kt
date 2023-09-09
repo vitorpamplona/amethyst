@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -63,7 +64,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.map
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -72,11 +72,12 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
-import com.vitorpamplona.amethyst.ui.screen.RelayPoolViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
@@ -454,7 +455,6 @@ fun ListContent(
     }
 
     val coroutineScope = rememberCoroutineScope()
-    val relayViewModel: RelayPoolViewModel = viewModel { RelayPoolViewModel() }
     var wantsToEditRelays by remember {
         mutableStateOf(false)
     }
@@ -490,7 +490,7 @@ fun ListContent(
         )
 
         IconRowRelays(
-            relayViewModel = relayViewModel,
+            accountViewModel = accountViewModel,
             onClick = {
                 coroutineScope.launch {
                     scaffoldState.drawerState.close()
@@ -633,27 +633,37 @@ private fun enableTor(
 }
 
 @Composable
-private fun RelayStatus(
-    relayViewModel: RelayPoolViewModel
-) {
-    val connectedRelaysText by relayViewModel.connectionStatus.observeAsState("--/--")
-    val isConnected by relayViewModel.isConnected.observeAsState(false)
+private fun RelayStatus(accountViewModel: AccountViewModel) {
+    val connectedRelaysText by RelayPool.statusFlow.collectAsState(initial = RelayPoolStatus(0, 0))
 
-    RenderRelayStatus(connectedRelaysText, isConnected)
+    RenderRelayStatus(connectedRelaysText)
 }
 
 @Composable
 private fun RenderRelayStatus(
-    connectedRelaysText: String,
-    isConnected: Boolean
+    relayPool: RelayPoolStatus
 ) {
+    val text by remember(relayPool) {
+        derivedStateOf {
+            "${relayPool.connected}/${relayPool.available}"
+        }
+    }
+
+    val placeHolder = MaterialTheme.colors.placeholderText
+
+    val color by remember(relayPool) {
+        derivedStateOf {
+            if (relayPool.isConnected) {
+                placeHolder
+            } else {
+                Color.Red
+            }
+        }
+    }
+
     Text(
-        text = connectedRelaysText,
-        color = if (isConnected) {
-            MaterialTheme.colors.placeholderText
-        } else {
-            Color.Red
-        },
+        text = text,
+        color = color,
         style = MaterialTheme.typography.subtitle1
     )
 }
@@ -709,7 +719,7 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongCl
 }
 
 @Composable
-fun IconRowRelays(relayViewModel: RelayPoolViewModel, onClick: () -> Unit) {
+fun IconRowRelays(accountViewModel: AccountViewModel, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -736,7 +746,7 @@ fun IconRowRelays(relayViewModel: RelayPoolViewModel, onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.width(Size16dp))
 
-            RelayStatus(relayViewModel = relayViewModel)
+            RelayStatus(accountViewModel = accountViewModel)
         }
     }
 }

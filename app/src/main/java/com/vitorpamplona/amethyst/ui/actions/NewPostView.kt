@@ -133,13 +133,7 @@ fun NewPostView(
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeRelays()?.filter {
-        it.write
-    }?.map {
-        it
-    } ?: account.convertLocalRelays().filter {
-        it.write
-    }
+    var relayList = account.activeWriteRelays()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account, baseReplyTo, quote)
@@ -169,7 +163,7 @@ fun NewPostView(
     ) {
         if (showRelaysDialog) {
             RelaySelectionDialog(
-                list = relayList,
+                preSelectedList = relayList,
                 onClose = {
                     showRelaysDialog = false
                 },
@@ -1376,8 +1370,8 @@ fun ImageVideoDescription(
                             try {
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {
-                                onError("Unable to load file")
-                                Log.e("NewPostView", "Couldn't create thumbnail for $uri")
+                                onError("Unable to load thumbnail")
+                                Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                             }
                         }
                     }

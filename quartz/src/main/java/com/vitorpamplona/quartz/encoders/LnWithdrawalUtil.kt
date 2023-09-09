@@ -4,7 +4,7 @@ import java.util.regex.Pattern
 
 object LnWithdrawalUtil {
     private val withdrawalPattern = Pattern.compile(
-        "lnurl.+",
+        "lnurl1[02-9ac-hj-np-z]+",
         Pattern.CASE_INSENSITIVE
     )
 

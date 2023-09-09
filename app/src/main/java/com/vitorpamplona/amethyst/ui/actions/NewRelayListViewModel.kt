@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayPool
@@ -24,6 +25,7 @@ class NewRelayListViewModel : ViewModel() {
     fun load(account: Account) {
         this.account = account
         clear()
+        loadRelayDocuments()
     }
 
     fun create() {
@@ -36,17 +38,34 @@ class NewRelayListViewModel : ViewModel() {
         clear()
     }
 
+    fun loadRelayDocuments() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _relays.value.forEach { item ->
+                Nip11CachedRetriever.loadRelayInfo(
+                    dirtyUrl = item.url,
+                    onInfo = {
+                        togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                    },
+                    onError = { url, errorCode, exceptionMessage ->
+                    }
+                )
+            }
+        }
+    }
+
     fun clear() {
         _relays.update {
             var relayFile = account.userProfile().latestContactList?.relays()
 
             // Ugly, but forces nostr.band as the only search-supporting relay today.
             // TODO: Remove when search becomes more available.
-            if (relayFile?.none { it.key == Constants.forcedRelayForSearch.url } == true) {
-                relayFile = relayFile + Pair(
-                    Constants.forcedRelayForSearch.url,
-                    ContactListEvent.ReadWrite(Constants.forcedRelayForSearch.read, Constants.forcedRelayForSearch.write)
-                )
+            if (relayFile?.none { it.key.removeSuffix("/") in Constants.forcedRelaysForSearchSet } == true) {
+                relayFile = relayFile + Constants.forcedRelayForSearch.map {
+                    Pair(
+                        it.url,
+                        ContactListEvent.ReadWrite(it.read, it.write)
+                    )
+                }
             }
 
             if (relayFile != null) {

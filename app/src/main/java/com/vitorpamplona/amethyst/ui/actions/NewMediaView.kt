@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -79,13 +80,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeRelays()?.filter {
-        it.write
-    }?.map {
-        it
-    } ?: account.convertLocalRelays().filter {
-        it.write
-    }
+    var relayList = account.activeWriteRelays()
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -101,7 +96,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
         ) {
             if (showRelaysDialog) {
                 RelaySelectionDialog(
-                    list = relayList,
+                    preSelectedList = relayList,
                     onClose = {
                         showRelaysDialog = false
                     },
@@ -221,7 +216,8 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
                         } catch (e: Exception) {
-                            postViewModel.imageUploadingError.emit("Unable to load file")
+                            postViewModel.imageUploadingError.emit("Unable to load thumbnail, but the video can be uploaded")
+                            Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                         }
                     }
                 }

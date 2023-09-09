@@ -286,6 +286,12 @@ val Colors.overPictureBackground: Color
 val Colors.bitcoinColor: Color
     get() = if (isLight) BitcoinLight else BitcoinDark
 
+val Colors.warningColor: Color
+    get() = if (isLight) LightWarningColor else DarkWarningColor
+
+val Colors.allGoodColor: Color
+    get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
+
 val Colors.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 
