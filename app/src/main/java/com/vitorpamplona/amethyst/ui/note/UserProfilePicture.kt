@@ -438,6 +438,10 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             Text(stringResource(R.string.quick_action_share))
         }
         Divider()
+        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
+            Text(stringResource(R.string.broadcast))
+        }
+        Divider()
         if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
@@ -455,10 +459,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.add_to_public_bookmarks))
             }
-        }
-        Divider()
-        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
-            Text(stringResource(R.string.broadcast))
         }
         Divider()
         if (state.isLoggedUser) {
