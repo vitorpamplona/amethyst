@@ -101,37 +101,50 @@ class NewMessageTagger(
 
         key = key.removePrefix("@")
 
-        if (key.length < 63) {
-            return null
-        }
-
         try {
-            val keyB32 = key.substring(0, 63)
-            val restOfWord = key.substring(63)
-
             if (key.startsWith("nsec1", true)) {
+                if (key.length < 63) {
+                    return null
+                }
+
+                val keyB32 = key.substring(0, 63)
+                val restOfWord = key.substring(63)
                 // Converts to npub
                 val pubkey = Nip19.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
 
                 return DirtyKeyInfo(pubkey, restOfWord)
             } else if (key.startsWith("npub1", true)) {
+                if (key.length < 63) {
+                    return null
+                }
+
+                val keyB32 = key.substring(0, 63)
+                val restOfWord = key.substring(63)
+
                 val pubkey = Nip19.uriToRoute(keyB32) ?: return null
 
                 return DirtyKeyInfo(pubkey, restOfWord)
             } else if (key.startsWith("note1", true)) {
+                if (key.length < 63) {
+                    return null
+                }
+
+                val keyB32 = key.substring(0, 63)
+                val restOfWord = key.substring(63)
+
                 val noteId = Nip19.uriToRoute(keyB32) ?: return null
 
                 return DirtyKeyInfo(noteId, restOfWord)
             } else if (key.startsWith("nprofile", true)) {
-                val pubkeyRelay = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
+                val pubkeyRelay = Nip19.uriToRoute(key) ?: return null
 
                 return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
             } else if (key.startsWith("nevent1", true)) {
-                val noteRelayId = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
+                val noteRelayId = Nip19.uriToRoute(key) ?: return null
 
                 return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
             } else if (key.startsWith("naddr1", true)) {
-                val address = Nip19.uriToRoute(keyB32 + restOfWord) ?: return null
+                val address = Nip19.uriToRoute(key) ?: return null
 
                 return DirtyKeyInfo(address, address.additionalChars) // no way to know when they address ends and dirt begins
             }
