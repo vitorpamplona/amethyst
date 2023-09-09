@@ -53,6 +53,10 @@ object LocalCache {
         // checkNotInMainThread()
 
         return users[key] ?: run {
+            require(isValidHex(key = key)) {
+                "$key is not a valid hex"
+            }
+
             val newObject = User(key)
             users.putIfAbsent(key, newObject) ?: newObject
         }
@@ -98,7 +102,9 @@ object LocalCache {
         checkNotInMainThread()
 
         return notes.get(idHex) ?: run {
-            require(isValidHex(idHex))
+            require(isValidHex(idHex)) {
+                "$idHex is not a valid hex"
+            }
 
             val newObject = Note(idHex)
             notes.putIfAbsent(idHex, newObject) ?: newObject
