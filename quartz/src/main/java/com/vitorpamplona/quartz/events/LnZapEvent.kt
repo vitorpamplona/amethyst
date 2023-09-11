@@ -21,7 +21,7 @@ class LnZapEvent(
             fromJson(it)
         } as? LnZapRequestEvent
     } catch (e: Exception) {
-        Log.w("LnZapEvent", "Failed to Parse Contained Post ${description()}", e)
+        Log.w("LnZapEvent", "Failed to Parse Contained Post ${description()} in event ${id}", e)
         null
     }
 

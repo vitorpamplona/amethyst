@@ -5,7 +5,9 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -556,5 +558,29 @@ class GiftWrapEventTest {
             fail("Event is not a Sealed Gossip")
             null
         }
+    }
+
+    @Test
+    fun decryptMsgFromNostrTools() {
+        val receiversPrivateKey = Hex.decode("df51ec558372612918a83446d279d683039bece79b7a721274b1d3cb612dc6af")
+        val msg = """            
+            {
+              "tags": [],
+              "content": "AUC1i3lHsEOYQZaqav8jAw/Dv25r6BpUX4r7ARaj/7JEqvtHkbtaWXEx3LvMlDJstNX1C90RIelgYTzxb4Xnql7zFmXtxGGd/gXOZzW/OCNWECTrhFTruZUcsyn2ssJMgEMBZKY3PgbAKykHlGCuWR3KI9bo+IA5sTqHlrwDGAysxBypRuAxTdtEApw1LSu2A+1UQsdHK/4HcW/fQLPguWGyPv09dftJIJkFWM8VYBQT7b5FeAEMhjlUM+lEmLMnx6qb07Ji/YMESkhzFlgGjHNVl1Q/BT4i6X+Skogl6Si3lWQzlS9oebUim1BQW+RO0IOyQLalZwjzGP+eE7Ry62ukQg7cPiqk62p7NNula17SF2Q8aVFLxr8WjbLXoWhZOWY25uFbTl7OPGGQb5TewRsjHoFeU4h05Ien3Ymf1VPqJVJCMIxU+yFZ1IMZh/vQW4BSx8VotRdNA05fz03ST88GzGxUvqEm4VW/Yp5q4UUkCDQTKmUImaSFmTser39WmvS5+dHY6ne4RwnrZR0ZYrG1bthRHycnPmaJiYsHn9Ox37EzgLR07pmNxr2+86NR3S3TLAVfTDN3XaXRee/7UfW/MXULVyuyweksIHOYBvANC0PxmGSs4UiFoCbwNi45DT2y0SwP6CxzDuM=",
+              "kind": 1059,
+              "created_at": 1694192155914,
+              "pubkey": "8253eb518413b57f0df329d3d4287bdef4031fd71c32ad1952d854e703dae6a7",
+              "id": "ae625fd43612127d63bfd1967ba32ae915100842a205fc2c3b3fc02ab3827f08",
+              "sig": "2807a7ab5728984144676fd34686267cbe6fe38bc2f65a3640ba9243c13e8a1ae5a9a051e8852aa0c997a3623d7fa066cf2073a233c6d7db46fb1a0d4c01e5a3"
+            }
+        """.trimIndent()
+
+        val wrap = Event.fromJson(msg) as GiftWrapEvent
+        wrap.checkSignature()
+
+        val event = wrap.unwrap(receiversPrivateKey)
+        assertNotNull(event)
+
+        println(event)
     }
 }
