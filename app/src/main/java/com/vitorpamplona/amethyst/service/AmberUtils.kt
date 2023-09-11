@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
 object AmberUtils {
     var content: String = ""
@@ -29,6 +30,7 @@ object AmberUtils {
             SignerType.NIP44_ENCRYPT -> "nip44_encrypt"
             SignerType.NIP44_DECRYPT -> "nip44_decrypt"
             SignerType.GET_PUBLIC_KEY -> "get_public_key"
+            SignerType.DECRYPT_ZAP_EVENT -> "decrypt_zap_event"
         }
         intent.putExtra("type", signerType)
         intent.putExtra("pubKey", pubKey)
@@ -95,6 +97,22 @@ object AmberUtils {
                 IntentUtils.activityResultLauncher,
                 pubKey,
                 ""
+            )
+            while (isActivityRunning) {
+                // do nothing
+            }
+        }
+    }
+
+    fun decryptZapEvent(event: LnZapRequestEvent) {
+        if (content.isBlank()) {
+            isActivityRunning = true
+            openAmber(
+                event.toJson(),
+                SignerType.DECRYPT_ZAP_EVENT,
+                IntentUtils.activityResultLauncher,
+                event.pubKey,
+                event.id
             )
             while (isActivityRunning) {
                 // do nothing

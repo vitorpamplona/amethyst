@@ -361,6 +361,9 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun decrypt(note: Note): String? {
+        if (loggedInWithAmber()) {
+            return account.decryptContentWithAmber(note)
+        }
         return account.decryptContent(note)
     }
 

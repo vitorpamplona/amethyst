@@ -2523,14 +2523,40 @@ class Account(
         }
     }
 
+    fun decryptContentWithAmber(note: Note): String? = with(Dispatchers.IO) {
+        val event = note.event
+        return when (event) {
+            is PrivateDmEvent -> {
+                AmberUtils.decrypt(event.content, event.talkingWith(userProfile().pubkeyHex), event.id)
+                AmberUtils.cachedDecryptedContent[event.id]
+            }
+            is LnZapRequestEvent -> {
+                decryptZapContentAuthor(note)?.content()
+            }
+            else -> {
+                event?.content()
+            }
+        }
+    }
+
     fun decryptZapContentAuthor(note: Note): Event? {
         val event = note.event
         val loggedInPrivateKey = keyPair.privKey
 
+        if (loginWithAmber && event is LnZapRequestEvent && event.isPrivateZap()) {
+            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+            if (decryptedContent != null) {
+                return Event.fromJson(decryptedContent)
+            }
+            AmberUtils.decryptZapEvent(event)
+            if (AmberUtils.content.isBlank()) return null
+            AmberUtils.cachedDecryptedContent[event.id] = AmberUtils.content
+            return Event.fromJson(AmberUtils.content)
+        }
+
         return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
             val recipientPK = event.zappedAuthor().firstOrNull()
             val recipientPost = event.zappedPost().firstOrNull()
-
             if (recipientPK == userProfile().pubkeyHex) {
                 // if the receiver is logged in, these are the params.
                 val privateKeyToUse = loggedInPrivateKey
