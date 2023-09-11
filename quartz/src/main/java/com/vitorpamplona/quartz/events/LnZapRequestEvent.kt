@@ -123,6 +123,32 @@ class LnZapRequestEvent(
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, message, "")
         }
 
+        fun createPrivateZap(
+            originalNote: EventInterface,
+            relays: Set<String>,
+            pubKey: HexKey,
+            pollOption: Int?,
+            message: String,
+            createdAt: Long = TimeUtils.now()
+        ): LnZapRequestEvent {
+            val content = message
+            var tags = listOf(
+                listOf("e", originalNote.id()),
+                listOf("p", originalNote.pubKey()),
+                listOf("relays") + relays
+            )
+            if (originalNote is AddressableEvent) {
+                tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+            }
+            if (pollOption != null && pollOption >= 0) {
+                tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
+            }
+
+            tags = tags + listOf(listOf("anon", ""))
+
+            return LnZapRequestEvent("", pubKey, createdAt, tags, content, "")
+        }
+
         fun createAnonymous(
             originalNote: EventInterface,
             relays: Set<String>,

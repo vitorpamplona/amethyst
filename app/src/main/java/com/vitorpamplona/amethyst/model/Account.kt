@@ -461,6 +461,21 @@ class Account(
                             AmberUtils.content
                         )
                     }
+
+                    LnZapEvent.ZapType.PRIVATE -> {
+                        val unsignedEvent = LnZapRequestEvent.createPrivateZap(
+                            event,
+                            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                                ?: localRelays.map { it.url }.toSet(),
+                            keyPair.pubKey.toHexKey(),
+                            pollOption,
+                            message
+                        )
+                        AmberUtils.content = ""
+                        AmberUtils.openAmber(unsignedEvent)
+                        if (AmberUtils.content.isBlank()) return null
+                        return Event.fromJson(AmberUtils.content) as LnZapRequestEvent
+                    }
                     else -> null
                 }
             } else {
@@ -485,10 +500,14 @@ class Account(
     fun isNIP47Author(pubkeyHex: String?): Boolean {
         val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
 
-        if (privKey == null) return false
+        if (privKey == null && !loginWithAmber) return false
 
-        val pubKey = CryptoUtils.pubkeyCreate(privKey).toHexKey()
-        return (pubKey == pubkeyHex)
+        if (privKey != null) {
+            val pubKey = CryptoUtils.pubkeyCreate(privKey).toHexKey()
+            return (pubKey == pubkeyHex)
+        }
+
+        return (keyPair.pubKey.toHexKey() == pubkeyHex)
     }
 
     fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
@@ -497,9 +516,14 @@ class Account(
         val privKey = myNip47.secret?.hexToByteArray() ?: keyPair.privKey
         val pubKey = myNip47.pubKeyHex.hexToByteArray()
 
-        if (privKey == null) return null
+        if (privKey == null && !loginWithAmber) return null
 
-        return zapResponseEvent.response(privKey, pubKey)
+        if (privKey != null) return zapResponseEvent.response(privKey, pubKey)
+
+        Log.d("zaps", "decrypt with amber")
+        AmberUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
+        if (AmberUtils.content.isBlank()) return null
+        return zapResponseEvent.response(AmberUtils.content)
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note?): Boolean {
@@ -2546,12 +2570,21 @@ class Account(
         if (loginWithAmber && event is LnZapRequestEvent && event.isPrivateZap()) {
             val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
             if (decryptedContent != null) {
-                return Event.fromJson(decryptedContent)
+                return try {
+                    Event.fromJson(decryptedContent)
+                } catch (e: Exception) {
+                    null
+                }
             }
             AmberUtils.decryptZapEvent(event)
             if (AmberUtils.content.isBlank()) return null
+            if (AmberUtils.content == "Could not decrypt the message") return null
             AmberUtils.cachedDecryptedContent[event.id] = AmberUtils.content
-            return Event.fromJson(AmberUtils.content)
+            return try {
+                Event.fromJson(AmberUtils.content)
+            } catch (e: Exception) {
+                null
+            }
         }
 
         return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {

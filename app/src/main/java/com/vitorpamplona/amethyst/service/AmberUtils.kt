@@ -105,18 +105,16 @@ object AmberUtils {
     }
 
     fun decryptZapEvent(event: LnZapRequestEvent) {
-        if (content.isBlank()) {
-            isActivityRunning = true
-            openAmber(
-                event.toJson(),
-                SignerType.DECRYPT_ZAP_EVENT,
-                IntentUtils.activityResultLauncher,
-                event.pubKey,
-                event.id
-            )
-            while (isActivityRunning) {
-                // do nothing
-            }
+        isActivityRunning = true
+        openAmber(
+            event.toJson(),
+            SignerType.DECRYPT_ZAP_EVENT,
+            IntentUtils.activityResultLauncher,
+            event.pubKey,
+            event.id
+        )
+        while (isActivityRunning) {
+            // do nothing
         }
     }
 }
