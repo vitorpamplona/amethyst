@@ -34,7 +34,7 @@ class GiftWrapBenchmark {
         val events = NIP24Factory().createMsgNIP24(
             message,
             listOf(receiver.pubKey.toHexKey()),
-            sender.privKey!!
+            sender
         )
 
         Assert.assertEquals(expectedLength, events.map { it.toJson() }.joinToString("").length)
@@ -63,7 +63,7 @@ class GiftWrapBenchmark {
         val giftWrap = NIP24Factory().createMsgNIP24(
             message,
             listOf(receiver.pubKey.toHexKey()),
-            sender.privKey!!
+            sender
         ).first()
 
         val keyToUse = if (giftWrap.recipientPubKey() == sender.pubKey.toHexKey()) sender.privKey!! else receiver.privKey!!

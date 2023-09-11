@@ -35,14 +35,13 @@ object AmberUtils {
         intent.putExtra("type", signerType)
         intent.putExtra("pubKey", pubKey)
         intent.putExtra("id", id)
-        intent.`package` = "com.greenart7c3.nostrsigner.debug"
+        intent.`package` = "com.greenart7c3.nostrsigner"
         intentResult.launch(intent)
     }
 
     fun openAmber(event: EventInterface) {
         checkNotInMainThread()
         ServiceManager.shouldPauseService = false
-        content = ""
         isActivityRunning = true
         openAmber(
             event.toJson(),
@@ -52,14 +51,12 @@ object AmberUtils {
             event.id()
         )
         while (isActivityRunning) {
-            // do nothing
+            Thread.sleep(100)
         }
     }
 
     fun loginWithAmber() {
         checkNotInMainThread()
-        content = ""
-        isActivityRunning = true
         openAmber(
             "",
             SignerType.GET_PUBLIC_KEY,
@@ -67,9 +64,6 @@ object AmberUtils {
             "",
             ""
         )
-        while (isActivityRunning) {
-            // do nothing
-        }
     }
 
     fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
@@ -89,18 +83,16 @@ object AmberUtils {
     }
 
     fun encrypt(decryptedContent: String, pubKey: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
-        if (content.isBlank()) {
-            isActivityRunning = true
-            openAmber(
-                decryptedContent,
-                signerType,
-                IntentUtils.activityResultLauncher,
-                pubKey,
-                ""
-            )
-            while (isActivityRunning) {
-                // do nothing
-            }
+        isActivityRunning = true
+        openAmber(
+            decryptedContent,
+            signerType,
+            IntentUtils.activityResultLauncher,
+            pubKey,
+            "encrypt"
+        )
+        while (isActivityRunning) {
+            Thread.sleep(100)
         }
     }
 
@@ -114,7 +106,7 @@ object AmberUtils {
             event.id
         )
         while (isActivityRunning) {
-            // do nothing
+            Thread.sleep(100)
         }
     }
 }

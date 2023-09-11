@@ -12,6 +12,6 @@ object PackageUtils {
     }
 
     fun isAmberInstalled(context: Context): Boolean {
-        return isPackageInstalled(context, "com.greenart7c3.nostrsigner.debug")
+        return isPackageInstalled(context, "com.greenart7c3.nostrsigner")
     }
 }
