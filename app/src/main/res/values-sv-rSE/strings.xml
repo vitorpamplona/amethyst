@@ -472,7 +472,6 @@
     <string name="error_dialog_zap_error">Kunde inte skicka zap</string>
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
     <string name="error_dialog_button_ok">Ok</string>
-
     <string name="relay_information_document_error_assemble_url">Misslyckades att nå %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Misslyckades att nå %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Misslyckades att parsa resultatet från %1$s: %2$s</string>

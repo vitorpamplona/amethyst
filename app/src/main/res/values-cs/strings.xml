@@ -463,7 +463,6 @@
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_zap_error">Nelze odeslat zap</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
-
     <string name="relay_information_document_error_assemble_url">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Nepodařilo se zpracovat výsledek z %1$s: %2$s</string>

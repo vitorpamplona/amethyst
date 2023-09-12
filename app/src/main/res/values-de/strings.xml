@@ -461,7 +461,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_zap_error">Zap konnte nicht gesendet werden</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
-
     <string name="relay_information_document_error_assemble_url">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="relay_information_document_error_reach_server">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="relay_information_document_error_parse_result">Konnte das Ergebnis von %1$s nicht verarbeiten: %2$s</string>
@@ -469,7 +468,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="active_for">Aktiv für: </string>
     <string name="active_for_home">Startseite</string>
     <string name="active_for_msg">Nachrichten</string>
-    <string name="active_for_chats">Chats</string>
-    <string name="active_for_global">Global</string>
     <string name="active_for_search">Suche</string>
 </resources>
