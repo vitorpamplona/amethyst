@@ -526,16 +526,18 @@ class Account(
     }
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         zapPaymentRequest?.let { nip47 ->
-            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, nip47.secret?.hexToByteArray() ?: keyPair.privKey!!)
+            val privateKey = if (loginWithAmber) nip47.secret?.hexToByteArray() else nip47.secret?.hexToByteArray() ?: keyPair.privKey
+            if (privateKey == null) return
+            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, privateKey)
 
             val wcListener = NostrLnZapPaymentResponseDataSource(
                 fromServiceHex = nip47.pubKeyHex,
                 toUserHex = event.pubKey,
                 replyingToHex = event.id,
-                authSigningKey = nip47.secret?.hexToByteArray() ?: keyPair.privKey!!
+                authSigningKey = privateKey
             )
             wcListener.start()
 
