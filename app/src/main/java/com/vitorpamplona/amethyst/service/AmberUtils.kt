@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
@@ -54,18 +55,20 @@ object AmberUtils {
             event.id()
         )
         while (isActivityRunning) {
-            Thread.sleep(100)
+            // do nothing
         }
     }
 
-    fun loginWithAmber() {
+    fun signEvent(event: EventInterface) {
         checkNotInMainThread()
+        ServiceManager.shouldPauseService = false
+        isActivityRunning = true
         openAmber(
-            "",
-            SignerType.GET_PUBLIC_KEY,
-            IntentUtils.activityResultLauncher,
-            "",
-            ""
+            event.toJson(),
+            SignerType.SIGN_EVENT,
+            IntentUtils.signEventResultLauncher,
+            account.keyPair.pubKey.toHexKey(),
+            event.id()
         )
     }
 

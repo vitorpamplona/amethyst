@@ -1,6 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.app.Activity
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -22,8 +25,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -32,8 +39,10 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -291,6 +300,60 @@ fun ZapVote(
 
     nonClickablePrepend()
 
+    val event = remember { mutableStateOf<LnZapRequestEvent?>(null) }
+    val activityResult = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                val json = it.data?.getStringExtra("event") ?: ""
+                val signedEvent = Event.fromJson(json) as LnZapRequestEvent
+                if (signedEvent.hasValidSignature()) {
+                    accountViewModel.zap(
+                        baseNote,
+                        accountViewModel.account.zapAmountChoices.first() * 1000,
+                        null,
+                        "",
+                        context,
+                        {
+                            scope.launch {
+                                zappingProgress = 0f
+                                showErrorMessageDialog = it
+                            }
+                        },
+                        { progress: Float ->
+                            zappingProgress = progress
+                        },
+                        accountViewModel.account.defaultZapType,
+                        null
+                    )
+                }
+            }
+            AmberUtils.isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+            event.value = null
+        }
+    )
+
+    LaunchedEffect(event.value) {
+        if (event.value != null) {
+            AmberUtils.openAmber(
+                event.value!!.toJson(),
+                SignerType.SIGN_EVENT,
+                activityResult,
+                "",
+                event.value!!.id()
+            )
+        }
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.combinedClickable(
@@ -362,7 +425,8 @@ fun ZapVote(
                                 zappingProgress = it
                             }
                         },
-                        zapType = accountViewModel.account.defaultZapType
+                        zapType = accountViewModel.account.defaultZapType,
+                        null
                     )
                 } else {
                     wantsToZap = true
@@ -502,7 +566,8 @@ fun FilteredZapAmountChoicePopup(
                             context,
                             onError,
                             onProgress,
-                            defaultZapType
+                            defaultZapType,
+                            null
                         )
                         onDismiss()
                     },
@@ -526,7 +591,8 @@ fun FilteredZapAmountChoicePopup(
                                     context,
                                     onError,
                                     onProgress,
-                                    defaultZapType
+                                    defaultZapType,
+                                    null
                                 )
                                 onDismiss()
                             },

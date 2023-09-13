@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -22,6 +23,7 @@ object IntentUtils {
     lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
     lateinit var decryptGossipResultLauncher: ActivityResultLauncher<Intent>
     lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
+    lateinit var signEventResultLauncher: ActivityResultLauncher<Intent>
     val eventCache = LruCache<String, Event>(100)
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -63,6 +65,31 @@ object IntentUtils {
 
     @OptIn(DelicateCoroutinesApi::class)
     fun start(activity: MainActivity) {
+        signEventResultLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                val json = it.data?.getStringExtra("event") ?: ""
+                GlobalScope.launch(Dispatchers.IO) {
+                    val signedEvent = Event.fromJson(json)
+                    if (signedEvent.hasValidSignature()) {
+                        Client.send(signedEvent)
+                        LocalCache.verifyAndConsume(signedEvent, null)
+                    }
+                }
+            }
+            AmberUtils.isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+        }
+
         activityResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {

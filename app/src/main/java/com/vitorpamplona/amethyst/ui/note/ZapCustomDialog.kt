@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -19,17 +23,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
@@ -83,6 +96,55 @@ fun ZapCustomDialog(
     val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
     var selectedZapType by remember(accountViewModel) { mutableStateOf(accountViewModel.account.defaultZapType) }
 
+    val event = remember { mutableStateOf<LnZapRequestEvent?>(null) }
+    val activityResult = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode != Activity.RESULT_OK) {
+                postViewModel.viewModelScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                event.value = null
+            } else {
+                val json = it.data?.getStringExtra("event") ?: ""
+                val signedEvent = Event.fromJson(json) as LnZapRequestEvent
+                if (signedEvent.hasValidSignature()) {
+                    accountViewModel.zap(
+                        baseNote,
+                        postViewModel.value()!! * 1000L,
+                        null,
+                        postViewModel.customMessage.text,
+                        context,
+                        onError,
+                        onProgress,
+                        selectedZapType,
+                        signedEvent
+                    )
+                    event.value = null
+                    onClose()
+                }
+            }
+            AmberUtils.isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+        }
+    )
+
+    LaunchedEffect(event.value) {
+        if (event.value != null) {
+            AmberUtils.openAmber(
+                event.value!!.toJson(),
+                SignerType.SIGN_EVENT,
+                activityResult,
+                "",
+                event.value!!.id()
+            )
+        }
+    }
+
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
@@ -105,17 +167,22 @@ fun ZapCustomDialog(
                     ZapButton(
                         isActive = postViewModel.canSend()
                     ) {
-                        accountViewModel.zap(
-                            baseNote,
-                            postViewModel.value()!! * 1000L,
-                            null,
-                            postViewModel.customMessage.text,
-                            context,
-                            onError = onError,
-                            onProgress = onProgress,
-                            zapType = selectedZapType
-                        )
-                        onClose()
+                        if (accountViewModel.loggedInWithAmber() && selectedZapType != LnZapEvent.ZapType.ANONYMOUS && selectedZapType != LnZapEvent.ZapType.PUBLIC) {
+                            event.value = accountViewModel.account.createZapRequestFor(baseNote, null, postViewModel.customMessage.text, selectedZapType)
+                        } else {
+                            accountViewModel.zap(
+                                baseNote,
+                                postViewModel.value()!! * 1000L,
+                                null,
+                                postViewModel.customMessage.text,
+                                context,
+                                onError = onError,
+                                onProgress = onProgress,
+                                zapType = selectedZapType,
+                                null
+                            )
+                            onClose()
+                        }
                     }
                 }
 

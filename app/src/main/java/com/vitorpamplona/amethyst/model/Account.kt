@@ -405,17 +405,13 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        var event = ReactionEvent.create(emojiUrl, it, keyPair)
+                        val event = ReactionEvent.create(emojiUrl, it, keyPair)
                         if (loginWithAmber) {
-                            AmberUtils.openAmber(event)
-                            if (AmberUtils.content.isBlank()) {
-                                return
-                            }
-                            event = ReactionEvent.create(event, AmberUtils.content)
+                            AmberUtils.signEvent(event)
+                        } else {
+                            Client.send(event)
+                            LocalCache.consume(event)
                         }
-
-                        Client.send(event)
-                        LocalCache.consume(event)
                     }
 
                     return
@@ -423,16 +419,13 @@ class Account(
             }
 
             note.event?.let {
-                var event = ReactionEvent.create(reaction, it, keyPair)
+                val event = ReactionEvent.create(reaction, it, keyPair)
                 if (loginWithAmber) {
-                    AmberUtils.openAmber(event)
-                    if (AmberUtils.content.isBlank()) {
-                        return
-                    }
-                    event = ReactionEvent.create(event, AmberUtils.content)
+                    AmberUtils.signEvent(event)
+                } else {
+                    Client.send(event)
+                    LocalCache.consume(event)
                 }
-                Client.send(event)
-                LocalCache.consume(event)
             }
         }
     }
@@ -453,29 +446,18 @@ class Account(
                         )
                     }
                     LnZapEvent.ZapType.PUBLIC -> {
-                        val unsignedEvent = LnZapRequestEvent.createPublic(
+                        return LnZapRequestEvent.createPublic(
                             event,
                             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                                 ?: localRelays.map { it.url }.toSet(),
                             keyPair.pubKey.toHexKey(),
                             pollOption,
                             message
-                        )
-                        AmberUtils.content = ""
-                        AmberUtils.openAmber(unsignedEvent)
-                        if (AmberUtils.content.isBlank()) return null
-                        return LnZapRequestEvent(
-                            unsignedEvent.id,
-                            unsignedEvent.pubKey,
-                            unsignedEvent.createdAt,
-                            unsignedEvent.tags,
-                            unsignedEvent.content,
-                            AmberUtils.content
                         )
                     }
 
                     LnZapEvent.ZapType.PRIVATE -> {
-                        val unsignedEvent = LnZapRequestEvent.createPrivateZap(
+                        return LnZapRequestEvent.createPrivateZap(
                             event,
                             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                                 ?: localRelays.map { it.url }.toSet(),
@@ -483,10 +465,6 @@ class Account(
                             pollOption,
                             message
                         )
-                        AmberUtils.content = ""
-                        AmberUtils.openAmber(unsignedEvent)
-                        if (AmberUtils.content.isBlank()) return null
-                        return Event.fromJson(AmberUtils.content) as LnZapRequestEvent
                     }
                     else -> null
                 }
@@ -674,16 +652,13 @@ class Account(
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
-            var event = DeletionEvent.create(myNotes, keyPair)
+            val event = DeletionEvent.create(myNotes, keyPair)
             if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
-                    return
-                }
-                event = DeletionEvent.create(event, AmberUtils.content)
+                AmberUtils.signEvent(event)
+            } else {
+                Client.send(event)
+                LocalCache.consume(event)
             }
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
@@ -711,27 +686,21 @@ class Account(
 
         note.event?.let {
             if (it.kind() == 1) {
-                var event = RepostEvent.create(it, keyPair)
+                val event = RepostEvent.create(it, keyPair)
                 if (loginWithAmber) {
-                    AmberUtils.openAmber(event)
-                    if (AmberUtils.content.isBlank()) {
-                        return
-                    }
-                    event = RepostEvent.create(event, AmberUtils.content)
+                    AmberUtils.signEvent(event)
+                } else {
+                    Client.send(event)
+                    LocalCache.consume(event)
                 }
-                Client.send(event)
-                LocalCache.consume(event)
             } else {
-                var event = GenericRepostEvent.create(it, keyPair)
+                val event = GenericRepostEvent.create(it, keyPair)
                 if (loginWithAmber) {
-                    AmberUtils.openAmber(event)
-                    if (AmberUtils.content.isBlank()) {
-                        return
-                    }
-                    event = GenericRepostEvent.create(event, AmberUtils.content)
+                    AmberUtils.signEvent(event)
+                } else {
+                    Client.send(event)
+                    LocalCache.consume(event)
                 }
-                Client.send(event)
-                LocalCache.consume(event)
             }
         }
     }

@@ -217,13 +217,33 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return null
     }
 
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
+    fun zap(
+        note: Note,
+        amount: Long,
+        pollOption: Int?,
+        message: String,
+        context: Context,
+        onError: (String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        zapType: LnZapEvent.ZapType,
+        zapRequest: LnZapRequestEvent?
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
-            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType)
+            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType, zapRequest)
         }
     }
 
-    private suspend fun innerZap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
+    private suspend fun innerZap(
+        note: Note,
+        amount: Long,
+        pollOption: Int?,
+        message: String,
+        context: Context,
+        onError: (String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        zapType: LnZapEvent.ZapType,
+        zapRequest: LnZapRequestEvent?
+    ) {
         val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
         if (lud16.isNullOrBlank()) {
@@ -232,11 +252,14 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
 
         var zapRequestJson = ""
-
         if (zapType != LnZapEvent.ZapType.NONZAP) {
-            val zapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
             if (zapRequest != null) {
                 zapRequestJson = zapRequest.toJson()
+            } else {
+                val localZapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
+                if (localZapRequest != null) {
+                    zapRequestJson = localZapRequest.toJson()
+                }
             }
         }
 
