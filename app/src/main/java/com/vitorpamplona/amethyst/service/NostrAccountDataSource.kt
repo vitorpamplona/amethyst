@@ -160,13 +160,13 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     }
                 } else if (account.loginWithAmber) {
                     GlobalScope.launch(Dispatchers.IO) {
-                        AmberUtils.content = ""
-                        AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
                         val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
                         if (decryptedContent.isNotBlank()) {
                             event.cachedGift(account.keyPair.pubKey, decryptedContent)?.let {
                                 consume(it, relay)
                             }
+                        } else {
+                            AmberUtils.decryptGossip(event)
                         }
                     }
                 }
@@ -180,18 +180,13 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     }
                 } else if (account.loginWithAmber) {
                     GlobalScope.launch(Dispatchers.IO) {
-                        AmberUtils.content = ""
-                        AmberUtils.decrypt(
-                            event.content,
-                            event.pubKey,
-                            event.id,
-                            SignerType.NIP44_DECRYPT
-                        )
                         val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
                         if (decryptedContent.isNotBlank()) {
                             event.cachedGossip(account.keyPair.pubKey, decryptedContent)?.let {
                                 LocalCache.justConsume(it, relay)
                             }
+                        } else {
+                            AmberUtils.decryptGossip(event)
                         }
                     }
                 }

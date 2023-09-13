@@ -6,6 +6,7 @@ import androidx.activity.result.ActivityResultLauncher
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
@@ -80,6 +81,20 @@ object AmberUtils {
                 // do nothing
             }
         }
+    }
+
+    fun decryptGossip(event: Event) {
+        if (IntentUtils.eventCache.get(event.id) == null) {
+            IntentUtils.eventCache.put(event.id, event)
+        }
+        isActivityRunning = true
+        openAmber(
+            event.content,
+            SignerType.NIP44_DECRYPT,
+            IntentUtils.decryptGossipResultLauncher,
+            event.pubKey,
+            event.id
+        )
     }
 
     fun encrypt(decryptedContent: String, pubKey: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
