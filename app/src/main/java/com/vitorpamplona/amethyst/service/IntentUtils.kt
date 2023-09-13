@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 object IntentUtils {
     lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
     lateinit var decryptGossipResultLauncher: ActivityResultLauncher<Intent>
+    lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
     val eventCache = LruCache<String, Event>(100)
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -79,6 +80,29 @@ object IntentUtils {
                 val id = it.data?.getStringExtra("id") ?: ""
                 if (id.isNotBlank()) {
                     AmberUtils.cachedDecryptedContent[id] = event
+                }
+            }
+            AmberUtils.isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+        }
+
+        blockListResultLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                val decryptedContent = it.data?.getStringExtra("signature") ?: ""
+                val id = it.data?.getStringExtra("id") ?: ""
+                if (id.isNotBlank()) {
+                    AmberUtils.cachedDecryptedContent[id] = decryptedContent
+                    AmberUtils.account.live.invalidateData()
                 }
             }
             AmberUtils.isActivityRunning = false

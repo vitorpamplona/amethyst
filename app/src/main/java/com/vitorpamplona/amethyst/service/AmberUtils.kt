@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
@@ -14,6 +15,7 @@ object AmberUtils {
     var content: String = ""
     var isActivityRunning: Boolean = false
     val cachedDecryptedContent = mutableMapOf<HexKey, String>()
+    lateinit var account: Account
 
     fun openAmber(
         data: String,
@@ -64,6 +66,17 @@ object AmberUtils {
             IntentUtils.activityResultLauncher,
             "",
             ""
+        )
+    }
+
+    fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        isActivityRunning = true
+        openAmber(
+            encryptedContent,
+            signerType,
+            IntentUtils.blockListResultLauncher,
+            pubKey,
+            id
         )
     }
 

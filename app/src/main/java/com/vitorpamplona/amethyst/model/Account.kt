@@ -108,31 +108,43 @@ class Account(
         live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
             val blockList = liveMuteListEvent?.note?.event as? PeopleListEvent
             if (loginWithAmber) {
-                if (blockList?.decryptedContent == null) {
-                    GlobalScope.launch(Dispatchers.IO) {
-                        val content = blockList?.content ?: ""
-                        if (content.isEmpty()) return@launch
-                        AmberUtils.content = ""
-                        AmberUtils.decrypt(
-                            content,
-                            keyPair.pubKey.toHexKey(),
-                            blockList?.id() ?: ""
-                        )
-                        blockList?.decryptedContent = AmberUtils.content
-                        live.invalidateData()
-                        AmberUtils.content = ""
-                    }
+                val id = blockList?.id
+                if (id != null) {
+                    if (AmberUtils.cachedDecryptedContent[blockList.id] == null) {
+                        GlobalScope.launch(Dispatchers.IO) {
+                            val content = blockList.content
+                            if (content.isEmpty()) return@launch
+                            AmberUtils.content = ""
+                            AmberUtils.decryptBlockList(
+                                content,
+                                keyPair.pubKey.toHexKey(),
+                                blockList.id()
+                            )
+                            blockList.decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
+                            live.invalidateData()
+                        }
 
+                        LiveHiddenUsers(
+                            hiddenUsers = persistentSetOf(),
+                            spammers = localLive?.account?.transientHiddenUsers
+                                ?: persistentSetOf(),
+                            showSensitiveContent = showSensitiveContent
+                        )
+                    } else {
+                        blockList.decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
+                        val liveBlockedUsers = blockList.publicAndPrivateUsers(blockList.decryptedContent ?: "")
+                        LiveHiddenUsers(
+                            hiddenUsers = liveBlockedUsers,
+                            spammers = localLive?.account?.transientHiddenUsers
+                                ?: persistentSetOf(),
+                            showSensitiveContent = showSensitiveContent
+                        )
+                    }
+                } else {
                     LiveHiddenUsers(
                         hiddenUsers = persistentSetOf(),
-                        spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-                        showSensitiveContent = showSensitiveContent
-                    )
-                } else {
-                    val liveBlockedUsers = blockList.publicAndPrivateUsers(blockList.decryptedContent ?: "")
-                    LiveHiddenUsers(
-                        hiddenUsers = liveBlockedUsers,
-                        spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
+                        spammers = localLive?.account?.transientHiddenUsers
+                            ?: persistentSetOf(),
                         showSensitiveContent = showSensitiveContent
                     )
                 }
@@ -2167,8 +2179,8 @@ class Account(
     fun hideUser(pubkeyHex: String) {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
         if (loginWithAmber) {
-            val content = blockList?.content ?: ""
-            val encryptedContent = if (content.isBlank()) {
+            val id = blockList?.id
+            val encryptedContent = if (id == null) {
                 val privateTags = listOf(listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
@@ -2177,12 +2189,15 @@ class Account(
                 if (AmberUtils.content.isBlank()) return
                 AmberUtils.content
             } else {
-                AmberUtils.content = ""
-                AmberUtils.decrypt(content, keyPair.pubKey.toHexKey(), blockList?.id ?: "")
-                if (AmberUtils.content.isBlank()) return
-                val decryptedContent = AmberUtils.content
-                AmberUtils.content = ""
-                val privateTags = blockList?.privateTagsOrEmpty(decryptedContent)?.plus(element = listOf("p", pubkeyHex))
+                var decryptedContent = AmberUtils.cachedDecryptedContent[id]
+                if (decryptedContent == null) {
+                    AmberUtils.content = ""
+                    AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
+                    if (AmberUtils.content.isBlank()) return
+                    decryptedContent = AmberUtils.content
+                }
+
+                val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
                 AmberUtils.content = ""
                 AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
@@ -2251,7 +2266,7 @@ class Account(
 
         if (blockList != null) {
             if (loginWithAmber) {
-                val content = blockList.content ?: ""
+                val content = blockList.content
                 val encryptedContent = if (content.isBlank()) {
                     val privateTags = listOf(listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
@@ -2261,10 +2276,13 @@ class Account(
                     if (AmberUtils.content.isBlank()) return
                     AmberUtils.content
                 } else {
-                    AmberUtils.content = ""
-                    AmberUtils.decrypt(content, keyPair.pubKey.toHexKey(), blockList.id)
-                    if (AmberUtils.content.isBlank()) return
-                    val decryptedContent = AmberUtils.content
+                    var decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
+                    if (decryptedContent == null) {
+                        AmberUtils.content = ""
+                        AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
+                        if (AmberUtils.content.isBlank()) return
+                        decryptedContent = AmberUtils.content
+                    }
                     AmberUtils.content = ""
                     val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
@@ -2551,8 +2569,16 @@ class Account(
         val event = note.event
         return when (event) {
             is PrivateDmEvent -> {
-                AmberUtils.decrypt(event.content, event.talkingWith(userProfile().pubkeyHex), event.id)
-                AmberUtils.cachedDecryptedContent[event.id]
+                if (AmberUtils.cachedDecryptedContent[event.id] == null) {
+                    AmberUtils.decrypt(
+                        event.content,
+                        event.talkingWith(userProfile().pubkeyHex),
+                        event.id
+                    )
+                    AmberUtils.cachedDecryptedContent[event.id]
+                } else {
+                    AmberUtils.cachedDecryptedContent[event.id]
+                }
             }
             is LnZapRequestEvent -> {
                 decryptZapContentAuthor(note)?.content()

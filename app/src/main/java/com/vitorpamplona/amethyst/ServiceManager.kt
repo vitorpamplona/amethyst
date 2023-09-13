@@ -12,6 +12,7 @@ import coil.disk.DiskCache
 import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -41,6 +42,7 @@ object ServiceManager {
 
     fun start(account: Account, context: Context) {
         this.account = account
+        AmberUtils.account = account
         start(context)
     }
 
