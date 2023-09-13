@@ -532,7 +532,6 @@ class Account(
 
         if (privKey != null) return zapResponseEvent.response(privKey, pubKey)
 
-        Log.d("zaps", "decrypt with amber")
         AmberUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
         if (AmberUtils.content.isBlank()) return null
         return zapResponseEvent.response(AmberUtils.content)
@@ -2529,9 +2528,12 @@ class Account(
         if (!isWriteable() && !loginWithAmber) return null
 
         if (loginWithAmber) {
-            AmberUtils.content = ""
-            AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
-            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+            var decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+            if (decryptedContent == null) {
+                AmberUtils.content = ""
+                AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+            }
+            decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
             if (decryptedContent.isEmpty()) return null
             return event.cachedGift(keyPair.pubKey, decryptedContent)
         }
@@ -2543,9 +2545,12 @@ class Account(
         if (!isWriteable() && !loginWithAmber) return null
 
         if (loginWithAmber) {
-            AmberUtils.content = ""
-            AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
-            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+            var decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+            if (decryptedContent == null) {
+                AmberUtils.content = ""
+                AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+            }
+            decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
             if (decryptedContent.isEmpty()) return null
             return event.cachedGossip(keyPair.pubKey, decryptedContent)
         }

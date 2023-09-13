@@ -100,27 +100,6 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                     event.cachedGift(key)?.let {
                         unwrapAndConsume(it, account)
                     }
-                } else if (account.loginWithAmber) {
-                    var cached = AmberUtils.cachedDecryptedContent[event.id]
-                    if (cached == null) {
-                        AmberUtils.content = ""
-                        AmberUtils.decrypt(
-                            event.content,
-                            event.pubKey,
-                            event.id,
-                            SignerType.NIP44_DECRYPT
-                        )
-                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
-                    }
-
-                    if (cached.isNotBlank()) {
-                        event.cachedGift(account.keyPair.pubKey, cached)?.let {
-                            LocalCache.justConsume(it, null)
-                            it
-                        }
-                    } else {
-                        null
-                    }
                 } else {
                     null
                 }
@@ -132,26 +111,6 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                         // this is not verifiable
                         LocalCache.justConsume(it, null)
                         it
-                    }
-                } else if (account.loginWithAmber) {
-                    var cached = AmberUtils.cachedDecryptedContent[event.id]
-                    if (cached == null) {
-                        AmberUtils.content = ""
-                        AmberUtils.decrypt(
-                            event.content,
-                            event.pubKey,
-                            event.id,
-                            SignerType.NIP44_DECRYPT
-                        )
-                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
-                    }
-                    if (cached.isNotBlank()) {
-                        event.cachedGossip(account.keyPair.pubKey, cached)?.let {
-                            LocalCache.justConsume(it, null)
-                            it
-                        }
-                    } else {
-                        null
                     }
                 } else {
                     null

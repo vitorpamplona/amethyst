@@ -30,9 +30,6 @@ import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
@@ -157,17 +154,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     event.cachedGift(privateKey)?.let {
                         this.consume(it, relay)
                     }
-                } else if (account.loginWithAmber) {
-                    GlobalScope.launch(Dispatchers.IO) {
-                        val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
-                        if (decryptedContent.isNotBlank()) {
-                            event.cachedGift(account.keyPair.pubKey, decryptedContent)?.let {
-                                consume(it, relay)
-                            }
-                        } else {
-                            AmberUtils.decryptGossip(event)
-                        }
-                    }
                 }
             }
 
@@ -176,17 +162,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 if (privateKey != null) {
                     event.cachedGossip(privateKey)?.let {
                         LocalCache.justConsume(it, relay)
-                    }
-                } else if (account.loginWithAmber) {
-                    GlobalScope.launch(Dispatchers.IO) {
-                        val decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
-                        if (decryptedContent.isNotBlank()) {
-                            event.cachedGossip(account.keyPair.pubKey, decryptedContent)?.let {
-                                LocalCache.justConsume(it, relay)
-                            }
-                        } else {
-                            AmberUtils.decryptGossip(event)
-                        }
                     }
                 }
 

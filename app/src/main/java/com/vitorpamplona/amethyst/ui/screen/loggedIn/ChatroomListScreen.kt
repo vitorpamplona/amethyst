@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.IntentUtils
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
@@ -46,6 +48,8 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GiftWrapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -65,6 +69,19 @@ fun ChatroomListScreen(
     val markNewAsRead = remember { mutableStateOf(false) }
 
     WatchAccountForListScreen(knownFeedViewModel, newFeedViewModel, accountViewModel)
+
+    LaunchedEffect(Unit) {
+        if (accountViewModel.loggedInWithAmber()) {
+            coroutineScope.launch(Dispatchers.IO) {
+                val gifts = LocalCache.notes.elements().toList().filter { it.event is GiftWrapEvent }
+                gifts.forEach {
+                    it.event?.let {
+                        IntentUtils.consume(it as Event)
+                    }
+                }
+            }
+        }
+    }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(accountViewModel) {
