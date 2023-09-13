@@ -83,6 +83,16 @@ object AmberUtils {
         }
     }
 
+    fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        openAmber(
+            encryptedContent,
+            signerType,
+            IntentUtils.activityResultLauncher,
+            pubKey,
+            id
+        )
+    }
+
     fun decryptGossip(event: Event) {
         if (IntentUtils.eventCache.get(event.id) == null) {
             IntentUtils.eventCache.put(event.id, event)

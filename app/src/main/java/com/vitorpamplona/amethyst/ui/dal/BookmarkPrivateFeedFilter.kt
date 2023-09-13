@@ -17,14 +17,24 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
         val bookmarks = account.userProfile().latestBookmarkList
 
         if (account.loginWithAmber) {
-            if (AmberUtils.content.isBlank()) {
-                AmberUtils.decrypt(bookmarks?.content ?: "", account.keyPair.pubKey.toHexKey(), "")
-                bookmarks?.decryptedContent = AmberUtils.content
+            val id = bookmarks?.id
+            if (id != null) {
+                val decryptedContent = AmberUtils.cachedDecryptedContent[id]
+                if (decryptedContent == null) {
+                    AmberUtils.decryptBookmark(
+                        bookmarks.content,
+                        account.keyPair.pubKey.toHexKey(),
+                        id
+                    )
+                } else {
+                    bookmarks.decryptedContent = decryptedContent
+                }
             }
+            val decryptedContent = AmberUtils.cachedDecryptedContent[id] ?: ""
 
-            val notes = bookmarks?.privateTaggedEvents(bookmarks.decryptedContent)
+            val notes = bookmarks?.privateTaggedEvents(decryptedContent)
                 ?.mapNotNull { LocalCache.checkGetOrCreateNote(it) } ?: emptyList()
-            val addresses = bookmarks?.privateTaggedAddresses(bookmarks.decryptedContent)
+            val addresses = bookmarks?.privateTaggedAddresses(decryptedContent)
                 ?.map { LocalCache.getOrCreateAddressableNote(it) } ?: emptyList()
 
             return notes.plus(addresses).toSet()
