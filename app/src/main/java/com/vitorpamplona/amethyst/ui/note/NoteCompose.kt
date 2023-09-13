@@ -1262,7 +1262,8 @@ fun RenderTextEvent(
 ) {
     val eventContent = remember(note.event) {
         val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-        val body = accountViewModel.decrypt(note)
+        val decryptedContent = if (note.event == null) null else AmberUtils.cachedDecryptedContent[note.event!!.id()]
+        val body = decryptedContent ?: accountViewModel.decrypt(note)
 
         if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
             "## $subject\n$body"

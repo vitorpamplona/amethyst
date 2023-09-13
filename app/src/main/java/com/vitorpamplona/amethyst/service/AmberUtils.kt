@@ -96,6 +96,16 @@ object AmberUtils {
         }
     }
 
+    fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        openAmber(
+            encryptedContent,
+            signerType,
+            IntentUtils.activityResultLauncher,
+            pubKey,
+            id
+        )
+    }
+
     fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
         openAmber(
             encryptedContent,

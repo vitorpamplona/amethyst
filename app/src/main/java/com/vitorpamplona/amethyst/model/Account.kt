@@ -2570,7 +2570,8 @@ class Account(
         return when (event) {
             is PrivateDmEvent -> {
                 if (AmberUtils.cachedDecryptedContent[event.id] == null) {
-                    AmberUtils.decrypt(
+                    AmberUtils.content = ""
+                    AmberUtils.decryptDM(
                         event.content,
                         event.talkingWith(userProfile().pubkeyHex),
                         event.id
