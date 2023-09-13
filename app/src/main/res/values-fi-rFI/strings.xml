@@ -474,4 +474,14 @@
     <string name="error_dialog_zap_error">Zapin lähettäminen ei onnistunut</string>
     <string name="error_dialog_talk_to_user">Viesti käyttäjälle</string>
     <string name="error_dialog_button_ok">Ok</string>
+    <string name="relay_information_document_error_assemble_url">Kohdetta %1$s ei tavoitettu: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Kohdetta %1$s ei tavoitettu: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Tuloksen jäsentäminen epäonnistui %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s epäonnistui koodilla %2$s</string>
+    <string name="active_for">Aktiivinen kohteelle: </string>
+    <string name="active_for_home">Koti</string>
+    <string name="active_for_msg">YVt</string>
+    <string name="active_for_chats">Keskustelut</string>
+    <string name="active_for_global">Yleinen</string>
+    <string name="active_for_search">Haku</string>
 </resources>
