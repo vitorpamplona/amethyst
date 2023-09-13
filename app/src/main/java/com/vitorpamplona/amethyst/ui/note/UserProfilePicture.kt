@@ -461,16 +461,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             }
         }
         Divider()
-        if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
-                Text(stringResource(R.string.request_deletion))
-            }
-        } else {
-            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
-                Text(stringResource(R.string.block_report))
-            }
-        }
-        Divider()
         if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.hideSensitiveContent(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
@@ -484,6 +474,16 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         if (state.showSensitiveContent != null) {
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.seeContentWarnings(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_see_warnings))
+            }
+        }
+        Divider()
+        if (state.isLoggedUser) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
+                Text(stringResource(R.string.request_deletion))
+            }
+        } else {
+            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
+                Text(stringResource(R.string.block_report))
             }
         }
     }
