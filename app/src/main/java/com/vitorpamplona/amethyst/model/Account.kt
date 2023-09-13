@@ -2594,23 +2594,25 @@ class Account(
         val loggedInPrivateKey = keyPair.privKey
 
         if (loginWithAmber && event is LnZapRequestEvent && event.isPrivateZap()) {
-            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
-            if (decryptedContent != null) {
-                return try {
-                    Event.fromJson(decryptedContent)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            AmberUtils.decryptZapEvent(event)
-            if (AmberUtils.content.isBlank()) return null
-            if (AmberUtils.content == "Could not decrypt the message") return null
-            AmberUtils.cachedDecryptedContent[event.id] = AmberUtils.content
-            return try {
-                Event.fromJson(AmberUtils.content)
-            } catch (e: Exception) {
-                null
-            }
+            // never decrypt zaps for now, it keeps opening amber for very private zap event
+            return null
+//            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+//            if (decryptedContent != null) {
+//                return try {
+//                    Event.fromJson(decryptedContent)
+//                } catch (e: Exception) {
+//                    null
+//                }
+//            }
+//            AmberUtils.decryptZapEvent(event)
+//            if (AmberUtils.content.isBlank()) return null
+//            if (AmberUtils.content == "Could not decrypt the message") return null
+//            AmberUtils.cachedDecryptedContent[event.id] = AmberUtils.content
+//            return try {
+//                Event.fromJson(AmberUtils.content)
+//            } catch (e: Exception) {
+//                null
+//            }
         }
 
         return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
