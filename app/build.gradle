@@ -112,7 +112,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
     // Zoomable images
-    implementation "net.engawapg.lib:zoomable:1.5.0"
+    implementation 'net.engawapg.lib:zoomable:1.5.1'
 
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
