@@ -1214,7 +1214,7 @@ class Account(
         val event = if (note is AddressableNote) {
             BookmarkListEvent.create(
                 "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
+                bookmarks?.taggedEvents()?.minus(note.address.toTag()) ?: emptyList(),
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses()?.minus(note.address),
 
