@@ -92,24 +92,32 @@ open class NewMediaModel : ViewModel() {
                     } else {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Uploading"
-                        ImageUploader.uploadImage(
-                            uri = fileUri,
-                            contentType = contentType,
-                            size = size,
-                            server = serverToUse,
-                            contentResolver = contentResolver,
-                            onSuccess = { imageUrl, mimeType ->
-                                createNIP94Record(imageUrl, mimeType, description, sensitiveContent, relayList = relayList)
-                            },
-                            onError = {
-                                isUploadingImage = false
-                                uploadingPercentage.value = 0.00f
-                                uploadingDescription.value = null
-                                viewModelScope.launch {
-                                    imageUploadingError.emit("Failed to upload the image / video")
+                        viewModelScope.launch(Dispatchers.IO) {
+                            ImageUploader.uploadImage(
+                                uri = fileUri,
+                                contentType = contentType,
+                                size = size,
+                                server = serverToUse,
+                                contentResolver = contentResolver,
+                                onSuccess = { imageUrl, mimeType ->
+                                    createNIP94Record(
+                                        imageUrl,
+                                        mimeType,
+                                        description,
+                                        sensitiveContent,
+                                        relayList = relayList
+                                    )
+                                },
+                                onError = {
+                                    isUploadingImage = false
+                                    uploadingPercentage.value = 0.00f
+                                    uploadingDescription.value = null
+                                    viewModelScope.launch {
+                                        imageUploadingError.emit("Failed to upload the image / video")
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 },
                 onError = {
