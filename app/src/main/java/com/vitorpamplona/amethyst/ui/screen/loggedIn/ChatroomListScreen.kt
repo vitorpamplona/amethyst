@@ -40,7 +40,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.IntentUtils
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
@@ -76,7 +76,7 @@ fun ChatroomListScreen(
                 val gifts = LocalCache.notes.elements().toList().filter { it.event is GiftWrapEvent }
                 gifts.forEach {
                     it.event?.let {
-                        IntentUtils.consume(it as Event)
+                        AmberUtils.consume(it as Event)
                     }
                 }
             }
