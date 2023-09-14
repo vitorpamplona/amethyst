@@ -162,6 +162,48 @@
     <string name="posts_received">পেশকৃত আধেয় গৃহীত হয়েছে</string>
     <string name="remove">সরিয়ে ফেলুন</string>
     <string name="translations_auto">স্বয়ংক্রিয়</string>
+    <string name="translations_translated_from">এই মূলপাঠ থেকে অনূদিত হয়েছে</string>
+    <string name="translations_to">থেকে</string>
+    <string name="translations_show_in_lang_first">প্রথমে %1$s ভাষায় দেখান</string>
+    <string name="translations_always_translate_to_lang">সর্বদা %1$s ভাষায় অনুবাদ করুন</string>
+    <string name="translations_never_translate_from_lang">কখনোই %1$s ভাষা থেকে অনুবাদ করবেন না</string>
+    <string name="nip_05">নস্টার ঠিকানা</string>
+    <string name="never">কখনো না</string>
+    <string name="now">এখন</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
+    <string name="nudity">নগ্নতা</string>
+    <string name="profanity_hateful_speech">অশ্লীলতা / বিদ্বেষপূর্ণ বক্তব্য</string>
+    <string name="report_hateful_speech">বিদ্বেষপূর্ণ বক্তব্য হিসেবে অভিযোগ জানান</string>
+    <string name="report_nudity_porn">নগ্নতা / পর্ন হিসেবে অভিযোগ জানান</string>
+    <string name="others">অন্যান্য</string>
+    <string name="mark_all_known_as_read">পরিচিত সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
+    <string name="mark_all_new_as_read">নতুন সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
+    <string name="mark_all_as_read">সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
+    <string name="backup_keys">ব্যাকআপ চাবিগুলি</string>
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## চাবির ব্যাকআপ এবং নিরাপত্তা বিষয়ক টিপস
+        \n\nআপনার অ্যাকাউন্ট একটি ব্যক্তিগত চাবি দ্বারা সুরক্ষিত। চাবি হলো এলোমেলো অক্ষর ও সংখ্যার একটি দীর্ঘ তন্তু যা **nsec** দ্বারা শুরু হয়। আপনার ব্যক্তিগত চাবিটি পেলে যে কেউ আপনার পরিচয় ব্যবহার করে যেকোনো আধেয় প্রকাশ করতে পারবে।
+        \n\n- আপনি বিশ্বাস করেন না এমন কোনো ওয়েবসাইট কিংবা সফটওয়্যারে আপনার ব্যক্তিগত চাবিটি রাখবেন **না**।
+        \n- অ্যামেথিস্টের ডেভেলপাররা **কখনোই** আপনার কাছে আপনার ব্যক্তিগত চাবিটি জানতে চাইবে না।
+        \n- আপনার ব্যক্তিগত চাবির একটি নিরাপদ ব্যাকআপ **অবশ্যই** সংরক্ষণ করবেন কারণ এটি আপনার অ্যাকাউন্ট পুনরুদ্ধারে কাজে আসবে। আমরা একটি পাসওয়ার্ড ম্যানেজার ব্যবহারের পরামর্শ দিই। 
+    </string>
+    <string name="secret_key_copied_to_clipboard">ব্যক্তিগত চাবি (nsec) ক্লিপবোর্ডে কপি করা হয়েছে</string>
+    <string name="copy_my_secret_key">আমার ব্যক্তিগত চাবিটি কপি করুন</string>
+    <string name="biometric_authentication_failed">প্রমাণীকরণ ব্যর্থ হয়েছে।</string>
+    <string name="biometric_error">ত্রুটি</string>
+    <string name="badge_created_by">"%1$s দ্বারা নির্মিত"</string>
+    <string name="badge_award_image_for">"%1$s -এর জন্য ব্যাজ পুরষ্কারের ছবি"</string>
+    <string name="new_badge_award_notif">আপনি একটি নতুন ব্যাজ পুরষ্কার পেয়েছেন</string>
+    <string name="award_granted_to">ব্যাজ পুরস্কারটি পাচ্ছে</string>
+    <string name="copied_note_text_to_clipboard">নোটের রচনাটি ক্লিপবোর্ডে কপি করা হয়েছে</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">রচয়িতার @npub ক্লিপবোর্ডে কপি করুন</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">নোট আইডিটি (@note1) ক্লিপবোর্ডে কপি করা হয়েছে</string>
+    <string name="select_text_dialog_top">রচনাটি নির্বাচন করুন</string>
+    <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nআপনাকে %1$s এবং %2$s এর মধ্যে একটি ব্যক্তিগত/এনক্রিপ্টেড কথোপকথনে উদ্ধৃত করা হয়েছে৷"</string>
+    <string name="account_switch_add_account_dialog_title">নতুন অ্যাকাউন্ট যুক্ত করুন</string>
+    <string name="drawer_accounts">অ্যাকাউন্টগুলি</string>
+    <string name="account_switch_select_account">অ্যাকাউন্ট নির্বাচন করুন</string>
     <string name="quick_action_share_browser_link">ব্রাউজারের লিংক শেয়ার করুন</string>
     <string name="quick_action_share">শেয়ার</string>
     <string name="quick_action_copy_user_id">লেখকের আইডি</string>
