@@ -468,10 +468,20 @@
     <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
     <string name="created_at">Létrehozva</string>
     <string name="rules">Szabályok</string>
-    <string name="status_update">Állapotod változtatása</string>
+    <string name="status_update">Állapotod megjelenítése</string>
     <string name="lightning_wallets_not_found">Hiba a hibaüzenet elemzésekor</string>
     <string name="poll_zap_value_min_max_explainer">A szavazatokat a Zap-ek összegével súlyozzuk. Beállíthatsz egy minimális összeget, hogy a kéretlen leveleket elkerüld, és egy maximális összeget annak elkerülésére, hogy a szavazás feletti irányítást a nagy Zapperek vegyék át. Mindkét mezőben ugyanazt az összeget használd, hogy minden szavazat azonos értéket kapjon. Bármilyen összeg elfogadásához, hagyjd üresen.</string>
     <string name="error_dialog_zap_error">Zap küldése nem sikerült</string>
     <string name="error_dialog_talk_to_user">Üzenet a Felhasználónak</string>
     <string name="error_dialog_button_ok">Ok</string>
+    <string name="relay_information_document_error_assemble_url">Nem sikerült elérni %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Nem sikerült elérni %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Nem sikerült az eredmény elemzése a %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s hiba a következő kóddal %2$s</string>
+    <string name="active_for">Aktív: </string>
+    <string name="active_for_home">Főoldal</string>
+    <string name="active_for_msg">PÜk</string>
+    <string name="active_for_chats">Chat</string>
+    <string name="active_for_global">Globális</string>
+    <string name="active_for_search">Keresés</string>
 </resources>
