@@ -69,14 +69,14 @@ object Bech32 {
         values.forEach { v ->
             val b = chk shr 25
             chk = ((chk and 0x1ffffff) shl 5) xor v.toInt()
-            for (i in 0..5) {
+            for (i in 0..4) {
                 if (((b shr i) and 1) != 0) chk = chk xor GEN[i]
             }
         }
         values1.forEach { v ->
             val b = chk shr 25
             chk = ((chk and 0x1ffffff) shl 5) xor v.toInt()
-            for (i in 0..5) {
+            for (i in 0..4) {
                 if (((b shr i) and 1) != 0) chk = chk xor GEN[i]
             }
         }
@@ -129,7 +129,7 @@ object Bech32 {
             }
         }
 
-        val hrp = bech32.take(pos)
+        val hrp = bech32.take(pos).lowercase() // strings must be lower case
         require(hrp.length in 1..83) { "hrp must contain 1 to 83 characters" }
 
         val data = Array(bech32.length - pos - 1) {

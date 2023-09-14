@@ -5,16 +5,15 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.quartz.encoders.Bech32
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Lud06
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
@@ -27,9 +26,6 @@ import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
-import java.util.regex.Pattern
-
-val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
 
 @Stable
 class User(val pubkeyHex: String) {
@@ -268,19 +264,11 @@ class User(val pubkeyHex: String) {
         info?.updatedMetadataAt = latestMetadata.createdAt
         info?.tags = latestMetadata.tags.toImmutableListOfLists()
 
-        if (newUserInfo.lud16.isNullOrBlank() && newUserInfo.lud06?.lowercase()?.startsWith("lnurl") == true) {
-            try {
-                val url = String(Bech32.decodeBytes(newUserInfo.lud06!!, false).second)
-
-                val matcher = lnurlpPattern.matcher(url)
-                while (matcher.find()) {
-                    val domain = matcher.group(2)
-                    val username = matcher.group(3)
-
-                    info?.lud16 = "$username@$domain"
+        if (newUserInfo.lud16.isNullOrBlank()) {
+            info?.lud06?.let {
+                if (it.lowercase().startsWith("lnurl")) {
+                    info?.lud16 = Lud06().toLud16(it)
                 }
-            } catch (t: Throwable) {
-                // Doesn't create errors.
             }
         }
 
