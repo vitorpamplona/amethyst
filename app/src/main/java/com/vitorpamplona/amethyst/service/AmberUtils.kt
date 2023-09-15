@@ -30,6 +30,7 @@ object AmberUtils {
     val cachedDecryptedContent = mutableMapOf<HexKey, String>()
     lateinit var account: Account
     lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
+    lateinit var decryptResultLauncher: ActivityResultLauncher<Intent>
     lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
     lateinit var signEventResultLauncher: ActivityResultLauncher<Intent>
 
@@ -61,6 +62,32 @@ object AmberUtils {
         }
 
         activityResultLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode != Activity.RESULT_OK) {
+                GlobalScope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                val event = it.data?.getStringExtra("signature") ?: ""
+                val id = it.data?.getStringExtra("id") ?: ""
+                if (id.isNotBlank()) {
+                    content.put(id, event)
+                }
+            }
+            isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+            GlobalScope.launch(Dispatchers.IO) {
+                isActivityRunning = false
+                ServiceManager.shouldPauseService = true
+            }
+        }
+
+        decryptResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
             if (it.resultCode != Activity.RESULT_OK) {
@@ -223,7 +250,7 @@ object AmberUtils {
         openAmber(
             encryptedContent,
             signerType,
-            activityResultLauncher,
+            decryptResultLauncher,
             pubKey,
             id
         )
@@ -242,7 +269,7 @@ object AmberUtils {
         openAmber(
             encryptedContent,
             signerType,
-            activityResultLauncher,
+            decryptResultLauncher,
             pubKey,
             id
         )
@@ -258,7 +285,7 @@ object AmberUtils {
         openAmber(
             encryptedContent,
             signerType,
-            activityResultLauncher,
+            decryptResultLauncher,
             pubKey,
             id
         )
@@ -277,7 +304,7 @@ object AmberUtils {
             signerType,
             activityResultLauncher,
             pubKey,
-            "encrypt"
+            id
         )
         while (isActivityRunning) {
             Thread.sleep(100)
@@ -294,7 +321,7 @@ object AmberUtils {
         openAmber(
             event.toJson(),
             SignerType.DECRYPT_ZAP_EVENT,
-            activityResultLauncher,
+            decryptResultLauncher,
             event.pubKey,
             event.id
         )
