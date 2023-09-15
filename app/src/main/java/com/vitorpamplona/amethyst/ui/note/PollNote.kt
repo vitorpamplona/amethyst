@@ -372,7 +372,6 @@ fun ZapVote(
                             }
                         },
                         onPayViaIntent = {
-
                         },
                         zapType = accountViewModel.account.defaultZapType
                     )

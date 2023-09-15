@@ -574,7 +574,7 @@
     <string name="zap_split_title">Split and Forward Zaps</string>
     <string name="zap_split_explainer">Supporting clients will split and forward zaps to the users added here instead of yours</string>
     <string name="zap_split_serarch_and_add_user">Search and Add User</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">"@User"</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Username or display name</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">User %1$s does not have a lightning address set up to receive sats</string>
     <string name="zap_split_weight">Percentage</string>
     <string name="zap_split_weight_placeholder">25</string>

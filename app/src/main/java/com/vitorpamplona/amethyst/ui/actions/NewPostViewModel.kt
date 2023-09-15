@@ -436,10 +436,10 @@ open class NewPostViewModel() : ViewModel() {
     open fun updateZapForwardTo(it: TextFieldValue) {
         forwardZapToEditting = it
         if (it.selection.collapsed) {
-            val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+            val lastWord = it.text
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
-            if (lastWord.startsWith("@") && lastWord.length > 2) {
+            if (lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))

@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,17 +24,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -291,7 +286,7 @@ fun ErrorMessageDialog(
 fun PayViaIntentDialog(
     payingInvoices: ImmutableList<ZapPaymentHandler.Payable>,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
+    onClose: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -310,7 +305,7 @@ fun PayViaIntentDialog(
                 ) {
                     CloseButton(onPress = onClose)
                 }
-                
+
                 Spacer(modifier = DoubleVertSpacer)
 
                 payingInvoices.forEachIndexed { index, it ->
@@ -321,7 +316,7 @@ fun PayViaIntentDialog(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size10dp)) {
                         if (it.user != null) {
                             BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
-                        } else  {
+                        } else {
                             DisplayBlankAuthor(size = Size55dp)
                         }
 
@@ -332,7 +327,7 @@ fun PayViaIntentDialog(
                                 UsernameDisplay(it.user, showPlayButton = false)
                             } else {
                                 Text(
-                                    text = stringResource(id = R.string.wallet_number, index+1),
+                                    text = stringResource(id = R.string.wallet_number, index + 1),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontWeight = FontWeight.Bold,
@@ -341,7 +336,7 @@ fun PayViaIntentDialog(
                             }
                             Row() {
                                 Text(
-                                    text = showAmount((it.amountMilliSats/1000.0f).toBigDecimal()),
+                                    text = showAmount((it.amountMilliSats / 1000.0f).toBigDecimal()),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     fontWeight = FontWeight.Bold,
@@ -356,7 +351,6 @@ fun PayViaIntentDialog(
                                     fontSize = 18.sp
                                 )
                             }
-
                         }
 
                         Spacer(modifier = DoubleHorzSpacer)
@@ -392,9 +386,10 @@ fun PayButton(isActive: Boolean, modifier: Modifier = Modifier, onPost: () -> Un
             ),
         contentPadding = PaddingValues(0.dp)
     ) {
-        if (isActive)
+        if (isActive) {
             Text(text = stringResource(R.string.pay), color = Color.White)
-        else
+        } else {
             Text(text = stringResource(R.string.paid), color = Color.White)
+        }
     }
 }
