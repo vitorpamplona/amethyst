@@ -151,7 +151,7 @@ class LightningAddressResolver() {
                                     onSuccess(pr)
                                 } else {
                                     onProgress(0.0f)
-                                    onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from ${lnaddress}. It should have been ${expectedAmountInSats}")
+                                    onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from $lnaddress. It should have been $expectedAmountInSats")
                                 }
                             } ?: lnInvoice?.get("reason")?.asText()?.ifBlank { null }?.let { reason ->
                                 onProgress(0.0f)
