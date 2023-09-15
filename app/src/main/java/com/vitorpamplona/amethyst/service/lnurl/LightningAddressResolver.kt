@@ -9,11 +9,9 @@ import com.vitorpamplona.quartz.encoders.Lud06
 import com.vitorpamplona.quartz.encoders.toLnUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.Request
-import okhttp3.Response
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.net.URLEncoder
 
 class LightningAddressResolver() {
@@ -62,7 +60,7 @@ class LightningAddressResolver() {
         }
     }
 
-    suspend fun fetchLightningInvoice(lnCallback: String, milliSats: Long, message: String, nostrRequest: String? = null, onSuccess: (String) -> Unit, onError: (String) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun fetchLightningInvoice(lnCallback: String, milliSats: Long, message: String, nostrRequest: String? = null, onSuccess: suspend (String) -> Unit, onError: (String) -> Unit) = withContext(Dispatchers.IO) {
         val encodedMessage = URLEncoder.encode(message, "utf-8")
 
         val urlBinder = if (lnCallback.contains("?")) "&" else "?"
@@ -78,22 +76,13 @@ class LightningAddressResolver() {
             .url(url)
             .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (it.isSuccessful) {
-                        onSuccess(response.body.string())
-                    } else {
-                        onError("Could not fetch invoice from $lnCallback")
-                    }
-                }
+        client.newCall(request).execute().use {
+            if (it.isSuccessful) {
+                onSuccess(it.body.string())
+            } else {
+                onError("Could not fetch invoice from $lnCallback")
             }
-
-            override fun onFailure(call: Call, e: java.io.IOException) {
-                onError("Could not fetch an invoice from $lnCallback. Message ${e.message}")
-                e.printStackTrace()
-            }
-        })
+        }
     }
 
     suspend fun lnAddressToLnUrl(lnaddress: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
@@ -111,7 +100,7 @@ class LightningAddressResolver() {
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
-        onSuccess: (String) -> Unit,
+        onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
         onProgress: (percent: Float) -> Unit
     ) {
@@ -155,13 +144,14 @@ class LightningAddressResolver() {
 
                             lnInvoice?.get("pr")?.asText()?.ifBlank { null }?.let { pr ->
                                 // Forces LN Invoice amount to be the requested amount.
+                                val expectedAmountInSats = BigDecimal(milliSats).divide(BigDecimal(1000), RoundingMode.HALF_UP).toLong()
                                 val invoiceAmount = LnInvoiceUtil.getAmountInSats(pr)
-                                if (invoiceAmount.multiply(BigDecimal(1000)).toLong() == BigDecimal(milliSats).toLong()) {
+                                if (invoiceAmount.toLong() == expectedAmountInSats) {
                                     onProgress(0.7f)
                                     onSuccess(pr)
                                 } else {
                                     onProgress(0.0f)
-                                    onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from server")
+                                    onError("Incorrect invoice amount (${invoiceAmount.toLong()} sats) from ${lnaddress}. It should have been ${expectedAmountInSats}")
                                 }
                             } ?: lnInvoice?.get("reason")?.asText()?.ifBlank { null }?.let { reason ->
                                 onProgress(0.0f)

@@ -52,7 +52,7 @@ class PollNoteEvent(
             valueMinimum: Int?,
             consensusThreshold: Int?,
             closedAt: Int?,
-            zapReceiver: String?,
+            zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null
@@ -76,8 +76,8 @@ class PollNoteEvent(
             tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
             tags.add(listOf(CLOSED_AT, closedAt.toString()))
 
-            if (zapReceiver != null) {
-                tags.add(listOf("zap", zapReceiver))
+            zapReceiver?.forEach {
+                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))

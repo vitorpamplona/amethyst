@@ -57,7 +57,7 @@ class ChatMessageEvent(
             subject: String? = null,
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
-            zapReceiver: String? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
             geohash: String? = null,
@@ -75,8 +75,8 @@ class ChatMessageEvent(
             mentions?.forEach {
                 tags.add(listOf("p", it, "", "mention"))
             }
-            zapReceiver?.let {
-                tags.add(listOf("zap", it))
+            zapReceiver?.forEach {
+                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))

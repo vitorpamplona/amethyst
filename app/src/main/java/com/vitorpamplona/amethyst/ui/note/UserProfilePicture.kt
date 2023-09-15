@@ -104,6 +104,32 @@ fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
 
 @Composable
 fun UserPicture(
+    userHex: String,
+    size: Dp,
+    pictureModifier: Modifier = remember { Modifier },
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    LoadUser(baseUserHex = userHex) {
+        if (it != null) {
+            UserPicture(
+                user = it,
+                size = size,
+                pictureModifier = pictureModifier,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        } else {
+            DisplayBlankAuthor(
+                size,
+                pictureModifier
+            )
+        }
+    }
+}
+
+@Composable
+fun UserPicture(
     user: User,
     size: Dp,
     pictureModifier: Modifier = remember { Modifier },
