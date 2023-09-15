@@ -18,61 +18,20 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 object AmberUtils {
-    var content: String = ""
+    val content = LruCache<String, String>(10)
     var isActivityRunning: Boolean = false
     val cachedDecryptedContent = mutableMapOf<HexKey, String>()
     lateinit var account: Account
     lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
-    lateinit var decryptGossipResultLauncher: ActivityResultLauncher<Intent>
     lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
     lateinit var signEventResultLauncher: ActivityResultLauncher<Intent>
-    val eventCache = LruCache<String, Event>(100)
-
-    @OptIn(DelicateCoroutinesApi::class)
-    fun consume(event: Event) {
-        if (LocalCache.justVerify(event)) {
-            if (event is GiftWrapEvent) {
-                GlobalScope.launch(Dispatchers.IO) {
-                    val decryptedContent = cachedDecryptedContent[event.id] ?: ""
-                    if (decryptedContent.isNotBlank()) {
-                        event.cachedGift(
-                            NostrAccountDataSource.account.keyPair.pubKey,
-                            decryptedContent
-                        )?.let {
-                            consume(it)
-                        }
-                    } else {
-                        decryptGossip(event)
-                    }
-                }
-            }
-
-            if (event is SealedGossipEvent) {
-                GlobalScope.launch(Dispatchers.IO) {
-                    val decryptedContent = cachedDecryptedContent[event.id] ?: ""
-                    if (decryptedContent.isNotBlank()) {
-                        event.cachedGossip(NostrAccountDataSource.account.keyPair.pubKey, decryptedContent)?.let {
-                            LocalCache.justConsume(it, null)
-                        }
-                    } else {
-                        decryptGossip(event)
-                    }
-                }
-                // Don't store sealed gossips to avoid rebroadcasting by mistake.
-            } else {
-                LocalCache.justConsume(event, null)
-            }
-        }
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
     fun start(activity: MainActivity) {
@@ -104,8 +63,6 @@ object AmberUtils {
         activityResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
-            isActivityRunning = false
-            ServiceManager.shouldPauseService = true
             if (it.resultCode != Activity.RESULT_OK) {
                 GlobalScope.launch(Dispatchers.Main) {
                     Toast.makeText(
@@ -116,11 +73,17 @@ object AmberUtils {
                 }
             } else {
                 val event = it.data?.getStringExtra("signature") ?: ""
-                content = event
                 val id = it.data?.getStringExtra("id") ?: ""
                 if (id.isNotBlank()) {
+                    content.put(id, event)
                     cachedDecryptedContent[id] = event
                 }
+            }
+            isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+            GlobalScope.launch(Dispatchers.IO) {
+                isActivityRunning = false
+                ServiceManager.shouldPauseService = true
             }
         }
 
@@ -145,34 +108,10 @@ object AmberUtils {
             }
             isActivityRunning = false
             ServiceManager.shouldPauseService = true
-        }
-
-        decryptGossipResultLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) {
-            if (it.resultCode != Activity.RESULT_OK) {
-                GlobalScope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            } else {
-                val decryptedContent = it.data?.getStringExtra("signature") ?: ""
-                val id = it.data?.getStringExtra("id") ?: ""
-                if (id.isNotBlank()) {
-                    val event = eventCache.get(id)
-                    if (event != null) {
-                        GlobalScope.launch(Dispatchers.IO) {
-                            AmberUtils.cachedDecryptedContent[event.id] = decryptedContent
-                            consume(event)
-                        }
-                    }
-                }
+            GlobalScope.launch(Dispatchers.IO) {
+                isActivityRunning = false
+                ServiceManager.shouldPauseService = true
             }
-            isActivityRunning = false
-            ServiceManager.shouldPauseService = true
         }
     }
 
@@ -203,6 +142,13 @@ object AmberUtils {
 
     fun openAmber(event: EventInterface) {
         checkNotInMainThread()
+
+        val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()))
+        if (result !== null) {
+            content.put(event.id(), result)
+            return
+        }
+
         ServiceManager.shouldPauseService = false
         isActivityRunning = true
         openAmber(
@@ -231,6 +177,12 @@ object AmberUtils {
     }
 
     fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+        if (result !== null) {
+            content.put(id, result)
+            cachedDecryptedContent[id] = result
+            return
+        }
         isActivityRunning = true
         openAmber(
             encryptedContent,
@@ -241,23 +193,52 @@ object AmberUtils {
         )
     }
 
-    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        if (content.isBlank()) {
-            isActivityRunning = true
-            openAmber(
-                encryptedContent,
-                signerType,
-                activityResultLauncher,
-                pubKey,
-                id
-            )
-            while (isActivityRunning) {
-                // do nothing
+    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature"): String? {
+        Amethyst.instance.contentResolver.query(
+            Uri.parse("content://com.greenart7c3.nostrsigner.$signerType"),
+            data,
+            null,
+            null,
+            null
+        ).use {
+            if (it !== null) {
+                if (it.moveToFirst()) {
+                    val index = it.getColumnIndex(columnName)
+                    return it.getString(index)
+                }
             }
+        }
+        return null
+    }
+
+    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+        if (result !== null) {
+            content.put(id, result)
+            cachedDecryptedContent[id] = result
+            return
+        }
+
+        isActivityRunning = true
+        openAmber(
+            encryptedContent,
+            signerType,
+            activityResultLauncher,
+            pubKey,
+            id
+        )
+        while (isActivityRunning) {
+            // do nothing
         }
     }
 
     fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+        if (result !== null) {
+            content.put(id, result)
+            cachedDecryptedContent[id] = result
+            return
+        }
         openAmber(
             encryptedContent,
             signerType,
@@ -268,6 +249,12 @@ object AmberUtils {
     }
 
     fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+        if (result !== null) {
+            content.put(id, result)
+            cachedDecryptedContent[id] = result
+            return
+        }
         openAmber(
             encryptedContent,
             signerType,
@@ -277,21 +264,13 @@ object AmberUtils {
         )
     }
 
-    fun decryptGossip(event: Event) {
-        if (eventCache.get(event.id) == null) {
-            eventCache.put(event.id, event)
+    fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
+        if (result !== null) {
+            content.put(id, result)
+            return
         }
-        isActivityRunning = true
-        openAmber(
-            event.content,
-            SignerType.NIP44_DECRYPT,
-            decryptGossipResultLauncher,
-            event.pubKey,
-            event.id
-        )
-    }
 
-    fun encrypt(decryptedContent: String, pubKey: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
         isActivityRunning = true
         openAmber(
             decryptedContent,
@@ -306,7 +285,12 @@ object AmberUtils {
     }
 
     fun decryptZapEvent(event: LnZapRequestEvent) {
-        isActivityRunning = true
+        val result = getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson()))
+        if (result !== null) {
+            content.put(event.id, result)
+            cachedDecryptedContent[event.id] = result
+            return
+        }
         openAmber(
             event.toJson(),
             SignerType.DECRYPT_ZAP_EVENT,
@@ -314,8 +298,5 @@ object AmberUtils {
             event.pubKey,
             event.id
         )
-        while (isActivityRunning) {
-            Thread.sleep(100)
-        }
     }
 }

@@ -1,11 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.app.Activity
 import android.graphics.Bitmap
 import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -44,7 +40,6 @@ import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -81,7 +76,6 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
 import com.fonfon.kgeohash.toGeoHash
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
@@ -90,12 +84,10 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -1262,8 +1254,7 @@ fun RenderTextEvent(
 ) {
     val eventContent = remember(note.event) {
         val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-        val decryptedContent = if (note.event == null) null else AmberUtils.cachedDecryptedContent[note.event!!.id()]
-        val body = decryptedContent ?: accountViewModel.decrypt(note)
+        val body = accountViewModel.decrypt(note)
 
         if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
             "## $subject\n$body"
@@ -1569,41 +1560,8 @@ private fun RenderPrivateMessage(
     val noteEvent = note.event as? PrivateDmEvent ?: return
 
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
-    val scope = rememberCoroutineScope()
-
     if (withMe) {
-        val decryptedContent = AmberUtils.cachedDecryptedContent[noteEvent.id]
-        var eventContent by remember { mutableStateOf(decryptedContent ?: accountViewModel.decrypt(note)) }
-        val activityLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult(),
-            onResult = {
-                if (it.resultCode != Activity.RESULT_OK) {
-                    scope.launch(Dispatchers.Main) {
-                        Toast.makeText(
-                            Amethyst.instance,
-                            "Sign request rejected",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    return@rememberLauncherForActivityResult
-                }
-                AmberUtils.cachedDecryptedContent[noteEvent.id] = it.data?.getStringExtra("signature") ?: ""
-                eventContent = AmberUtils.cachedDecryptedContent[noteEvent.id]
-            }
-        )
-        if (accountViewModel.loggedInWithAmber() && decryptedContent == null) {
-            val event = note.event
-            SideEffect {
-                AmberUtils.openAmber(
-                    event?.content() ?: "",
-                    SignerType.NIP04_DECRYPT,
-                    activityLauncher,
-                    (event as PrivateDmEvent).talkingWith(accountViewModel.userProfile().pubkeyHex),
-                    event.id
-                )
-            }
-        }
-
+        val eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
         val hashtags = remember(note.event?.id()) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
         val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }

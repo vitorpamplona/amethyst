@@ -357,7 +357,34 @@ fun LoginPage(
                 Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
                     Button(
                         onClick = {
-                            loginWithAmber = true
+                            val result = AmberUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
+                            if (result == null) {
+                                loginWithAmber = true
+                                return@Button
+                            }
+                            key.value = TextFieldValue(result)
+                            if (!acceptedTerms.value) {
+                                termsAcceptanceIsRequired =
+                                    context.getString(R.string.acceptance_of_terms_is_required)
+                            }
+
+                            if (key.value.text.isBlank()) {
+                                errorMessage = context.getString(R.string.key_is_required)
+                            }
+
+                            if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                                try {
+                                    accountViewModel.startUI(
+                                        key.value.text,
+                                        useProxy.value,
+                                        proxyPort.value.toInt(),
+                                        true
+                                    )
+                                } catch (e: Exception) {
+                                    Log.e("Login", "Could not sign in", e)
+                                    errorMessage = context.getString(R.string.invalid_key)
+                                }
+                            }
                         },
                         shape = RoundedCornerShape(Size35dp),
                         modifier = Modifier

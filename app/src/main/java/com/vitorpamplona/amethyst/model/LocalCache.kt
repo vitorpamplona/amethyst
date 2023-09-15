@@ -214,7 +214,7 @@ object LocalCache {
                 if (hexKey != null) {
                     val pubKey = Hex.encode(hexKey)
                     if (pubKey == event.pubKey) {
-                        AmberUtils.content = ""
+                        AmberUtils.content.remove(event.id)
                     }
                 }
                 user.updateBookmark(event)
@@ -466,6 +466,7 @@ object LocalCache {
     }
 
     fun consume(event: PrivateDmEvent, relay: Relay?): Note {
+        Log.e("isRunning", event.toJson())
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 

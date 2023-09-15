@@ -11,7 +11,6 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -21,7 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
@@ -91,12 +89,6 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
                         )
                     }
                 }
-            }
-        }
-
-        DisposableEffect(Unit) {
-            onDispose {
-                AmberUtils.content = ""
             }
         }
     }

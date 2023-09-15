@@ -459,8 +459,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.content
-                            AmberUtils.content = ""
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
                         } else {
                             accountViewModel.removePrivateBookmark(note)
@@ -482,8 +481,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.content
-                            AmberUtils.content = ""
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
                         } else {
                             accountViewModel.addPrivateBookmark(note)
@@ -506,8 +504,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.content
-                            AmberUtils.content = ""
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.removePublicBookmark(
                                 note,
                                 bookmarks?.decryptedContent ?: ""
@@ -532,8 +529,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.content
-                            AmberUtils.content = ""
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.addPublicBookmark(
                                 note,
                                 bookmarks?.decryptedContent ?: ""

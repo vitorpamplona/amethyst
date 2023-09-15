@@ -110,11 +110,10 @@ class Account(
             if (loginWithAmber) {
                 val id = blockList?.id
                 if (id != null) {
-                    if (AmberUtils.cachedDecryptedContent[blockList.id] == null) {
+                    if (blockList.decryptedContent == null) {
                         GlobalScope.launch(Dispatchers.IO) {
                             val content = blockList.content
                             if (content.isEmpty()) return@launch
-                            AmberUtils.content = ""
                             AmberUtils.decryptBlockList(
                                 content,
                                 keyPair.pubKey.toHexKey(),
@@ -222,10 +221,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val content = AmberUtils.content[event.id] ?: ""
+                if (content.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, content)
             }
 
             Client.send(event)
@@ -243,10 +243,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val content = AmberUtils.content[event.id]
+                if (content.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, content)
             }
 
             // Keep this local to avoid erasing a good contact list.
@@ -260,11 +261,11 @@ class Account(
 
         var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val content = AmberUtils.content[event.id]
+            if (content.isBlank()) {
                 return
             }
-            event = MetadataEvent.create(event, AmberUtils.content)
+            event = MetadataEvent.create(event, content)
         }
         Client.send(event)
         LocalCache.consume(event)
@@ -314,21 +315,25 @@ class Account(
                             )
 
                             AmberUtils.openAmber(senderReaction)
-                            if (AmberUtils.content.isBlank()) return
-                            senderReaction = ReactionEvent.create(senderReaction, AmberUtils.content)
+                            val reactionContent = AmberUtils.content[event.id]
+                            if (reactionContent.isBlank()) return
+                            senderReaction = ReactionEvent.create(senderReaction, reactionContent)
 
                             val giftWraps = users.plus(senderPublicKey).map {
                                 val gossip = Gossip.create(senderReaction)
                                 val content = Gossip.toJson(gossip)
-                                AmberUtils.encrypt(content, it, SignerType.NIP44_ENCRYPT)
+                                AmberUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                                val encryptedContent = AmberUtils.content[gossip.id]
+                                if (encryptedContent.isBlank()) return
 
                                 var sealedEvent = SealedGossipEvent.create(
-                                    encryptedContent = AmberUtils.content,
+                                    encryptedContent = encryptedContent,
                                     pubKey = senderPublicKey
                                 )
                                 AmberUtils.openAmber(sealedEvent)
-                                if (AmberUtils.content.isBlank()) return
-                                sealedEvent = SealedGossipEvent.create(sealedEvent, AmberUtils.content)
+                                val eventContent = AmberUtils.content[sealedEvent.id] ?: ""
+                                if (eventContent.isBlank()) return
+                                sealedEvent = SealedGossipEvent.create(sealedEvent, eventContent)
 
                                 GiftWrapEvent.create(
                                     event = sealedEvent,
@@ -363,23 +368,26 @@ class Account(
                     )
 
                     AmberUtils.openAmber(senderReaction)
-                    if (AmberUtils.content.isBlank()) return
-                    senderReaction = ReactionEvent.create(senderReaction, AmberUtils.content)
+                    val reactionContent = AmberUtils.content[senderReaction.id] ?: ""
+                    if (reactionContent.isBlank()) return
+                    senderReaction = ReactionEvent.create(senderReaction, reactionContent)
 
                     val newUsers = users.plus(senderPublicKey)
                     newUsers.forEach {
                         val gossip = Gossip.create(senderReaction)
                         val content = Gossip.toJson(gossip)
-                        AmberUtils.content = ""
-                        AmberUtils.encrypt(content, it, SignerType.NIP44_ENCRYPT)
+                        AmberUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                        val encryptedContent = AmberUtils.content[gossip.id]
+                        if (encryptedContent.isBlank()) return
 
                         var sealedEvent = SealedGossipEvent.create(
-                            encryptedContent = AmberUtils.content,
+                            encryptedContent = encryptedContent,
                             pubKey = senderPublicKey
                         )
                         AmberUtils.openAmber(sealedEvent)
-                        if (AmberUtils.content.isBlank()) return
-                        sealedEvent = SealedGossipEvent.create(sealedEvent, AmberUtils.content)
+                        val sealedContent = AmberUtils.content[sealedEvent.id] ?: ""
+                        if (sealedContent.isBlank()) return
+                        sealedEvent = SealedGossipEvent.create(sealedEvent, sealedContent)
 
                         val giftWraps = GiftWrapEvent.create(
                             event = sealedEvent,
@@ -511,8 +519,9 @@ class Account(
         if (privKey != null) return zapResponseEvent.response(privKey, pubKey)
 
         AmberUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
-        if (AmberUtils.content.isBlank()) return null
-        return zapResponseEvent.response(AmberUtils.content)
+        val decryptedContent = AmberUtils.content[zapResponseEvent.id] ?: ""
+        if (decryptedContent.isBlank()) return null
+        return zapResponseEvent.response(decryptedContent)
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note?): Boolean {
@@ -582,16 +591,16 @@ class Account(
         note.event?.let {
             var event = ReactionEvent.createWarning(it, keyPair)
             if (loginWithAmber) {
-                AmberUtils.content = ""
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) return
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) return
                 event = ReactionEvent(
                     event.id,
                     event.pubKey,
                     event.createdAt,
                     event.tags,
                     event.content,
-                    AmberUtils.content
+                    eventContent
                 )
             }
             Client.send(event)
@@ -601,16 +610,16 @@ class Account(
         note.event?.let {
             var event = ReportEvent.create(it, type, keyPair, content = content)
             if (loginWithAmber) {
-                AmberUtils.content = ""
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) return
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) return
                 event = ReportEvent(
                     event.id,
                     event.pubKey,
                     event.createdAt,
                     event.tags,
                     event.content,
-                    AmberUtils.content
+                    eventContent
                 )
             }
             Client.send(event)
@@ -628,16 +637,16 @@ class Account(
 
         var event = ReportEvent.create(user.pubkeyHex, type, keyPair)
         if (loginWithAmber) {
-            AmberUtils.content = ""
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) return
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) return
             event = ReportEvent(
                 event.id,
                 event.pubKey,
                 event.createdAt,
                 event.tags,
                 event.content,
-                AmberUtils.content
+                eventContent
             )
         }
         Client.send(event)
@@ -670,10 +679,11 @@ class Account(
         var event = HTTPAuthorizationEvent.create(url, method, body, keyPair)
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return null
             }
-            event = HTTPAuthorizationEvent.create(event, AmberUtils.content)
+            event = HTTPAuthorizationEvent.create(event, eventContent)
         }
         return event
     }
@@ -734,10 +744,11 @@ class Account(
                             keyPair
                         )
                         AmberUtils.openAmber(unsignedEvent)
-                        returningContactList = if (AmberUtils.content.isBlank()) {
+                        val eventContent = AmberUtils.content[unsignedEvent.id] ?: ""
+                        returningContactList = if (eventContent.isBlank()) {
                             latestContactList
                         } else {
-                            ContactListEvent.create(unsignedEvent, AmberUtils.content)
+                            ContactListEvent.create(unsignedEvent, eventContent)
                         }
                     } else {
                         returningContactList = ContactListEvent.followAddressableEvent(
@@ -782,10 +793,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = ContactListEvent.create(event, AmberUtils.content)
+            event = ContactListEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -813,10 +825,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = ContactListEvent.create(event, AmberUtils.content)
+            event = ContactListEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -845,10 +858,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = ContactListEvent.create(event, AmberUtils.content)
+            event = ContactListEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -880,10 +894,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = ContactListEvent.create(event, AmberUtils.content)
+            event = ContactListEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -915,10 +930,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = ContactListEvent.create(event, AmberUtils.content)
+            event = ContactListEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -939,10 +955,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, eventContent)
             }
 
             Client.send(event)
@@ -964,10 +981,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, eventContent)
             }
 
             Client.send(event)
@@ -989,10 +1007,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, eventContent)
             }
 
             Client.send(event)
@@ -1014,10 +1033,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, eventContent)
             }
 
             Client.send(event)
@@ -1039,10 +1059,11 @@ class Account(
 
             if (loginWithAmber) {
                 AmberUtils.openAmber(event)
-                if (AmberUtils.content.isBlank()) {
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) {
                     return
                 }
-                event = ContactListEvent.create(event, AmberUtils.content)
+                event = ContactListEvent.create(event, eventContent)
             }
 
             Client.send(event)
@@ -1061,14 +1082,15 @@ class Account(
             )
 
             AmberUtils.openAmber(unsignedData)
-            if (AmberUtils.content.isBlank()) return null
+            val eventContent = AmberUtils.content[unsignedData.id] ?: ""
+            if (eventContent.isBlank()) return null
             val data = FileStorageEvent(
                 unsignedData.id,
                 unsignedData.pubKey,
                 unsignedData.createdAt,
                 unsignedData.tags,
                 unsignedData.content,
-                AmberUtils.content
+                eventContent
             )
 
             val unsignedEvent = FileStorageHeaderEvent.create(
@@ -1084,14 +1106,15 @@ class Account(
             )
 
             AmberUtils.openAmber(unsignedEvent)
-            if (AmberUtils.content.isBlank()) return null
+            val unsignedEventContent = AmberUtils.content[unsignedEvent.id] ?: ""
+            if (unsignedEventContent.isBlank()) return null
             val signedEvent = FileStorageHeaderEvent(
                 unsignedEvent.id,
                 unsignedEvent.pubKey,
                 unsignedEvent.createdAt,
                 unsignedEvent.tags,
                 unsignedEvent.content,
-                AmberUtils.content
+                unsignedEventContent
             )
 
             return Pair(data, signedEvent)
@@ -1153,14 +1176,15 @@ class Account(
                 keyPair = keyPair
             )
             AmberUtils.openAmber(unsignedEvent)
-            if (AmberUtils.content.isBlank()) return null
+            val eventContent = AmberUtils.content[unsignedEvent.id] ?: ""
+            if (eventContent.isBlank()) return null
             val signedEvent = FileHeaderEvent(
                 unsignedEvent.id,
                 unsignedEvent.pubKey,
                 unsignedEvent.createdAt,
                 unsignedEvent.tags,
                 unsignedEvent.content,
-                AmberUtils.content
+                eventContent
             )
 
             return sendHeader(signedEvent, relayList = relayList)
@@ -1219,10 +1243,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(signedEvent)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            signedEvent = TextNoteEvent.create(signedEvent, AmberUtils.content)
+            signedEvent = TextNoteEvent.create(signedEvent, eventContent)
         }
 
         Client.send(signedEvent, relayList = relayList)
@@ -1288,10 +1313,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(signedEvent)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            signedEvent = PollNoteEvent.create(signedEvent, AmberUtils.content)
+            signedEvent = PollNoteEvent.create(signedEvent, eventContent)
         }
 
         Client.send(signedEvent, relayList = relayList)
@@ -1339,10 +1365,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(signedEvent)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            signedEvent = ChannelMessageEvent.create(signedEvent, AmberUtils.content)
+            signedEvent = ChannelMessageEvent.create(signedEvent, eventContent)
         }
 
         Client.send(signedEvent)
@@ -1379,10 +1406,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(signedEvent)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            signedEvent = LiveActivitiesChatMessageEvent.create(signedEvent, AmberUtils.content)
+            signedEvent = LiveActivitiesChatMessageEvent.create(signedEvent, eventContent)
         }
 
         Client.send(signedEvent)
@@ -1410,10 +1438,11 @@ class Account(
 
         var localMessage = message
         if (loginWithAmber) {
-            AmberUtils.content = ""
-            AmberUtils.encrypt(localMessage, toUser)
-            if (AmberUtils.content.isBlank()) return
-            localMessage = AmberUtils.content
+            AmberUtils.encrypt(localMessage, toUser, "encrypt")
+            val eventContent = AmberUtils.content["encrypt"] ?: ""
+            if (eventContent.isBlank()) return
+            localMessage = eventContent
+            AmberUtils.content.remove("encrypt")
         }
 
         var signedEvent = PrivateDmEvent.create(
@@ -1432,10 +1461,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(signedEvent)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            signedEvent = PrivateDmEvent.create(signedEvent, AmberUtils.content)
+            signedEvent = PrivateDmEvent.create(signedEvent, eventContent)
         }
 
         Client.send(signedEvent)
@@ -1473,22 +1503,24 @@ class Account(
             )
 
             AmberUtils.openAmber(chatMessageEvent)
-            if (AmberUtils.content.isBlank()) return
-            chatMessageEvent = ChatMessageEvent.create(chatMessageEvent, AmberUtils.content)
+            val eventContent = AmberUtils.content[chatMessageEvent.id] ?: ""
+            if (eventContent.isBlank()) return
+            chatMessageEvent = ChatMessageEvent.create(chatMessageEvent, eventContent)
             val senderPublicKey = keyPair.pubKey.toHexKey()
             toUsers.plus(senderPublicKey).toSet().forEach {
                 val gossip = Gossip.create(chatMessageEvent)
                 val content = Gossip.toJson(gossip)
-                AmberUtils.content = ""
-                AmberUtils.encrypt(content, it, SignerType.NIP44_ENCRYPT)
-                if (AmberUtils.content.isNotBlank()) {
+                AmberUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                val gossipContent = AmberUtils.content[gossip.id] ?: ""
+                if (gossipContent.isNotBlank()) {
                     var sealedEvent = SealedGossipEvent.create(
-                        encryptedContent = AmberUtils.content,
+                        encryptedContent = gossipContent,
                         pubKey = senderPublicKey
                     )
                     AmberUtils.openAmber(sealedEvent)
-                    if (AmberUtils.content.isBlank()) return
-                    sealedEvent = SealedGossipEvent.create(sealedEvent, AmberUtils.content)
+                    val sealedEventContent = AmberUtils.content[sealedEvent.id] ?: ""
+                    if (sealedEventContent.isBlank()) return
+                    sealedEvent = SealedGossipEvent.create(sealedEvent, sealedEventContent)
 
                     val giftWraps = GiftWrapEvent.create(
                         event = sealedEvent,
@@ -1522,13 +1554,11 @@ class Account(
             // Only keep in cache the GiftWrap for the account.
             if (it.recipientPubKey() == keyPair.pubKey.toHexKey()) {
                 if (loginWithAmber) {
-                    AmberUtils.content = ""
                     AmberUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
                     val decryptedContent = AmberUtils.cachedDecryptedContent[it.id] ?: ""
                     if (decryptedContent.isEmpty()) return
                     it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
                         if (cached is SealedGossipEvent) {
-                            AmberUtils.content = ""
                             AmberUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
                             val localDecryptedContent = AmberUtils.cachedDecryptedContent[cached.id] ?: ""
                             if (localDecryptedContent.isEmpty()) return
@@ -1572,10 +1602,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = ChannelCreateEvent.create(event, AmberUtils.content)
+            event = ChannelCreateEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -1593,10 +1624,11 @@ class Account(
         var event = StatusEvent.update(oldEvent, newStatus, keyPair)
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = StatusEvent.create(event, AmberUtils.content)
+            event = StatusEvent.create(event, eventContent)
         }
         Client.send(event)
         LocalCache.consume(event, null)
@@ -1608,10 +1640,11 @@ class Account(
         var event = StatusEvent.create(newStatus, "general", expiration = null, keyPair)
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = StatusEvent.create(event, AmberUtils.content)
+            event = StatusEvent.create(event, eventContent)
         }
         Client.send(event)
         LocalCache.consume(event, null)
@@ -1624,10 +1657,11 @@ class Account(
         var event = StatusEvent.clear(oldEvent, keyPair)
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = StatusEvent.create(event, AmberUtils.content)
+            event = StatusEvent.create(event, eventContent)
         }
         Client.send(event)
         LocalCache.consume(event, null)
@@ -1635,10 +1669,11 @@ class Account(
         var event2 = DeletionEvent.create(listOf(event.id), keyPair)
         if (loginWithAmber) {
             AmberUtils.openAmber(event2)
-            if (AmberUtils.content.isBlank()) {
+            val event2Content = AmberUtils.content[event2.id] ?: ""
+            if (event2Content.isBlank()) {
                 return
             }
-            event2 = DeletionEvent.create(event2, AmberUtils.content)
+            event2 = DeletionEvent.create(event2, event2Content)
         }
         Client.send(event2)
         LocalCache.consume(event2)
@@ -1659,10 +1694,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = EmojiPackSelectionEvent.create(event, AmberUtils.content)
+            event = EmojiPackSelectionEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -1695,10 +1731,11 @@ class Account(
 
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return
             }
-            event = EmojiPackSelectionEvent.create(event, AmberUtils.content)
+            event = EmojiPackSelectionEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -1732,9 +1769,10 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-
-        if (AmberUtils.content.isBlank()) {
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
+        AmberUtils.content.remove("encrypt")
+        if (encryptedContent.isBlank()) {
             return
         }
 
@@ -1744,16 +1782,17 @@ class Account(
             bookmarks?.taggedUsers() ?: emptyList(),
             bookmarks?.taggedAddresses() ?: emptyList(),
 
-            AmberUtils.content,
+            encryptedContent,
 
             keyPair.pubKey.toHexKey()
         )
 
         AmberUtils.openAmber(event)
-        if (AmberUtils.content.isBlank()) {
+        val eventContent = AmberUtils.content[event.id] ?: ""
+        if (eventContent.isBlank()) {
             return
         }
-        event = BookmarkListEvent.create(event, AmberUtils.content)
+        event = BookmarkListEvent.create(event, eventContent)
 
         Client.send(event)
         LocalCache.consume(event)
@@ -1786,9 +1825,10 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-
-        if (AmberUtils.content.isBlank()) {
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
+        AmberUtils.content.remove("encrypt")
+        if (encryptedContent.isBlank()) {
             return
         }
 
@@ -1798,16 +1838,17 @@ class Account(
             bookmarks?.taggedUsers() ?: emptyList(),
             bookmarks?.taggedAddresses() ?: emptyList(),
 
-            AmberUtils.content,
+            encryptedContent,
 
             keyPair.pubKey.toHexKey()
         )
 
         AmberUtils.openAmber(event)
-        if (AmberUtils.content.isBlank()) {
+        val eventContent = AmberUtils.content[event.id] ?: ""
+        if (eventContent.isBlank()) {
             return
         }
-        event = BookmarkListEvent.create(event, AmberUtils.content)
+        event = BookmarkListEvent.create(event, eventContent)
 
         Client.send(event)
         LocalCache.consume(event)
@@ -1870,9 +1911,10 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-
-        if (AmberUtils.content.isBlank()) {
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
+        AmberUtils.content.remove("encrypt")
+        if (encryptedContent.isBlank()) {
             return
         }
 
@@ -1882,7 +1924,7 @@ class Account(
                 bookmarks?.taggedEvents() ?: emptyList(),
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
-                AmberUtils.content,
+                encryptedContent,
                 keyPair.pubKey.toHexKey()
             )
         } else {
@@ -1891,15 +1933,16 @@ class Account(
                 bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
-                AmberUtils.content,
+                encryptedContent,
                 keyPair.pubKey.toHexKey()
             )
         }
         AmberUtils.openAmber(event)
-        if (AmberUtils.content.isBlank()) {
+        val eventContent = AmberUtils.content[event.id] ?: ""
+        if (eventContent.isBlank()) {
             return
         }
-        event = BookmarkListEvent.create(event, AmberUtils.content)
+        event = BookmarkListEvent.create(event, encryptedContent)
 
         Client.send(event)
         LocalCache.consume(event)
@@ -1985,10 +2028,11 @@ class Account(
         var event = RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) {
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) {
                 return null
             }
-            event = RelayAuthEvent.create(event, AmberUtils.content)
+            event = RelayAuthEvent.create(event, eventContent)
         }
 
         return event
@@ -2051,9 +2095,10 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-
-        if (AmberUtils.content.isBlank()) {
+        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
+        AmberUtils.content.remove("encrypt")
+        if (encryptedContent.isBlank()) {
             return
         }
 
@@ -2063,7 +2108,7 @@ class Account(
                 bookmarks?.taggedEvents() ?: emptyList(),
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses()?.minus(note.address),
-                AmberUtils.content,
+                encryptedContent,
                 keyPair.pubKey.toHexKey()
             )
         } else {
@@ -2072,16 +2117,17 @@ class Account(
                 bookmarks?.taggedEvents()?.minus(note.idHex),
                 bookmarks?.taggedUsers() ?: emptyList(),
                 bookmarks?.taggedAddresses() ?: emptyList(),
-                AmberUtils.content,
+                encryptedContent,
                 keyPair.pubKey.toHexKey()
             )
         }
 
         AmberUtils.openAmber(event)
-        if (AmberUtils.content.isBlank()) {
+        val eventContent = AmberUtils.content[event.id] ?: ""
+        if (eventContent.isBlank()) {
             return
         }
-        event = BookmarkListEvent.create(event, AmberUtils.content)
+        event = BookmarkListEvent.create(event, eventContent)
 
         Client.send(event)
         LocalCache.consume(event)
@@ -2154,25 +2200,26 @@ class Account(
                 val privateTags = listOf(listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
-                AmberUtils.content = ""
-                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-                if (AmberUtils.content.isBlank()) return
-                AmberUtils.content
+                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+                val encryptedContent = AmberUtils.content["encrypted"] ?: ""
+                AmberUtils.content.remove("encrypted")
+                if (encryptedContent.isBlank()) return
+                encryptedContent
             } else {
                 var decryptedContent = AmberUtils.cachedDecryptedContent[id]
                 if (decryptedContent == null) {
-                    AmberUtils.content = ""
-                    AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
-                    if (AmberUtils.content.isBlank()) return
-                    decryptedContent = AmberUtils.content
+                    AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
+                    val content = AmberUtils.content[id] ?: ""
+                    if (content.isBlank()) return
+                    decryptedContent = content
                 }
 
                 val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
-                AmberUtils.content = ""
-                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-                if (AmberUtils.content.isBlank()) return
-                AmberUtils.content
+                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
+                val eventContent = AmberUtils.content[id] ?: ""
+                if (eventContent.isBlank()) return
+                eventContent
             }
 
             var event = if (blockList != null) {
@@ -2193,15 +2240,16 @@ class Account(
                 )
             }
 
-            AmberUtils.content = ""
             AmberUtils.openAmber(event)
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) return
             event = PeopleListEvent(
                 event.id,
                 event.pubKey,
                 event.createdAt,
                 event.tags,
                 event.content,
-                AmberUtils.content
+                eventContent
             )
 
             Client.send(event)
@@ -2241,25 +2289,24 @@ class Account(
                     val privateTags = listOf(listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
 
-                    AmberUtils.content = ""
-                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-                    if (AmberUtils.content.isBlank()) return
-                    AmberUtils.content
+                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    val eventContent = AmberUtils.content[blockList.id] ?: ""
+                    if (eventContent.isBlank()) return
+                    eventContent
                 } else {
                     var decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
                     if (decryptedContent == null) {
-                        AmberUtils.content = ""
                         AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
-                        if (AmberUtils.content.isBlank()) return
-                        decryptedContent = AmberUtils.content
+                        val eventContent = AmberUtils.content[blockList.id] ?: ""
+                        if (eventContent.isBlank()) return
+                        decryptedContent = eventContent
                     }
-                    AmberUtils.content = ""
                     val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
-                    AmberUtils.content = ""
-                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey())
-                    if (AmberUtils.content.isBlank()) return
-                    AmberUtils.content
+                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    val eventContent = AmberUtils.content[blockList.id] ?: ""
+                    if (eventContent.isBlank()) return
+                    eventContent
                 }
 
                 var event = PeopleListEvent.addUser(
@@ -2270,9 +2317,10 @@ class Account(
                     encryptedContent
                 )
 
-                AmberUtils.content = ""
                 AmberUtils.openAmber(event)
-                event = PeopleListEvent.create(event, AmberUtils.content)
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) return
+                event = PeopleListEvent.create(event, eventContent)
 
                 Client.send(event)
                 LocalCache.consume(event)
@@ -2485,8 +2533,9 @@ class Account(
         )
         if (loginWithAmber) {
             AmberUtils.openAmber(event)
-            if (AmberUtils.content.isBlank()) return
-            event = ChannelMetadataEvent.create(event, AmberUtils.content)
+            val eventContent = AmberUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) return
+            event = ChannelMetadataEvent.create(event, eventContent)
         }
 
         Client.send(event)
@@ -2501,7 +2550,6 @@ class Account(
         if (loginWithAmber) {
             var decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
             if (decryptedContent == null) {
-                AmberUtils.content = ""
                 AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
             }
             decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
@@ -2518,7 +2566,6 @@ class Account(
         if (loginWithAmber) {
             var decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
             if (decryptedContent == null) {
-                AmberUtils.content = ""
                 AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
             }
             decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
@@ -2546,7 +2593,6 @@ class Account(
         return when (event) {
             is PrivateDmEvent -> {
                 if (AmberUtils.cachedDecryptedContent[event.id] == null) {
-                    AmberUtils.content = ""
                     AmberUtils.decryptDM(
                         event.content,
                         event.talkingWith(userProfile().pubkeyHex),
@@ -2571,25 +2617,16 @@ class Account(
         val loggedInPrivateKey = keyPair.privKey
 
         if (loginWithAmber && event is LnZapRequestEvent && event.isPrivateZap()) {
-            // never decrypt zaps for now, it keeps opening amber for very private zap event
+            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+            if (decryptedContent != null) {
+                return try {
+                    Event.fromJson(decryptedContent)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            AmberUtils.decryptZapEvent(event)
             return null
-//            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
-//            if (decryptedContent != null) {
-//                return try {
-//                    Event.fromJson(decryptedContent)
-//                } catch (e: Exception) {
-//                    null
-//                }
-//            }
-//            AmberUtils.decryptZapEvent(event)
-//            if (AmberUtils.content.isBlank()) return null
-//            if (AmberUtils.content == "Could not decrypt the message") return null
-//            AmberUtils.cachedDecryptedContent[event.id] = AmberUtils.content
-//            return try {
-//                Event.fromJson(AmberUtils.content)
-//            } catch (e: Exception) {
-//                null
-//            }
         }
 
         return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {

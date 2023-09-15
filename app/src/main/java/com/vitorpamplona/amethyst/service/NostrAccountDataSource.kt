@@ -8,6 +8,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
-import kotlinx.coroutines.DelicateCoroutinesApi
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
@@ -147,13 +147,26 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun consume(event: Event, relay: Relay) {
         if (LocalCache.justVerify(event)) {
             if (event is GiftWrapEvent) {
                 val privateKey = account.keyPair.privKey
                 if (privateKey != null) {
                     event.cachedGift(privateKey)?.let {
+                        this.consume(it, relay)
+                    }
+                } else if (account.loginWithAmber) {
+                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGift(account.keyPair.pubKey, cached)?.let {
                         this.consume(it, relay)
                     }
                 }
@@ -163,6 +176,20 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 val privateKey = account.keyPair.privKey
                 if (privateKey != null) {
                     event.cachedGossip(privateKey)?.let {
+                        LocalCache.justConsume(it, relay)
+                    }
+                } else if (account.loginWithAmber) {
+                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGossip(account.keyPair.pubKey, cached)?.let {
                         LocalCache.justConsume(it, relay)
                     }
                 }
@@ -195,6 +222,15 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         if (this::account.isInitialized) {
             if (account.loginWithAmber) {
                 val event = RelayAuthEvent.create(relay.url, challenge, account.keyPair.pubKey.toHexKey(), account.keyPair.privKey)
+                val result = AmberUtils.getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson()), "event")
+                if (result !== null) {
+                    val signedEvent = Event.fromJson(result)
+                    Client.send(
+                        signedEvent,
+                        relay.url
+                    )
+                    return
+                }
                 AmberUtils.signEvent(event)
             } else {
                 val event = account.createAuthEvent(relay, challenge)
