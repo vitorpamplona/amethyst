@@ -29,10 +29,31 @@ object AmberUtils {
     var isActivityRunning: Boolean = false
     val cachedDecryptedContent = mutableMapOf<HexKey, String>()
     lateinit var account: Account
-    lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
-    lateinit var decryptResultLauncher: ActivityResultLauncher<Intent>
-    lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
-    lateinit var signEventResultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var decryptResultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var signEventResultLauncher: ActivityResultLauncher<Intent>
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun requestRejectedToast() {
+        GlobalScope.launch(Dispatchers.Main) {
+            Toast.makeText(
+                Amethyst.instance,
+                "Sign request rejected",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun default() {
+        isActivityRunning = false
+        ServiceManager.shouldPauseService = true
+        GlobalScope.launch(Dispatchers.IO) {
+            isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+        }
+    }
 
     @OptIn(DelicateCoroutinesApi::class)
     fun start(activity: MainActivity) {
@@ -40,13 +61,7 @@ object AmberUtils {
             ActivityResultContracts.StartActivityForResult()
         ) {
             if (it.resultCode != Activity.RESULT_OK) {
-                GlobalScope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                requestRejectedToast()
             } else {
                 val json = it.data?.getStringExtra("event") ?: ""
                 GlobalScope.launch(Dispatchers.IO) {
@@ -57,21 +72,14 @@ object AmberUtils {
                     }
                 }
             }
-            isActivityRunning = false
-            ServiceManager.shouldPauseService = true
+            default()
         }
 
         activityResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
             if (it.resultCode != Activity.RESULT_OK) {
-                GlobalScope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                requestRejectedToast()
             } else {
                 val event = it.data?.getStringExtra("signature") ?: ""
                 val id = it.data?.getStringExtra("id") ?: ""
@@ -79,25 +87,14 @@ object AmberUtils {
                     content.put(id, event)
                 }
             }
-            isActivityRunning = false
-            ServiceManager.shouldPauseService = true
-            GlobalScope.launch(Dispatchers.IO) {
-                isActivityRunning = false
-                ServiceManager.shouldPauseService = true
-            }
+            default()
         }
 
         decryptResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
             if (it.resultCode != Activity.RESULT_OK) {
-                GlobalScope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                requestRejectedToast()
             } else {
                 val event = it.data?.getStringExtra("signature") ?: ""
                 val id = it.data?.getStringExtra("id") ?: ""
@@ -106,25 +103,14 @@ object AmberUtils {
                     cachedDecryptedContent[id] = event
                 }
             }
-            isActivityRunning = false
-            ServiceManager.shouldPauseService = true
-            GlobalScope.launch(Dispatchers.IO) {
-                isActivityRunning = false
-                ServiceManager.shouldPauseService = true
-            }
+            default()
         }
 
         blockListResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
             if (it.resultCode != Activity.RESULT_OK) {
-                GlobalScope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                requestRejectedToast()
             } else {
                 val decryptedContent = it.data?.getStringExtra("signature") ?: ""
                 val id = it.data?.getStringExtra("id") ?: ""
@@ -133,12 +119,7 @@ object AmberUtils {
                     account.live.invalidateData()
                 }
             }
-            isActivityRunning = false
-            ServiceManager.shouldPauseService = true
-            GlobalScope.launch(Dispatchers.IO) {
-                isActivityRunning = false
-                ServiceManager.shouldPauseService = true
-            }
+            default()
         }
     }
 
