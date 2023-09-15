@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
@@ -43,6 +44,7 @@ import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -215,111 +217,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return null
     }
 
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
-        viewModelScope.launch(Dispatchers.IO) {
-            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType)
-        }
-    }
-
-    private suspend fun innerZap(note: Note, amountMilliSats: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
-        val zapSplitSetup = note.event?.zapSplitSetup()
-
-        val zapsToSend = if (!zapSplitSetup.isNullOrEmpty()) {
-            zapSplitSetup
-        } else {
-            val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
-
-            if (lud16.isNullOrBlank()) {
-                onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
-                return
-            }
-
-            listOf(ZapSplitSetup(lud16, null, weight = 1.0, true))
-        }
-
-        val totalWeight = zapsToSend.sumOf { it.weight }
-
-        val invoicesToPayOnIntent = mutableListOf<String>()
-
-        zapsToSend.forEachIndexed { index, value ->
-            val outerProgressMin = index / zapsToSend.size.toFloat()
-            val outerProgressMax = (index + 1) / zapsToSend.size.toFloat()
-
-            val zapValue =
-                round((amountMilliSats * value.weight / totalWeight) / 1000f).toLong() * 1000
-
-            if (value.isLnAddress) {
-                innerZap(
-                    lud16 = value.lnAddressOrPubKeyHex,
-                    note = note,
-                    amount = zapValue,
-                    pollOption = pollOption,
-                    message = message,
-                    context = context,
-                    onError = onError,
-                    onProgress = {
-                        onProgress((it * (outerProgressMax - outerProgressMin)) + outerProgressMin)
-                    },
-                    zapType = zapType,
-                    onPayInvoiceThroughIntent = {
-                        invoicesToPayOnIntent.add(it)
-                    }
-                )
-            } else {
-                val user = LocalCache.getUserIfExists(value.lnAddressOrPubKeyHex)
-                val lud16 = user?.info?.lnAddress()
-
-                if (lud16 != null) {
-                    innerZap(
-                        lud16 = lud16,
-                        note = note,
-                        amount = zapValue,
-                        pollOption = pollOption,
-                        message = message,
-                        context = context,
-                        onError = onError,
-                        onProgress = {
-                            onProgress((it * (outerProgressMax - outerProgressMin)) + outerProgressMin)
-                        },
-                        zapType = zapType,
-                        overrideUser = user,
-                        onPayInvoiceThroughIntent = {
-                            invoicesToPayOnIntent.add(it)
-                        }
-                    )
-                } else {
-                    onError(
-                        context.getString(
-                            R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                            user?.toBestDisplayName() ?: value.lnAddressOrPubKeyHex
-                        )
-                    )
-                }
-            }
-        }
-
-        if (invoicesToPayOnIntent.isNotEmpty()) {
-            payInvoices(bolt11s = invoicesToPayOnIntent, context = context)
-        }
-
-        // Awaits for the event to come back to LocalCache.
-        viewModelScope.launch(Dispatchers.IO) {
-            delay(5000)
-            onProgress(1f)
-        }
-    }
-
-    private suspend fun payInvoices(bolt11s: List<String>, context: Context) {
-        val uri = "lightning:" + bolt11s.joinToString("&")
-
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-        ContextCompat.startActivity(context, intent, null)
-    }
-
-    private suspend fun innerZap(
-        lud16: String,
+    fun zap(
         note: Note,
         amount: Long,
         pollOption: Int?,
@@ -327,58 +225,12 @@ class AccountViewModel(val account: Account) : ViewModel() {
         context: Context,
         onError: (String) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        onPayInvoiceThroughIntent: (String) -> Unit,
-        zapType: LnZapEvent.ZapType,
-        overrideUser: User? = null
+        onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+        zapType: LnZapEvent.ZapType
     ) {
-        var zapRequestJson = ""
-
-        if (zapType != LnZapEvent.ZapType.NONZAP) {
-            val zapRequest = account.createZapRequestFor(note, pollOption, message, zapType, overrideUser)
-            if (zapRequest != null) {
-                zapRequestJson = zapRequest.toJson()
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            ZapPaymentHandler(account).zap(note, amount, pollOption, message, context, onError, onProgress, onPayViaIntent, zapType)
         }
-
-        onProgress(0.10f)
-
-        LightningAddressResolver().lnAddressInvoice(
-            lud16,
-            amount,
-            message,
-            zapRequestJson,
-            onSuccess = {
-                onProgress(0.7f)
-                if (account.hasWalletConnectSetup()) {
-                    account.sendZapPaymentRequestFor(
-                        bolt11 = it,
-                        note,
-                        onResponse = { response ->
-                            if (response is PayInvoiceErrorResponse) {
-                                onProgress(0.0f)
-                                onError(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: "Error parsing error message"
-                                )
-                            } else {
-                                onProgress(1f)
-                            }
-                        }
-                    )
-                    onProgress(0.8f)
-                } else {
-                    try {
-                        onPayInvoiceThroughIntent(it)
-                    } catch (e: Exception) {
-                        onError(context.getString(R.string.lightning_wallets_not_found2))
-                    }
-                    onProgress(0f)
-                }
-            },
-            onError = onError,
-            onProgress = onProgress
-        )
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {

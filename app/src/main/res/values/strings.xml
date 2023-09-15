@@ -582,4 +582,6 @@
     <string name="forwarding_zaps_to">Forwarding zaps to</string>
 
     <string name="lightning_wallets_not_found2">Lightning wallets not found</string>
+    <string name="paid">Paid</string>
+    <string name="wallet_number">Wallet %1$s</string>
 </resources>
