@@ -1577,6 +1577,7 @@ fun ZapAmountChoicePopup(
             AmberUtils.isActivityRunning = false
             ServiceManager.shouldPauseService = true
             event = null
+            onDismiss()
         }
     )
 
