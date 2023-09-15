@@ -4,8 +4,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.quartz.encoders.Bech32
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.encoders.Lud06
 import com.vitorpamplona.quartz.encoders.toLnUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,11 +27,7 @@ class LightningAddressResolver() {
         }
 
         if (lnaddress.lowercase().startsWith("lnurl")) {
-            return try {
-                String(Bech32.decodeBytes(lnaddress, false).second)
-            } catch (e: Exception) {
-                null
-            }
+            return Lud06().toLnUrlp(lnaddress)
         }
 
         return null
