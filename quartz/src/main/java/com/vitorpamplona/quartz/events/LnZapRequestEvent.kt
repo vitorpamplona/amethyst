@@ -99,6 +99,13 @@ class LnZapRequestEvent(
             return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
         }
 
+        fun create(
+            unsignedEvent: LnZapRequestEvent,
+            signature: String
+        ): LnZapRequestEvent {
+            return LnZapRequestEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+        }
+
         fun createPublic(
             originalNote: EventInterface,
             relays: Set<String>,
@@ -146,7 +153,7 @@ class LnZapRequestEvent(
 
             tags = tags + listOf(listOf("anon", ""))
 
-            return LnZapRequestEvent("", pubKey, createdAt, tags, content, "")
+            return LnZapRequestEvent("zap", pubKey, createdAt, tags, content, "")
         }
 
         fun createAnonymous(

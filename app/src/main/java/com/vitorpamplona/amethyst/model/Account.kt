@@ -454,18 +454,26 @@ class Account(
                         )
                     }
                     LnZapEvent.ZapType.PUBLIC -> {
-                        return LnZapRequestEvent.createPublic(
+                        val unsignedEvent = LnZapRequestEvent.createPublic(
                             event,
                             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                                 ?: localRelays.map { it.url }.toSet(),
                             keyPair.pubKey.toHexKey(),
                             pollOption,
                             message
+                        )
+                        AmberUtils.openAmber(unsignedEvent)
+                        val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                        if (content.isBlank()) return null
+
+                        return LnZapRequestEvent.create(
+                            unsignedEvent,
+                            content
                         )
                     }
 
                     LnZapEvent.ZapType.PRIVATE -> {
-                        return LnZapRequestEvent.createPrivateZap(
+                        val unsignedEvent = LnZapRequestEvent.createPrivateZap(
                             event,
                             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                                 ?: localRelays.map { it.url }.toSet(),
@@ -473,6 +481,11 @@ class Account(
                             pollOption,
                             message
                         )
+                        AmberUtils.openAmber(unsignedEvent)
+                        val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                        if (content.isBlank()) return null
+
+                        return Event.fromJson(content) as LnZapRequestEvent
                     }
                     else -> null
                 }

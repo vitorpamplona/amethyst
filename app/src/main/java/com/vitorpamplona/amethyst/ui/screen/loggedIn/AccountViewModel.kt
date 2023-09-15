@@ -225,11 +225,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         context: Context,
         onError: (String) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        zapType: LnZapEvent.ZapType,
-        zapRequest: LnZapRequestEvent?
+        zapType: LnZapEvent.ZapType
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType, zapRequest)
+            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType)
         }
     }
 
@@ -241,8 +240,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         context: Context,
         onError: (String) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        zapType: LnZapEvent.ZapType,
-        zapRequest: LnZapRequestEvent?
+        zapType: LnZapEvent.ZapType
     ) {
         val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
@@ -253,13 +251,9 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
         var zapRequestJson = ""
         if (zapType != LnZapEvent.ZapType.NONZAP) {
-            if (zapRequest != null) {
-                zapRequestJson = zapRequest.toJson()
-            } else {
-                val localZapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
-                if (localZapRequest != null) {
-                    zapRequestJson = localZapRequest.toJson()
-                }
+            val localZapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
+            if (localZapRequest != null) {
+                zapRequestJson = localZapRequest.toJson()
             }
         }
 

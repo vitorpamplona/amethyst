@@ -466,7 +466,6 @@ object LocalCache {
     }
 
     fun consume(event: PrivateDmEvent, relay: Relay?): Note {
-        Log.e("isRunning", event.toJson())
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 

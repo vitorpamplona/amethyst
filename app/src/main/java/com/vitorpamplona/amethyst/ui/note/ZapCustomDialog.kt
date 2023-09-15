@@ -1,15 +1,31 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.app.Activity
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Icon
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,26 +39,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
@@ -96,55 +103,6 @@ fun ZapCustomDialog(
     val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
     var selectedZapType by remember(accountViewModel) { mutableStateOf(accountViewModel.account.defaultZapType) }
 
-    val event = remember { mutableStateOf<LnZapRequestEvent?>(null) }
-    val activityResult = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = {
-            if (it.resultCode != Activity.RESULT_OK) {
-                postViewModel.viewModelScope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                event.value = null
-            } else {
-                val json = it.data?.getStringExtra("event") ?: ""
-                val signedEvent = Event.fromJson(json) as LnZapRequestEvent
-                if (signedEvent.hasValidSignature()) {
-                    accountViewModel.zap(
-                        baseNote,
-                        postViewModel.value()!! * 1000L,
-                        null,
-                        postViewModel.customMessage.text,
-                        context,
-                        onError,
-                        onProgress,
-                        selectedZapType,
-                        signedEvent
-                    )
-                    event.value = null
-                    onClose()
-                }
-            }
-            AmberUtils.isActivityRunning = false
-            ServiceManager.shouldPauseService = true
-        }
-    )
-
-    LaunchedEffect(event.value) {
-        if (event.value != null) {
-            AmberUtils.openAmber(
-                event.value!!.toJson(),
-                SignerType.SIGN_EVENT,
-                activityResult,
-                "",
-                event.value!!.id()
-            )
-        }
-    }
-
     Dialog(
         onDismissRequest = { onClose() },
         properties = DialogProperties(
@@ -167,22 +125,16 @@ fun ZapCustomDialog(
                     ZapButton(
                         isActive = postViewModel.canSend()
                     ) {
-                        if (accountViewModel.loggedInWithAmber() && selectedZapType != LnZapEvent.ZapType.ANONYMOUS && selectedZapType != LnZapEvent.ZapType.PUBLIC) {
-                            event.value = accountViewModel.account.createZapRequestFor(baseNote, null, postViewModel.customMessage.text, selectedZapType)
-                        } else {
-                            accountViewModel.zap(
-                                baseNote,
-                                postViewModel.value()!! * 1000L,
-                                null,
-                                postViewModel.customMessage.text,
-                                context,
-                                onError = onError,
-                                onProgress = onProgress,
-                                zapType = selectedZapType,
-                                null
-                            )
-                            onClose()
-                        }
+                        accountViewModel.zap(
+                            baseNote,
+                            postViewModel.value()!! * 1000L,
+                            null,
+                            postViewModel.customMessage.text,
+                            context,
+                            onError = onError,
+                            onProgress = onProgress,
+                            zapType = selectedZapType
+                        )
                     }
                 }
 
