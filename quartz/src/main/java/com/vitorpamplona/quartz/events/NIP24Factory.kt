@@ -13,7 +13,7 @@ class NIP24Factory {
         subject: String? = null,
         replyTos: List<String>? = null,
         mentions: List<String>? = null,
-        zapReceiver: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
         markAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
         geohash: String? = null

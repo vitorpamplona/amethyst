@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.ZapSplitSetup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -92,9 +94,13 @@ open class NewPostViewModel() : ViewModel() {
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
+    data class ForwardZapSetup(val user: User) {
+        var percentage by mutableStateOf(100)
+    }
+
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
-    var forwardZapTo by mutableStateOf<User?>(null)
+    var forwardZapTo by mutableStateOf<Split<User>>(Split())
     var forwardZapToEditting by mutableStateOf(TextFieldValue(""))
 
     // NSFW, Sensitive
@@ -155,7 +161,7 @@ open class NewPostViewModel() : ViewModel() {
         wantsToAddGeoHash = false
         wantsZapraiser = false
         zapRaiserAmount = null
-        forwardZapTo = null
+        forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
 
         this.account = account
@@ -170,14 +176,14 @@ open class NewPostViewModel() : ViewModel() {
             toUsersTagger.run()
             val dmUsers = toUsersTagger.mentions
 
-            val zapReceiver = if (wantsForwardZapTo) {
-                if (forwardZapTo != null) {
-                    forwardZapTo?.info?.lud16 ?: forwardZapTo?.info?.lud06
-                } else {
-                    forwardZapToEditting.text
-                }
-            } else {
-                null
+        val zapReceiver = if (wantsForwardZapTo) {
+            forwardZapTo?.items?.map {
+                ZapSplitSetup(
+                    lnAddressOrPubKeyHex = it.key.pubkeyHex,
+                    relay = it.key.relaysBeingUsed.keys.firstOrNull(),
+                    weight = it.percentage.toDouble(),
+                    isLnAddress = false
+                )
             }
 
             val geoLocation = locUtil?.locationStateFlow?.value
@@ -375,7 +381,7 @@ open class NewPostViewModel() : ViewModel() {
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
         wantsToAddGeoHash = false
-        forwardZapTo = null
+        forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
 
         userSuggestions = emptyList()
@@ -447,10 +453,10 @@ open class NewPostViewModel() : ViewModel() {
     open fun updateZapForwardTo(it: TextFieldValue) {
         forwardZapToEditting = it
         if (it.selection.collapsed) {
-            val lastWord = it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+            val lastWord = it.text
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
-            if (lastWord.startsWith("@") && lastWord.length > 2) {
+            if (lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
@@ -480,6 +486,9 @@ open class NewPostViewModel() : ViewModel() {
                     TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
                 )
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
+                forwardZapTo?.addItem(item)
+                forwardZapToEditting = TextFieldValue("")
+                /*
                 val lastWord = forwardZapToEditting.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
                 val wordToInsert = "@${item.pubkeyNpub()}"
@@ -488,7 +497,7 @@ open class NewPostViewModel() : ViewModel() {
                 forwardZapToEditting = TextFieldValue(
                     forwardZapToEditting.text.replaceRange(lastWordStart, it.end, wordToInsert),
                     TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
-                )
+                )*/
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
                 val lastWord = toUsers.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
@@ -675,6 +684,10 @@ open class NewPostViewModel() : ViewModel() {
             isValidvalueMinimum.value = true
             isValidvalueMaximum.value = true
         }
+    }
+
+    fun updateZapPercentage(index: Int, sliderValue: Float) {
+        forwardZapTo?.updatePercentage(index, sliderValue)
     }
 }
 

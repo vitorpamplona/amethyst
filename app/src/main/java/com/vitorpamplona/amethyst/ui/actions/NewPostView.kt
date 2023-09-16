@@ -9,6 +9,7 @@ import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -82,20 +83,24 @@ import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.ui.components.*
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -111,6 +116,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.Math.round
 
 @Composable
 fun NewPostView(
@@ -321,9 +327,9 @@ fun NewPostView(
                                 if (postViewModel.wantsForwardZapTo) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)
+                                        modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp)
                                     ) {
-                                        FowardZapTo(postViewModel)
+                                        FowardZapTo(postViewModel, accountViewModel)
                                     }
                                 }
 
@@ -721,7 +727,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
 }
 
 @Composable
-fun FowardZapTo(postViewModel: NewPostViewModel) {
+fun FowardZapTo(postViewModel: NewPostViewModel, accountViewModel: AccountViewModel) {
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -755,7 +761,7 @@ fun FowardZapTo(postViewModel: NewPostViewModel) {
             }
 
             Text(
-                text = stringResource(R.string.zap_forward_title),
+                text = stringResource(R.string.zap_split_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp)
@@ -765,22 +771,52 @@ fun FowardZapTo(postViewModel: NewPostViewModel) {
         Divider()
 
         Text(
-            text = stringResource(R.string.zap_forward_explainer),
+            text = stringResource(R.string.zap_split_explainer),
             color = MaterialTheme.colors.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp)
         )
+
+        postViewModel.forwardZapTo.items.forEachIndexed { index, splitItem ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size10dp)) {
+                BaseUserPicture(splitItem.key, Size55dp, accountViewModel = accountViewModel)
+
+                Spacer(modifier = DoubleHorzSpacer)
+
+                Column(modifier = Modifier.weight(1f)) {
+                    UsernameDisplay(splitItem.key, showPlayButton = false)
+                    Text(
+                        text = String.format("%.0f%%", splitItem.percentage * 100),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+
+                Spacer(modifier = DoubleHorzSpacer)
+
+                Slider(
+                    value = splitItem.percentage,
+                    onValueChange = { sliderValue ->
+                        val rounded = (round(sliderValue * 20)) / 20.0f
+                        postViewModel.updateZapPercentage(index, rounded)
+                    },
+                    modifier = Modifier
+                        .weight(1.5f)
+                )
+            }
+        }
 
         OutlinedTextField(
             value = postViewModel.forwardZapToEditting,
             onValueChange = {
                 postViewModel.updateZapForwardTo(it)
             },
-
-            label = { Text(text = stringResource(R.string.zap_forward_lnAddress)) },
+            label = { Text(text = stringResource(R.string.zap_split_serarch_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.zap_forward_lnAddress),
+                    text = stringResource(R.string.zap_split_serarch_and_add_user_placeholder),
                     color = MaterialTheme.colors.placeholderText
                 )
             },

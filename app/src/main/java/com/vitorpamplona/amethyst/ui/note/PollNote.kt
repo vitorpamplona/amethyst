@@ -24,6 +24,7 @@ import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -35,6 +36,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -283,6 +286,12 @@ fun ZapVote(
     }
 
     var wantsToZap by remember { mutableStateOf(false) }
+    var wantsToPay by remember {
+        mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
+            persistentListOf()
+        )
+    }
+
     var zappingProgress by remember { mutableStateOf(0f) }
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
@@ -362,6 +371,8 @@ fun ZapVote(
                                 zappingProgress = it
                             }
                         },
+                        onPayViaIntent = {
+                        },
                         zapType = accountViewModel.account.defaultZapType
                     )
                 } else {
@@ -393,8 +404,17 @@ fun ZapVote(
                     scope.launch(Dispatchers.Main) {
                         zappingProgress = it
                     }
+                },
+                onPayViaIntent = {
+                    wantsToPay = it
                 }
             )
+        }
+
+        if (wantsToPay.isNotEmpty()) {
+            PayViaIntentDialog(payingInvoices = wantsToPay, accountViewModel = accountViewModel) {
+                wantsToPay = persistentListOf()
+            }
         }
 
         if (showErrorMessageDialog != null) {
@@ -463,7 +483,8 @@ fun FilteredZapAmountChoicePopup(
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (text: String) -> Unit,
-    onProgress: (percent: Float) -> Unit
+    onProgress: (percent: Float) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -502,6 +523,7 @@ fun FilteredZapAmountChoicePopup(
                             context,
                             onError,
                             onProgress,
+                            onPayViaIntent,
                             defaultZapType
                         )
                         onDismiss()
@@ -526,6 +548,7 @@ fun FilteredZapAmountChoicePopup(
                                     context,
                                     onError,
                                     onProgress,
+                                    onPayViaIntent,
                                     defaultZapType
                                 )
                                 onDismiss()

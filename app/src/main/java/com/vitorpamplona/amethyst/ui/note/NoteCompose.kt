@@ -31,11 +31,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.darkColors
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -117,11 +121,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
@@ -173,6 +179,7 @@ import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
+import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -1055,6 +1062,60 @@ private fun NoteBody(
         accountViewModel,
         nav
     )
+
+    val noteEvent = baseNote.event
+    val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+    if (zapSplits && noteEvent != null) {
+        Spacer(modifier = HalfDoubleVertSpacer)
+        DisplayZapSplits(noteEvent, accountViewModel, nav)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DisplayZapSplits(noteEvent: EventInterface, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val list = remember(noteEvent) { noteEvent.zapSplitSetup() }
+
+    Row(verticalAlignment = CenterVertically) {
+        Box(
+            Modifier
+                .height(20.dp)
+                .width(25.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Bolt,
+                contentDescription = stringResource(id = R.string.zaps),
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(Alignment.CenterStart),
+                tint = BitcoinOrange
+            )
+            Icon(
+                imageVector = Icons.Outlined.ArrowForwardIos,
+                contentDescription = stringResource(id = R.string.zaps),
+                modifier = Modifier
+                    .size(13.dp)
+                    .align(Alignment.CenterEnd),
+                tint = BitcoinOrange
+            )
+        }
+
+        Spacer(modifier = StdHorzSpacer)
+
+        FlowRow {
+            list.forEach {
+                if (it.isLnAddress) {
+                    ClickableText(
+                        text = AnnotatedString(it.lnAddressOrPubKeyHex),
+                        onClick = { },
+                        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+                    )
+                } else {
+                    UserPicture(userHex = it.lnAddressOrPubKeyHex, size = 25.dp, accountViewModel = accountViewModel, nav = nav)
+                }
+            }
+        }
+    }
 }
 
 @Composable

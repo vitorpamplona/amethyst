@@ -1,18 +1,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -27,7 +23,7 @@ import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
@@ -37,16 +33,15 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
@@ -225,85 +220,12 @@ class AccountViewModel(val account: Account) : ViewModel() {
         context: Context,
         onError: (String) -> Unit,
         onProgress: (percent: Float) -> Unit,
+        onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            innerZap(note, amount, pollOption, message, context, onError, onProgress, zapType)
+            ZapPaymentHandler(account).zap(note, amount, pollOption, message, context, onError, onProgress, onPayViaIntent, zapType)
         }
-    }
-
-    private suspend fun innerZap(
-        note: Note,
-        amount: Long,
-        pollOption: Int?,
-        message: String,
-        context: Context,
-        onError: (String) -> Unit,
-        onProgress: (percent: Float) -> Unit,
-        zapType: LnZapEvent.ZapType
-    ) {
-        val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
-
-        if (lud16.isNullOrBlank()) {
-            onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
-            return
-        }
-
-        var zapRequestJson = ""
-        if (zapType != LnZapEvent.ZapType.NONZAP) {
-            val localZapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
-            if (localZapRequest != null) {
-                zapRequestJson = localZapRequest.toJson()
-            }
-        }
-
-        onProgress(0.10f)
-
-        LightningAddressResolver().lnAddressInvoice(
-            lud16,
-            amount,
-            message,
-            zapRequestJson,
-            onSuccess = {
-                onProgress(0.7f)
-                if (account.hasWalletConnectSetup()) {
-                    account.sendZapPaymentRequestFor(
-                        bolt11 = it,
-                        note,
-                        onResponse = { response ->
-                            if (response is PayInvoiceErrorResponse) {
-                                onProgress(0.0f)
-                                onError(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: "Error parsing error message"
-                                )
-                            } else {
-                                onProgress(1f)
-                            }
-                        }
-                    )
-                    onProgress(0.8f)
-
-                    // Awaits for the event to come back to LocalCache.
-                    viewModelScope.launch(Dispatchers.IO) {
-                        delay(5000)
-                        onProgress(0f)
-                    }
-                } else {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        ContextCompat.startActivity(context, intent, null)
-                    } catch (e: Exception) {
-                        onError(context.getString(R.string.lightning_wallets_not_found))
-                    }
-                    onProgress(0f)
-                }
-            },
-            onError = onError,
-            onProgress = onProgress
-        )
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {

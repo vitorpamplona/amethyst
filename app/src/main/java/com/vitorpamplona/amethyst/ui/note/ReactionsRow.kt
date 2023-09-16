@@ -78,6 +78,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
@@ -107,6 +108,8 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
@@ -945,6 +948,11 @@ fun ZapReaction(
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var wantsToPay by remember(baseNote) {
+        mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
+            persistentListOf()
+        )
+    }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -976,6 +984,9 @@ fun ZapReaction(
                                 zappingProgress = 0f
                                 showErrorMessageDialog = it
                             }
+                        },
+                        onPayViaIntent = {
+                            wantsToPay = it
                         }
                     )
                 },
@@ -1009,6 +1020,9 @@ fun ZapReaction(
                     scope.launch(Dispatchers.Main) {
                         zappingProgress = it
                     }
+                },
+                onPayViaIntent = {
+                    wantsToPay = it
                 }
             )
         }
@@ -1019,7 +1033,10 @@ fun ZapReaction(
                 textContent = showErrorMessageDialog ?: "",
                 onClickStartMessage = {
                     baseNote.author?.let {
-                        nav(routeToMessage(it, showErrorMessageDialog, accountViewModel))
+                        scope.launch(Dispatchers.IO) {
+                            val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
+                            nav(route)
+                        }
                     }
                 },
                 onDismiss = { showErrorMessageDialog = null }
@@ -1031,6 +1048,12 @@ fun ZapReaction(
                 onClose = { wantsToChangeZapAmount = false },
                 accountViewModel = accountViewModel
             )
+        }
+
+        if (wantsToPay.isNotEmpty()) {
+            PayViaIntentDialog(payingInvoices = wantsToPay, accountViewModel = accountViewModel) {
+                wantsToPay = persistentListOf()
+            }
         }
 
         if (wantsToSetCustomZap) {
@@ -1046,6 +1069,9 @@ fun ZapReaction(
                     scope.launch(Dispatchers.Main) {
                         zappingProgress = it
                     }
+                },
+                onPayViaIntent = {
+                    wantsToPay = it
                 },
                 accountViewModel = accountViewModel,
                 baseNote = baseNote
@@ -1083,7 +1109,8 @@ private fun zapClick(
     context: Context,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
-    onError: (String) -> Unit
+    onError: (String) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
         scope.launch {
@@ -1118,7 +1145,8 @@ private fun zapClick(
                     onZappingProgress(it)
                 }
             },
-            zapType = accountViewModel.account.defaultZapType
+            zapType = accountViewModel.account.defaultZapType,
+            onPayViaIntent = onPayViaIntent
         )
     } else if (accountViewModel.account.zapAmountChoices.size > 1) {
         onMultipleChoices()
@@ -1434,7 +1462,8 @@ fun ZapAmountChoicePopup(
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (text: String) -> Unit,
-    onProgress: (percent: Float) -> Unit
+    onProgress: (percent: Float) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1460,6 +1489,7 @@ fun ZapAmountChoicePopup(
                             context,
                             onError,
                             onProgress,
+                            onPayViaIntent,
                             account.defaultZapType
                         )
                         onDismiss()
@@ -1484,6 +1514,7 @@ fun ZapAmountChoicePopup(
                                     context,
                                     onError,
                                     onProgress,
+                                    onPayViaIntent,
                                     account.defaultZapType
                                 )
                                 onDismiss()

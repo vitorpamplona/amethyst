@@ -204,6 +204,12 @@
     <string name="account_switch_add_account_dialog_title">নতুন অ্যাকাউন্ট যুক্ত করুন</string>
     <string name="drawer_accounts">অ্যাকাউন্টগুলি</string>
     <string name="account_switch_select_account">অ্যাকাউন্ট নির্বাচন করুন</string>
+    <string name="account_switch_add_account_btn">নতুন অ্যাকাউন্ট যুক্ত করুন</string>
+    <string name="account_switch_active_account">অ্যাকাউন্ট সক্রিয় করুন</string>
+    <string name="account_switch_has_private_key">ব্যক্তিগত চাবি আছে</string>
+    <string name="account_switch_pubkey_only">শুধুমাত্র পাঠযোগ্য, কোনো ব্যক্তিগত চাবি নেই</string>
+    <string name="back">পিছে যান</string>
+    <string name="quick_action_select">নির্বাচন করুন</string>
     <string name="quick_action_share_browser_link">ব্রাউজারের লিংক শেয়ার করুন</string>
     <string name="quick_action_share">শেয়ার</string>
     <string name="quick_action_copy_user_id">লেখকের আইডি</string>
@@ -254,6 +260,13 @@
     <string name="post_poll">একটি পোল পেশ করুন</string>
     <string name="poll_heading_required">প্রয়োজনীয় ক্ষেত্রসমূহ:</string>
     <string name="poll_zap_recipients">জ্যাপ প্রাপকেরা</string>
+    <string name="poll_primary_description">পোলের প্রাথমিক বিবরণ…</string>
+    <string name="poll_option_index">বিকল্প %s</string>
+    <string name="poll_option_description">পোলের বিবিধ বিকল্পের বিবরণ</string>
+    <string name="poll_heading_optional">ঐচ্ছিক ক্ষেত্র:</string>
+    <string name="poll_zap_value_min">ন্যূনতম জ্যাপ</string>
+    <string name="poll_zap_value_max">সর্বোচ্চ জ্যাপ</string>
+    <string name="poll_consensus_threshold">ঐক্যমত</string>
     <string name="poll_consensus_threshold_percent">(০–১০০)%</string>
     <string name="poll_closing_time">এই সময় পর বন্ধ করুন</string>
     <string name="poll_closing_time_days">দিনগুলি</string>
@@ -304,10 +317,72 @@
     <string name="upload_server_nostrbuild_nip94">যাচাইযোগ্য Nostr.build (NIP-94)</string>
     <string name="upload_server_nostrbuild_nip94_explainer">Nostr.build ফাইলটি পরিবর্তন করেছে কিনা তা পরীক্ষা করে। নতুন NIP: অন্য ক্লায়েন্টরা এটি দেখতে নাও পেতে পারে</string>
     <string name="upload_server_nostrfilesdev_nip94">যাচাইযোগ্য Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Nostrfiles.dev ফাইলটি পরিবর্তন করেছে কিনা তা পরীক্ষা করে। নতুন NIP: অন্য ক্লায়েন্টরা এটি দেখতে নাও পেতে পারে</string>
+    <string name="upload_server_nostrcheckme_nip94">যাচাইযোগ্য Nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Nostrcheck.me ফাইলটি পরিবর্তন করেছে কিনা তা পরীক্ষা করে। নতুন NIP: অন্য ক্লায়েন্টরা এটি দেখতে নাও পেতে পারে</string>
+    <string name="upload_server_relays_nip95">আপনার রিলেগুলি (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">ফাইলগুলো আপনার রিলে দ্বারা গৃহীত হয়। নতুন NIP: তারা এটি সমর্থন করে কিনা দেখে নিন</string>
+    <string name="connect_via_tor_short">Tor/Orbot সেটআপ করুন</string>
+    <string name="connect_via_tor">আপনার Orbot সেটআপের মাধ্যমে সংযুক্ত হোন</string>
+    <string name="do_you_really_want_to_disable_tor_title">Orbot/Tor থেকে সংযোগ বিচ্ছিন্ন করতে চান?</string>
+    <string name="do_you_really_want_to_disable_tor_text">আপনার ডেটা অবিলম্বে নিয়মিত নেটওয়ার্কে স্থানান্তর করা হবে</string>
+    <string name="yes">হ্যাঁ</string>
+    <string name="no">না</string>
+    <string name="follow_list_selection">অনুসরণ তালিকা</string>
+    <string name="follow_list_kind3follows">অনুসৃত সকলেরা</string>
+    <string name="follow_list_global">বৈশ্বিক</string>
+    <string name="connect_through_your_orbot_setup_markdown">        ## Tor এর মাধ্যমে Orbot এর সাথে সংযুক্ত হোন
+        \n\n১. [Orbot] নামান (https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n২. Orbot চালু করুন
+        \n৩. Orbot এ ঢুকে Socks পোর্টটি খেয়াল করুন। এটি ৯০৫০ তে নির্দিষ্ট করা থাকে
+        \n৪. প্রয়োজনে Orbot এ পোর্টটি বদলে দিন
+        \n৫. স্ক্রিনের Socks পোর্টটি প্রস্তুত করুন
+        \n৬. Orbot কে প্রক্সি হিসেবে ব্যবহার করতে Activate বাটনটি চাপুন
+    </string>
+    <string name="orbot_socks_port">Orbot এর Socks পোর্ট</string>
+    <string name="invalid_port_number">পোর্ট নম্বরটি অকার্যকর</string>
+    <string name="use_orbot">Orbot ব্যবহার করুন</string>
+    <string name="disconnect_from_your_orbot_setup">Tor/Orbot থেকে সংযোগ বিচ্ছিন্ন করুন</string>
+    <string name="app_notification_dms_channel_name">ব্যক্তিগত বার্তাসমূহ</string>
+    <string name="app_notification_dms_channel_description">যখন একটি ব্যক্তিগত বার্তা আসে তখন আপনাকে অবহিত করে</string>
+    <string name="app_notification_zaps_channel_name">জ্যাপ গৃহীত হয়েছে</string>
+    <string name="app_notification_zaps_channel_description">কেউ জ্যাপ পাঠালে আপনাকে অবহিত করে</string>
+    <string name="app_notification_zaps_channel_message">%1$s স্যাট</string>
+    <string name="app_notification_zaps_channel_message_from">%1$s থেকে</string>
+    <string name="app_notification_zaps_channel_message_for">%1$s এর জন্য</string>
+    <string name="reply_notify">অবহিত করুন: </string>
+    <string name="channel_list_join_conversation">আলোচনায় যুক্ত হোন</string>
+    <string name="channel_list_user_or_group_id">ব্যবহারকারী কিংবা গ্রুপের আইডি</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent অথবা hex</string>
+    <string name="channel_list_create_channel">তৈরি করুন</string>
+    <string name="channel_list_join_channel">যুক্ত হোন</string>
+    <string name="today">আজ</string>
+    <string name="content_warning">আধেয় বিষয়ক সতর্কতা</string>
+    <string name="content_warning_explanation">এই পোস্টে সংবেদনশীল উপাদান রয়েছে যা কারো জন্য আপত্তিকর কিংবা সমস্যাজনক হতে পারে</string>
+    <string name="content_warning_hide_all_sensitive_content">সংবেদনশীল আধেয় সবসময় আড়ালে রাখুন</string>
+    <string name="content_warning_show_all_sensitive_content">সংবেদনশীল বিষয়বস্তু সবসময় খোলামেলা দেখান</string>
+    <string name="content_warning_see_warnings">সবসময় আধেয় বিষয়ক সতর্কতা দেখান</string>
     <string name="owner">মালিক</string>
     <string name="version">সংস্করণ</string>
     <string name="software">সফটওয়্যার</string>
     <string name="contact">যোগাযোগ</string>
     <string name="supports">সমর্থিত NIPs</string>
     <string name="admission_fees">প্রবেশমূল্য</string>
+    <string name="connectivity_type_always">সবসময়</string>
+    <string name="connectivity_type_wifi_only">শুধুমাত্র ওয়াইফাইতে</string>
+    <string name="connectivity_type_never">কখনো না</string>
+    <string name="system">সিস্টেম</string>
+    <string name="light">উজ্জ্বল</string>
+    <string name="dark">আঁধারি</string>
+    <string name="application_preferences">অ্যাপ্লিকেশনের পছন্দসমূহ</string>
+    <string name="language">ভাষা</string>
+    <string name="theme">থিম</string>
+    <string name="automatically_load_images_gifs">ছবির পূর্বরূপ</string>
+    <string name="automatically_play_videos">ভিডিও প্লেব্যাক</string>
+    <string name="automatically_show_url_preview">URL-এর পূর্বরূপ</string>
+    <string name="load_image">ছবিটি লোড করুন</string>
+    <string name="spamming_users">স্প্যামাররা</string>
+    <string name="muted_button">মৌন করে রাখা। এটি তুলে নিতে ক্লিক করুন</string>
+    <string name="mute_button">শব্দ চালু আছে। মৌন করতে ক্লিক করুন</string>
+    <string name="search_button">স্থানীয় এবং দূরবর্তী রেকর্ড অনুসন্ধান করুন</string>
 </resources>

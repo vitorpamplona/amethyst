@@ -438,7 +438,7 @@ class Account(
         }
     }
 
-    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
+    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType, toUser: User?): LnZapRequestEvent? {
         if (!isWriteable() && !loginWithAmber) return null
 
         note.event?.let { event ->
@@ -497,7 +497,8 @@ class Account(
                     keyPair.privKey!!,
                     pollOption,
                     message,
-                    zapType
+                    zapType,
+                    toUser?.pubkeyHex
                 )
             }
         }
@@ -1223,7 +1224,7 @@ class Account(
         replyTo: List<Note>?,
         mentions: List<User>?,
         tags: List<String>? = null,
-        zapReceiver: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         replyingTo: String?,
@@ -1293,7 +1294,7 @@ class Account(
         valueMinimum: Int?,
         consensusThreshold: Int?,
         closedAt: Int?,
-        zapReceiver: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
@@ -1348,17 +1349,8 @@ class Account(
         }
     }
 
-    fun sendChannelMessage(
-        message: String,
-        toChannel: String,
-        replyTo: List<Note>?,
-        mentions: List<User>?,
-        zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean,
-        zapRaiserAmount: Long? = null,
-        geohash: String? = null
-    ) {
-        if (!isWriteable() && !loginWithAmber) return
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+        if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1389,17 +1381,8 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendLiveMessage(
-        message: String,
-        toChannel: ATag,
-        replyTo: List<Note>?,
-        mentions: List<User>?,
-        zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean,
-        zapRaiserAmount: Long? = null,
-        geohash: String? = null
-    ) {
-        if (!isWriteable() && !loginWithAmber) return
+    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+        if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1430,21 +1413,12 @@ class Account(
         LocalCache.consume(signedEvent, null)
     }
 
-    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: String? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+    fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
         sendPrivateMessage(message, toUser.pubkeyHex, replyingTo, mentions, zapReceiver, wantsToMarkAsSensitive, zapRaiserAmount, geohash)
     }
 
-    fun sendPrivateMessage(
-        message: String,
-        toUser: HexKey,
-        replyingTo: Note? = null,
-        mentions: List<User>?,
-        zapReceiver: String? = null,
-        wantsToMarkAsSensitive: Boolean,
-        zapRaiserAmount: Long? = null,
-        geohash: String? = null
-    ) {
-        if (!isWriteable() && !loginWithAmber) return
+    fun sendPrivateMessage(message: String, toUser: HexKey, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+        if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -1491,7 +1465,7 @@ class Account(
         subject: String? = null,
         replyingTo: Note? = null,
         mentions: List<User>?,
-        zapReceiver: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null
