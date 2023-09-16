@@ -14,11 +14,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ServersAvailable
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.*
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -168,13 +164,12 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun sendPost(relayList: List<Relay>? = null) {
-        try {
-            val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
-            tagger.run()
+        val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
+        tagger.run()
 
-            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null)
-            toUsersTagger.run()
-            val dmUsers = toUsersTagger.mentions
+        val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null)
+        toUsersTagger.run()
+        val dmUsers = toUsersTagger.mentions
 
         val zapReceiver = if (wantsForwardZapTo) {
             forwardZapTo?.items?.map {
@@ -185,117 +180,112 @@ open class NewPostViewModel() : ViewModel() {
                     isLnAddress = false
                 )
             }
+        } else {
+            null
+        }
 
-            val geoLocation = locUtil?.locationStateFlow?.value
-            val geoHash = if (wantsToAddGeoHash && geoLocation != null) {
-                geoLocation.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
+        val geoLocation = locUtil?.locationStateFlow?.value
+        val geoHash = if (wantsToAddGeoHash && geoLocation != null) {
+            geoLocation.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
+        } else {
+            null
+        }
+
+        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
+
+        if (originalNote?.channelHex() != null) {
+            if (originalNote is AddressableEvent && originalNote?.address() != null) {
+                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
             } else {
-                null
+                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
             }
+        } else if (originalNote?.event is PrivateDmEvent) {
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+        } else if (originalNote?.event is ChatMessageEvent) {
+            val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
 
-            val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
-
-            if (originalNote?.channelHex() != null) {
-                if (originalNote is AddressableEvent && originalNote?.address() != null) {
-                    account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
-                } else {
-                    account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
-                }
-            } else if (originalNote?.event is PrivateDmEvent) {
-                account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
-            } else if (originalNote?.event is ChatMessageEvent) {
-                val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
-
+            account?.sendNIP24PrivateMessage(
+                message = tagger.message,
+                toUsers = receivers,
+                subject = subject.text.ifBlank { null },
+                replyingTo = originalNote!!,
+                mentions = tagger.mentions,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapReceiver = zapReceiver,
+                zapRaiserAmount = localZapRaiserAmount,
+                geohash = geoHash
+            )
+        } else if (!dmUsers.isNullOrEmpty()) {
+            if (nip24 || dmUsers.size > 1) {
                 account?.sendNIP24PrivateMessage(
                     message = tagger.message,
-                    toUsers = receivers,
+                    toUsers = dmUsers.map { it.pubkeyHex },
                     subject = subject.text.ifBlank { null },
-                    replyingTo = originalNote!!,
+                    replyingTo = tagger.replyTos?.firstOrNull(),
                     mentions = tagger.mentions,
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash
                 )
-            } else if (!dmUsers.isNullOrEmpty()) {
-                if (nip24 || dmUsers.size > 1) {
-                    account?.sendNIP24PrivateMessage(
-                        message = tagger.message,
-                        toUsers = dmUsers.map { it.pubkeyHex },
-                        subject = subject.text.ifBlank { null },
-                        replyingTo = tagger.replyTos?.firstOrNull(),
-                        mentions = tagger.mentions,
-                        wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                        zapReceiver = zapReceiver,
-                        zapRaiserAmount = localZapRaiserAmount,
-                        geohash = geoHash
-                    )
-                } else {
-                    account?.sendPrivateMessage(
-                        message = tagger.message,
-                        toUser = dmUsers.first().pubkeyHex,
-                        replyingTo = originalNote,
-                        mentions = tagger.mentions,
-                        wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                        zapReceiver = zapReceiver,
-                        zapRaiserAmount = localZapRaiserAmount,
-                        geohash = geoHash
-                    )
-                }
             } else {
-                if (wantsPoll) {
-                    account?.sendPoll(
-                        tagger.message,
-                        tagger.replyTos,
-                        tagger.mentions,
-                        pollOptions,
-                        valueMaximum,
-                        valueMinimum,
-                        consensusThreshold,
-                        closedAt,
-                        zapReceiver,
-                        wantsToMarkAsSensitive,
-                        localZapRaiserAmount,
-                        relayList,
-                        geoHash
-                    )
-                } else {
-                    // adds markers
-                    val rootId =
-                        (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
-                            ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
-                            ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
-                    val replyId = originalNote?.idHex
-
-                    account?.sendPost(
-                        message = tagger.message,
-                        replyTo = tagger.replyTos,
-                        mentions = tagger.mentions,
-                        tags = null,
-                        zapReceiver = zapReceiver,
-                        wantsToMarkAsSensitive = wantsToMarkAsSensitive,
-                        zapRaiserAmount = localZapRaiserAmount,
-                        replyingTo = replyId,
-                        root = rootId,
-                        directMentions = tagger.directMentions,
-                        relayList = relayList,
-                        geohash = geoHash
-                    )
-                }
+                account?.sendPrivateMessage(
+                    message = tagger.message,
+                    toUser = dmUsers.first().pubkeyHex,
+                    replyingTo = originalNote,
+                    mentions = tagger.mentions,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapReceiver = zapReceiver,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash
+                )
             }
-        } finally {
-            cancel()
+        } else {
+            if (wantsPoll) {
+                account?.sendPoll(
+                    tagger.message,
+                    tagger.replyTos,
+                    tagger.mentions,
+                    pollOptions,
+                    valueMaximum,
+                    valueMinimum,
+                    consensusThreshold,
+                    closedAt,
+                    zapReceiver,
+                    wantsToMarkAsSensitive,
+                    localZapRaiserAmount,
+                    relayList,
+                    geoHash
+                )
+            } else {
+                // adds markers
+                val rootId =
+                    (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
+                        ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
+                        ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+                val replyId = originalNote?.idHex
+
+                account?.sendPost(
+                    message = tagger.message,
+                    replyTo = tagger.replyTos,
+                    mentions = tagger.mentions,
+                    tags = null,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    replyingTo = replyId,
+                    root = rootId,
+                    directMentions = tagger.directMentions,
+                    relayList = relayList,
+                    geohash = geoHash
+                )
+            }
         }
+
+        cancel()
     }
 
-    fun upload(
-        galleryUri: Uri,
-        description: String,
-        sensitiveContent: Boolean,
-        server: ServersAvailable,
-        context: Context,
-        relayList: List<Relay>? = null
-    ) {
+    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
         isUploadingImage = true
         contentToAddUrl = null
 
@@ -313,35 +303,28 @@ open class NewPostViewModel() : ViewModel() {
                             createNIP95Record(it.readBytes(), contentType, description, sensitiveContent, relayList = relayList)
                         }
                     } else {
-                        viewModelScope.launch(Dispatchers.IO) {
-                            ImageUploader.uploadImage(
-                                uri = fileUri,
-                                contentType = contentType,
-                                size = size,
-                                server = server,
-                                contentResolver = contentResolver,
-                                onSuccess = { imageUrl, mimeType ->
-                                    if (isNIP94Server(server)) {
-                                        createNIP94Record(
-                                            imageUrl,
-                                            mimeType,
-                                            description,
-                                            sensitiveContent
-                                        )
-                                    } else {
-                                        isUploadingImage = false
-                                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
-                                        urlPreview = findUrlInMessage()
-                                    }
-                                },
-                                onError = {
+                        ImageUploader.uploadImage(
+                            uri = fileUri,
+                            contentType = contentType,
+                            size = size,
+                            server = server,
+                            contentResolver = contentResolver,
+                            onSuccess = { imageUrl, mimeType ->
+                                if (isNIP94Server(server)) {
+                                    createNIP94Record(imageUrl, mimeType, description, sensitiveContent)
+                                } else {
                                     isUploadingImage = false
-                                    viewModelScope.launch {
-                                        imageUploadingError.emit("Failed to upload the image / video")
-                                    }
+                                    message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                                    urlPreview = findUrlInMessage()
                                 }
-                            )
-                        }
+                            },
+                            onError = {
+                                isUploadingImage = false
+                                viewModelScope.launch {
+                                    imageUploadingError.emit("Failed to upload the image / video")
+                                }
+                            }
+                        )
                     }
                 },
                 onError = {

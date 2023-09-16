@@ -588,4 +588,6 @@
     <string name="lightning_wallets_not_found2">Lightning wallets not found</string>
     <string name="paid">Paid</string>
     <string name="wallet_number">Wallet %1$s</string>
+    <string name="error_opening_amber">Error opening Amber</string>
+    <string name="sign_request_rejected">Sign request rejected</string>
 </resources>

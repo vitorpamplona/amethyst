@@ -450,7 +450,8 @@ class Account(
                             userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
                                 ?: localRelays.map { it.url }.toSet(),
                             pollOption,
-                            message
+                            message,
+                            toUser?.pubkeyHex
                         )
                     }
                     LnZapEvent.ZapType.PUBLIC -> {
@@ -460,7 +461,8 @@ class Account(
                                 ?: localRelays.map { it.url }.toSet(),
                             keyPair.pubKey.toHexKey(),
                             pollOption,
-                            message
+                            message,
+                            toUser?.pubkeyHex
                         )
                         AmberUtils.openAmber(unsignedEvent)
                         val content = AmberUtils.content[unsignedEvent.id] ?: ""
@@ -479,7 +481,8 @@ class Account(
                                 ?: localRelays.map { it.url }.toSet(),
                             keyPair.pubKey.toHexKey(),
                             pollOption,
-                            message
+                            message,
+                            toUser?.pubkeyHex
                         )
                         AmberUtils.openAmber(unsignedEvent, "event")
                         val content = AmberUtils.content[unsignedEvent.id] ?: ""

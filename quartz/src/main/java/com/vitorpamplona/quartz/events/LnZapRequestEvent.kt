@@ -113,11 +113,12 @@ class LnZapRequestEvent(
             pubKey: HexKey,
             pollOption: Int?,
             message: String,
+            toUserPubHex: String?, // Overrides in case of Zap Splits
             createdAt: Long = TimeUtils.now()
         ): LnZapRequestEvent {
             var tags = listOf(
                 listOf("e", originalNote.id()),
-                listOf("p", originalNote.pubKey()),
+                listOf("p", toUserPubHex ?: originalNote.pubKey()),
                 listOf("relays") + relays
             )
             if (originalNote is AddressableEvent) {
@@ -137,12 +138,13 @@ class LnZapRequestEvent(
             pubKey: HexKey,
             pollOption: Int?,
             message: String,
+            toUserPubHex: String?,
             createdAt: Long = TimeUtils.now()
         ): LnZapRequestEvent {
             val content = message
             var tags = listOf(
                 listOf("e", originalNote.id()),
-                listOf("p", originalNote.pubKey()),
+                listOf("p", toUserPubHex ?: originalNote.pubKey()),
                 listOf("relays") + relays
             )
             if (originalNote is AddressableEvent) {
@@ -162,11 +164,12 @@ class LnZapRequestEvent(
             relays: Set<String>,
             pollOption: Int?,
             message: String,
+            toUserPubHex: String?, // Overrides in case of Zap Splits
             createdAt: Long = TimeUtils.now()
         ): LnZapRequestEvent {
             var tags = listOf(
                 listOf("e", originalNote.id()),
-                listOf("p", originalNote.pubKey()),
+                listOf("p", toUserPubHex ?: originalNote.pubKey()),
                 listOf("relays") + relays
             )
             if (originalNote is AddressableEvent) {

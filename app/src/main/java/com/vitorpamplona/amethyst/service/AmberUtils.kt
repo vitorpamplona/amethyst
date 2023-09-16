@@ -3,11 +3,13 @@ package com.vitorpamplona.amethyst.service
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.util.LruCache
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -49,7 +51,7 @@ object AmberUtils {
         GlobalScope.launch(Dispatchers.Main) {
             Toast.makeText(
                 Amethyst.instance,
-                "Sign request rejected",
+                Amethyst.instance.getString(R.string.sign_request_rejected),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -133,6 +135,7 @@ object AmberUtils {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun openAmber(
         data: String,
         type: SignerType,
@@ -140,25 +143,36 @@ object AmberUtils {
         pubKey: HexKey,
         id: String
     ) {
-        ServiceManager.shouldPauseService = false
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
-        val signerType = when (type) {
-            SignerType.SIGN_EVENT -> "sign_event"
-            SignerType.NIP04_ENCRYPT -> "nip04_encrypt"
-            SignerType.NIP04_DECRYPT -> "nip04_decrypt"
-            SignerType.NIP44_ENCRYPT -> "nip44_encrypt"
-            SignerType.NIP44_DECRYPT -> "nip44_decrypt"
-            SignerType.GET_PUBLIC_KEY -> "get_public_key"
-            SignerType.DECRYPT_ZAP_EVENT -> "decrypt_zap_event"
+        try {
+            ServiceManager.shouldPauseService = false
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
+            val signerType = when (type) {
+                SignerType.SIGN_EVENT -> "sign_event"
+                SignerType.NIP04_ENCRYPT -> "nip04_encrypt"
+                SignerType.NIP04_DECRYPT -> "nip04_decrypt"
+                SignerType.NIP44_ENCRYPT -> "nip44_encrypt"
+                SignerType.NIP44_DECRYPT -> "nip44_decrypt"
+                SignerType.GET_PUBLIC_KEY -> "get_public_key"
+                SignerType.DECRYPT_ZAP_EVENT -> "decrypt_zap_event"
+            }
+            intent.putExtra("type", signerType)
+            intent.putExtra("pubKey", pubKey)
+            intent.putExtra("id", id)
+            if (type !== SignerType.GET_PUBLIC_KEY) {
+                intent.putExtra("current_user", account.keyPair.pubKey.toNpub())
+            }
+            intent.`package` = "com.greenart7c3.nostrsigner"
+            intentResult.launch(intent)
+        } catch (e: Exception) {
+            Log.e("Amber", "Error opening amber", e)
+            GlobalScope.launch(Dispatchers.Main) {
+                Toast.makeText(
+                    Amethyst.instance,
+                    Amethyst.instance.getString(R.string.error_opening_amber),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
-        intent.putExtra("type", signerType)
-        intent.putExtra("pubKey", pubKey)
-        intent.putExtra("id", id)
-        if (type !== SignerType.GET_PUBLIC_KEY) {
-            intent.putExtra("current_user", account.keyPair.pubKey.toNpub())
-        }
-        intent.`package` = "com.greenart7c3.nostrsigner"
-        intentResult.launch(intent)
     }
 
     fun openAmber(event: EventInterface, columnName: String = "signature") {
