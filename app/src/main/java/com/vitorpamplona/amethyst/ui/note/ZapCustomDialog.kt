@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -12,23 +14,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 class ZapOptionstViewModel : ViewModel() {
@@ -62,6 +75,7 @@ fun ZapCustomDialog(
     onClose: () -> Unit,
     onError: (text: String) -> Unit,
     onProgress: (percent: Float) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     accountViewModel: AccountViewModel,
     baseNote: Note
 ) {
@@ -113,6 +127,7 @@ fun ZapCustomDialog(
                             context,
                             onError = onError,
                             onProgress = onProgress,
+                            onPayViaIntent = onPayViaIntent,
                             zapType = selectedZapType
                         )
                         onClose()
@@ -265,4 +280,116 @@ fun ErrorMessageDialog(
             }
         }
     )
+}
+
+@Composable
+fun PayViaIntentDialog(
+    payingInvoices: ImmutableList<ZapPaymentHandler.Payable>,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Surface() {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CloseButton(onPress = onClose)
+                }
+
+                Spacer(modifier = DoubleVertSpacer)
+
+                payingInvoices.forEachIndexed { index, it ->
+                    val paid = remember {
+                        mutableStateOf(false)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size10dp)) {
+                        if (it.user != null) {
+                            BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
+                        } else {
+                            DisplayBlankAuthor(size = Size55dp)
+                        }
+
+                        Spacer(modifier = DoubleHorzSpacer)
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (it.user != null) {
+                                UsernameDisplay(it.user, showPlayButton = false)
+                            } else {
+                                Text(
+                                    text = stringResource(id = R.string.wallet_number, index + 1),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
+                            Row() {
+                                Text(
+                                    text = showAmount((it.amountMilliSats / 1000.0f).toBigDecimal()),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                                Spacer(modifier = StdHorzSpacer)
+                                Text(
+                                    text = stringResource(id = R.string.sats),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = DoubleHorzSpacer)
+
+                        PayButton(isActive = !paid.value) {
+                            paid.value = true
+
+                            val uri = "lightning:" + it.invoice
+
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                            ContextCompat.startActivity(context, intent, null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PayButton(isActive: Boolean, modifier: Modifier = Modifier, onPost: () -> Unit = {}) {
+    Button(
+        modifier = modifier,
+        onClick = {
+            onPost()
+        },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
+            ),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        if (isActive) {
+            Text(text = stringResource(R.string.pay), color = Color.White)
+        } else {
+            Text(text = stringResource(R.string.paid), color = Color.White)
+        }
+    }
 }

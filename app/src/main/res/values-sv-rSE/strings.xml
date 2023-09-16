@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Peka på QR-koden</string>
+    <string name="point_to_the_qr_code">Peka mot QR-koden</string>
     <string name="show_qr">Visa QR</string>
     <string name="profile_image">Profilbild</string>
     <string name="scan_qr">Scanna QR</string>
@@ -472,4 +472,14 @@
     <string name="error_dialog_zap_error">Kunde inte skicka zap</string>
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
     <string name="error_dialog_button_ok">Ok</string>
+    <string name="relay_information_document_error_assemble_url">Misslyckades att nå %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Misslyckades att nå %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Misslyckades att parsa resultatet från %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s misslyckades med kod %2$s</string>
+    <string name="active_for">Aktiv för: </string>
+    <string name="active_for_home">Hem</string>
+    <string name="active_for_msg">Meddelanden</string>
+    <string name="active_for_chats">Chattar</string>
+    <string name="active_for_global">Globalt</string>
+    <string name="active_for_search">Sök</string>
 </resources>

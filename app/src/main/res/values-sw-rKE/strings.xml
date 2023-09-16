@@ -473,4 +473,14 @@
     <string name="error_dialog_zap_error">Haiwezekani kutuma zap</string>
     <string name="error_dialog_talk_to_user">Tuma ujumbe kwa mtumiaji</string>
     <string name="error_dialog_button_ok">Sawa</string>
+    <string name="relay_information_document_error_assemble_url">Imeshindwa kufikia %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Imeshindwa kufikia %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Imeshindwa kuchanganua matokeo kutoka %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s imeshindwa kwa kutumia msimbo %2$s</string>
+    <string name="active_for">Inatumika kwa: </string>
+    <string name="active_for_home">Nyumbani</string>
+    <string name="active_for_msg">DMs</string>
+    <string name="active_for_chats">Soga</string>
+    <string name="active_for_global">Ulimwenguni</string>
+    <string name="active_for_search">Tafuta</string>
 </resources>

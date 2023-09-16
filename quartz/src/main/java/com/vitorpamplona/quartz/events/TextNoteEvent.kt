@@ -30,7 +30,7 @@ class TextNoteEvent(
             mentions: List<String>?,
             addresses: List<ATag>?,
             extraTags: List<String>?,
-            zapReceiver: String?,
+            zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             replyingTo: String?,
@@ -80,8 +80,8 @@ class TextNoteEvent(
             extraTags?.forEach {
                 tags.add(listOf("t", it))
             }
-            zapReceiver?.let {
-                tags.add(listOf("zap", it))
+            zapReceiver?.forEach {
+                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             findURLs(msg).forEach {
                 tags.add(listOf("r", it))

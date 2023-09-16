@@ -65,6 +65,7 @@ class LnZapRequestEvent(
             pollOption: Int?,
             message: String,
             zapType: LnZapEvent.ZapType,
+            toUserPubHex: String?, // Overrides in case of Zap Splits
             createdAt: Long = TimeUtils.now()
         ): LnZapRequestEvent {
             var content = message
@@ -72,7 +73,7 @@ class LnZapRequestEvent(
             var pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             var tags = listOf(
                 listOf("e", originalNote.id()),
-                listOf("p", originalNote.pubKey()),
+                listOf("p", toUserPubHex ?: originalNote.pubKey()),
                 listOf("relays") + relays
             )
             if (originalNote is AddressableEvent) {

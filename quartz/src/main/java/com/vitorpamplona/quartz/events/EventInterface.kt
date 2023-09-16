@@ -58,7 +58,7 @@ interface EventInterface {
     fun getPoWRank(): Int
     fun getGeoHash(): String?
 
-    fun zapAddress(): String?
+    fun zapSplitSetup(): List<ZapSplitSetup>
     fun isSensitive(): Boolean
     fun subject(): String?
     fun zapraiserAmount(): Long?
@@ -78,4 +78,5 @@ interface EventInterface {
     fun taggedEmojis(): List<EmojiUrl>
     fun matchTag1With(text: String): Boolean
     fun isExpired(): Boolean
+    fun hasZapSplitSetup(): Boolean
 }

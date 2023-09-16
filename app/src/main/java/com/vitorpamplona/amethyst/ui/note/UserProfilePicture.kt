@@ -104,6 +104,32 @@ fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
 
 @Composable
 fun UserPicture(
+    userHex: String,
+    size: Dp,
+    pictureModifier: Modifier = remember { Modifier },
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    LoadUser(baseUserHex = userHex) {
+        if (it != null) {
+            UserPicture(
+                user = it,
+                size = size,
+                pictureModifier = pictureModifier,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        } else {
+            DisplayBlankAuthor(
+                size,
+                pictureModifier
+            )
+        }
+    }
+}
+
+@Composable
+fun UserPicture(
     user: User,
     size: Dp,
     pictureModifier: Modifier = remember { Modifier },
@@ -438,6 +464,10 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             Text(stringResource(R.string.quick_action_share))
         }
         Divider()
+        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
+            Text(stringResource(R.string.broadcast))
+        }
+        Divider()
         if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
@@ -457,20 +487,6 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             }
         }
         Divider()
-        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
-            Text(stringResource(R.string.broadcast))
-        }
-        Divider()
-        if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
-                Text(stringResource(R.string.request_deletion))
-            }
-        } else {
-            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
-                Text(stringResource(R.string.block_report))
-            }
-        }
-        Divider()
         if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.hideSensitiveContent(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
@@ -484,6 +500,16 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         if (state.showSensitiveContent != null) {
             DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.seeContentWarnings(); onDismiss() } }) {
                 Text(stringResource(R.string.content_warning_see_warnings))
+            }
+        }
+        Divider()
+        if (state.isLoggedUser) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
+                Text(stringResource(R.string.request_deletion))
+            }
+        } else {
+            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
+                Text(stringResource(R.string.block_report))
             }
         }
     }

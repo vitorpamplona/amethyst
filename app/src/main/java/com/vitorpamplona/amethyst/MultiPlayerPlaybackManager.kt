@@ -92,9 +92,7 @@ class MultiPlayerPlaybackManager(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     STATE_IDLE -> {
-                        if (player.currentPosition > 5 * 60) { // 5 seconds
-                            cachedPositions.add(uri, player.currentPosition)
-                        }
+                        cachedPositions.add(uri, player.currentPosition)
                     }
                     STATE_READY -> {
                         cachedPositions.get(uri)?.let { lastPosition ->
@@ -104,9 +102,7 @@ class MultiPlayerPlaybackManager(
                         }
                     }
                     else -> {
-                        if (player.currentPosition > 5 * 60) { // 5 seconds
-                            cachedPositions.add(uri, player.currentPosition)
-                        }
+                        cachedPositions.add(uri, player.currentPosition)
                     }
                 }
             }

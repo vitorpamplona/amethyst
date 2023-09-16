@@ -93,7 +93,21 @@ open class Event(
         (it.size > 1 && it[0] == "zapraiser")
     }?.get(1)?.toLongOrNull()
 
-    override fun zapAddress() = tags.firstOrNull { it.size > 1 && it[0] == "zap" }?.get(1)
+    override fun hasZapSplitSetup() = tags.any { it.size > 1 && it[0] == "zap" }
+
+    override fun zapSplitSetup(): List<ZapSplitSetup> {
+        return tags.filter { it.size > 1 && it[0] == "zap" }.map {
+            val isLnAddress = it[0].contains("@") || it[0].startsWith("LNURL", true)
+            val weight = if (isLnAddress) 1.0 else (it.getOrNull(3)?.toDoubleOrNull() ?: 0.0)
+
+            ZapSplitSetup(
+                it[1],
+                it.getOrNull(2),
+                weight,
+                isLnAddress
+            )
+        }
+    }
 
     override fun taggedAddresses() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull {
         val aTagValue = it[1]
@@ -421,3 +435,9 @@ fun String.bytesUsedInMemory(): Int {
     return (8 * ((((this.length) * 2) + 45) / 8))
 }
 
+data class ZapSplitSetup(
+    val lnAddressOrPubKeyHex: String,
+    val relay: String?,
+    val weight: Double,
+    val isLnAddress: Boolean,
+)

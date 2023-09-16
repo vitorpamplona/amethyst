@@ -32,7 +32,7 @@ class ChannelMessageEvent(
             channel: String,
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
-            zapReceiver: String?,
+            zapReceiver: List<ZapSplitSetup>? = null,
             privateKey: ByteArray,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
@@ -50,8 +50,8 @@ class ChannelMessageEvent(
             mentions?.forEach {
                 tags.add(listOf("p", it))
             }
-            zapReceiver?.let {
-                tags.add(listOf("zap", it))
+            zapReceiver?.forEach {
+                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
                 tags.add(listOf("content-warning", ""))
