@@ -1388,7 +1388,7 @@ class Account(
     }
 
     fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1420,7 +1420,7 @@ class Account(
     }
 
     fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1456,7 +1456,7 @@ class Account(
     }
 
     fun sendPrivateMessage(message: String, toUser: HexKey, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable()) return
+        if (!isWriteable() && !loginWithAmber) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
