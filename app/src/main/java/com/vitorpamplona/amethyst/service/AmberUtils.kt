@@ -12,13 +12,9 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -44,7 +40,6 @@ object AmberUtils {
     private lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
     private lateinit var decryptResultLauncher: ActivityResultLauncher<Intent>
     private lateinit var blockListResultLauncher: ActivityResultLauncher<Intent>
-    private lateinit var signEventResultLauncher: ActivityResultLauncher<Intent>
 
     @OptIn(DelicateCoroutinesApi::class)
     fun requestRejectedToast() {
@@ -69,24 +64,6 @@ object AmberUtils {
 
     @OptIn(DelicateCoroutinesApi::class)
     fun start(activity: MainActivity) {
-        signEventResultLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) {
-            if (it.resultCode != Activity.RESULT_OK) {
-                requestRejectedToast()
-            } else {
-                val json = it.data?.getStringExtra("event") ?: ""
-                GlobalScope.launch(Dispatchers.IO) {
-                    val signedEvent = Event.fromJson(json)
-                    if (signedEvent.hasValidSignature()) {
-                        Client.send(signedEvent)
-                        LocalCache.verifyAndConsume(signedEvent, null)
-                    }
-                }
-            }
-            default()
-        }
-
         activityResultLauncher = activity.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
@@ -196,19 +173,6 @@ object AmberUtils {
         while (isActivityRunning) {
             Thread.sleep(100)
         }
-    }
-
-    fun signEvent(event: EventInterface) {
-        checkNotInMainThread()
-        ServiceManager.shouldPauseService = false
-        isActivityRunning = true
-        openAmber(
-            event.toJson(),
-            SignerType.SIGN_EVENT,
-            signEventResultLauncher,
-            account.keyPair.pubKey.toHexKey(),
-            event.id()
-        )
     }
 
     fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {

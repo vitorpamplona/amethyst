@@ -413,13 +413,17 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        val event = ReactionEvent.create(emojiUrl, it, keyPair)
+                        var event = ReactionEvent.create(emojiUrl, it, keyPair)
                         if (loginWithAmber) {
-                            AmberUtils.signEvent(event)
-                        } else {
-                            Client.send(event)
-                            LocalCache.consume(event)
+                            AmberUtils.openAmber(event)
+                            val content = AmberUtils.content[event.id] ?: ""
+                            if (content.isBlank()) {
+                                return
+                            }
+                            event = ReactionEvent.create(event, content)
                         }
+                        Client.send(event)
+                        LocalCache.consume(event)
                     }
 
                     return
@@ -427,13 +431,17 @@ class Account(
             }
 
             note.event?.let {
-                val event = ReactionEvent.create(reaction, it, keyPair)
+                var event = ReactionEvent.create(reaction, it, keyPair)
                 if (loginWithAmber) {
-                    AmberUtils.signEvent(event)
-                } else {
-                    Client.send(event)
-                    LocalCache.consume(event)
+                    AmberUtils.openAmber(event)
+                    val content = AmberUtils.content[event.id] ?: ""
+                    if (content.isBlank()) {
+                        return
+                    }
+                    event = ReactionEvent.create(event, content)
                 }
+                Client.send(event)
+                LocalCache.consume(event)
             }
         }
     }
@@ -680,13 +688,22 @@ class Account(
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
-            val event = DeletionEvent.create(myNotes, keyPair)
+            var event = DeletionEvent.create(myNotes, keyPair)
             if (loginWithAmber) {
-                AmberUtils.signEvent(event)
-            } else {
-                Client.send(event)
-                LocalCache.consume(event)
+                AmberUtils.openAmber(event)
+                val eventContent = AmberUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) return
+                event = DeletionEvent(
+                    event.id,
+                    event.pubKey,
+                    event.createdAt,
+                    event.tags,
+                    event.content,
+                    eventContent
+                )
             }
+            Client.send(event)
+            LocalCache.consume(event)
         }
     }
 
@@ -715,21 +732,39 @@ class Account(
 
         note.event?.let {
             if (it.kind() == 1) {
-                val event = RepostEvent.create(it, keyPair)
+                var event = RepostEvent.create(it, keyPair)
                 if (loginWithAmber) {
-                    AmberUtils.signEvent(event)
-                } else {
-                    Client.send(event)
-                    LocalCache.consume(event)
+                    AmberUtils.openAmber(event)
+                    val eventContent = AmberUtils.content[event.id] ?: ""
+                    if (eventContent.isBlank()) return
+                    event = RepostEvent(
+                        event.id,
+                        event.pubKey,
+                        event.createdAt,
+                        event.tags,
+                        event.content,
+                        eventContent
+                    )
                 }
+                Client.send(event)
+                LocalCache.consume(event)
             } else {
-                val event = GenericRepostEvent.create(it, keyPair)
+                var event = GenericRepostEvent.create(it, keyPair)
                 if (loginWithAmber) {
-                    AmberUtils.signEvent(event)
-                } else {
-                    Client.send(event)
-                    LocalCache.consume(event)
+                    AmberUtils.openAmber(event)
+                    val eventContent = AmberUtils.content[event.id] ?: ""
+                    if (eventContent.isBlank()) return
+                    event = GenericRepostEvent(
+                        event.id,
+                        event.pubKey,
+                        event.createdAt,
+                        event.tags,
+                        event.content,
+                        eventContent
+                    )
                 }
+                Client.send(event)
+                LocalCache.consume(event)
             }
         }
     }

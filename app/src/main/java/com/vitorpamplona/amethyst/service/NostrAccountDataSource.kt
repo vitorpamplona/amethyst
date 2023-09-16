@@ -8,8 +8,6 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -26,7 +24,6 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
-import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
@@ -220,26 +217,12 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         super.auth(relay, challenge)
 
         if (this::account.isInitialized) {
-            if (account.loginWithAmber) {
-                val event = RelayAuthEvent.create(relay.url, challenge, account.keyPair.pubKey.toHexKey(), account.keyPair.privKey)
-                val result = AmberUtils.getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), account.keyPair.pubKey.toNpub()), "event")
-                if (result !== null) {
-                    val signedEvent = Event.fromJson(result)
-                    Client.send(
-                        signedEvent,
-                        relay.url
-                    )
-                    return
-                }
-                AmberUtils.signEvent(event)
-            } else {
-                val event = account.createAuthEvent(relay, challenge)
-                if (event != null) {
-                    Client.send(
-                        event,
-                        relay.url
-                    )
-                }
+            val event = account.createAuthEvent(relay, challenge)
+            if (event != null) {
+                Client.send(
+                    event,
+                    relay.url
+                )
             }
         }
     }
