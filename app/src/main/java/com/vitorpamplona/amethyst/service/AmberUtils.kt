@@ -15,6 +15,7 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
@@ -137,8 +138,7 @@ object AmberUtils {
         type: SignerType,
         intentResult: ActivityResultLauncher<Intent>,
         pubKey: HexKey,
-        id: String,
-        currentUserNpub: HexKey
+        id: String
     ) {
         ServiceManager.shouldPauseService = false
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
@@ -154,15 +154,17 @@ object AmberUtils {
         intent.putExtra("type", signerType)
         intent.putExtra("pubKey", pubKey)
         intent.putExtra("id", id)
-        intent.putExtra("current_user", currentUserNpub)
+        if (type !== SignerType.GET_PUBLIC_KEY) {
+            intent.putExtra("current_user", account.keyPair.pubKey.toNpub())
+        }
         intent.`package` = "com.greenart7c3.nostrsigner"
         intentResult.launch(intent)
     }
 
-    fun openAmber(event: EventInterface, currentUserNpub: HexKey) {
+    fun openAmber(event: EventInterface, columnName: String = "signature") {
         checkNotInMainThread()
 
-        val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()), currentUserNpub)
+        val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()), columnName)
         if (result !== null) {
             content.put(event.id(), result)
             return
@@ -175,15 +177,14 @@ object AmberUtils {
             SignerType.SIGN_EVENT,
             activityResultLauncher,
             "",
-            event.id(),
-            currentUserNpub
+            event.id()
         )
         while (isActivityRunning) {
             Thread.sleep(100)
         }
     }
 
-    fun signEvent(event: EventInterface, currentUserNpub: HexKey) {
+    fun signEvent(event: EventInterface) {
         checkNotInMainThread()
         ServiceManager.shouldPauseService = false
         isActivityRunning = true
@@ -192,13 +193,12 @@ object AmberUtils {
             SignerType.SIGN_EVENT,
             signEventResultLauncher,
             account.keyPair.pubKey.toHexKey(),
-            event.id(),
-            currentUserNpub
+            event.id()
         )
     }
 
-    fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
+    fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -210,13 +210,17 @@ object AmberUtils {
             signerType,
             blockListResultLauncher,
             pubKey,
-            id,
-            currentUserNpub
+            id
         )
     }
 
-    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, currentUserNpub: HexKey, columnName: String = "signature"): String? {
-        val localData = data.toList().plus(currentUserNpub).toTypedArray()
+    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature"): String? {
+        val localData = if (signerType !== SignerType.GET_PUBLIC_KEY) {
+            data.toList().plus(account.keyPair.pubKey.toNpub()).toTypedArray()
+        } else {
+            data
+        }
+
         Amethyst.instance.contentResolver.query(
             Uri.parse("content://com.greenart7c3.nostrsigner.$signerType"),
             localData,
@@ -234,8 +238,8 @@ object AmberUtils {
         return null
     }
 
-    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
+    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -248,16 +252,15 @@ object AmberUtils {
             signerType,
             decryptResultLauncher,
             pubKey,
-            id,
-            currentUserNpub
+            id
         )
         while (isActivityRunning) {
             // do nothing
         }
     }
 
-    fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
+    fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -268,13 +271,12 @@ object AmberUtils {
             signerType,
             decryptResultLauncher,
             pubKey,
-            id,
-            currentUserNpub
+            id
         )
     }
 
-    fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
+    fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -285,13 +287,12 @@ object AmberUtils {
             signerType,
             decryptResultLauncher,
             pubKey,
-            id,
-            currentUserNpub
+            id
         )
     }
 
-    fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey), currentUserNpub)
+    fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
         if (result !== null) {
             content.put(id, result)
             return
@@ -303,16 +304,15 @@ object AmberUtils {
             signerType,
             activityResultLauncher,
             pubKey,
-            id,
-            currentUserNpub
+            id
         )
         while (isActivityRunning) {
             Thread.sleep(100)
         }
     }
 
-    fun decryptZapEvent(event: LnZapRequestEvent, currentUserNpub: HexKey) {
-        val result = getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson()), currentUserNpub)
+    fun decryptZapEvent(event: LnZapRequestEvent) {
+        val result = getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson(), event.pubKey))
         if (result !== null) {
             content.put(event.id, result)
             cachedDecryptedContent[event.id] = result
@@ -323,8 +323,7 @@ object AmberUtils {
             SignerType.DECRYPT_ZAP_EVENT,
             decryptResultLauncher,
             event.pubKey,
-            event.id,
-            currentUserNpub
+            event.id
         )
     }
 }

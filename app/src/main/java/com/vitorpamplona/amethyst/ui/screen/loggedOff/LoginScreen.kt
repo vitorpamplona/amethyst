@@ -121,7 +121,6 @@ fun LoginPage(
                 SignerType.GET_PUBLIC_KEY,
                 activity,
                 "",
-                "",
                 ""
             )
         }

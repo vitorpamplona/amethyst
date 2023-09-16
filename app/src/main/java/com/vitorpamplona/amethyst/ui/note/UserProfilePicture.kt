@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.encoders.toNpub
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -458,8 +457,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: "",
-                                accountViewModel.account.keyPair.pubKey.toNpub()
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
@@ -481,8 +479,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: "",
-                                accountViewModel.account.keyPair.pubKey.toNpub()
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
@@ -505,8 +502,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: "",
-                                accountViewModel.account.keyPair.pubKey.toNpub()
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.removePublicBookmark(
@@ -531,8 +527,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                             AmberUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: "",
-                                accountViewModel.account.keyPair.pubKey.toNpub()
+                                bookmarks?.id ?: ""
                             )
                             bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.addPublicBookmark(
