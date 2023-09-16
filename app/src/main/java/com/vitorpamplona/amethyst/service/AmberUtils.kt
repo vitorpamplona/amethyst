@@ -155,7 +155,7 @@ object AmberUtils {
         intent.putExtra("pubKey", pubKey)
         intent.putExtra("id", id)
         intent.putExtra("current_user", currentUserNpub)
-        intent.`package` = "com.greenart7c3.nostrsigner.debug"
+        intent.`package` = "com.greenart7c3.nostrsigner"
         intentResult.launch(intent)
     }
 
