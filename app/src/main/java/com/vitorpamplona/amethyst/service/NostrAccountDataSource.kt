@@ -8,8 +8,8 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -162,6 +162,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                             event.content,
                             event.pubKey,
                             event.id,
+                            account.keyPair.pubKey.toNpub(),
                             SignerType.NIP44_DECRYPT
                         )
                         cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
@@ -185,6 +186,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                             event.content,
                             event.pubKey,
                             event.id,
+                            account.keyPair.pubKey.toNpub(),
                             SignerType.NIP44_DECRYPT
                         )
                         cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
@@ -222,7 +224,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         if (this::account.isInitialized) {
             if (account.loginWithAmber) {
                 val event = RelayAuthEvent.create(relay.url, challenge, account.keyPair.pubKey.toHexKey(), account.keyPair.privKey)
-                val result = AmberUtils.getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson()), "event")
+                val result = AmberUtils.getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), account.keyPair.pubKey.toNpub()), account.keyPair.pubKey.toNpub(), "event")
                 if (result !== null) {
                     val signedEvent = Event.fromJson(result)
                     Client.send(
@@ -231,7 +233,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     )
                     return
                 }
-                AmberUtils.signEvent(event)
+                AmberUtils.signEvent(event, account.keyPair.pubKey.toNpub())
             } else {
                 val event = account.createAuthEvent(relay, challenge)
                 if (event != null) {

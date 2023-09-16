@@ -13,7 +13,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
@@ -23,6 +22,16 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+
+enum class SignerType {
+    SIGN_EVENT,
+    NIP04_ENCRYPT,
+    NIP04_DECRYPT,
+    NIP44_ENCRYPT,
+    NIP44_DECRYPT,
+    GET_PUBLIC_KEY,
+    DECRYPT_ZAP_EVENT
+}
 
 object AmberUtils {
     val content = LruCache<String, String>(10)
@@ -128,7 +137,8 @@ object AmberUtils {
         type: SignerType,
         intentResult: ActivityResultLauncher<Intent>,
         pubKey: HexKey,
-        id: String
+        id: String,
+        currentUserNpub: HexKey
     ) {
         ServiceManager.shouldPauseService = false
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
@@ -144,14 +154,15 @@ object AmberUtils {
         intent.putExtra("type", signerType)
         intent.putExtra("pubKey", pubKey)
         intent.putExtra("id", id)
-        intent.`package` = "com.greenart7c3.nostrsigner"
+        intent.putExtra("current_user", currentUserNpub)
+        intent.`package` = "com.greenart7c3.nostrsigner.debug"
         intentResult.launch(intent)
     }
 
-    fun openAmber(event: EventInterface) {
+    fun openAmber(event: EventInterface, currentUserNpub: HexKey) {
         checkNotInMainThread()
 
-        val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()))
+        val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()), currentUserNpub)
         if (result !== null) {
             content.put(event.id(), result)
             return
@@ -164,14 +175,15 @@ object AmberUtils {
             SignerType.SIGN_EVENT,
             activityResultLauncher,
             "",
-            event.id()
+            event.id(),
+            currentUserNpub
         )
         while (isActivityRunning) {
             Thread.sleep(100)
         }
     }
 
-    fun signEvent(event: EventInterface) {
+    fun signEvent(event: EventInterface, currentUserNpub: HexKey) {
         checkNotInMainThread()
         ServiceManager.shouldPauseService = false
         isActivityRunning = true
@@ -180,12 +192,13 @@ object AmberUtils {
             SignerType.SIGN_EVENT,
             signEventResultLauncher,
             account.keyPair.pubKey.toHexKey(),
-            event.id()
+            event.id(),
+            currentUserNpub
         )
     }
 
-    fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+    fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -197,14 +210,16 @@ object AmberUtils {
             signerType,
             blockListResultLauncher,
             pubKey,
-            id
+            id,
+            currentUserNpub
         )
     }
 
-    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature"): String? {
+    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, currentUserNpub: HexKey, columnName: String = "signature"): String? {
+        val localData = data.toList().plus(currentUserNpub).toTypedArray()
         Amethyst.instance.contentResolver.query(
             Uri.parse("content://com.greenart7c3.nostrsigner.$signerType"),
-            data,
+            localData,
             null,
             null,
             null
@@ -219,8 +234,8 @@ object AmberUtils {
         return null
     }
 
-    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+    fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -233,15 +248,16 @@ object AmberUtils {
             signerType,
             decryptResultLauncher,
             pubKey,
-            id
+            id,
+            currentUserNpub
         )
         while (isActivityRunning) {
             // do nothing
         }
     }
 
-    fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+    fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -252,12 +268,13 @@ object AmberUtils {
             signerType,
             decryptResultLauncher,
             pubKey,
-            id
+            id,
+            currentUserNpub
         )
     }
 
-    fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
+    fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey), currentUserNpub)
         if (result !== null) {
             content.put(id, result)
             cachedDecryptedContent[id] = result
@@ -268,12 +285,13 @@ object AmberUtils {
             signerType,
             decryptResultLauncher,
             pubKey,
-            id
+            id,
+            currentUserNpub
         )
     }
 
-    fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
-        val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
+    fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, currentUserNpub: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
+        val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey), currentUserNpub)
         if (result !== null) {
             content.put(id, result)
             return
@@ -285,15 +303,16 @@ object AmberUtils {
             signerType,
             activityResultLauncher,
             pubKey,
-            id
+            id,
+            currentUserNpub
         )
         while (isActivityRunning) {
             Thread.sleep(100)
         }
     }
 
-    fun decryptZapEvent(event: LnZapRequestEvent) {
-        val result = getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson()))
+    fun decryptZapEvent(event: LnZapRequestEvent, currentUserNpub: HexKey) {
+        val result = getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson()), currentUserNpub)
         if (result !== null) {
             content.put(event.id, result)
             cachedDecryptedContent[event.id] = result
@@ -304,7 +323,8 @@ object AmberUtils {
             SignerType.DECRYPT_ZAP_EVENT,
             decryptResultLauncher,
             event.pubKey,
-            event.id
+            event.id,
+            currentUserNpub
         )
     }
 }

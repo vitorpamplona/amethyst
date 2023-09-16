@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 
 object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
     lateinit var account: Account
@@ -24,7 +25,8 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
                     AmberUtils.decryptBookmark(
                         bookmarks.content,
                         account.keyPair.pubKey.toHexKey(),
-                        id
+                        id,
+                        account.keyPair.pubKey.toNpub()
                     )
                 } else {
                     bookmarks.decryptedContent = decryptedContent

@@ -8,11 +8,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
-import com.vitorpamplona.amethyst.ui.actions.SignerType
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.Event
@@ -49,6 +50,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                     pushWrappedEvent.content,
                     pushWrappedEvent.pubKey,
                     pushWrappedEvent.id,
+                    account.keyPair.pubKey.toNpub(),
                     SignerType.NIP44_DECRYPT
                 )
                 cached = AmberUtils.cachedDecryptedContent[pushWrappedEvent.id] ?: ""
@@ -106,6 +108,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                             event.content,
                             event.pubKey,
                             event.id,
+                            account.keyPair.pubKey.toNpub(),
                             SignerType.NIP44_DECRYPT
                         )
                         cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
@@ -132,6 +135,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                             event.content,
                             event.pubKey,
                             event.id,
+                            account.keyPair.pubKey.toNpub(),
                             SignerType.NIP44_DECRYPT
                         )
                         cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""

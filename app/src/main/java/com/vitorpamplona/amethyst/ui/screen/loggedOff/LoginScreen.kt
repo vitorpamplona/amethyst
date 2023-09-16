@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.PackageUtils
-import com.vitorpamplona.amethyst.ui.actions.SignerType
+import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
@@ -120,6 +120,7 @@ fun LoginPage(
                 "",
                 SignerType.GET_PUBLIC_KEY,
                 activity,
+                "",
                 "",
                 ""
             )
@@ -357,7 +358,7 @@ fun LoginPage(
                 Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
                     Button(
                         onClick = {
-                            val result = AmberUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
+                            val result = AmberUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"), "")
                             if (result == null) {
                                 loginWithAmber = true
                                 return@Button
