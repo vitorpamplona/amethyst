@@ -1,7 +1,10 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -358,6 +361,12 @@ private fun ParseAuthorCommentAndAmount(
     onReady(content)
 }
 
+fun click(content: MutableState<ZapAmountCommentNotification>, nav: (String) -> Unit) {
+    content.value.user?.let {
+        nav(routeFor(it))
+    }
+}
+
 @Composable
 private fun RenderState(
     content: MutableState<ZapAmountCommentNotification>,
@@ -366,11 +375,7 @@ private fun RenderState(
     nav: (String) -> Unit
 ) {
     Row(
-        modifier = Modifier.clickable {
-            content.value.user?.let {
-                nav(routeFor(it))
-            }
-        },
+        modifier = Modifier.clickable { click(content, nav) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         DisplayAuthorCommentAndAmount(
@@ -418,8 +423,19 @@ fun CrossfadeToDisplayPicture(authorComment: MutableState<ZapAmountCommentNotifi
 
 @Composable
 fun CrossfadeToDisplayAmount(authorComment: MutableState<ZapAmountCommentNotification>) {
-    Crossfade(authorComment.value, modifier = amountBoxModifier) {
-        it.amount?.let {
+    val visible by remember(authorComment) {
+        derivedStateOf {
+            authorComment.value.amount != null
+        }
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        modifier = amountBoxModifier,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        authorComment.value.amount?.let {
             Box(
                 modifier = amountBoxModifier,
                 contentAlignment = Alignment.BottomCenter
@@ -453,8 +469,18 @@ fun CrossfadeToDisplayComment(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    Crossfade(authorComment.value) {
-        it.comment?.let {
+    val visible by remember(authorComment) {
+        derivedStateOf {
+            authorComment.value.comment != null
+        }
+    }
+
+    AnimatedVisibility(
+        visible,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        authorComment.value.comment?.let {
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = true,
