@@ -2,6 +2,7 @@ package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 
 class NIP24Factory {
@@ -78,6 +79,52 @@ class NIP24Factory {
             GiftWrapEvent.create(
                 event = SealedGossipEvent.create(
                     event = senderReaction,
+                    encryptTo = it,
+                    privateKey = from
+                ),
+                recipientPubKey = it
+            )
+        }
+    }
+
+    fun createTextNoteNIP24(
+        msg: String,
+        to: List<HexKey>,
+        from: ByteArray,
+        replyTos: List<String>? = null,
+        mentions: List<String>? = null,
+        addresses: List<ATag>?,
+        extraTags: List<String>?,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        markAsSensitive: Boolean = false,
+        replyingTo: String?,
+        root: String?,
+        directMentions: Set<HexKey>,
+        zapRaiserAmount: Long? = null,
+        geohash: String? = null
+    ): List<GiftWrapEvent> {
+        val senderPublicKey = CryptoUtils.pubkeyCreate(from).toHexKey()
+
+        val senderMessage = TextNoteEvent.create(
+            msg = msg,
+            privateKey = from,
+            replyTos = replyTos,
+            mentions = mentions,
+            zapReceiver = zapReceiver,
+            root = root,
+            extraTags = extraTags,
+            addresses = addresses,
+            directMentions = directMentions,
+            replyingTo = replyingTo,
+            markAsSensitive = markAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            geohash = geohash
+        )
+
+        return to.plus(senderPublicKey).map {
+            GiftWrapEvent.create(
+                event = SealedGossipEvent.create(
+                    event = senderMessage,
                     encryptTo = it,
                     privateKey = from
                 ),
