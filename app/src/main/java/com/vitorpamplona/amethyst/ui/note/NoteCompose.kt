@@ -54,6 +54,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.Alignment.Companion.TopStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -135,11 +136,12 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
@@ -158,7 +160,6 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.ui.theme.repostProfileBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.toNpub
@@ -1042,7 +1043,9 @@ private fun NoteBody(
         )
     }
 
-    Spacer(modifier = Modifier.height(3.dp))
+    if (baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
+        Spacer(modifier = Modifier.height(3.dp))
+    }
 
     if (!makeItShort) {
         ReplyRow(
@@ -2635,12 +2638,14 @@ fun FirstUserInfoRow(
             }
         }
 
+        val textColor = if (isRepost) MaterialTheme.colors.placeholderText else Color.Unspecified
+
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
             Spacer(HalfPadding)
-            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
+            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) }, textColor = textColor)
         } else {
-            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
+            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) }, textColor = textColor)
         }
 
         if (isRepost) {
@@ -2752,12 +2757,18 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
+    val baseRepost by remember {
+        derivedStateOf {
+            baseNote.replyTo?.lastOrNull()
+        }
+    }
 
     val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
 
-    if (isRepost) {
-        RepostNoteAuthorPicture(baseNote, accountViewModel, nav)
+    if (isRepost && baseRepost != null) {
+        RepostNoteAuthorPicture(baseNote, baseRepost!!, accountViewModel, nav)
+    } else {
+        NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
     }
 
     val isChannel = baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null
@@ -2828,23 +2839,30 @@ private fun ChannelNotePicture(baseChannel: Channel) {
 @Composable
 private fun RepostNoteAuthorPicture(
     baseNote: Note,
+    baseRepost: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val baseRepost by remember {
-        derivedStateOf {
-            baseNote.replyTo?.lastOrNull()
-        }
-    }
-
-    baseRepost?.let {
-        Box(Size30Modifier) {
+    Box(modifier = Size55Modifier) {
+        Box(Size35Modifier.align(Alignment.TopStart)) {
             NoteAuthorPicture(
-                baseNote = it,
+                baseNote = baseNote,
                 nav = nav,
                 accountViewModel = accountViewModel,
-                size = Size30dp,
-                pictureModifier = MaterialTheme.colors.repostProfileBorder
+                size = Size34dp
+            )
+        }
+
+        Box(Size18Modifier.align(Alignment.BottomStart).padding(1.dp)) {
+            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colors.placeholderText)
+        }
+
+        Box(Size35Modifier.align(Alignment.BottomEnd)) {
+            NoteAuthorPicture(
+                baseNote = baseRepost,
+                nav = nav,
+                accountViewModel = accountViewModel,
+                size = Size34dp
             )
         }
     }

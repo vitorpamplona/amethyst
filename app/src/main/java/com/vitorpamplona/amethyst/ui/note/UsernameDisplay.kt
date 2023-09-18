@@ -15,6 +15,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -31,20 +32,20 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 @Composable
-fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true) {
+fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true, textColor: Color = Color.Unspecified) {
     val authorState by baseNote.live().metadata.map {
         it.note.author
     }.observeAsState(baseNote.author)
 
     Crossfade(targetState = authorState, modifier = weight) {
         it?.let {
-            UsernameDisplay(it, weight, showPlayButton)
+            UsernameDisplay(it, weight, showPlayButton, textColor = textColor)
         }
     }
 }
 
 @Composable
-fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true, fontWeight: FontWeight = FontWeight.Bold) {
+fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true, fontWeight: FontWeight = FontWeight.Bold, textColor: Color = Color.Unspecified) {
     val npubDisplay by remember {
         derivedStateOf {
             baseUser.pubkeyDisplayHex()
@@ -57,9 +58,9 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton:
 
     Crossfade(targetState = userMetadata, modifier = weight) {
         if (it != null) {
-            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton, fontWeight)
+            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton, fontWeight, textColor)
         } else {
-            NPubDisplay(npubDisplay, weight, fontWeight)
+            NPubDisplay(npubDisplay, weight, fontWeight, textColor)
         }
     }
 }
@@ -72,27 +73,29 @@ private fun UserNameDisplay(
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
     showPlayButton: Boolean = true,
-    fontWeight: FontWeight = FontWeight.Bold
+    fontWeight: FontWeight = FontWeight.Bold,
+    textColor: Color = Color.Unspecified
 ) {
     if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
-        UserAndUsernameDisplay(bestDisplayName.trim(), tags, bestUserName.trim(), modifier, showPlayButton, fontWeight)
+        UserAndUsernameDisplay(bestDisplayName.trim(), tags, bestUserName.trim(), modifier, showPlayButton, fontWeight, textColor)
     } else if (bestDisplayName != null) {
-        UserDisplay(bestDisplayName.trim(), tags, modifier, showPlayButton, fontWeight)
+        UserDisplay(bestDisplayName.trim(), tags, modifier, showPlayButton, fontWeight, textColor)
     } else if (bestUserName != null) {
-        UserDisplay(bestUserName.trim(), tags, modifier, showPlayButton, fontWeight)
+        UserDisplay(bestUserName.trim(), tags, modifier, showPlayButton, fontWeight, textColor)
     } else {
-        NPubDisplay(npubDisplay, modifier, fontWeight)
+        NPubDisplay(npubDisplay, modifier, fontWeight, textColor)
     }
 }
 
 @Composable
-fun NPubDisplay(npubDisplay: String, modifier: Modifier, fontWeight: FontWeight = FontWeight.Bold) {
+fun NPubDisplay(npubDisplay: String, modifier: Modifier, fontWeight: FontWeight = FontWeight.Bold, textColor: Color = Color.Unspecified) {
     Text(
         text = npubDisplay,
         fontWeight = fontWeight,
         modifier = modifier,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        color = textColor
     )
 }
 
@@ -102,7 +105,8 @@ private fun UserDisplay(
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
     showPlayButton: Boolean = true,
-    fontWeight: FontWeight = FontWeight.Bold
+    fontWeight: FontWeight = FontWeight.Bold,
+    textColor: Color = Color.Unspecified
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
@@ -111,7 +115,8 @@ private fun UserDisplay(
             fontWeight = fontWeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = modifier
+            modifier = modifier,
+            color = textColor
         )
         if (showPlayButton) {
             Spacer(StdHorzSpacer)
@@ -127,7 +132,8 @@ private fun UserAndUsernameDisplay(
     bestUserName: String,
     modifier: Modifier,
     showPlayButton: Boolean = true,
-    fontWeight: FontWeight = FontWeight.Bold
+    fontWeight: FontWeight = FontWeight.Bold,
+    textColor: Color = Color.Unspecified
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
@@ -135,7 +141,8 @@ private fun UserAndUsernameDisplay(
             tags = tags,
             fontWeight = fontWeight,
             maxLines = 1,
-            modifier = modifier
+            modifier = modifier,
+            color = textColor
         )
         /*
         CreateTextWithEmoji(
