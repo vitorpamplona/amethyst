@@ -91,7 +91,7 @@ class NIP24Factory {
     fun createTextNoteNIP24(
         msg: String,
         to: List<HexKey>,
-        from: ByteArray,
+        keyPair: KeyPair,
         replyTos: List<String>? = null,
         mentions: List<String>? = null,
         addresses: List<ATag>?,
@@ -104,11 +104,11 @@ class NIP24Factory {
         zapRaiserAmount: Long? = null,
         geohash: String? = null
     ): List<GiftWrapEvent> {
-        val senderPublicKey = CryptoUtils.pubkeyCreate(from).toHexKey()
+        val senderPublicKey = keyPair.pubKey.toHexKey()
 
         val senderMessage = TextNoteEvent.create(
             msg = msg,
-            privateKey = from,
+            keyPair = keyPair,
             replyTos = replyTos,
             mentions = mentions,
             zapReceiver = zapReceiver,
@@ -127,7 +127,7 @@ class NIP24Factory {
                 event = SealedGossipEvent.create(
                     event = senderMessage,
                     encryptTo = it,
-                    privateKey = from
+                    privateKey = keyPair.privKey!!
                 ),
                 recipientPubKey = it
             )
