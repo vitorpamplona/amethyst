@@ -108,6 +108,22 @@ class LnZapRequestEvent(
         }
 
         fun createPublic(
+            userHex: String,
+            relays: Set<String>,
+            pubKey: HexKey,
+            message: String,
+            createdAt: Long = TimeUtils.now()
+        ): LnZapRequestEvent {
+            val tags = listOf(
+                listOf("p", userHex),
+                listOf("relays") + relays
+            )
+
+            val id = generateId(pubKey, createdAt, kind, tags, message)
+            return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, message, "")
+        }
+
+        fun createPublic(
             originalNote: EventInterface,
             relays: Set<String>,
             pubKey: HexKey,
@@ -159,6 +175,23 @@ class LnZapRequestEvent(
             return LnZapRequestEvent("zap", pubKey, createdAt, tags, content, "")
         }
 
+        fun createPrivateZap(
+            userHex: String,
+            relays: Set<String>,
+            pubKey: HexKey,
+            message: String,
+            createdAt: Long = TimeUtils.now()
+        ): LnZapRequestEvent {
+            val content = message
+            var tags = listOf(
+                listOf("p", userHex),
+                listOf("relays") + relays
+            )
+            tags = tags + listOf(listOf("anon", ""))
+
+            return LnZapRequestEvent("zap", pubKey, createdAt, tags, content, "")
+        }
+
         fun createAnonymous(
             originalNote: EventInterface,
             relays: Set<String>,
@@ -178,6 +211,26 @@ class LnZapRequestEvent(
             if (pollOption != null && pollOption >= 0) {
                 tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
             }
+
+            tags = tags + listOf(listOf("anon", ""))
+            val privkey = CryptoUtils.privkeyCreate()
+            val pubKey = CryptoUtils.pubkeyCreate(privkey).toHexKey()
+
+            val id = generateId(pubKey, createdAt, kind, tags, message)
+            val sig = CryptoUtils.sign(id, privkey)
+            return LnZapRequestEvent(id.toHexKey(), pubKey, createdAt, tags, message, sig.toHexKey())
+        }
+
+        fun createAnonymous(
+            userHex: String,
+            relays: Set<String>,
+            message: String,
+            createdAt: Long = TimeUtils.now()
+        ): LnZapRequestEvent {
+            var tags = listOf(
+                listOf("p", userHex),
+                listOf("relays") + relays
+            )
 
             tags = tags + listOf(listOf("anon", ""))
             val privkey = CryptoUtils.privkeyCreate()

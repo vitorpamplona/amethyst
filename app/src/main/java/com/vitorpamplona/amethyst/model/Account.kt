@@ -594,15 +594,61 @@ class Account(
     }
 
     fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
-        if (!isWriteable()) return null
+        if (!isWriteable() && !loginWithAmber) return null
+        if (loginWithAmber) {
+            return when (zapType) {
+                LnZapEvent.ZapType.ANONYMOUS -> {
+                    return LnZapRequestEvent.createAnonymous(
+                        userPubKeyHex,
+                        userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                            ?: localRelays.map { it.url }.toSet(),
+                        message
+                    )
+                }
+                LnZapEvent.ZapType.PUBLIC -> {
+                    val unsignedEvent = LnZapRequestEvent.createPublic(
+                        userPubKeyHex,
+                        userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                            ?: localRelays.map { it.url }.toSet(),
+                        keyPair.pubKey.toHexKey(),
+                        message
+                    )
+                    AmberUtils.openAmber(unsignedEvent)
+                    val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                    if (content.isBlank()) return null
 
-        return LnZapRequestEvent.create(
-            userPubKeyHex,
-            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null } ?: localRelays.map { it.url }.toSet(),
-            keyPair.privKey!!,
-            message,
-            zapType
-        )
+                    return LnZapRequestEvent.create(
+                        unsignedEvent,
+                        content
+                    )
+                }
+
+                LnZapEvent.ZapType.PRIVATE -> {
+                    val unsignedEvent = LnZapRequestEvent.createPrivateZap(
+                        userPubKeyHex,
+                        userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                            ?: localRelays.map { it.url }.toSet(),
+                        keyPair.pubKey.toHexKey(),
+                        message
+                    )
+                    AmberUtils.openAmber(unsignedEvent, "event")
+                    val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                    if (content.isBlank()) return null
+
+                    return Event.fromJson(content) as LnZapRequestEvent
+                }
+                else -> null
+            }
+        } else {
+            return LnZapRequestEvent.create(
+                userPubKeyHex,
+                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                    ?: localRelays.map { it.url }.toSet(),
+                keyPair.privKey!!,
+                message,
+                zapType
+            )
+        }
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
