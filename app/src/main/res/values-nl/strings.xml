@@ -474,4 +474,9 @@
     <string name="error_dialog_zap_error">Kan zap niet verzenden</string>
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>
     <string name="error_dialog_button_ok">Ok</string>
+    <string name="relay_information_document_error_assemble_url">Mislukt om %1$s te bereiken: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Mislukt om %1$s te bereiken: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Mislukt om het resultaat van %1$s te parsen: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s mislukt met code %2$s</string>
+    <string name="active_for">Actief voor: </string>
 </resources>
