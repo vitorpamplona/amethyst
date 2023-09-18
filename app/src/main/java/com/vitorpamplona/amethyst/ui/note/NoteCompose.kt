@@ -1076,6 +1076,8 @@ private fun NoteBody(
 fun DisplayZapSplits(noteEvent: EventInterface, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val list = remember(noteEvent) { noteEvent.zapSplitSetup() }
 
+    if (list.isEmpty()) return
+
     Row(verticalAlignment = CenterVertically) {
         Box(
             Modifier
