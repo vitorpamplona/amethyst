@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Richt camera op de QR-Code</string>
+    <string name="point_to_the_qr_code">Richt camera op de QR-code</string>
     <string name="show_qr">Toon QR</string>
     <string name="profile_image">Profielfoto</string>
     <string name="scan_qr">Scan QR</string>
@@ -479,4 +479,21 @@
     <string name="relay_information_document_error_parse_result">Mislukt om het resultaat van %1$s te parsen: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s mislukt met code %2$s</string>
     <string name="active_for">Actief voor: </string>
+    <string name="active_for_home">Startpagina</string>
+    <string name="active_for_msg">DM\'s</string>
+    <string name="active_for_chats">Chats</string>
+    <string name="active_for_global">Globaal</string>
+    <string name="active_for_search">Zoeken</string>
+    <string name="zap_split_title">Deel en stuur Zaps door</string>
+    <string name="zap_split_explainer">Ondersteunende clients delen en sturen door naar de gebruikers toegevoegd hier in plaats van de jouwe</string>
+    <string name="zap_split_serarch_and_add_user">Zoek en voeg gebruiker toe</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Gebruikersnaam of weergavenaam</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker %1$s heeft geen Lightning Adress ingesteld om sats te ontvangen</string>
+    <string name="zap_split_weight">Percentage</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Deel zaps met</string>
+    <string name="forwarding_zaps_to">Stuur zaps door naar</string>
+    <string name="lightning_wallets_not_found2">Lightning wallets niet gevonden</string>
+    <string name="paid">Betaald</string>
+    <string name="wallet_number">Wallet %1$s</string>
 </resources>
