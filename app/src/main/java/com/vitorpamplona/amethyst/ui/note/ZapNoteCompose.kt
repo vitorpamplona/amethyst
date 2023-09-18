@@ -173,6 +173,8 @@ fun UserActionOptions(
     baseAuthor: User,
     accountViewModel: AccountViewModel
 ) {
+    val scope = rememberCoroutineScope()
+
     WatchIsHiddenUser(baseAuthor, accountViewModel) { isHidden ->
         if (isHidden) {
             ShowUserButton {
@@ -209,14 +211,20 @@ fun ShowFollowingOrUnfollowingButton(
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.unfollow(baseAuthor)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -227,14 +235,20 @@ fun ShowFollowingOrUnfollowingButton(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.follow(baseAuthor)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {

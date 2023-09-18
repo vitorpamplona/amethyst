@@ -36,7 +36,7 @@ class RegisterAccounts(
         }
     }
 
-    private fun postRegistrationEvent(events: List<RelayAuthEvent>) {
+    fun postRegistrationEvent(events: List<RelayAuthEvent>) {
         try {
             val jsonObject = """{
                 "events": [ ${events.joinToString(", ") { it.toJson() }} ]

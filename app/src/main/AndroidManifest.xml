@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <queries>
         <package android:name="org.torproject.android"/>
+        <package android:name="com.greenart7c3.nostrsigner"/>
+        <package android:name="com.greenart7c3.nostrsigner.debug"/>
     </queries>
 
     <!-- Doesn't require a camera -->

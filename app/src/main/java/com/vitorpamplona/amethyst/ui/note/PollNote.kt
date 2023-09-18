@@ -307,7 +307,7 @@ fun ZapVote(
             // interactionSource = remember { MutableInteractionSource() },
             // indication = rememberRipple(bounded = false, radius = 24.dp),
             onClick = {
-                if (!accountViewModel.isWriteable()) {
+                if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithAmber()) {
                     scope.launch {
                         Toast
                             .makeText(

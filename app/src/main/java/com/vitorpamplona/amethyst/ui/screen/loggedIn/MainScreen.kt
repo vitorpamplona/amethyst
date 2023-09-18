@@ -9,15 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.*
-import androidx.compose.material.DrawerValue
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ModalBottomSheetLayout
-import androidx.compose.material.ModalBottomSheetValue
-import androidx.compose.material.Scaffold
-import androidx.compose.material.rememberDrawerState
-import androidx.compose.material.rememberModalBottomSheetState
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -28,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -37,12 +29,6 @@ import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
-import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
-import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
-import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -251,11 +237,14 @@ fun FloatingButtons(
     navScrollToTop: (Route, Boolean) -> Unit
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
+    val context = LocalContext.current
 
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
             is AccountState.LoggedInViewOnly -> {
-                // Does nothing.
+                if (accountViewModel.loggedInWithAmber()) {
+                    WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
+                }
             }
             is AccountState.LoggedOff -> {
                 // Does nothing.

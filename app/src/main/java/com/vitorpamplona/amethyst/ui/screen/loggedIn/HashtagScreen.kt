@@ -147,14 +147,20 @@ fun HashtagActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollowHashtag(tag)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -165,14 +171,20 @@ fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.followHashtag(tag)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {

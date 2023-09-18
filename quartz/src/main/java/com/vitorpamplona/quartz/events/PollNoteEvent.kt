@@ -45,7 +45,8 @@ class PollNoteEvent(
             replyTos: List<String>?,
             mentions: List<String>?,
             addresses: List<ATag>?,
-            privateKey: ByteArray,
+            pubKey: HexKey,
+            privateKey: ByteArray?,
             createdAt: Long = TimeUtils.now(),
             pollOptions: Map<Int, String>,
             valueMaximum: Int?,
@@ -57,7 +58,6 @@ class PollNoteEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): PollNoteEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 tags.add(listOf("e", it))
@@ -90,8 +90,14 @@ class PollNoteEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
+            return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
+        }
+
+        fun create(
+            unsignedEvent: PollNoteEvent, signature: String
+        ): PollNoteEvent {
+            return PollNoteEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

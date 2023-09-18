@@ -61,6 +61,22 @@ class LnZapPaymentResponseEvent(
         }
     }
 
+    fun response(decryptedContent: String): Response? {
+        if (response != null) response
+
+        return try {
+            if (content.isNotEmpty()) {
+                response = mapper.readValue(decryptedContent, Response::class.java)
+                response
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("LnZapPaymentResponseEvent", "Can't parse content as a payment response: $content", e)
+            null
+        }
+    }
+
     companion object {
         const val kind = 23195
     }

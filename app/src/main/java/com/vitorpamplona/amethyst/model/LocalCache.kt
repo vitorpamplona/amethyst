@@ -3,6 +3,8 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -11,6 +13,7 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
 import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.*
@@ -206,6 +209,14 @@ object LocalCache {
         val user = getOrCreateUser(event.pubKey)
         if (user.latestBookmarkList == null || event.createdAt > user.latestBookmarkList!!.createdAt) {
             if (event.dTag() == "bookmark") {
+                val loggedInUser = LocalPreferences.currentAccount()
+                val hexKey = loggedInUser?.bechToBytes()
+                if (hexKey != null) {
+                    val pubKey = Hex.encode(hexKey)
+                    if (pubKey == event.pubKey) {
+                        AmberUtils.content.remove(event.id)
+                    }
+                }
                 user.updateBookmark(event)
             }
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
@@ -23,7 +24,7 @@ class HTTPAuthorizationEvent(
             url: String,
             method: String,
             body: String? = null,
-            privateKey: ByteArray,
+            keyPair: KeyPair,
             createdAt: Long = TimeUtils.now()
         ): HTTPAuthorizationEvent {
             var hash = ""
@@ -37,10 +38,16 @@ class HTTPAuthorizationEvent(
                 listOf("payload", hash)
             )
 
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = keyPair.pubKey.toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = CryptoUtils.sign(id, privateKey)
-            return HTTPAuthorizationEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
+            return HTTPAuthorizationEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig?.toHexKey() ?: "")
+        }
+
+        fun create(
+            unsignedEvent: HTTPAuthorizationEvent, signature: String
+        ): HTTPAuthorizationEvent {
+            return HTTPAuthorizationEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

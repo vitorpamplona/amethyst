@@ -7,6 +7,8 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -32,27 +34,56 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         // Test with all logged in accounts
         LocalPreferences.allSavedAccounts().forEach {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
-            if (acc != null && acc.keyPair.privKey != null) {
+            if (acc != null && (acc.keyPair.privKey != null || acc.loginWithAmber)) {
                 consumeIfMatchesAccount(event, acc)
             }
         }
     }
 
     private suspend fun consumeIfMatchesAccount(pushWrappedEvent: GiftWrapEvent, account: Account) {
-        val key = account.keyPair.privKey ?: return
-        pushWrappedEvent.unwrap(key)?.let { notificationEvent ->
-            if (!LocalCache.justVerify(notificationEvent)) return // invalid event
-            if (LocalCache.notes[notificationEvent.id] != null) return // already processed
+        val key = account.keyPair.privKey
+        if (account.loginWithAmber) {
+            var cached = AmberUtils.cachedDecryptedContent[pushWrappedEvent.id]
+            if (cached == null) {
+                AmberUtils.decrypt(
+                    pushWrappedEvent.content,
+                    pushWrappedEvent.pubKey,
+                    pushWrappedEvent.id,
+                    SignerType.NIP44_DECRYPT
+                )
+                cached = AmberUtils.cachedDecryptedContent[pushWrappedEvent.id] ?: ""
+            }
+            pushWrappedEvent.unwrap(cached)?.let { notificationEvent ->
+                if (!LocalCache.justVerify(notificationEvent)) return // invalid event
+                if (LocalCache.notes[notificationEvent.id] != null) return // already processed
 
-            LocalCache.justConsume(notificationEvent, null)
+                LocalCache.justConsume(notificationEvent, null)
 
-            unwrapAndConsume(notificationEvent, account)?.let { innerEvent ->
-                if (innerEvent is PrivateDmEvent) {
-                    notify(innerEvent, account)
-                } else if (innerEvent is LnZapEvent) {
-                    notify(innerEvent, account)
-                } else if (innerEvent is ChatMessageEvent) {
-                    notify(innerEvent, account)
+                unwrapAndConsume(notificationEvent, account)?.let { innerEvent ->
+                    if (innerEvent is PrivateDmEvent) {
+                        notify(innerEvent, account)
+                    } else if (innerEvent is LnZapEvent) {
+                        notify(innerEvent, account)
+                    } else if (innerEvent is ChatMessageEvent) {
+                        notify(innerEvent, account)
+                    }
+                }
+            }
+        } else if (key != null) {
+            pushWrappedEvent.unwrap(key)?.let { notificationEvent ->
+                if (!LocalCache.justVerify(notificationEvent)) return // invalid event
+                if (LocalCache.notes[notificationEvent.id] != null) return // already processed
+
+                LocalCache.justConsume(notificationEvent, null)
+
+                unwrapAndConsume(notificationEvent, account)?.let { innerEvent ->
+                    if (innerEvent is PrivateDmEvent) {
+                        notify(innerEvent, account)
+                    } else if (innerEvent is LnZapEvent) {
+                        notify(innerEvent, account)
+                    } else if (innerEvent is ChatMessageEvent) {
+                        notify(innerEvent, account)
+                    }
                 }
             }
         }
@@ -63,17 +94,54 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
         return when (event) {
             is GiftWrapEvent -> {
-                val key = account.keyPair.privKey ?: return null
-                event.cachedGift(key)?.let {
-                    unwrapAndConsume(it, account)
+                val key = account.keyPair.privKey
+                if (key != null) {
+                    event.cachedGift(key)?.let {
+                        unwrapAndConsume(it, account)
+                    }
+                } else if (account.loginWithAmber) {
+                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGift(account.keyPair.pubKey, cached)?.let {
+                        unwrapAndConsume(it, account)
+                    }
+                } else {
+                    null
                 }
             }
             is SealedGossipEvent -> {
-                val key = account.keyPair.privKey ?: return null
-                event.cachedGossip(key)?.let {
-                    // this is not verifiable
-                    LocalCache.justConsume(it, null)
-                    it
+                val key = account.keyPair.privKey
+                if (key != null) {
+                    event.cachedGossip(key)?.let {
+                        // this is not verifiable
+                        LocalCache.justConsume(it, null)
+                        it
+                    }
+                } else if (account.loginWithAmber) {
+                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGossip(account.keyPair.pubKey, cached)?.let {
+                        LocalCache.justConsume(it, null)
+                        it
+                    }
+                } else {
+                    null
                 }
             }
             else -> {

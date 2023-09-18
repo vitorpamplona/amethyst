@@ -43,11 +43,13 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -409,11 +411,15 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         val scope = rememberCoroutineScope()
 
         if (!state.isFollowingAuthor) {
-            DropdownMenuItem(onClick = {
-                accountViewModel.follow(
-                    note.author ?: return@DropdownMenuItem
-                ); onDismiss()
-            }) {
+            DropdownMenuItem(
+                onClick = {
+                    val author = note.author ?: return@DropdownMenuItem
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.follow(author)
+                        onDismiss()
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.follow))
             }
             Divider()
@@ -469,20 +475,98 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         }
         Divider()
         if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
+                        } else {
+                            accountViewModel.removePrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.remove_from_private_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPrivateBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
+                        } else {
+                            accountViewModel.addPrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.add_to_private_bookmarks))
             }
         }
         if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePublicBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.removePublicBookmark(
+                                note,
+                                bookmarks?.decryptedContent ?: ""
+                            )
+                        } else {
+                            accountViewModel.removePublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.remove_from_public_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithAmber()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            AmberUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.addPublicBookmark(
+                                note,
+                                bookmarks?.decryptedContent ?: ""
+                            )
+                        } else {
+                            accountViewModel.addPublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.add_to_public_bookmarks))
             }
         }

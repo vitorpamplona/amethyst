@@ -36,8 +36,28 @@ class GiftWrapEvent(
         return myInnerEvent
     }
 
+    fun cachedGift(pubKey: ByteArray, decryptedContent: String): Event? {
+        val hex = pubKey.toHexKey()
+        if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
+
+        val myInnerEvent = unwrap(decryptedContent)
+        if (myInnerEvent is WrappedEvent) {
+            myInnerEvent.host = this
+        }
+
+        cachedInnerEvent = cachedInnerEvent + Pair(hex, myInnerEvent)
+        return myInnerEvent
+    }
+
     fun unwrap(privKey: ByteArray) = try {
         plainContent(privKey)?.let { fromJson(it) }
+    } catch (e: Exception) {
+        // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
+        null
+    }
+
+    fun unwrap(decryptedContent: String) = try {
+        plainContent(decryptedContent)?.let { fromJson(it) }
     } catch (e: Exception) {
         // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
         null
@@ -58,6 +78,11 @@ class GiftWrapEvent(
             Log.w("GeneralList", "Error decrypting the message ${e.message}")
             null
         }
+    }
+
+    private fun plainContent(decryptedContent: String): String? {
+        if (decryptedContent.isEmpty()) return null
+        return decryptedContent
     }
 
     fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)

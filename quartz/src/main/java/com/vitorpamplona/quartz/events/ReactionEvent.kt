@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
@@ -22,30 +23,29 @@ class ReactionEvent(
     companion object {
         const val kind = 7
 
-        fun createWarning(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
-            return create("\u26A0\uFE0F", originalNote, privateKey, createdAt)
+        fun createWarning(originalNote: EventInterface, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ReactionEvent {
+            return create("\u26A0\uFE0F", originalNote, keyPair, createdAt)
         }
 
-        fun createLike(originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
-            return create("+", originalNote, privateKey, createdAt)
+        fun createLike(originalNote: EventInterface, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ReactionEvent {
+            return create("+", originalNote, keyPair, createdAt)
         }
 
-        fun create(content: String, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-
+        fun create(content: String, originalNote: EventInterface, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ReactionEvent {
             var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
             if (originalNote is AddressableEvent) {
                 tags = tags + listOf(listOf("a", originalNote.address().toTag()))
             }
 
+            val pubKey = keyPair.pubKey.toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
+            return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
 
-        fun create(emojiUrl: EmojiUrl, originalNote: EventInterface, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ReactionEvent {
+        fun create(emojiUrl: EmojiUrl, originalNote: EventInterface, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ReactionEvent {
             val content = ":${emojiUrl.code}:"
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+            val pubKey = keyPair.pubKey.toHexKey()
 
             var tags = listOf(
                 listOf("e", originalNote.id()),
@@ -58,8 +58,12 @@ class ReactionEvent(
             }
 
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
+            return ReactionEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+        }
+
+        fun create(unsignedEvent: ReactionEvent, signature: String): ReactionEvent {
+            return ReactionEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

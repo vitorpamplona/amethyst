@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
 import com.vitorpamplona.quartz.encoders.Hex
@@ -86,7 +87,7 @@ class PrivateDmEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
-            privateKey: ByteArray,
+            keyPair: KeyPair,
             createdAt: Long = TimeUtils.now(),
             publishedRecipientPubKey: ByteArray? = null,
             advertiseNip18: Boolean = true,
@@ -94,12 +95,12 @@ class PrivateDmEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): PrivateDmEvent {
-            val content = CryptoUtils.encryptNIP04(
-                if (advertiseNip18) { nip18Advertisement } else { "" } + msg,
-                privateKey,
+            val message = if (advertiseNip18) { nip18Advertisement } else { "" } + msg
+            val content = if (keyPair.privKey == null) message else CryptoUtils.encryptNIP04(
+                message,
+                keyPair.privKey,
                 recipientPubKey
             )
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf<List<String>>()
             publishedRecipientPubKey?.let {
                 tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
@@ -123,9 +124,17 @@ class PrivateDmEvent(
                 tags.add(listOf("g", it))
             }
 
+            val pubKey = keyPair.pubKey.toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
+            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+        }
+
+        fun create(
+            unsignedEvent: PrivateDmEvent,
+            signature: String,
+        ): PrivateDmEvent {
+            return PrivateDmEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

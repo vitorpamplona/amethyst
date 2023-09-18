@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 
@@ -49,14 +50,13 @@ class LiveActivitiesChatMessageEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
-            privateKey: ByteArray,
+            keyPair: KeyPair,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null
         ): LiveActivitiesChatMessageEvent {
             val content = message
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
             val tags = mutableListOf(
                 listOf("a", activity.toTag(), "", "root")
             )
@@ -79,9 +79,16 @@ class LiveActivitiesChatMessageEvent(
                 tags.add(listOf("g", it))
             }
 
+            val pubKey = keyPair.pubKey.toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return LiveActivitiesChatMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
+            return LiveActivitiesChatMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+        }
+
+        fun create(
+            unsignedEvent: LiveActivitiesChatMessageEvent, signature: String
+        ): LiveActivitiesChatMessageEvent {
+            return LiveActivitiesChatMessageEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

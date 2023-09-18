@@ -97,6 +97,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.isWriteable()
     }
 
+    fun loggedInWithAmber(): Boolean {
+        return account.loginWithAmber
+    }
+
     fun userProfile(): User {
         return account.userProfile()
     }
@@ -251,8 +255,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.addPrivateBookmark(note)
     }
 
+    fun addPrivateBookmark(note: Note, decryptedContent: String) {
+        account.addPrivateBookmark(note, decryptedContent)
+    }
+
+    fun addPublicBookmark(note: Note, decryptedContent: String) {
+        account.addPublicBookmark(note, decryptedContent)
+    }
+
+    fun removePublicBookmark(note: Note, decryptedContent: String) {
+        account.removePublicBookmark(note, decryptedContent)
+    }
+
     fun addPublicBookmark(note: Note) {
         account.addPublicBookmark(note)
+    }
+
+    fun removePrivateBookmark(note: Note, decryptedContent: String) {
+        account.removePrivateBookmark(note, decryptedContent)
     }
 
     fun removePrivateBookmark(note: Note) {
@@ -280,6 +300,9 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun decrypt(note: Note): String? {
+        if (loggedInWithAmber()) {
+            return account.decryptContentWithAmber(note)
+        }
         return account.decryptContent(note)
     }
 

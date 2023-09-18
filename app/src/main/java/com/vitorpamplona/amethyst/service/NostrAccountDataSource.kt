@@ -8,17 +8,26 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
@@ -143,6 +152,20 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     event.cachedGift(privateKey)?.let {
                         this.consume(it, relay)
                     }
+                } else if (account.loginWithAmber) {
+                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGift(account.keyPair.pubKey, cached)?.let {
+                        this.consume(it, relay)
+                    }
                 }
             }
 
@@ -150,6 +173,20 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 val privateKey = account.keyPair.privKey
                 if (privateKey != null) {
                     event.cachedGossip(privateKey)?.let {
+                        LocalCache.justConsume(it, relay)
+                    }
+                } else if (account.loginWithAmber) {
+                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        AmberUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGossip(account.keyPair.pubKey, cached)?.let {
                         LocalCache.justConsume(it, relay)
                     }
                 }
@@ -181,7 +218,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
         if (this::account.isInitialized) {
             val event = account.createAuthEvent(relay, challenge)
-
             if (event != null) {
                 Client.send(
                     event,

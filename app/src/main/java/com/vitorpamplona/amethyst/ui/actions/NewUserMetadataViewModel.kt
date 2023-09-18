@@ -124,7 +124,6 @@ class NewUserMetadataViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
         }
-
         clear()
     }
 
@@ -183,23 +182,25 @@ class NewUserMetadataViewModel : ViewModel() {
             contentResolver.getType(galleryUri),
             context.applicationContext,
             onReady = { fileUri, contentType, size ->
-                ImageUploader.uploadImage(
-                    uri = fileUri,
-                    contentType = contentType,
-                    size = size,
-                    server = account.defaultFileServer,
-                    contentResolver = contentResolver,
-                    onSuccess = { imageUrl, mimeType ->
-                        onUploading(false)
-                        onUploaded(imageUrl)
-                    },
-                    onError = {
-                        onUploading(false)
-                        viewModelScope.launch {
-                            imageUploadingError.emit("Failed to upload the image / video")
+                viewModelScope.launch(Dispatchers.IO) {
+                    ImageUploader.uploadImage(
+                        uri = fileUri,
+                        contentType = contentType,
+                        size = size,
+                        server = account.defaultFileServer,
+                        contentResolver = contentResolver,
+                        onSuccess = { imageUrl, mimeType ->
+                            onUploading(false)
+                            onUploaded(imageUrl)
+                        },
+                        onError = {
+                            onUploading(false)
+                            viewModelScope.launch {
+                                imageUploadingError.emit("Failed to upload the image / video")
+                            }
                         }
-                    }
-                )
+                    )
+                }
             },
             onError = {
                 onUploading(false)

@@ -35,7 +35,8 @@ private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 @Immutable
 data class AccountInfo(
     val npub: String,
-    val hasPrivKey: Boolean = false
+    val hasPrivKey: Boolean,
+    val loggedInWithAmber: Boolean
 )
 
 private object PrefKeys {
@@ -74,6 +75,7 @@ private object PrefKeys {
     const val THEME = "theme"
     const val PREFERRED_LANGUAGE = "preferred_Language"
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
+    const val LOGIN_WITH_AMBER = "login_with_amber"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -82,7 +84,7 @@ object LocalPreferences {
 
     private var _currentAccount: String? = null
 
-    private fun currentAccount(): String? {
+    fun currentAccount(): String? {
         if (_currentAccount == null) {
             _currentAccount = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
         }
@@ -201,7 +203,11 @@ object LocalPreferences {
 
     fun allSavedAccounts(): List<AccountInfo> {
         return savedAccounts().map { npub ->
-            AccountInfo(npub = npub)
+            AccountInfo(
+                npub,
+                hasPrivKey(npub),
+                getLoggedInWithAmber(npub)
+            )
         }
     }
 
@@ -245,6 +251,7 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
             }
+            putBoolean(PrefKeys.LOGIN_WITH_AMBER, account.loginWithAmber)
         }.apply()
 
         val globalPrefs = encryptedPreferences()
@@ -287,6 +294,22 @@ object LocalPreferences {
             language = getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
         }
         return language
+    }
+
+    private fun getLoggedInWithAmber(npub: String): Boolean {
+        var loggedInWithAmber: Boolean
+        encryptedPreferences(npub).apply {
+            loggedInWithAmber = getBoolean(PrefKeys.LOGIN_WITH_AMBER, false)
+        }
+        return loggedInWithAmber
+    }
+
+    private fun hasPrivKey(npub: String): Boolean {
+        var hasPrivKey: Boolean
+        encryptedPreferences(npub).apply {
+            hasPrivKey = (getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
+        }
+        return hasPrivKey
     }
 
     fun loadFromEncryptedStorage(): Account? {
@@ -363,6 +386,7 @@ object LocalPreferences {
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
             val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+            val loginWithAmber = getBoolean(PrefKeys.LOGIN_WITH_AMBER, false)
 
             val showSensitiveContent = if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
                 getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
@@ -431,7 +455,8 @@ object LocalPreferences {
                 warnAboutPostsWithReports = warnAboutReports,
                 filterSpamFromStrangers = filterSpam,
                 lastReadPerRoute = lastReadPerRoute,
-                settings = settings
+                settings = settings,
+                loginWithAmber = loginWithAmber
             )
 
             return a

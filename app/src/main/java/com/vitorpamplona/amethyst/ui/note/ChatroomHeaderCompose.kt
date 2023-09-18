@@ -256,11 +256,10 @@ private fun UserRoomCompose(
             note.createdAt()
         }
     }
-
     val content by remember(note) {
-        derivedStateOf {
+        mutableStateOf(
             accountViewModel.decrypt(note)
-        }
+        )
     }
 
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->

@@ -621,7 +621,9 @@ private fun ProfileHeader(
                 modifier = Modifier
                     .size(30.dp)
                     .align(Alignment.Center),
-                onClick = { popupExpanded = true },
+                onClick = {
+                    popupExpanded = true
+                },
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
@@ -714,6 +716,8 @@ private fun ProfileActions(
         EditButton(accountViewModel.account)
     }
 
+    val scope = rememberCoroutineScope()
+
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
         if (isHidden) {
             ShowUserButton {
@@ -744,14 +748,20 @@ private fun DisplayFollowUnfollowButton(
     if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollow(baseUser)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -763,14 +773,20 @@ private fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                    if (accountViewModel.loggedInWithAmber()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.account.follow(baseUser)
+                        }
+                    } else {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
@@ -781,14 +797,20 @@ private fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                    if (accountViewModel.loggedInWithAmber()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.account.follow(baseUser)
+                        }
+                    } else {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
@@ -1688,17 +1710,21 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         if (accountViewModel.userProfile() != user) {
             Divider()
             if (accountViewModel.account.isHidden(user)) {
-                DropdownMenuItem(onClick = {
-                    accountViewModel.show(user)
-                    onDismiss()
-                }) {
+                DropdownMenuItem(
+                    onClick = {
+                        accountViewModel.show(user)
+                        onDismiss()
+                    }
+                ) {
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
-                DropdownMenuItem(onClick = {
-                    accountViewModel.hide(user)
-                    onDismiss()
-                }) {
+                DropdownMenuItem(
+                    onClick = {
+                        accountViewModel.hide(user)
+                        onDismiss()
+                    }
+                ) {
                     Text(stringResource(id = R.string.block_hide_user))
                 }
             }

@@ -1,7 +1,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
-import android.content.Context
+import android.app.Activity
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -36,13 +39,20 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -63,6 +73,58 @@ fun LoginPage(
     val useProxy = remember { mutableStateOf(false) }
     val proxyPort = remember { mutableStateOf("9050") }
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var loginWithAmber by remember { mutableStateOf(false) }
+    val activity = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            loginWithAmber = false
+            AmberUtils.isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
+            } else {
+                val event = it.data?.getStringExtra("signature") ?: ""
+                key.value = TextFieldValue(event)
+                if (!acceptedTerms.value) {
+                    termsAcceptanceIsRequired =
+                        context.getString(R.string.acceptance_of_terms_is_required)
+                }
+
+                if (key.value.text.isBlank()) {
+                    errorMessage = context.getString(R.string.key_is_required)
+                }
+
+                if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                    try {
+                        accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt(), true)
+                    } catch (e: Exception) {
+                        Log.e("Login", "Could not sign in", e)
+                        errorMessage = context.getString(R.string.invalid_key)
+                    }
+                }
+            }
+        }
+    )
+
+    LaunchedEffect(loginWithAmber) {
+        if (loginWithAmber) {
+            AmberUtils.openAmber(
+                "",
+                SignerType.GET_PUBLIC_KEY,
+                activity,
+                "",
+                ""
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -229,7 +291,7 @@ fun LoginPage(
                 }
             }
 
-            if (isPackageInstalled(context, "org.torproject.android")) {
+            if (PackageUtils.isOrbotInstalled(context)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = useProxy.value,
@@ -290,6 +352,53 @@ fun LoginPage(
                     Text(text = stringResource(R.string.login))
                 }
             }
+
+            if (PackageUtils.isAmberInstalled(context)) {
+                Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
+                    Button(
+                        onClick = {
+                            val result = AmberUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"), "")
+                            if (result == null) {
+                                loginWithAmber = true
+                                return@Button
+                            }
+                            key.value = TextFieldValue(result)
+                            if (!acceptedTerms.value) {
+                                termsAcceptanceIsRequired =
+                                    context.getString(R.string.acceptance_of_terms_is_required)
+                            }
+
+                            if (key.value.text.isBlank()) {
+                                errorMessage = context.getString(R.string.key_is_required)
+                            }
+
+                            if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                                try {
+                                    accountViewModel.startUI(
+                                        key.value.text,
+                                        useProxy.value,
+                                        proxyPort.value.toInt(),
+                                        true
+                                    )
+                                } catch (e: Exception) {
+                                    Log.e("Login", "Could not sign in", e)
+                                    errorMessage = context.getString(R.string.invalid_key)
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(Size35dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        colors = ButtonDefaults
+                            .buttonColors(
+                                backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
+                            )
+                    ) {
+                        Text(text = stringResource(R.string.login_with_amber))
+                    }
+                }
+            }
         }
 
         // The last child is glued to the bottom.
@@ -314,8 +423,4 @@ fun LoginPage(
             )
         )
     }
-}
-
-fun isPackageInstalled(context: Context, target: String): Boolean {
-    return context.packageManager.getInstalledApplications(0).find { info -> info.packageName == target } != null
 }

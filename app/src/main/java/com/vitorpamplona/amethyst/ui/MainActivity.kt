@@ -23,6 +23,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.AmberUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
@@ -51,6 +52,8 @@ import java.nio.charset.StandardCharsets
 class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
+        AmberUtils.start(this)
+
         super.onCreate(savedInstanceState)
 
         LocalPreferences.migrateSingleUserPrefs()
@@ -99,11 +102,13 @@ class MainActivity : AppCompatActivity() {
 
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.start(this@MainActivity)
+            if (ServiceManager.shouldPauseService) {
+                ServiceManager.start(this@MainActivity)
+            }
         }
 
         GlobalScope.launch(Dispatchers.IO) {
-            PushNotificationUtils().init(LocalPreferences.allSavedAccounts())
+            PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
         }
     }
 
@@ -113,7 +118,9 @@ class MainActivity : AppCompatActivity() {
         debugState(this)
         // }
 
-        ServiceManager.pause()
+        if (ServiceManager.shouldPauseService) {
+            ServiceManager.pause()
+        }
         super.onPause()
     }
 
@@ -145,8 +152,10 @@ class MainActivity : AppCompatActivity() {
             Log.d("NETWORKCALLBACK", "onAvailable: Disconnecting and connecting again")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
-                ServiceManager.start(this@MainActivity)
+                if (ServiceManager.shouldPauseService) {
+                    ServiceManager.pause()
+                    ServiceManager.start(this@MainActivity)
+                }
             }
         }
 
@@ -176,7 +185,9 @@ class MainActivity : AppCompatActivity() {
             Log.d("NETWORKCALLBACK", "onLost: Disconnecting and pausing relay's connection")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
+                if (ServiceManager.shouldPauseService) {
+                    ServiceManager.pause()
+                }
             }
         }
     }

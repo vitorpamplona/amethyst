@@ -1623,10 +1623,8 @@ private fun RenderPrivateMessage(
     val noteEvent = note.event as? PrivateDmEvent ?: return
 
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
-
     if (withMe) {
-        val eventContent = remember { accountViewModel.decrypt(note) }
-
+        val eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
         val hashtags = remember(note.event?.id()) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
         val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
@@ -1636,7 +1634,7 @@ private fun RenderPrivateMessage(
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
                 Text(
-                    text = eventContent,
+                    text = eventContent!!,
                     color = MaterialTheme.colors.placeholderText,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -1647,7 +1645,7 @@ private fun RenderPrivateMessage(
                     accountViewModel = accountViewModel
                 ) {
                     TranslatableRichTextViewer(
-                        content = eventContent,
+                        content = eventContent!!,
                         canPreview = canPreview && !makeItShort,
                         modifier = modifier,
                         tags = tags,
@@ -1657,7 +1655,7 @@ private fun RenderPrivateMessage(
                     )
                 }
 
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                DisplayUncitedHashtags(hashtags, eventContent!!, nav)
             }
         }
     } else {

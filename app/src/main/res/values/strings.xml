@@ -537,6 +537,8 @@
     <string name="messages_new_subject_message">Explanation to members</string>
     <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
 
+    <string name="paste_from_clipboard">Paste from clipboard</string>
+  
     <string name="language_description">For the App\'s Interface</string>
     <string name="theme_description">Dark, Light or System theme</string>
     <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
@@ -549,6 +551,8 @@
 
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>
+
+    <string name="login_with_amber">Login with Amber</string>
 
     <string name="status_update">Update your status</string>
 
@@ -584,4 +588,6 @@
     <string name="lightning_wallets_not_found2">Lightning wallets not found</string>
     <string name="paid">Paid</string>
     <string name="wallet_number">Wallet %1$s</string>
+    <string name="error_opening_amber">Error opening Amber</string>
+    <string name="sign_request_rejected">Sign request rejected</string>
 </resources>

@@ -38,11 +38,37 @@ class SealedGossipEvent(
         return event
     }
 
+    fun cachedGossip(pubKey: ByteArray, decryptedContent: String): Event? {
+        val hex = pubKey.toHexKey()
+        if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
+
+        val gossip = unseal(decryptedContent)
+        val event = gossip?.mergeWith(this)
+        if (event is WrappedEvent) {
+            event.host = host ?: this
+        }
+
+        cachedInnerEvent = cachedInnerEvent + Pair(hex, event)
+        return event
+    }
+
     fun unseal(privKey: ByteArray): Gossip? = try {
         plainContent(privKey)?.let { Gossip.fromJson(it) }
     } catch (e: Exception) {
         Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
         null
+    }
+
+    fun unseal(decryptedContent: String): Gossip? = try {
+        plainContent(decryptedContent)?.let { Gossip.fromJson(it) }
+    } catch (e: Exception) {
+        Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
+        null
+    }
+
+    private fun plainContent(decryptedContent: String): String? {
+        if (decryptedContent.isEmpty()) return null
+        return decryptedContent
     }
 
     private fun plainContent(privKey: ByteArray): String? {
@@ -94,6 +120,23 @@ class SealedGossipEvent(
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = CryptoUtils.sign(id, privateKey)
             return SealedGossipEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+        }
+
+        fun create(
+            encryptedContent: String,
+            pubKey: HexKey,
+            createdAt: Long = TimeUtils.randomWithinAWeek()
+        ): SealedGossipEvent {
+            val tags = listOf<List<String>>()
+            val id = generateId(pubKey, createdAt, kind, tags, encryptedContent)
+            return SealedGossipEvent(id.toHexKey(), pubKey, createdAt, tags, encryptedContent, "")
+        }
+
+        fun create(
+            unsignedEvent: SealedGossipEvent,
+            signature: String
+        ): SealedGossipEvent {
+            return SealedGossipEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

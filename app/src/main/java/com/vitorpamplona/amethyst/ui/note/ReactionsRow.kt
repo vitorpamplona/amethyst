@@ -546,12 +546,16 @@ fun ReplyReaction(
             if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_be_able_to_reply),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    onPress()
+                } else {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_reply),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -655,12 +659,22 @@ fun BoostReaction(
                     wantsToBoost = true
                 }
             } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (accountViewModel.loggedInWithAmber()) {
+                    if (accountViewModel.hasBoosted(baseNote)) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.deleteBoostsTo(baseNote)
+                        }
+                    } else {
+                        wantsToBoost = true
+                    }
+                } else {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -678,6 +692,11 @@ fun BoostReaction(
                 onQuote = {
                     wantsToBoost = false
                     onQuotePress()
+                },
+                onRepost = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.boost(baseNote)
+                    }
                 }
             )
         }
@@ -741,6 +760,20 @@ fun LikeReaction(
                     context,
                     onMultipleChoices = {
                         wantsToReact = true
+                    },
+                    onWantsToSignReaction = {
+                        if (accountViewModel.account.reactionChoices.size == 1) {
+                            scope.launch(Dispatchers.IO) {
+                                val reaction = accountViewModel.account.reactionChoices.first()
+                                if (accountViewModel.hasReactedTo(baseNote, reaction)) {
+                                    accountViewModel.deleteReactionTo(baseNote, reaction)
+                                } else {
+                                    accountViewModel.reactTo(baseNote, reaction)
+                                }
+                            }
+                        } else if (accountViewModel.account.reactionChoices.size > 1) {
+                            wantsToReact = true
+                        }
                     }
                 )
             },
@@ -860,7 +893,8 @@ private fun likeClick(
     accountViewModel: AccountViewModel,
     scope: CoroutineScope,
     context: Context,
-    onMultipleChoices: () -> Unit
+    onMultipleChoices: () -> Unit,
+    onWantsToSignReaction: () -> Unit
 ) {
     if (accountViewModel.account.reactionChoices.isEmpty()) {
         scope.launch {
@@ -873,14 +907,18 @@ private fun likeClick(
                 .show()
         }
     } else if (!accountViewModel.isWriteable()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.login_with_a_private_key_to_like_posts),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
+        if (accountViewModel.loggedInWithAmber()) {
+            onWantsToSignReaction()
+        } else {
+            scope.launch {
+                Toast
+                    .makeText(
+                        context,
+                        context.getString(R.string.login_with_a_private_key_to_like_posts),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
+            }
         }
     } else if (accountViewModel.account.reactionChoices.size == 1) {
         scope.launch(Dispatchers.IO) {
@@ -1084,7 +1122,7 @@ private fun zapClick(
                 )
                 .show()
         }
-    } else if (!accountViewModel.isWriteable()) {
+    } else if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithAmber()) {
         scope.launch {
             Toast
                 .makeText(
@@ -1224,7 +1262,7 @@ private fun DrawViewCount(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
+private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit, onRepost: () -> Unit) {
     val iconSizePx = with(LocalDensity.current) {
         -iconSize.toPx().toInt()
     }
@@ -1239,8 +1277,13 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.boost(baseNote)
+                    if (accountViewModel.isWriteable()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.boost(baseNote)
+                            onDismiss()
+                        }
+                    } else {
+                        onRepost()
                         onDismiss()
                     }
                 },
@@ -1423,7 +1466,7 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
-
+    val scope = rememberCoroutineScope()
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
     val zapMessage = ""

@@ -627,7 +627,7 @@ private fun RenderRegularTextNote(
     nav: (String) -> Unit
 ) {
     val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
-    val eventContent = remember { accountViewModel.decrypt(note) }
+    val eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
@@ -636,7 +636,7 @@ private fun RenderRegularTextNote(
             accountViewModel = accountViewModel
         ) {
             TranslatableRichTextViewer(
-                content = eventContent,
+                content = eventContent!!,
                 canPreview = canPreview,
                 modifier = modifier,
                 tags = tags,
