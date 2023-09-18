@@ -127,7 +127,6 @@ fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountVi
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SaveableFeedState(
     videoFeedView: NostrVideoFeedViewModel,

@@ -96,16 +96,20 @@ open class Event(
     override fun hasZapSplitSetup() = tags.any { it.size > 1 && it[0] == "zap" }
 
     override fun zapSplitSetup(): List<ZapSplitSetup> {
-        return tags.filter { it.size > 1 && it[0] == "zap" }.map {
+        return tags.filter { it.size > 1 && it[0] == "zap" }.mapNotNull {
             val isLnAddress = it[0].contains("@") || it[0].startsWith("LNURL", true)
             val weight = if (isLnAddress) 1.0 else (it.getOrNull(3)?.toDoubleOrNull() ?: 0.0)
 
-            ZapSplitSetup(
-                it[1],
-                it.getOrNull(2),
-                weight,
-                isLnAddress
-            )
+            if (weight > 0) {
+                ZapSplitSetup(
+                    it[1],
+                    it.getOrNull(2),
+                    weight,
+                    isLnAddress
+                )
+            } else {
+                null
+            }
         }
     }
 

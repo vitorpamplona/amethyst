@@ -23,7 +23,7 @@ class RegisterAccounts(
     ): List<RelayAuthEvent> {
         return accounts.mapNotNull {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
-            if (acc != null) {
+            if (acc != null && acc.isWriteable()) {
                 val relayToUse = acc.activeRelays()?.firstOrNull { it.read }
                 if (relayToUse != null) {
                     acc.createAuthEvent(relayToUse, notificationToken)
