@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
@@ -344,16 +345,18 @@ object LocalPreferences {
                     Event.mapper.readValue<Nip47URI?>(it)
                 }
             } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Error Decoding Zap Payment Request Server ${getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)}", e)
                 e.printStackTrace()
                 null
             }
 
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
+                    println("Decoding Contact List: " + it)
                     Event.fromJson(it) as ContactListEvent?
                 }
             } catch (e: Throwable) {
-                e.printStackTrace()
+                Log.w("LocalPreferences", "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}", e)
                 null
             }
 
@@ -362,6 +365,7 @@ object LocalPreferences {
                     Event.mapper.readValue<Map<String, String>?>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Error Decoding Language Preferences ${getString(PrefKeys.LANGUAGE_PREFS, null)}", e)
                 e.printStackTrace()
                 mapOf()
             }
@@ -387,6 +391,7 @@ object LocalPreferences {
                     Event.mapper.readValue<Map<String, Long>?>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Error Decoding Last Read per route ${getString(PrefKeys.LAST_READ_PER_ROUTE, null)}", e)
                 e.printStackTrace()
                 mapOf()
             }

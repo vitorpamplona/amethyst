@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -461,6 +462,13 @@ fun NoteMaster(
                         )
                     }
                 }
+            }
+
+            val noteEvent = baseNote.event
+            val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+            if (zapSplits && noteEvent != null) {
+                Spacer(modifier = HalfDoubleVertSpacer)
+                DisplayZapSplits(noteEvent, accountViewModel, nav)
             }
 
             ReactionsRow(note, true, accountViewModel, nav)
