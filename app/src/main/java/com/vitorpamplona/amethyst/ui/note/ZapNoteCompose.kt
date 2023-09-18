@@ -211,7 +211,7 @@ fun ShowFollowingOrUnfollowingButton(
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.unfollow(baseAuthor)
                     }
@@ -235,7 +235,7 @@ fun ShowFollowingOrUnfollowingButton(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.account.follow(baseAuthor)
                     }

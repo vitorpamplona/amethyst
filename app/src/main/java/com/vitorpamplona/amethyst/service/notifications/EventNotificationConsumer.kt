@@ -7,7 +7,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
@@ -34,7 +34,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         // Test with all logged in accounts
         LocalPreferences.allSavedAccounts().forEach {
             val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
-            if (acc != null && (acc.keyPair.privKey != null || acc.loginWithAmber)) {
+            if (acc != null && (acc.keyPair.privKey != null || acc.loginWithExternalSigner)) {
                 consumeIfMatchesAccount(event, acc)
             }
         }
@@ -42,16 +42,16 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
     private suspend fun consumeIfMatchesAccount(pushWrappedEvent: GiftWrapEvent, account: Account) {
         val key = account.keyPair.privKey
-        if (account.loginWithAmber) {
-            var cached = AmberUtils.cachedDecryptedContent[pushWrappedEvent.id]
+        if (account.loginWithExternalSigner) {
+            var cached = ExternalSignerUtils.cachedDecryptedContent[pushWrappedEvent.id]
             if (cached == null) {
-                AmberUtils.decrypt(
+                ExternalSignerUtils.decrypt(
                     pushWrappedEvent.content,
                     pushWrappedEvent.pubKey,
                     pushWrappedEvent.id,
                     SignerType.NIP44_DECRYPT
                 )
-                cached = AmberUtils.cachedDecryptedContent[pushWrappedEvent.id] ?: ""
+                cached = ExternalSignerUtils.cachedDecryptedContent[pushWrappedEvent.id] ?: ""
             }
             pushWrappedEvent.unwrap(cached)?.let { notificationEvent ->
                 if (!LocalCache.justVerify(notificationEvent)) return // invalid event
@@ -99,16 +99,16 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                     event.cachedGift(key)?.let {
                         unwrapAndConsume(it, account)
                     }
-                } else if (account.loginWithAmber) {
-                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                } else if (account.loginWithExternalSigner) {
+                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        AmberUtils.decrypt(
+                        ExternalSignerUtils.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,
                             SignerType.NIP44_DECRYPT
                         )
-                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
                     }
                     event.cachedGift(account.keyPair.pubKey, cached)?.let {
                         unwrapAndConsume(it, account)
@@ -125,16 +125,16 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                         LocalCache.justConsume(it, null)
                         it
                     }
-                } else if (account.loginWithAmber) {
-                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                } else if (account.loginWithExternalSigner) {
+                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        AmberUtils.decrypt(
+                        ExternalSignerUtils.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,
                             SignerType.NIP44_DECRYPT
                         )
-                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
                     }
                     event.cachedGossip(account.keyPair.pubKey, cached)?.let {
                         LocalCache.justConsume(it, null)

@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -214,7 +214,7 @@ object LocalCache {
                 if (hexKey != null) {
                     val pubKey = Hex.encode(hexKey)
                     if (pubKey == event.pubKey) {
-                        AmberUtils.content.remove(event.id)
+                        ExternalSignerUtils.content.remove(event.id)
                     }
                 }
                 user.updateBookmark(event)

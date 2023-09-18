@@ -242,7 +242,7 @@ fun FloatingButtons(
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
             is AccountState.LoggedInViewOnly -> {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
                 }
             }

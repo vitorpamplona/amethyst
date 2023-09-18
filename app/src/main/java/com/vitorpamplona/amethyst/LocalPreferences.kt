@@ -36,7 +36,7 @@ private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 data class AccountInfo(
     val npub: String,
     val hasPrivKey: Boolean,
-    val loggedInWithAmber: Boolean
+    val loggedInWithExternalSigner: Boolean
 )
 
 private object PrefKeys {
@@ -75,7 +75,7 @@ private object PrefKeys {
     const val THEME = "theme"
     const val PREFERRED_LANGUAGE = "preferred_Language"
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
-    const val LOGIN_WITH_AMBER = "login_with_amber"
+    const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
@@ -206,7 +206,7 @@ object LocalPreferences {
             AccountInfo(
                 npub,
                 hasPrivKey(npub),
-                getLoggedInWithAmber(npub)
+                getLoggedInWithExternalSigner(npub)
             )
         }
     }
@@ -251,7 +251,7 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
             }
-            putBoolean(PrefKeys.LOGIN_WITH_AMBER, account.loginWithAmber)
+            putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.loginWithExternalSigner)
         }.apply()
 
         val globalPrefs = encryptedPreferences()
@@ -283,33 +283,19 @@ object LocalPreferences {
     }
 
     fun getTheme(): Int {
-        encryptedPreferences().apply {
-            return getInt(PrefKeys.THEME, 0)
-        }
+        return encryptedPreferences().getInt(PrefKeys.THEME, 0)
     }
 
     fun getPreferredLanguage(): String {
-        var language = ""
-        encryptedPreferences().apply {
-            language = getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
-        }
-        return language
+        return encryptedPreferences().getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
     }
 
-    private fun getLoggedInWithAmber(npub: String): Boolean {
-        var loggedInWithAmber: Boolean
-        encryptedPreferences(npub).apply {
-            loggedInWithAmber = getBoolean(PrefKeys.LOGIN_WITH_AMBER, false)
-        }
-        return loggedInWithAmber
+    private fun getLoggedInWithExternalSigner(npub: String): Boolean {
+        return encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
     }
 
     private fun hasPrivKey(npub: String): Boolean {
-        var hasPrivKey: Boolean
-        encryptedPreferences(npub).apply {
-            hasPrivKey = (getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
-        }
-        return hasPrivKey
+        return (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
     }
 
     fun loadFromEncryptedStorage(): Account? {
@@ -386,7 +372,7 @@ object LocalPreferences {
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
             val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
-            val loginWithAmber = getBoolean(PrefKeys.LOGIN_WITH_AMBER, false)
+            val loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
 
             val showSensitiveContent = if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
                 getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
@@ -456,7 +442,7 @@ object LocalPreferences {
                 filterSpamFromStrangers = filterSpam,
                 lastReadPerRoute = lastReadPerRoute,
                 settings = settings,
-                loginWithAmber = loginWithAmber
+                loginWithExternalSigner = loginWithExternalSigner
             )
 
             return a

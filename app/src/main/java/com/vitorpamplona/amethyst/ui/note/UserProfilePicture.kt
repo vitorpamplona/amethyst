@@ -43,7 +43,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -478,14 +478,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             DropdownMenuItem(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithAmber()) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decrypt(
+                            ExternalSignerUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
                         } else {
                             accountViewModel.removePrivateBookmark(note)
@@ -500,14 +500,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             DropdownMenuItem(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithAmber()) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decrypt(
+                            ExternalSignerUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
                         } else {
                             accountViewModel.addPrivateBookmark(note)
@@ -523,14 +523,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             DropdownMenuItem(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithAmber()) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decrypt(
+                            ExternalSignerUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.removePublicBookmark(
                                 note,
                                 bookmarks?.decryptedContent ?: ""
@@ -548,14 +548,14 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             DropdownMenuItem(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithAmber()) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            AmberUtils.decrypt(
+                            ExternalSignerUtils.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
                             )
-                            bookmarks?.decryptedContent = AmberUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
                             accountViewModel.addPublicBookmark(
                                 note,
                                 bookmarks?.decryptedContent ?: ""

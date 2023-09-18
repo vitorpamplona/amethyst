@@ -546,7 +546,7 @@ fun ReplyReaction(
             if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     onPress()
                 } else {
                     scope.launch {
@@ -659,7 +659,7 @@ fun BoostReaction(
                     wantsToBoost = true
                 }
             } else {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     if (accountViewModel.hasBoosted(baseNote)) {
                         scope.launch(Dispatchers.IO) {
                             accountViewModel.deleteBoostsTo(baseNote)
@@ -907,7 +907,7 @@ private fun likeClick(
                 .show()
         }
     } else if (!accountViewModel.isWriteable()) {
-        if (accountViewModel.loggedInWithAmber()) {
+        if (accountViewModel.loggedInWithExternalSigner()) {
             onWantsToSignReaction()
         } else {
             scope.launch {
@@ -1122,7 +1122,7 @@ private fun zapClick(
                 )
                 .show()
         }
-    } else if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithAmber()) {
+    } else if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
         scope.launch {
             Toast
                 .makeText(

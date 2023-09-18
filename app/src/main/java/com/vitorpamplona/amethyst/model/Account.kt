@@ -8,7 +8,7 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.OptOutFromFilters
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.SignerType
@@ -87,7 +87,7 @@ class Account(
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
     var settings: Settings = Settings(),
-    var loginWithAmber: Boolean = false
+    var loginWithExternalSigner: Boolean = false
 ) {
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 
@@ -107,19 +107,19 @@ class Account(
     val liveHiddenUsers: LiveData<LiveHiddenUsers> by lazy {
         live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
             val blockList = liveMuteListEvent?.note?.event as? PeopleListEvent
-            if (loginWithAmber) {
+            if (loginWithExternalSigner) {
                 val id = blockList?.id
                 if (id != null) {
                     if (blockList.decryptedContent == null) {
                         GlobalScope.launch(Dispatchers.IO) {
                             val content = blockList.content
                             if (content.isEmpty()) return@launch
-                            AmberUtils.decryptBlockList(
+                            ExternalSignerUtils.decryptBlockList(
                                 content,
                                 keyPair.pubKey.toHexKey(),
                                 blockList.id()
                             )
-                            blockList.decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
+                            blockList.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
                             live.invalidateData()
                         }
 
@@ -130,7 +130,7 @@ class Account(
                             showSensitiveContent = showSensitiveContent
                         )
                     } else {
-                        blockList.decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
+                        blockList.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
                         val liveBlockedUsers = blockList.publicAndPrivateUsers(blockList.decryptedContent ?: "")
                         LiveHiddenUsers(
                             hiddenUsers = liveBlockedUsers,
@@ -208,7 +208,7 @@ class Account(
     }
 
     fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = userProfile().latestContactList
 
@@ -219,9 +219,9 @@ class Account(
                 keyPair = keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val content = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val content = ExternalSignerUtils.content[event.id] ?: ""
                 if (content.isBlank()) {
                     return
                 }
@@ -241,9 +241,9 @@ class Account(
                 keyPair = keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val content = AmberUtils.content[event.id]
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val content = ExternalSignerUtils.content[event.id]
                 if (content.isBlank()) {
                     return
                 }
@@ -257,11 +257,11 @@ class Account(
     }
 
     fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
-        if (loginWithAmber) {
-            val content = AmberUtils.content[event.id]
+        if (loginWithExternalSigner) {
+            val content = ExternalSignerUtils.content[event.id]
             if (content.isBlank()) {
                 return
             }
@@ -290,7 +290,7 @@ class Account(
     }
 
     fun reactTo(note: Note, reaction: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         if (hasReacted(note, reaction)) {
             // has already liked this note
@@ -305,7 +305,7 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        if (loginWithAmber) {
+                        if (loginWithExternalSigner) {
                             val senderPublicKey = keyPair.pubKey.toHexKey()
 
                             var senderReaction = ReactionEvent.create(
@@ -314,24 +314,24 @@ class Account(
                                 keyPair
                             )
 
-                            AmberUtils.openAmber(senderReaction)
-                            val reactionContent = AmberUtils.content[event.id]
+                            ExternalSignerUtils.openSigner(senderReaction)
+                            val reactionContent = ExternalSignerUtils.content[event.id]
                             if (reactionContent.isBlank()) return
                             senderReaction = ReactionEvent.create(senderReaction, reactionContent)
 
                             val giftWraps = users.plus(senderPublicKey).map {
                                 val gossip = Gossip.create(senderReaction)
                                 val content = Gossip.toJson(gossip)
-                                AmberUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
-                                val encryptedContent = AmberUtils.content[gossip.id]
+                                ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                                val encryptedContent = ExternalSignerUtils.content[gossip.id]
                                 if (encryptedContent.isBlank()) return
 
                                 var sealedEvent = SealedGossipEvent.create(
                                     encryptedContent = encryptedContent,
                                     pubKey = senderPublicKey
                                 )
-                                AmberUtils.openAmber(sealedEvent)
-                                val eventContent = AmberUtils.content[sealedEvent.id] ?: ""
+                                ExternalSignerUtils.openSigner(sealedEvent)
+                                val eventContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
                                 if (eventContent.isBlank()) return
                                 sealedEvent = SealedGossipEvent.create(sealedEvent, eventContent)
 
@@ -358,7 +358,7 @@ class Account(
             }
 
             note.event?.let {
-                if (loginWithAmber) {
+                if (loginWithExternalSigner) {
                     val senderPublicKey = keyPair.pubKey.toHexKey()
 
                     var senderReaction = ReactionEvent.create(
@@ -367,8 +367,8 @@ class Account(
                         keyPair
                     )
 
-                    AmberUtils.openAmber(senderReaction)
-                    val reactionContent = AmberUtils.content[senderReaction.id] ?: ""
+                    ExternalSignerUtils.openSigner(senderReaction)
+                    val reactionContent = ExternalSignerUtils.content[senderReaction.id] ?: ""
                     if (reactionContent.isBlank()) return
                     senderReaction = ReactionEvent.create(senderReaction, reactionContent)
 
@@ -376,16 +376,16 @@ class Account(
                     newUsers.forEach {
                         val gossip = Gossip.create(senderReaction)
                         val content = Gossip.toJson(gossip)
-                        AmberUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
-                        val encryptedContent = AmberUtils.content[gossip.id]
+                        ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                        val encryptedContent = ExternalSignerUtils.content[gossip.id]
                         if (encryptedContent.isBlank()) return
 
                         var sealedEvent = SealedGossipEvent.create(
                             encryptedContent = encryptedContent,
                             pubKey = senderPublicKey
                         )
-                        AmberUtils.openAmber(sealedEvent)
-                        val sealedContent = AmberUtils.content[sealedEvent.id] ?: ""
+                        ExternalSignerUtils.openSigner(sealedEvent)
+                        val sealedContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
                         if (sealedContent.isBlank()) return
                         sealedEvent = SealedGossipEvent.create(sealedEvent, sealedContent)
 
@@ -414,9 +414,9 @@ class Account(
                 if (emojiUrl != null) {
                     note.event?.let {
                         var event = ReactionEvent.create(emojiUrl, it, keyPair)
-                        if (loginWithAmber) {
-                            AmberUtils.openAmber(event)
-                            val content = AmberUtils.content[event.id] ?: ""
+                        if (loginWithExternalSigner) {
+                            ExternalSignerUtils.openSigner(event)
+                            val content = ExternalSignerUtils.content[event.id] ?: ""
                             if (content.isBlank()) {
                                 return
                             }
@@ -432,9 +432,9 @@ class Account(
 
             note.event?.let {
                 var event = ReactionEvent.create(reaction, it, keyPair)
-                if (loginWithAmber) {
-                    AmberUtils.openAmber(event)
-                    val content = AmberUtils.content[event.id] ?: ""
+                if (loginWithExternalSigner) {
+                    ExternalSignerUtils.openSigner(event)
+                    val content = ExternalSignerUtils.content[event.id] ?: ""
                     if (content.isBlank()) {
                         return
                     }
@@ -447,10 +447,10 @@ class Account(
     }
 
     fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType, toUser: User?): LnZapRequestEvent? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
         note.event?.let { event ->
-            if (loginWithAmber) {
+            if (loginWithExternalSigner) {
                 when (zapType) {
                     LnZapEvent.ZapType.ANONYMOUS -> {
                         return LnZapRequestEvent.createAnonymous(
@@ -472,8 +472,8 @@ class Account(
                             message,
                             toUser?.pubkeyHex
                         )
-                        AmberUtils.openAmber(unsignedEvent)
-                        val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                        ExternalSignerUtils.openSigner(unsignedEvent)
+                        val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                         if (content.isBlank()) return null
 
                         return LnZapRequestEvent.create(
@@ -492,8 +492,8 @@ class Account(
                             message,
                             toUser?.pubkeyHex
                         )
-                        AmberUtils.openAmber(unsignedEvent, "event")
-                        val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                        ExternalSignerUtils.openSigner(unsignedEvent, "event")
+                        val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                         if (content.isBlank()) return null
 
                         return Event.fromJson(content) as LnZapRequestEvent
@@ -523,7 +523,7 @@ class Account(
     fun isNIP47Author(pubkeyHex: String?): Boolean {
         val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
 
-        if (privKey == null && !loginWithAmber) return false
+        if (privKey == null && !loginWithExternalSigner) return false
 
         if (privKey != null) {
             val pubKey = CryptoUtils.pubkeyCreate(privKey).toHexKey()
@@ -539,12 +539,12 @@ class Account(
         val privKey = myNip47.secret?.hexToByteArray() ?: keyPair.privKey
         val pubKey = myNip47.pubKeyHex.hexToByteArray()
 
-        if (privKey == null && !loginWithAmber) return null
+        if (privKey == null && !loginWithExternalSigner) return null
 
         if (privKey != null) return zapResponseEvent.response(privKey, pubKey)
 
-        AmberUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
-        val decryptedContent = AmberUtils.content[zapResponseEvent.id] ?: ""
+        ExternalSignerUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
+        val decryptedContent = ExternalSignerUtils.content[zapResponseEvent.id] ?: ""
         if (decryptedContent.isBlank()) return null
         return zapResponseEvent.response(decryptedContent)
     }
@@ -560,10 +560,10 @@ class Account(
     }
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         zapPaymentRequest?.let { nip47 ->
-            val privateKey = if (loginWithAmber) nip47.secret?.hexToByteArray() else nip47.secret?.hexToByteArray() ?: keyPair.privKey
+            val privateKey = if (loginWithExternalSigner) nip47.secret?.hexToByteArray() else nip47.secret?.hexToByteArray() ?: keyPair.privKey
             if (privateKey == null) return
             val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, privateKey)
 
@@ -594,8 +594,8 @@ class Account(
     }
 
     fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
-        if (!isWriteable() && !loginWithAmber) return null
-        if (loginWithAmber) {
+        if (!isWriteable() && !loginWithExternalSigner) return null
+        if (loginWithExternalSigner) {
             return when (zapType) {
                 LnZapEvent.ZapType.ANONYMOUS -> {
                     return LnZapRequestEvent.createAnonymous(
@@ -613,8 +613,8 @@ class Account(
                         keyPair.pubKey.toHexKey(),
                         message
                     )
-                    AmberUtils.openAmber(unsignedEvent)
-                    val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                    ExternalSignerUtils.openSigner(unsignedEvent)
+                    val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                     if (content.isBlank()) return null
 
                     return LnZapRequestEvent.create(
@@ -631,8 +631,8 @@ class Account(
                         keyPair.pubKey.toHexKey(),
                         message
                     )
-                    AmberUtils.openAmber(unsignedEvent, "event")
-                    val content = AmberUtils.content[unsignedEvent.id] ?: ""
+                    ExternalSignerUtils.openSigner(unsignedEvent, "event")
+                    val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                     if (content.isBlank()) return null
 
                     return Event.fromJson(content) as LnZapRequestEvent
@@ -652,7 +652,7 @@ class Account(
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         if (note.hasReacted(userProfile(), "⚠️")) {
             // has already liked this note
@@ -661,9 +661,9 @@ class Account(
 
         note.event?.let {
             var event = ReactionEvent.createWarning(it, keyPair)
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = ReactionEvent(
                     event.id,
@@ -680,9 +680,9 @@ class Account(
 
         note.event?.let {
             var event = ReportEvent.create(it, type, keyPair, content = content)
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = ReportEvent(
                     event.id,
@@ -699,7 +699,7 @@ class Account(
     }
 
     fun report(user: User, type: ReportEvent.ReportType) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         if (user.hasReport(userProfile(), type)) {
             // has already reported this note
@@ -707,9 +707,9 @@ class Account(
         }
 
         var event = ReportEvent.create(user.pubkeyHex, type, keyPair)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
             event = ReportEvent(
                 event.id,
@@ -729,15 +729,15 @@ class Account(
     }
 
     fun delete(notes: List<Note>) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
             var event = DeletionEvent.create(myNotes, keyPair)
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = DeletionEvent(
                     event.id,
@@ -754,12 +754,12 @@ class Account(
     }
 
     fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
         var event = HTTPAuthorizationEvent.create(url, method, body, keyPair)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return null
             }
@@ -769,7 +769,7 @@ class Account(
     }
 
     fun boost(note: Note) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         if (note.hasBoostedInTheLast5Minutes(userProfile())) {
             // has already bosted in the past 5mins
@@ -779,9 +779,9 @@ class Account(
         note.event?.let {
             if (it.kind() == 1) {
                 var event = RepostEvent.create(it, keyPair)
-                if (loginWithAmber) {
-                    AmberUtils.openAmber(event)
-                    val eventContent = AmberUtils.content[event.id] ?: ""
+                if (loginWithExternalSigner) {
+                    ExternalSignerUtils.openSigner(event)
+                    val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                     if (eventContent.isBlank()) return
                     event = RepostEvent(
                         event.id,
@@ -796,9 +796,9 @@ class Account(
                 LocalCache.consume(event)
             } else {
                 var event = GenericRepostEvent.create(it, keyPair)
-                if (loginWithAmber) {
-                    AmberUtils.openAmber(event)
-                    val eventContent = AmberUtils.content[event.id] ?: ""
+                if (loginWithExternalSigner) {
+                    ExternalSignerUtils.openSigner(event)
+                    val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                     if (eventContent.isBlank()) return
                     event = GenericRepostEvent(
                         event.id,
@@ -835,14 +835,14 @@ class Account(
         if (followingCommunities.isNotEmpty()) {
             followingCommunities.forEach {
                 ATag.parse(it, null)?.let {
-                    if (loginWithAmber) {
+                    if (loginWithExternalSigner) {
                         val unsignedEvent = ContactListEvent.followAddressableEvent(
                             returningContactList,
                             it,
                             keyPair
                         )
-                        AmberUtils.openAmber(unsignedEvent)
-                        val eventContent = AmberUtils.content[unsignedEvent.id] ?: ""
+                        ExternalSignerUtils.openSigner(unsignedEvent)
+                        val eventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                         returningContactList = if (eventContent.isBlank()) {
                             latestContactList
                         } else {
@@ -871,7 +871,7 @@ class Account(
     }
 
     fun follow(user: User) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -889,9 +889,9 @@ class Account(
             )
         }
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -903,7 +903,7 @@ class Account(
     }
 
     fun follow(channel: Channel) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -921,9 +921,9 @@ class Account(
             )
         }
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -935,7 +935,7 @@ class Account(
     }
 
     fun follow(community: AddressableNote) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -954,9 +954,9 @@ class Account(
             )
         }
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -968,7 +968,7 @@ class Account(
     }
 
     fun followHashtag(tag: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -990,9 +990,9 @@ class Account(
             )
         }
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1004,7 +1004,7 @@ class Account(
     }
 
     fun followGeohash(geohash: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -1026,9 +1026,9 @@ class Account(
             )
         }
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1040,7 +1040,7 @@ class Account(
     }
 
     fun unfollow(user: User) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -1051,9 +1051,9 @@ class Account(
                 keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
                 }
@@ -1066,7 +1066,7 @@ class Account(
     }
 
     fun unfollowHashtag(tag: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -1077,9 +1077,9 @@ class Account(
                 keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
                 }
@@ -1092,7 +1092,7 @@ class Account(
     }
 
     fun unfollowGeohash(geohash: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -1103,9 +1103,9 @@ class Account(
                 keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
                 }
@@ -1118,7 +1118,7 @@ class Account(
     }
 
     fun unfollow(channel: Channel) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -1129,9 +1129,9 @@ class Account(
                 keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
                 }
@@ -1144,7 +1144,7 @@ class Account(
     }
 
     fun unfollow(community: AddressableNote) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
 
@@ -1155,9 +1155,9 @@ class Account(
                 keyPair
             )
 
-            if (loginWithAmber) {
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
                 }
@@ -1170,17 +1170,17 @@ class Account(
     }
 
     fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
-        if (loginWithAmber) {
+        if (loginWithExternalSigner) {
             val unsignedData = FileStorageEvent.create(
                 mimeType = headerInfo.mimeType ?: "",
                 data = byteArray,
                 pubKey = keyPair.pubKey.toHexKey()
             )
 
-            AmberUtils.openAmber(unsignedData)
-            val eventContent = AmberUtils.content[unsignedData.id] ?: ""
+            ExternalSignerUtils.openSigner(unsignedData)
+            val eventContent = ExternalSignerUtils.content[unsignedData.id] ?: ""
             if (eventContent.isBlank()) return null
             val data = FileStorageEvent(
                 unsignedData.id,
@@ -1203,8 +1203,8 @@ class Account(
                 pubKey = keyPair.pubKey.toHexKey()
             )
 
-            AmberUtils.openAmber(unsignedEvent)
-            val unsignedEventContent = AmberUtils.content[unsignedEvent.id] ?: ""
+            ExternalSignerUtils.openSigner(unsignedEvent)
+            val unsignedEventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
             if (unsignedEventContent.isBlank()) return null
             val signedEvent = FileStorageHeaderEvent(
                 unsignedEvent.id,
@@ -1240,7 +1240,7 @@ class Account(
     }
 
     fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
         Client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
@@ -1259,9 +1259,9 @@ class Account(
     }
 
     fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
-        if (loginWithAmber) {
+        if (loginWithExternalSigner) {
             val unsignedEvent = FileHeaderEvent.create(
                 url = headerInfo.url,
                 mimeType = headerInfo.mimeType,
@@ -1273,8 +1273,8 @@ class Account(
                 sensitiveContent = headerInfo.sensitiveContent,
                 keyPair = keyPair
             )
-            AmberUtils.openAmber(unsignedEvent)
-            val eventContent = AmberUtils.content[unsignedEvent.id] ?: ""
+            ExternalSignerUtils.openSigner(unsignedEvent)
+            val eventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
             if (eventContent.isBlank()) return null
             val signedEvent = FileHeaderEvent(
                 unsignedEvent.id,
@@ -1317,7 +1317,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null
     ) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -1339,9 +1339,9 @@ class Account(
             keyPair = keyPair
         )
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(signedEvent)
-            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(signedEvent)
+            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1384,7 +1384,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null
     ) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
@@ -1409,9 +1409,9 @@ class Account(
         )
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(signedEvent)
-            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(signedEvent)
+            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1434,7 +1434,7 @@ class Account(
     }
 
     fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1452,9 +1452,9 @@ class Account(
             keyPair = keyPair
         )
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(signedEvent)
-            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(signedEvent)
+            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1466,7 +1466,7 @@ class Account(
     }
 
     fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1484,9 +1484,9 @@ class Account(
             keyPair = keyPair
         )
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(signedEvent)
-            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(signedEvent)
+            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1502,18 +1502,18 @@ class Account(
     }
 
     fun sendPrivateMessage(message: String, toUser: HexKey, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         var localMessage = message
-        if (loginWithAmber) {
-            AmberUtils.encrypt(localMessage, toUser, "encrypt")
-            val eventContent = AmberUtils.content["encrypt"] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.encrypt(localMessage, toUser, "encrypt")
+            val eventContent = ExternalSignerUtils.content["encrypt"] ?: ""
             if (eventContent.isBlank()) return
             localMessage = eventContent
-            AmberUtils.content.remove("encrypt")
+            ExternalSignerUtils.content.remove("encrypt")
         }
 
         var signedEvent = PrivateDmEvent.create(
@@ -1530,9 +1530,9 @@ class Account(
             advertiseNip18 = false
         )
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(signedEvent)
-            val eventContent = AmberUtils.content[signedEvent.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(signedEvent)
+            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1554,12 +1554,12 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null
     ) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        if (loginWithAmber) {
+        if (loginWithExternalSigner) {
             var chatMessageEvent = ChatMessageEvent.create(
                 msg = message,
                 to = toUsers,
@@ -1573,23 +1573,23 @@ class Account(
                 geohash = geohash
             )
 
-            AmberUtils.openAmber(chatMessageEvent)
-            val eventContent = AmberUtils.content[chatMessageEvent.id] ?: ""
+            ExternalSignerUtils.openSigner(chatMessageEvent)
+            val eventContent = ExternalSignerUtils.content[chatMessageEvent.id] ?: ""
             if (eventContent.isBlank()) return
             chatMessageEvent = ChatMessageEvent.create(chatMessageEvent, eventContent)
             val senderPublicKey = keyPair.pubKey.toHexKey()
             toUsers.plus(senderPublicKey).toSet().forEach {
                 val gossip = Gossip.create(chatMessageEvent)
                 val content = Gossip.toJson(gossip)
-                AmberUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
-                val gossipContent = AmberUtils.content[gossip.id] ?: ""
+                ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                val gossipContent = ExternalSignerUtils.content[gossip.id] ?: ""
                 if (gossipContent.isNotBlank()) {
                     var sealedEvent = SealedGossipEvent.create(
                         encryptedContent = gossipContent,
                         pubKey = senderPublicKey
                     )
-                    AmberUtils.openAmber(sealedEvent)
-                    val sealedEventContent = AmberUtils.content[sealedEvent.id] ?: ""
+                    ExternalSignerUtils.openSigner(sealedEvent)
+                    val sealedEventContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
                     if (sealedEventContent.isBlank()) return
                     sealedEvent = SealedGossipEvent.create(sealedEvent, sealedEventContent)
 
@@ -1624,14 +1624,14 @@ class Account(
 
             // Only keep in cache the GiftWrap for the account.
             if (it.recipientPubKey() == keyPair.pubKey.toHexKey()) {
-                if (loginWithAmber) {
-                    AmberUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
-                    val decryptedContent = AmberUtils.cachedDecryptedContent[it.id] ?: ""
+                if (loginWithExternalSigner) {
+                    ExternalSignerUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
+                    val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[it.id] ?: ""
                     if (decryptedContent.isEmpty()) return
                     it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
                         if (cached is SealedGossipEvent) {
-                            AmberUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
-                            val localDecryptedContent = AmberUtils.cachedDecryptedContent[cached.id] ?: ""
+                            ExternalSignerUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
+                            val localDecryptedContent = ExternalSignerUtils.cachedDecryptedContent[cached.id] ?: ""
                             if (localDecryptedContent.isEmpty()) return
                             cached.cachedGossip(keyPair.pubKey, localDecryptedContent)?.let { gossip ->
                                 LocalCache.justConsume(gossip, null)
@@ -1658,7 +1658,7 @@ class Account(
     }
 
     fun sendCreateNewChannel(name: String, about: String, picture: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val metadata = ChannelCreateEvent.ChannelData(
             name,
@@ -1671,9 +1671,9 @@ class Account(
             keyPair = keyPair
         )
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1689,13 +1689,13 @@ class Account(
     }
 
     fun updateStatus(oldStatus: AddressableNote, newStatus: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
         var event = StatusEvent.update(oldEvent, newStatus, keyPair)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1706,12 +1706,12 @@ class Account(
     }
 
     fun createStatus(newStatus: String) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         var event = StatusEvent.create(newStatus, "general", expiration = null, keyPair)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1722,13 +1722,13 @@ class Account(
     }
 
     fun deleteStatus(oldStatus: AddressableNote) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
         var event = StatusEvent.clear(oldEvent, keyPair)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1738,9 +1738,9 @@ class Account(
         LocalCache.consume(event, null)
 
         var event2 = DeletionEvent.create(listOf(event.id), keyPair)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event2)
-            val event2Content = AmberUtils.content[event2.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event2)
+            val event2Content = ExternalSignerUtils.content[event2.id] ?: ""
             if (event2Content.isBlank()) {
                 return
             }
@@ -1751,7 +1751,7 @@ class Account(
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val noteEvent = usersEmojiList.event
         if (noteEvent !is EmojiPackSelectionEvent) return
@@ -1763,9 +1763,9 @@ class Account(
             keyPair
         )
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1777,7 +1777,7 @@ class Account(
     }
 
     fun addEmojiPack(usersEmojiList: Note, emojiList: Note) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
         val emojiListEvent = emojiList.event
         if (emojiListEvent !is EmojiPackEvent) return
 
@@ -1800,9 +1800,9 @@ class Account(
             )
         }
 
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
             }
@@ -1840,9 +1840,9 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
-        AmberUtils.content.remove("encrypt")
+        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
+        ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
             return
         }
@@ -1858,8 +1858,8 @@ class Account(
             keyPair.pubKey.toHexKey()
         )
 
-        AmberUtils.openAmber(event)
-        val eventContent = AmberUtils.content[event.id] ?: ""
+        ExternalSignerUtils.openSigner(event)
+        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
         }
@@ -1896,9 +1896,9 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
-        AmberUtils.content.remove("encrypt")
+        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
+        ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
             return
         }
@@ -1914,8 +1914,8 @@ class Account(
             keyPair.pubKey.toHexKey()
         )
 
-        AmberUtils.openAmber(event)
-        val eventContent = AmberUtils.content[event.id] ?: ""
+        ExternalSignerUtils.openSigner(event)
+        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
         }
@@ -1982,9 +1982,9 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
-        AmberUtils.content.remove("encrypt")
+        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
+        ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
             return
         }
@@ -2008,8 +2008,8 @@ class Account(
                 keyPair.pubKey.toHexKey()
             )
         }
-        AmberUtils.openAmber(event)
-        val eventContent = AmberUtils.content[event.id] ?: ""
+        ExternalSignerUtils.openSigner(event)
+        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
         }
@@ -2094,12 +2094,12 @@ class Account(
     }
 
     fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
         var event = RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return null
             }
@@ -2166,9 +2166,9 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = AmberUtils.content["encrypt"] ?: ""
-        AmberUtils.content.remove("encrypt")
+        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
+        ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
             return
         }
@@ -2193,8 +2193,8 @@ class Account(
             )
         }
 
-        AmberUtils.openAmber(event)
-        val eventContent = AmberUtils.content[event.id] ?: ""
+        ExternalSignerUtils.openSigner(event)
+        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
         }
@@ -2205,9 +2205,9 @@ class Account(
     }
 
     fun isInPrivateBookmarks(note: Note): Boolean {
-        if (!isWriteable() && !loginWithAmber) return false
+        if (!isWriteable() && !loginWithExternalSigner) return false
 
-        if (loginWithAmber) {
+        if (loginWithExternalSigner) {
             return if (note is AddressableNote) {
                 userProfile().latestBookmarkList?.privateTaggedAddresses(userProfile().latestBookmarkList?.decryptedContent ?: "")
                     ?.contains(note.address) == true
@@ -2227,7 +2227,7 @@ class Account(
     }
 
     fun isInPublicBookmarks(note: Note): Boolean {
-        if (!isWriteable() && !loginWithAmber) return false
+        if (!isWriteable() && !loginWithExternalSigner) return false
 
         if (note is AddressableNote) {
             return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true
@@ -2265,30 +2265,30 @@ class Account(
 
     fun hideUser(pubkeyHex: String) {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
-        if (loginWithAmber) {
+        if (loginWithExternalSigner) {
             val id = blockList?.id
             val encryptedContent = if (id == null) {
                 val privateTags = listOf(listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
-                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-                val encryptedContent = AmberUtils.content["encrypted"] ?: ""
-                AmberUtils.content.remove("encrypted")
+                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+                val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
+                ExternalSignerUtils.content.remove("encrypted")
                 if (encryptedContent.isBlank()) return
                 encryptedContent
             } else {
-                var decryptedContent = AmberUtils.cachedDecryptedContent[id]
+                var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
                 if (decryptedContent == null) {
-                    AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
-                    val content = AmberUtils.content[id] ?: ""
+                    ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
+                    val content = ExternalSignerUtils.content[id] ?: ""
                     if (content.isBlank()) return
                     decryptedContent = content
                 }
 
                 val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
-                AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
-                val eventContent = AmberUtils.content[id] ?: ""
+                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
+                val eventContent = ExternalSignerUtils.content[id] ?: ""
                 if (eventContent.isBlank()) return
                 eventContent
             }
@@ -2311,8 +2311,8 @@ class Account(
                 )
             }
 
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
             event = PeopleListEvent(
                 event.id,
@@ -2354,28 +2354,28 @@ class Account(
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
 
         if (blockList != null) {
-            if (loginWithAmber) {
+            if (loginWithExternalSigner) {
                 val content = blockList.content
                 val encryptedContent = if (content.isBlank()) {
                     val privateTags = listOf(listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
 
-                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
-                    val eventContent = AmberUtils.content[blockList.id] ?: ""
+                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                     if (eventContent.isBlank()) return
                     eventContent
                 } else {
-                    var decryptedContent = AmberUtils.cachedDecryptedContent[blockList.id]
+                    var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
                     if (decryptedContent == null) {
-                        AmberUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
-                        val eventContent = AmberUtils.content[blockList.id] ?: ""
+                        ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
+                        val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                         if (eventContent.isBlank()) return
                         decryptedContent = eventContent
                     }
                     val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
-                    AmberUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
-                    val eventContent = AmberUtils.content[blockList.id] ?: ""
+                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                     if (eventContent.isBlank()) return
                     eventContent
                 }
@@ -2388,8 +2388,8 @@ class Account(
                     encryptedContent
                 )
 
-                AmberUtils.openAmber(event)
-                val eventContent = AmberUtils.content[event.id] ?: ""
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = PeopleListEvent.create(event, eventContent)
 
@@ -2589,7 +2589,7 @@ class Account(
     }
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
-        if (!isWriteable() && !loginWithAmber) return
+        if (!isWriteable() && !loginWithExternalSigner) return
 
         val metadata = ChannelCreateEvent.ChannelData(
             name,
@@ -2602,9 +2602,9 @@ class Account(
             originalChannelIdHex = channel.idHex,
             keyPair = keyPair
         )
-        if (loginWithAmber) {
-            AmberUtils.openAmber(event)
-            val eventContent = AmberUtils.content[event.id] ?: ""
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
             event = ChannelMetadataEvent.create(event, eventContent)
         }
@@ -2616,14 +2616,14 @@ class Account(
     }
 
     fun unwrap(event: GiftWrapEvent): Event? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
-        if (loginWithAmber) {
-            var decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+        if (loginWithExternalSigner) {
+            var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
             if (decryptedContent == null) {
-                AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+                ExternalSignerUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
             }
-            decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+            decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
             if (decryptedContent.isEmpty()) return null
             return event.cachedGift(keyPair.pubKey, decryptedContent)
         }
@@ -2632,14 +2632,14 @@ class Account(
     }
 
     fun unseal(event: SealedGossipEvent): Event? {
-        if (!isWriteable() && !loginWithAmber) return null
+        if (!isWriteable() && !loginWithExternalSigner) return null
 
-        if (loginWithAmber) {
-            var decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+        if (loginWithExternalSigner) {
+            var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
             if (decryptedContent == null) {
-                AmberUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+                ExternalSignerUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
             }
-            decryptedContent = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+            decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
             if (decryptedContent.isEmpty()) return null
             return event.cachedGossip(keyPair.pubKey, decryptedContent)
         }
@@ -2648,6 +2648,14 @@ class Account(
     }
 
     fun decryptContent(note: Note): String? {
+        return if (loginWithExternalSigner) {
+            decryptContentWithExternalSigner(note)
+        } else {
+            decryptContentInternalSigner(note)
+        }
+    }
+
+    fun decryptContentInternalSigner(note: Note): String? {
         val privKey = keyPair.privKey
         val event = note.event
         return if (event is PrivateDmEvent && privKey != null) {
@@ -2659,19 +2667,19 @@ class Account(
         }
     }
 
-    fun decryptContentWithAmber(note: Note): String? = with(Dispatchers.IO) {
+    fun decryptContentWithExternalSigner(note: Note): String? = with(Dispatchers.IO) {
         val event = note.event
         return when (event) {
             is PrivateDmEvent -> {
-                if (AmberUtils.cachedDecryptedContent[event.id] == null) {
-                    AmberUtils.decryptDM(
+                if (ExternalSignerUtils.cachedDecryptedContent[event.id] == null) {
+                    ExternalSignerUtils.decryptDM(
                         event.content,
                         event.talkingWith(userProfile().pubkeyHex),
                         event.id
                     )
-                    AmberUtils.cachedDecryptedContent[event.id]
+                    ExternalSignerUtils.cachedDecryptedContent[event.id]
                 } else {
-                    AmberUtils.cachedDecryptedContent[event.id]
+                    ExternalSignerUtils.cachedDecryptedContent[event.id]
                 }
             }
             is LnZapRequestEvent -> {
@@ -2687,8 +2695,8 @@ class Account(
         val event = note.event
         val loggedInPrivateKey = keyPair.privKey
 
-        if (loginWithAmber && event is LnZapRequestEvent && event.isPrivateZap()) {
-            val decryptedContent = AmberUtils.cachedDecryptedContent[event.id]
+        if (loginWithExternalSigner && event is LnZapRequestEvent && event.isPrivateZap()) {
+            val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
             if (decryptedContent != null) {
                 return try {
                     Event.fromJson(decryptedContent)
@@ -2696,7 +2704,7 @@ class Account(
                     null
                 }
             }
-            AmberUtils.decryptZapEvent(event)
+            ExternalSignerUtils.decryptZapEvent(event)
             return null
         }
 
@@ -2852,7 +2860,7 @@ class Account(
         val blockList = getBlockList()
         val decryptedContent = blockList?.decryptedContent ?: ""
 
-        if (loginWithAmber) {
+        if (loginWithExternalSigner) {
             if (decryptedContent.isBlank()) return false
             return (blockList?.publicAndPrivateUsers(decryptedContent)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
         }

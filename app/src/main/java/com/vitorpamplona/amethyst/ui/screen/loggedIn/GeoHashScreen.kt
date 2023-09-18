@@ -171,7 +171,7 @@ fun GeoHashActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.account.unfollowGeohash(tag)
                     }
@@ -195,7 +195,7 @@ fun GeoHashActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.account.followGeohash(tag)
                     }

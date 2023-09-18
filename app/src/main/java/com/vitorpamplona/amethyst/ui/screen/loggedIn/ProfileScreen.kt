@@ -748,7 +748,7 @@ private fun DisplayFollowUnfollowButton(
     if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.account.unfollow(baseUser)
                     }
@@ -773,7 +773,7 @@ private fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
-                    if (accountViewModel.loggedInWithAmber()) {
+                    if (accountViewModel.loggedInWithExternalSigner()) {
                         scope.launch(Dispatchers.IO) {
                             accountViewModel.account.follow(baseUser)
                         }
@@ -797,7 +797,7 @@ private fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
-                    if (accountViewModel.loggedInWithAmber()) {
+                    if (accountViewModel.loggedInWithExternalSigner()) {
                         scope.launch(Dispatchers.IO) {
                             accountViewModel.account.follow(baseUser)
                         }

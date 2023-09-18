@@ -97,8 +97,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.isWriteable()
     }
 
-    fun loggedInWithAmber(): Boolean {
-        return account.loginWithAmber
+    fun loggedInWithExternalSigner(): Boolean {
+        return account.loginWithExternalSigner
     }
 
     fun userProfile(): User {
@@ -300,9 +300,6 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun decrypt(note: Note): String? {
-        if (loggedInWithAmber()) {
-            return account.decryptContentWithAmber(note)
-        }
         return account.decryptContent(note)
     }
 

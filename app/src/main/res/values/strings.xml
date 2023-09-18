@@ -552,7 +552,7 @@
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>
 
-    <string name="login_with_amber">Login with Amber</string>
+    <string name="login_with_external_signer">Login with Amber</string>
 
     <string name="status_update">Update your status</string>
 
@@ -588,6 +588,6 @@
     <string name="lightning_wallets_not_found2">Lightning wallets not found</string>
     <string name="paid">Paid</string>
     <string name="wallet_number">Wallet %1$s</string>
-    <string name="error_opening_amber">Error opening Amber</string>
+    <string name="error_opening_external_signer">Error opening signer app</string>
     <string name="sign_request_rejected">Sign request rejected</string>
 </resources>

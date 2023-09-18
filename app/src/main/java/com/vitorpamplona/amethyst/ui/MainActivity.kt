@@ -23,7 +23,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
@@ -52,7 +52,7 @@ import java.nio.charset.StandardCharsets
 class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
-        AmberUtils.start(this)
+        ExternalSignerUtils.start(this)
 
         super.onCreate(savedInstanceState)
 

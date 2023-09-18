@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 
 object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
@@ -16,12 +16,12 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
     override fun feed(): List<Note> {
         val bookmarks = account.userProfile().latestBookmarkList
 
-        if (account.loginWithAmber) {
+        if (account.loginWithExternalSigner) {
             val id = bookmarks?.id
             if (id != null) {
-                val decryptedContent = AmberUtils.cachedDecryptedContent[id]
+                val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
                 if (decryptedContent == null) {
-                    AmberUtils.decryptBookmark(
+                    ExternalSignerUtils.decryptBookmark(
                         bookmarks.content,
                         account.keyPair.pubKey.toHexKey(),
                         id
@@ -30,7 +30,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
                     bookmarks.decryptedContent = decryptedContent
                 }
             }
-            val decryptedContent = AmberUtils.cachedDecryptedContent[id] ?: ""
+            val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id] ?: ""
 
             val notes = bookmarks?.privateTaggedEvents(decryptedContent)
                 ?.mapNotNull { LocalCache.checkGetOrCreateNote(it) } ?: emptyList()

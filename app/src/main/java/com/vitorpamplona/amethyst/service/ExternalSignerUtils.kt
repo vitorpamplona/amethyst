@@ -32,7 +32,7 @@ enum class SignerType {
     DECRYPT_ZAP_EVENT
 }
 
-object AmberUtils {
+object ExternalSignerUtils {
     val content = LruCache<String, String>(10)
     var isActivityRunning: Boolean = false
     val cachedDecryptedContent = mutableMapOf<HexKey, String>()
@@ -113,7 +113,7 @@ object AmberUtils {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun openAmber(
+    fun openSigner(
         data: String,
         type: SignerType,
         intentResult: ActivityResultLauncher<Intent>,
@@ -141,18 +141,18 @@ object AmberUtils {
             intent.`package` = "com.greenart7c3.nostrsigner"
             intentResult.launch(intent)
         } catch (e: Exception) {
-            Log.e("Amber", "Error opening amber", e)
+            Log.e("Signer", "Error opening Signer app", e)
             GlobalScope.launch(Dispatchers.Main) {
                 Toast.makeText(
                     Amethyst.instance,
-                    Amethyst.instance.getString(R.string.error_opening_amber),
+                    Amethyst.instance.getString(R.string.error_opening_external_signer),
                     Toast.LENGTH_SHORT
                 ).show()
             }
         }
     }
 
-    fun openAmber(event: EventInterface, columnName: String = "signature") {
+    fun openSigner(event: EventInterface, columnName: String = "signature") {
         checkNotInMainThread()
 
         val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()), columnName)
@@ -163,7 +163,7 @@ object AmberUtils {
 
         ServiceManager.shouldPauseService = false
         isActivityRunning = true
-        openAmber(
+        openSigner(
             event.toJson(),
             SignerType.SIGN_EVENT,
             activityResultLauncher,
@@ -183,7 +183,7 @@ object AmberUtils {
             return
         }
         isActivityRunning = true
-        openAmber(
+        openSigner(
             encryptedContent,
             signerType,
             blockListResultLauncher,
@@ -225,7 +225,7 @@ object AmberUtils {
         }
 
         isActivityRunning = true
-        openAmber(
+        openSigner(
             encryptedContent,
             signerType,
             decryptResultLauncher,
@@ -244,7 +244,7 @@ object AmberUtils {
             cachedDecryptedContent[id] = result
             return
         }
-        openAmber(
+        openSigner(
             encryptedContent,
             signerType,
             decryptResultLauncher,
@@ -260,7 +260,7 @@ object AmberUtils {
             cachedDecryptedContent[id] = result
             return
         }
-        openAmber(
+        openSigner(
             encryptedContent,
             signerType,
             decryptResultLauncher,
@@ -277,7 +277,7 @@ object AmberUtils {
         }
 
         isActivityRunning = true
-        openAmber(
+        openSigner(
             decryptedContent,
             signerType,
             activityResultLauncher,
@@ -296,7 +296,7 @@ object AmberUtils {
             cachedDecryptedContent[event.id] = result
             return
         }
-        openAmber(
+        openSigner(
             event.toJson(),
             SignerType.DECRYPT_ZAP_EVENT,
             decryptResultLauncher,

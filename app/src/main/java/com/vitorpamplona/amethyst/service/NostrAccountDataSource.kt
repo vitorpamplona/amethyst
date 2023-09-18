@@ -152,16 +152,16 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     event.cachedGift(privateKey)?.let {
                         this.consume(it, relay)
                     }
-                } else if (account.loginWithAmber) {
-                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                } else if (account.loginWithExternalSigner) {
+                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        AmberUtils.decrypt(
+                        ExternalSignerUtils.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,
                             SignerType.NIP44_DECRYPT
                         )
-                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
                     }
                     event.cachedGift(account.keyPair.pubKey, cached)?.let {
                         this.consume(it, relay)
@@ -175,16 +175,16 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     event.cachedGossip(privateKey)?.let {
                         LocalCache.justConsume(it, relay)
                     }
-                } else if (account.loginWithAmber) {
-                    var cached = AmberUtils.cachedDecryptedContent[event.id]
+                } else if (account.loginWithExternalSigner) {
+                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        AmberUtils.decrypt(
+                        ExternalSignerUtils.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,
                             SignerType.NIP44_DECRYPT
                         )
-                        cached = AmberUtils.cachedDecryptedContent[event.id] ?: ""
+                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
                     }
                     event.cachedGossip(account.keyPair.pubKey, cached)?.let {
                         LocalCache.justConsume(it, relay)

@@ -16,7 +16,7 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
     override fun feed(): List<User> {
         val blockList = account.getBlockList()
         val decryptedContent = blockList?.decryptedContent ?: ""
-        if (account.loginWithAmber) {
+        if (account.loginWithExternalSigner) {
             if (decryptedContent.isEmpty()) return emptyList()
 
             return blockList

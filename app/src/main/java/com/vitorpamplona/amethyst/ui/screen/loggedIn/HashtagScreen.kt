@@ -147,7 +147,7 @@ fun HashtagActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.account.unfollowHashtag(tag)
                     }
@@ -171,7 +171,7 @@ fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithAmber()) {
+                if (accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.account.followHashtag(tag)
                     }

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.service.AmberUtils
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
@@ -74,12 +74,12 @@ fun LoginPage(
     val proxyPort = remember { mutableStateOf("9050") }
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    var loginWithAmber by remember { mutableStateOf(false) }
+    var loginWithExternalSigner by remember { mutableStateOf(false) }
     val activity = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
         onResult = {
-            loginWithAmber = false
-            AmberUtils.isActivityRunning = false
+            loginWithExternalSigner = false
+            ExternalSignerUtils.isActivityRunning = false
             ServiceManager.shouldPauseService = true
             if (it.resultCode != Activity.RESULT_OK) {
                 scope.launch(Dispatchers.Main) {
@@ -114,9 +114,9 @@ fun LoginPage(
         }
     )
 
-    LaunchedEffect(loginWithAmber) {
-        if (loginWithAmber) {
-            AmberUtils.openAmber(
+    LaunchedEffect(loginWithExternalSigner) {
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(
                 "",
                 SignerType.GET_PUBLIC_KEY,
                 activity,
@@ -357,9 +357,9 @@ fun LoginPage(
                 Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
                     Button(
                         onClick = {
-                            val result = AmberUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"), "")
+                            val result = ExternalSignerUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"), "")
                             if (result == null) {
-                                loginWithAmber = true
+                                loginWithExternalSigner = true
                                 return@Button
                             }
                             key.value = TextFieldValue(result)
@@ -395,7 +395,7 @@ fun LoginPage(
                                 backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
                             )
                     ) {
-                        Text(text = stringResource(R.string.login_with_amber))
+                        Text(text = stringResource(R.string.login_with_external_signer))
                     }
                 }
             }
