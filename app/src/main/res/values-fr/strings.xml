@@ -474,4 +474,26 @@
     <string name="error_dialog_zap_error">Impossible d\'envoyer un zap</string>
     <string name="error_dialog_talk_to_user">Contacter l\'Utilisateur</string>
     <string name="error_dialog_button_ok">Ok</string>
+    <string name="relay_information_document_error_assemble_url">Impossible d\'atteindre %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Impossible d\'atteindre %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Impossible d\'analyser le résultat de %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s a échoué avec le code %2$s</string>
+    <string name="active_for">Actif pour : </string>
+    <string name="active_for_home">Accueil</string>
+    <string name="active_for_msg">MPs</string>
+    <string name="active_for_chats">Salons</string>
+    <string name="active_for_global">Général</string>
+    <string name="active_for_search">Rechercher</string>
+    <string name="zap_split_title">Diviser et Transférer des Zaps</string>
+    <string name="zap_split_explainer">Les clients supportés vont diviser et transférer les zaps aux utilisateurs ajoutés ici au lieu du vôtre</string>
+    <string name="zap_split_serarch_and_add_user">Rechercher et Ajouter un Utilisateur</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Nom d\'utilisateur ou nom affiché</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">L\'utilisateur %1$s n\'a pas configuré d\'adresse Lightning pour recevoir des sats</string>
+    <string name="zap_split_weight">Pourcentage</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Diviser les zaps avec</string>
+    <string name="forwarding_zaps_to">Transférer les zaps à</string>
+    <string name="lightning_wallets_not_found2">Portefeuilles Lightning introuvables</string>
+    <string name="paid">Payé</string>
+    <string name="wallet_number">Portefeuille %1$s</string>
 </resources>
