@@ -17,10 +17,8 @@ import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -77,7 +75,6 @@ private object PrefKeys {
     const val PREFERRED_LANGUAGE = "preferred_Language"
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
-    val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
 }
 
 object LocalPreferences {
@@ -452,46 +449,5 @@ object LocalPreferences {
 
             return a
         }
-    }
-
-    fun migrateSingleUserPrefs() {
-        if (currentAccount() != null) return
-
-        val pubkey = encryptedPreferences().getString(PrefKeys.NOSTR_PUBKEY, null) ?: return
-        val npub = Hex.decode(pubkey).toNpub()
-
-        val stringPrefs = listOf(
-            PrefKeys.NOSTR_PRIVKEY,
-            PrefKeys.NOSTR_PUBKEY,
-            PrefKeys.RELAYS,
-            PrefKeys.LANGUAGE_PREFS,
-            PrefKeys.TRANSLATE_TO,
-            PrefKeys.ZAP_AMOUNTS,
-            PrefKeys.LATEST_CONTACT_LIST
-        )
-
-        val stringSetPrefs = listOf(
-            PrefKeys.FOLLOWING_CHANNELS,
-            PrefKeys.HIDDEN_USERS,
-            PrefKeys.DONT_TRANSLATE_FROM
-        )
-
-        encryptedPreferences().apply {
-            val appPrefs = this
-            encryptedPreferences(npub).edit().apply {
-                val userPrefs = this
-
-                stringPrefs.forEach { userPrefs.putString(it, appPrefs.getString(it, null)) }
-                stringSetPrefs.forEach { userPrefs.putStringSet(it, appPrefs.getStringSet(it, null)) }
-                userPrefs.putBoolean(
-                    PrefKeys.HIDE_DELETE_REQUEST_DIALOG,
-                    appPrefs.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
-                )
-            }.apply()
-        }
-
-        encryptedPreferences().edit().clear().apply()
-        addAccount(npub)
-        updateCurrentAccount(npub)
     }
 }

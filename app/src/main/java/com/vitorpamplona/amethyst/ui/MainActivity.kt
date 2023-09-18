@@ -56,7 +56,6 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        LocalPreferences.migrateSingleUserPrefs()
         val language = LocalPreferences.getPreferredLanguage()
         if (language.isNotBlank()) {
             val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
