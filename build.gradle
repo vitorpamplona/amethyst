@@ -15,7 +15,7 @@ buildscript {
         core_ktx_version = '1.12.0'
     }
     dependencies {
-        classpath 'com.google.gms:google-services:4.3.15'
+        classpath 'com.google.gms:google-services:4.4.0'
     }
 }
 
