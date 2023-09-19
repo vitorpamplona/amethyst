@@ -392,7 +392,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
     )
 
     fun isNoteAcceptable(note: Note, onReady: (NoteComposeReportState) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
             val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
 
@@ -649,7 +649,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun loadUsers(hexList: List<String>, onReady: (ImmutableList<User>) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             onReady(
                 hexList.mapNotNull { hex ->
                     checkGetOrCreateUser(hex)
