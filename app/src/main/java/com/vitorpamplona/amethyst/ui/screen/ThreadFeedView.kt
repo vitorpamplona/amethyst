@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
-import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -147,7 +147,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
                                 if (index == 0) {
-                                    ProvideTextStyle(TextStyle(fontSize = 16.sp, lineHeight = 1.20.em)) {
+                                    ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
                                         NoteMaster(
                                             item,
                                             modifier = Modifier.drawReplyLevel(
@@ -467,7 +467,7 @@ fun NoteMaster(
             val noteEvent = baseNote.event
             val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
             if (zapSplits && noteEvent != null) {
-                Spacer(modifier = HalfDoubleVertSpacer)
+                Spacer(modifier = DoubleVertSpacer)
                 DisplayZapSplits(noteEvent, accountViewModel, nav)
             }
 
@@ -597,20 +597,20 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
             noteEvent.title()?.let {
+                Spacer(modifier = DoubleVertSpacer)
                 Text(
                     text = it,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Light,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            noteEvent.summary()?.let {
+            noteEvent.summary()?.ifBlank { null }?.let {
+                Spacer(modifier = DoubleVertSpacer)
                 Text(
                     text = it,
                     modifier = Modifier.fillMaxWidth(),
