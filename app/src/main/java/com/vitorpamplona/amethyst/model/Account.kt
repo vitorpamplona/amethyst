@@ -42,6 +42,10 @@ val DefaultChannels = setOf(
     "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5" // -> Amethyst's Group
 )
 
+val DefaultReactions = listOf("\uD83D\uDE80", "\uD83E\uDEC2", "\uD83D\uDC40", "\uD83D\uDE02")
+
+val DefaultZapAmounts = listOf(500L, 1000L, 5000L)
+
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
     val codedList = mutableSetOf<String>()
@@ -67,8 +71,8 @@ class Account(
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
-    var zapAmountChoices: List<Long> = listOf(500L, 1000L, 5000L),
-    var reactionChoices: List<String> = listOf("+"),
+    var zapAmountChoices: List<Long> = DefaultZapAmounts,
+    var reactionChoices: List<String> = DefaultReactions,
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
     var defaultHomeFollowList: String = KIND3_FOLLOWS,
