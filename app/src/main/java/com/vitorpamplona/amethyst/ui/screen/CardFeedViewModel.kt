@@ -34,6 +34,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.time.measureTimedValue
 
 @Stable
@@ -173,6 +176,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                 }
             }
 
+        val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
+
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
         val multiCards = allBaseNotes.map { baseNote ->
             val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
@@ -180,25 +185,46 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
             val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
 
             val singleList = (boostsInCard + zapsInCard.map { it.response } + reactionsInCard)
-                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                .reversed()
+                .groupBy {
+                    sdf.format(
+                        Instant.ofEpochSecond(it.createdAt() ?: 0)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime()
+                    )
+                }
 
-            singleList.chunked(30).map { chunk ->
-                MultiSetCard(
-                    baseNote,
-                    boostsInCard.filter { it in chunk }.toImmutableList(),
-                    reactionsInCard.filter { it in chunk }.toImmutableList(),
-                    zapsInCard.filter { it.response in chunk }.toImmutableList()
+            val days = singleList.keys.sortedBy { it }
+
+            days.mapNotNull {
+                val sortedList = singleList.get(it)?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))?.reversed()
+
+                sortedList?.chunked(30)?.map { chunk ->
+                    MultiSetCard(
+                        baseNote,
+                        boostsInCard.filter { it in chunk }.toImmutableList(),
+                        reactionsInCard.filter { it in chunk }.toImmutableList(),
+                        zapsInCard.filter { it.response in chunk }.toImmutableList()
+                    )
+                }
+            }.flatten()
+        }.flatten()
+
+        val userZaps = zapsPerUser.map { user ->
+            val byDay = user.value.groupBy {
+                sdf.format(
+                    Instant.ofEpochSecond(it.createdAt() ?: 0)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime()
+                )
+            }
+
+            byDay.values.map {
+                ZapUserSetCard(
+                    user.key,
+                    it.sortedWith(compareBy({ it.createdAt() }, { it.idHex() })).reversed().toImmutableList()
                 )
             }
         }.flatten()
-
-        val userZaps = zapsPerUser.map {
-            ZapUserSetCard(
-                it.key,
-                it.value.toImmutableList()
-            )
-        }
 
         val textNoteCards = notes.filter { it.event !is ReactionEvent && it.event !is RepostEvent && it.event !is GenericRepostEvent && it.event !is LnZapEvent }.map {
             if (it.event is PrivateDmEvent || it.event is ChatMessageEvent) {
