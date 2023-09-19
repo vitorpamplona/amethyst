@@ -101,10 +101,12 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     private val bundler = BundledUpdate(250, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
+        viewModelScope.launch(Dispatchers.IO) {
+            bundler.invalidate(ignoreIfDoing) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+            }
         }
     }
 

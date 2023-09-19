@@ -149,7 +149,7 @@ fun ChannelScreen(
 ) {
     if (channelId == null) return
 
-    LoadChannel(channelId) {
+    LoadChannel(channelId, accountViewModel) {
         PrepareChannelViewModels(
             baseChannel = it,
             accountViewModel = accountViewModel,
@@ -169,6 +169,7 @@ fun PrepareChannelViewModels(baseChannel: Channel, accountViewModel: AccountView
     )
 
     val channelScreenModel: NewPostViewModel = viewModel()
+    channelScreenModel.accountViewModel = accountViewModel
     channelScreenModel.account = accountViewModel.account
 
     ChannelScreen(
@@ -267,7 +268,8 @@ fun ChannelScreen(
                     message = newPostModel.message.text,
                     mentions = listOfNotNull(replyTo.value?.author),
                     replyTos = listOfNotNull(replyTo.value),
-                    channelHex = channel.idHex
+                    channelHex = channel.idHex,
+                    accountViewModel = accountViewModel
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {
@@ -530,7 +532,7 @@ fun ChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadChannel(channelHex) {
+    LoadChannel(channelHex, accountViewModel) {
         ChannelHeader(
             it,
             showVideo,
@@ -783,7 +785,7 @@ fun LongChannelHeader(
         }
     }
 
-    LoadNote(baseNoteHex = channel.idHex) { loadingNote ->
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
         loadingNote?.let { note ->
             Row(
                 lineModifier,
@@ -886,7 +888,7 @@ private fun ShortChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadNote(baseNoteHex = channel.idHex) {
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
         it?.let {
             var popupExpanded by remember { mutableStateOf(false) }
 

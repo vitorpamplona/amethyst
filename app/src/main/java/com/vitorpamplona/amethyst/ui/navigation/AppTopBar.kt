@@ -227,7 +227,7 @@ private fun CommunityTopBar(
     nav: (String) -> Unit,
     navPopBack: () -> Unit
 ) {
-    LoadAddressableNote(aTagHex = id) { baseNote ->
+    LoadAddressableNote(aTagHex = id, accountViewModel) { baseNote ->
         if (baseNote != null) {
             FlexibleTopBarWithBackButton(
                 title = {
@@ -288,7 +288,7 @@ private fun RenderRoomTopBar(
     if (room.users.size == 1) {
         FlexibleTopBarWithBackButton(
             title = {
-                LoadUser(baseUserHex = room.users.first()) { baseUser ->
+                LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
                     if (baseUser != null) {
                         ClickableUserPicture(
                             baseUser = baseUser,
@@ -303,7 +303,7 @@ private fun RenderRoomTopBar(
                 }
             },
             extendableRow = {
-                LoadUser(baseUserHex = room.users.first()) {
+                LoadUser(baseUserHex = room.users.first(), accountViewModel) {
                     if (it != null) {
                         UserCompose(
                             baseUser = it,
@@ -348,7 +348,7 @@ private fun ChannelTopBar(
     nav: (String) -> Unit,
     navPopBack: () -> Unit
 ) {
-    LoadChannel(baseChannelHex = id) { baseChannel ->
+    LoadChannel(baseChannelHex = id, accountViewModel) { baseChannel ->
         FlexibleTopBarWithBackButton(
             prefixRow = {
                 if (baseChannel is LiveActivitiesChannel) {

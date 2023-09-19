@@ -47,7 +47,6 @@ import androidx.lifecycle.map
 import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -99,7 +98,7 @@ fun ChatroomComposeChannelOrUser(
     }
 
     if (channelHex != null) {
-        ChatroomChannel(channelHex, baseNote, accountViewModel, nav)
+        ChatroomChannel(channelHex!!, baseNote, accountViewModel, nav)
     } else {
         ChatroomPrivateMessages(baseNote, accountViewModel, nav)
     }
@@ -134,12 +133,12 @@ private fun ChatroomPrivateMessages(
 
 @Composable
 private fun ChatroomChannel(
-    channelHex: HexKey?,
+    channelHex: HexKey,
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadChannel(baseChannelHex = channelHex!!) { channel ->
+    LoadChannel(baseChannelHex = channelHex, accountViewModel) { channel ->
         ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
     }
 }
@@ -277,7 +276,7 @@ private fun UserRoomCompose(
             )
         },
         channelTitle = {
-            RoomNameDisplay(room, it, accountViewModel.userProfile())
+            RoomNameDisplay(room, it, accountViewModel)
         },
         channelLastTime = createAt,
         channelLastContent = content,
@@ -287,20 +286,20 @@ private fun UserRoomCompose(
 }
 
 @Composable
-fun RoomNameDisplay(room: ChatroomKey, modifier: Modifier, loggedInUser: User) {
-    val roomSubject by loggedInUser.live().messages.map {
+fun RoomNameDisplay(room: ChatroomKey, modifier: Modifier, accountViewModel: AccountViewModel) {
+    val roomSubject by accountViewModel.userProfile().live().messages.map {
         it.user.privateChatrooms[room]?.subject
-    }.distinctUntilChanged().observeAsState(loggedInUser.privateChatrooms[room]?.subject)
+    }.distinctUntilChanged().observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
 
     Crossfade(targetState = roomSubject, modifier) {
         if (it != null && it.isNotBlank()) {
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)
             } else {
-                DisplayUserAndSubject(room.users.first(), it)
+                DisplayUserAndSubject(room.users.first(), it, accountViewModel)
             }
         } else {
-            DisplayUserSetAsSubject(room)
+            DisplayUserSetAsSubject(room, accountViewModel)
         }
     }
 }
@@ -308,7 +307,8 @@ fun RoomNameDisplay(room: ChatroomKey, modifier: Modifier, loggedInUser: User) {
 @Composable
 private fun DisplayUserAndSubject(
     user: HexKey,
-    subject: String
+    subject: String,
+    accountViewModel: AccountViewModel
 ) {
     Row() {
         Text(
@@ -322,7 +322,7 @@ private fun DisplayUserAndSubject(
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
-        LoadUser(baseUserHex = user) {
+        LoadUser(baseUserHex = user, accountViewModel = accountViewModel) {
             it?.let {
                 UsernameDisplay(it, Modifier.weight(1f))
             }
@@ -333,6 +333,7 @@ private fun DisplayUserAndSubject(
 @Composable
 fun DisplayUserSetAsSubject(
     room: ChatroomKey,
+    accountViewModel: AccountViewModel,
     fontWeight: FontWeight = FontWeight.Bold
 ) {
     val userList = remember(room) {
@@ -342,7 +343,7 @@ fun DisplayUserSetAsSubject(
     if (userList.size == 1) {
         // Regular Design
         Row() {
-            LoadUser(baseUserHex = userList[0]) {
+            LoadUser(baseUserHex = userList[0], accountViewModel) {
                 it?.let {
                     UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight)
                 }
@@ -351,7 +352,7 @@ fun DisplayUserSetAsSubject(
     } else {
         Row() {
             userList.take(4).forEachIndexedExtended { index, isFirst, isLast, value ->
-                LoadUser(baseUserHex = value) {
+                LoadUser(baseUserHex = value, accountViewModel) {
                     it?.let {
                         ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight)
                     }
@@ -416,15 +417,14 @@ private fun WatchNotificationChanges(
 }
 
 @Composable
-fun LoadUser(baseUserHex: String, content: @Composable (User?) -> Unit) {
+fun LoadUser(baseUserHex: String, accountViewModel: AccountViewModel, content: @Composable (User?) -> Unit) {
     var user by remember(baseUserHex) {
-        mutableStateOf(LocalCache.getUserIfExists(baseUserHex))
+        mutableStateOf(accountViewModel.getUserIfExists(baseUserHex))
     }
 
     if (user == null) {
         LaunchedEffect(key1 = baseUserHex) {
-            launch(Dispatchers.IO) {
-                val newUser = LocalCache.checkGetOrCreateUser(baseUserHex)
+            accountViewModel.checkGetOrCreateUser(baseUserHex) { newUser ->
                 if (user != newUser) {
                     user = newUser
                 }

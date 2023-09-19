@@ -34,7 +34,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -312,31 +311,8 @@ private fun TranslationMessage(
 @Composable
 fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (TranslationConfig) -> Unit) {
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
     LaunchedEffect(accountState) {
-        launch(Dispatchers.IO) {
-            LanguageTranslatorService.autoTranslate(
-                content,
-                account.dontTranslateFrom,
-                account.translateTo
-            ).addOnCompleteListener { task ->
-                if (task.isSuccessful && !content.equals(task.result.result, true)) {
-                    if (task.result.sourceLang != null && task.result.targetLang != null) {
-                        val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
-                        val newConfig = TranslationConfig(
-                            result = task.result.result,
-                            sourceLang = task.result.sourceLang,
-                            targetLang = task.result.targetLang,
-                            showOriginal = preference == task.result.sourceLang
-                        )
-
-                        // withContext(Dispatchers.Main) {
-                        onTranslated(newConfig)
-                        // }
-                    }
-                }
-            }
-        }
+        accountViewModel.translate(content, onTranslated)
     }
 }

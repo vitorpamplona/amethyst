@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
@@ -13,7 +13,8 @@ class NewMessageTagger(
     var message: String,
     var mentions: List<User>? = null,
     var replyTos: List<Note>? = null,
-    var channelHex: String? = null
+    var channelHex: String? = null,
+    var accountViewModel: AccountViewModel
 ) {
 
     val directMentions = mutableSetOf<HexKey>()
@@ -40,20 +41,20 @@ class NewMessageTagger(
         return (if (channelHex != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
     }
 
-    fun run() {
+    suspend fun run() {
         // adds all references to mentions and reply tos
         message.split('\n').forEach { paragraph: String ->
             paragraph.split(' ').forEach { word: String ->
                 val results = parseDirtyWordForKey(word)
 
                 if (results?.key?.type == Nip19.Type.USER) {
-                    addUserToMentions(LocalCache.getOrCreateUser(results.key.hex))
+                    addUserToMentions(accountViewModel.getOrCreateUser(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
-                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
+                    addNoteToReplyTos(accountViewModel.getOrCreateNote(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
-                    addNoteToReplyTos(LocalCache.getOrCreateNote(results.key.hex))
+                    addNoteToReplyTos(accountViewModel.getOrCreateNote(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
+                    val note = accountViewModel.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
                         addNoteToReplyTos(note)
                     }
@@ -66,19 +67,19 @@ class NewMessageTagger(
             paragraph.split(' ').map { word: String ->
                 val results = parseDirtyWordForKey(word)
                 if (results?.key?.type == Nip19.Type.USER) {
-                    val user = LocalCache.getOrCreateUser(results.key.hex)
+                    val user = accountViewModel.getOrCreateUser(results.key.hex)
 
                     "nostr:${user.pubkeyNpub()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
-                    val note = LocalCache.getOrCreateNote(results.key.hex)
+                    val note = accountViewModel.getOrCreateNote(results.key.hex)
 
                     "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
-                    val note = LocalCache.getOrCreateNote(results.key.hex)
+                    val note = accountViewModel.getOrCreateNote(results.key.hex)
 
                     "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                    val note = LocalCache.checkGetOrCreateAddressableNote(results.key.hex)
+                    val note = accountViewModel.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
                         "nostr:${note.idNote()}${results.restOfWord}"
                     } else {

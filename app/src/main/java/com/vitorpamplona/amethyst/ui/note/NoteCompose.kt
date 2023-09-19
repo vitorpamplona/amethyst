@@ -85,7 +85,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ConnectivityType
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.User
@@ -674,14 +673,13 @@ fun LongCommunityHeader(
     }
 
     LaunchedEffect(key1 = noteState) {
-        launch(Dispatchers.IO) {
-            val noteEvent = (noteState?.note?.event as? CommunityDefinitionEvent)
-            val newParticipantUsers = noteEvent?.moderators()?.mapNotNull { part ->
-                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
-            }?.toImmutableList()
+        val participants = (noteState?.note?.event as? CommunityDefinitionEvent)?.moderators()
 
-            if (newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)) {
-                participantUsers = newParticipantUsers
+        if (participants != null) {
+            accountViewModel.loadParticipants(participants) { newParticipantUsers ->
+                if (newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)) {
+                    participantUsers = newParticipantUsers
+                }
             }
         }
     }
@@ -1817,9 +1815,8 @@ fun DisplayPeopleList(
 ) {
     val noteEvent = baseNote.event as? PeopleListEvent ?: return
 
-    var members by remember { mutableStateOf<List<User>>(listOf()) }
+    var members by remember { mutableStateOf<ImmutableList<User>>(persistentListOf()) }
 
-    val account = accountViewModel.userProfile()
     var expanded by remember {
         mutableStateOf(false)
     }
@@ -1848,10 +1845,8 @@ fun DisplayPeopleList(
     )
 
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            members = noteEvent.bookmarkedPeople().mapNotNull { hex ->
-                LocalCache.checkGetOrCreateUser(hex)
-            }.sortedBy { account.isFollowing(it) }.reversed()
+        accountViewModel.loadUsers(noteEvent.bookmarkedPeople()) {
+            members = it
         }
     }
 
@@ -1899,15 +1894,11 @@ private fun RenderBadgeAward(
     val noteEvent = note.event as? BadgeAwardEvent ?: return
     var awardees by remember { mutableStateOf<List<User>>(listOf()) }
 
-    val account = accountViewModel.userProfile()
-
     Text(text = stringResource(R.string.award_granted_to))
 
     LaunchedEffect(key1 = note) {
-        launch(Dispatchers.IO) {
-            awardees = noteEvent.awardees().mapNotNull { hex ->
-                LocalCache.checkGetOrCreateUser(hex)
-            }.sortedBy { account.isFollowing(it) }.reversed()
+        accountViewModel.loadUsers(noteEvent.awardees()) {
+            awardees = it
         }
     }
 
@@ -2016,7 +2007,7 @@ fun RenderPostApproval(
 
     Column(Modifier.fillMaxWidth()) {
         noteEvent.communities().forEach {
-            LoadAddressableNote(it) {
+            LoadAddressableNote(it, accountViewModel) {
                 it?.let {
                     NoteCompose(
                         it,
@@ -2055,15 +2046,14 @@ fun RenderPostApproval(
 }
 
 @Composable
-fun LoadAddressableNote(aTagHex: String, content: @Composable (AddressableNote?) -> Unit) {
+fun LoadAddressableNote(aTagHex: String, accountViewModel: AccountViewModel, content: @Composable (AddressableNote?) -> Unit) {
     var note by remember(aTagHex) {
-        mutableStateOf<AddressableNote?>(LocalCache.getAddressableNoteIfExists(aTagHex))
+        mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTagHex))
     }
 
     if (note == null) {
         LaunchedEffect(key1 = aTagHex) {
-            launch(Dispatchers.IO) {
-                val newNote = LocalCache.checkGetOrCreateAddressableNote(aTagHex)
+            accountViewModel.checkGetOrCreateAddressableNote(aTagHex) { newNote ->
                 if (newNote != note) {
                     note = newNote
                 }
@@ -2075,15 +2065,14 @@ fun LoadAddressableNote(aTagHex: String, content: @Composable (AddressableNote?)
 }
 
 @Composable
-fun LoadAddressableNote(aTag: ATag, content: @Composable (AddressableNote?) -> Unit) {
+fun LoadAddressableNote(aTag: ATag, accountViewModel: AccountViewModel, content: @Composable (AddressableNote?) -> Unit) {
     var note by remember(aTag) {
-        mutableStateOf<AddressableNote?>(LocalCache.getAddressableNoteIfExists(aTag.toTag()))
+        mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTag.toTag()))
     }
 
     if (note == null) {
         LaunchedEffect(key1 = aTag) {
-            launch(Dispatchers.IO) {
-                val newNote = LocalCache.getOrCreateAddressableNote(aTag)
+            accountViewModel.getOrCreateAddressableNote(aTag) { newNote ->
                 if (newNote != note) {
                     note = newNote
                 }
@@ -2215,7 +2204,8 @@ private fun EmojiListOptions(
             accountViewModel.userProfile().pubkeyHex,
             "",
             null
-        )
+        ),
+        accountViewModel
     ) {
         it?.let { usersEmojiList ->
             val hasAddedThis by usersEmojiList.live().metadata.map {
@@ -2567,6 +2557,7 @@ fun SecondUserInfoRow(
 @Composable
 fun LoadStatuses(
     user: User,
+    accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<AddressableNote>) -> Unit
 ) {
     var statuses: ImmutableList<AddressableNote> by remember {
@@ -2576,9 +2567,7 @@ fun LoadStatuses(
     val userStatus by user.live().statuses.observeAsState()
 
     LaunchedEffect(key1 = userStatus) {
-        launch(Dispatchers.IO) {
-            val myUser = userStatus?.user ?: return@launch
-            val newStatuses = LocalCache.findStatusesForUser(myUser)
+        accountViewModel.findStatusesForUser(userStatus?.user ?: user) { newStatuses ->
             if (!equalImmutableLists(statuses, newStatuses)) {
                 statuses = newStatuses
             }
@@ -2776,7 +2765,7 @@ private fun RenderAuthorImages(
     if (isChannel) {
         val baseChannelHex = remember { baseNote.channelHex() }
         if (baseChannelHex != null) {
-            LoadChannel(baseChannelHex) { channel ->
+            LoadChannel(baseChannelHex, accountViewModel) { channel ->
                 ChannelNotePicture(channel)
             }
         }
@@ -2784,15 +2773,14 @@ private fun RenderAuthorImages(
 }
 
 @Composable
-fun LoadChannel(baseChannelHex: String, content: @Composable (Channel) -> Unit) {
+fun LoadChannel(baseChannelHex: String, accountViewModel: AccountViewModel, content: @Composable (Channel) -> Unit) {
     var channel by remember(baseChannelHex) {
-        mutableStateOf<Channel?>(LocalCache.getChannelIfExists(baseChannelHex))
+        mutableStateOf<Channel?>(accountViewModel.getChannelIfExists(baseChannelHex))
     }
 
     if (channel == null) {
         LaunchedEffect(key1 = baseChannelHex) {
-            launch(Dispatchers.IO) {
-                val newChannel = LocalCache.checkGetOrCreateChannel(baseChannelHex)
+            accountViewModel.checkGetOrCreateChannel(baseChannelHex) { newChannel ->
                 launch(Dispatchers.Main) {
                     channel = newChannel
                 }
@@ -2909,15 +2897,12 @@ private fun DisplayQuoteAuthor(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(authorHex)) }
+    var userBase by remember { mutableStateOf<User?>(accountViewModel.getUserIfExists(authorHex)) }
 
-    LaunchedEffect(Unit) {
-        if (userBase == null) {
-            launch(Dispatchers.IO) {
-                val newUserBase = LocalCache.checkGetOrCreateUser(authorHex)
-                launch(Dispatchers.Main) {
-                    userBase = newUserBase
-                }
+    if (userBase == null) {
+        LaunchedEffect(Unit) {
+            accountViewModel.checkGetOrCreateUser(authorHex) { newUserBase ->
+                userBase = newUserBase
             }
         }
     }
@@ -2941,7 +2926,7 @@ private fun DisplayQuoteAuthor(
 
 @Composable
 private fun LoadAndDisplayPost(postAddress: ATag, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    LoadAddressableNote(aTag = postAddress) {
+    LoadAddressableNote(aTag = postAddress, accountViewModel) {
         it?.let { note ->
             val noteEvent by note.live().metadata.map {
                 it.note.event
@@ -3387,7 +3372,7 @@ fun FileStorageHeaderDisplay(baseNote: Note, roundedCorner: Boolean, accountView
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
     val dataEventId = eventHeader.dataEventId() ?: return
 
-    LoadNote(baseNoteHex = dataEventId) { contentNote ->
+    LoadNote(baseNoteHex = dataEventId, accountViewModel) { contentNote ->
         if (contentNote != null) {
             ObserverAndRenderNIP95(baseNote, contentNote, roundedCorner, accountViewModel)
         }
@@ -3462,8 +3447,8 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
     var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
 
     LaunchedEffect(key1 = participants) {
-        launch(Dispatchers.IO) {
-            participantUsers = participants.mapNotNull { part -> LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) } }
+        accountViewModel.loadParticipants(participants) {
+            participantUsers = it
         }
     }
 
@@ -3672,11 +3657,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
     }
 
     LaunchedEffect(key1 = eventUpdates) {
-        launch(Dispatchers.IO) {
-            val newParticipantUsers = participants.mapNotNull { part ->
-                LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
-            }.toImmutableList()
-
+        accountViewModel.loadParticipants(participants) { newParticipantUsers ->
             if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
                 participantUsers = newParticipantUsers
             }

@@ -257,7 +257,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
-    LoadStatuses(user = baseAccountUser) { statuses ->
+    LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
         if (statuses.isEmpty()) {
             val currentStatus = remember {
                 mutableStateOf("")

@@ -142,7 +142,7 @@ fun NewPostView(
     var relayList = account.activeWriteRelays()
 
     LaunchedEffect(Unit) {
-        postViewModel.load(account, baseReplyTo, quote)
+        postViewModel.load(accountViewModel, baseReplyTo, quote)
 
         launch(Dispatchers.IO) {
             postViewModel.imageUploadingError.collect { error ->
@@ -211,10 +211,8 @@ fun NewPostView(
                             }
                             PostButton(
                                 onPost = {
-                                    scope.launch(Dispatchers.IO) {
-                                        postViewModel.sendPost(relayList = relayList)
-                                        onClose()
-                                    }
+                                    postViewModel.sendPost(relayList = relayList)
+                                    onClose()
                                 },
                                 isActive = postViewModel.canPost()
                             )

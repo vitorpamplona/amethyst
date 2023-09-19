@@ -185,6 +185,7 @@ fun PrepareChatroomViewModels(
     )
 
     val newPostModel: NewPostViewModel = viewModel()
+    newPostModel.accountViewModel = accountViewModel
     newPostModel.account = accountViewModel.account
     newPostModel.requiresNIP24 = room.users.size > 1
     if (newPostModel.requiresNIP24) {
@@ -482,7 +483,7 @@ fun ChatroomHeader(
     nav: (String) -> Unit
 ) {
     if (room.users.size == 1) {
-        LoadUser(baseUserHex = room.users.first()) { baseUser ->
+        LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
             if (baseUser != null) {
                 ChatroomHeader(baseUser = baseUser, modifier = modifier, accountViewModel = accountViewModel, nav = nav)
             }
@@ -559,7 +560,7 @@ fun GroupChatroomHeader(
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel.userProfile())
-                    DisplayUserSetAsSubject(room, FontWeight.Normal)
+                    DisplayUserSetAsSubject(room, accountViewModel, FontWeight.Normal)
                 }
             }
 
@@ -733,7 +734,7 @@ fun LongRoomHeader(
         state = rememberLazyListState()
     ) {
         itemsIndexed(list, key = { _, item -> item }) { _, item ->
-            LoadUser(baseUserHex = item) {
+            LoadUser(baseUserHex = item, accountViewModel) {
                 if (it != null) {
                     UserCompose(
                         baseUser = it,

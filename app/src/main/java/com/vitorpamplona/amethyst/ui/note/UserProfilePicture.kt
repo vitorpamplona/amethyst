@@ -112,7 +112,7 @@ fun UserPicture(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadUser(baseUserHex = userHex) {
+    LoadUser(baseUserHex = userHex, accountViewModel) {
         if (it != null) {
             UserPicture(
                 user = it,
@@ -216,57 +216,57 @@ fun NonClickableUserPictures(
 
         when (userList.size) {
             0 -> {}
-            1 -> LoadUser(baseUserHex = userList[0]) {
+            1 -> LoadUser(baseUserHex = userList[0], accountViewModel) {
                 it?.let {
                     BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier)
                 }
             }
             2 -> {
-                LoadUser(baseUserHex = userList[0]) {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(1.5f), accountViewModel, outerModifier = Modifier.align(Alignment.CenterStart))
                     }
                 }
-                LoadUser(baseUserHex = userList[1]) {
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(1.5f), accountViewModel, outerModifier = Modifier.align(Alignment.CenterEnd))
                     }
                 }
             }
             3 -> {
-                LoadUser(baseUserHex = userList[0]) {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomStart))
                     }
                 }
-                LoadUser(baseUserHex = userList[1]) {
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.TopCenter))
                     }
                 }
-                LoadUser(baseUserHex = userList[2]) {
+                LoadUser(baseUserHex = userList[2], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomEnd))
                     }
                 }
             }
             else -> {
-                LoadUser(baseUserHex = userList[0]) {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomStart))
                     }
                 }
-                LoadUser(baseUserHex = userList[1]) {
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.TopStart))
                     }
                 }
-                LoadUser(baseUserHex = userList[2]) {
+                LoadUser(baseUserHex = userList[2], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomEnd))
                     }
                 }
-                LoadUser(baseUserHex = userList[3]) {
+                LoadUser(baseUserHex = userList[3], accountViewModel) {
                     it?.let {
                         BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.TopEnd))
                     }

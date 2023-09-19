@@ -248,7 +248,7 @@ private fun DisplayOwnerInformation(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadUser(baseUserHex = userHex) {
+    LoadUser(baseUserHex = userHex, accountViewModel) {
         Crossfade(it) {
             if (it != null) {
                 UserCompose(baseUser = it, accountViewModel = accountViewModel, showDiviser = false, nav = nav)

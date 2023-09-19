@@ -646,7 +646,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
 fun RenderChannelThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? ChannelCreateEvent ?: return
 
-    LoadChannel(baseChannelHex = baseNote.idHex) {
+    LoadChannel(baseChannelHex = baseNote.idHex, accountViewModel) {
         RenderChannelThumb(baseNote = baseNote, channel = it, accountViewModel, nav)
     }
 }

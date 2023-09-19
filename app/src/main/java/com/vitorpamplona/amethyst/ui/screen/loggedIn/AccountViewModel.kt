@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -24,15 +25,19 @@ import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.ui.components.TranslationConfig
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
+import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.UserMetadata
@@ -40,6 +45,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -520,6 +526,135 @@ class AccountViewModel(val account: Account) : ViewModel() {
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             Nip11CachedRetriever.loadRelayInfo(dirtyUrl, onInfo, onError)
+        }
+    }
+
+    fun translate(content: String, onTranslated: (TranslationConfig) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            LanguageTranslatorService.autoTranslate(
+                content,
+                account.dontTranslateFrom,
+                account.translateTo
+            ).addOnCompleteListener { task ->
+                if (task.isSuccessful && !content.equals(task.result.result, true)) {
+                    if (task.result.sourceLang != null && task.result.targetLang != null) {
+                        val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
+                        val newConfig = TranslationConfig(
+                            result = task.result.result,
+                            sourceLang = task.result.sourceLang,
+                            targetLang = task.result.targetLang,
+                            showOriginal = preference == task.result.sourceLang
+                        )
+
+                        onTranslated(newConfig)
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun checkGetOrCreateUser(key: HexKey): User? {
+        return LocalCache.checkGetOrCreateUser(key)
+    }
+
+    suspend fun getOrCreateUser(key: HexKey): User {
+        return LocalCache.getOrCreateUser(key)
+    }
+
+    fun checkGetOrCreateUser(key: HexKey, onResult: (User?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateUser(key))
+        }
+    }
+
+    fun getUserIfExists(hex: HexKey): User? {
+        return LocalCache.getUserIfExists(hex)
+    }
+
+    suspend fun checkGetOrCreateNote(key: HexKey): Note? {
+        return LocalCache.checkGetOrCreateNote(key)
+    }
+
+    suspend fun getOrCreateNote(key: HexKey): Note {
+        return LocalCache.getOrCreateNote(key)
+    }
+
+    fun checkGetOrCreateNote(key: HexKey, onResult: (Note?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateNote(key))
+        }
+    }
+
+    fun getNoteIfExists(hex: HexKey): Note? {
+        return LocalCache.getNoteIfExists(hex)
+    }
+
+    suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? {
+        return LocalCache.checkGetOrCreateAddressableNote(key)
+    }
+
+    fun checkGetOrCreateAddressableNote(key: HexKey, onResult: (AddressableNote?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateAddressableNote(key))
+        }
+    }
+
+    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
+        return LocalCache.getOrCreateAddressableNote(key)
+    }
+
+    fun getOrCreateAddressableNote(key: ATag, onResult: (AddressableNote?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(getOrCreateAddressableNote(key))
+        }
+    }
+
+    fun getAddressableNoteIfExists(key: String): AddressableNote? {
+        return LocalCache.addressables[key]
+    }
+
+    fun findStatusesForUser(myUser: User, onResult: (ImmutableList<AddressableNote>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(LocalCache.findStatusesForUser(myUser))
+        }
+    }
+
+    suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
+        return LocalCache.checkGetOrCreateChannel(key)
+    }
+
+    fun checkGetOrCreateChannel(key: HexKey, onResult: (Channel?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateChannel(key))
+        }
+    }
+
+    fun getChannelIfExists(hex: HexKey): Channel? {
+        return LocalCache.getChannelIfExists(hex)
+    }
+
+    fun loadParticipants(participants: List<Participant>, onReady: (ImmutableList<Pair<Participant, User>>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val participantUsers = participants.mapNotNull { part ->
+                checkGetOrCreateUser(part.key)?.let {
+                    Pair(
+                        part,
+                        it
+                    )
+                }
+            }.toImmutableList()
+
+            onReady(participantUsers)
+        }
+    }
+
+    fun loadUsers(hexList: List<String>, onReady: (ImmutableList<User>) -> Unit) {
+        viewModelScope.launch {
+            onReady(
+                hexList.mapNotNull { hex ->
+                    checkGetOrCreateUser(hex)
+                }.sortedBy { account.isFollowing(it) }.reversed().toImmutableList()
+            )
         }
     }
 

@@ -106,7 +106,7 @@ fun ObserveDisplayNip05Status(
 ) {
     val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
-    LoadStatuses(baseUser) { statuses ->
+    LoadStatuses(baseUser, accountViewModel) { statuses ->
         Crossfade(targetState = nip05, modifier = columnModifier, label = "ObserveDisplayNip05StatusCrossfade") {
             VerifyAndDisplayNIP05OrStatusLine(it, statuses, baseUser, columnModifier, accountViewModel, nav)
         }
@@ -233,7 +233,7 @@ fun DisplayStatus(
             )
         }
     } else if (nostrATag != null) {
-        LoadAddressableNote(nostrATag) { note ->
+        LoadAddressableNote(nostrATag, accountViewModel) { note ->
             if (note != null) {
                 Spacer(modifier = StdHorzSpacer)
                 IconButton(
@@ -255,7 +255,7 @@ fun DisplayStatus(
             }
         }
     } else if (nostrHexID != null) {
-        LoadNote(baseNoteHex = nostrHexID) {
+        LoadNote(baseNoteHex = nostrHexID, accountViewModel) {
             if (it != null) {
                 Spacer(modifier = StdHorzSpacer)
                 IconButton(

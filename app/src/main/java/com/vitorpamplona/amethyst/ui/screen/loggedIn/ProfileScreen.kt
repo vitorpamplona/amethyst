@@ -940,7 +940,7 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    DisplayBadges(baseUser, nav)
+    DisplayBadges(baseUser, accountViewModel, nav)
 
     DisplayNip05ProfileStatus(user, accountViewModel)
 
@@ -1174,6 +1174,7 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
 @Composable
 private fun DisplayBadges(
     baseUser: User,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     LoadAddressableNote(
@@ -1182,7 +1183,8 @@ private fun DisplayBadges(
             baseUser.pubkeyHex,
             BadgeProfilesEvent.standardDTAg,
             null
-        )
+        ),
+        accountViewModel
     ) {
         if (it != null) {
             val badgeList by it.live().metadata.map {
