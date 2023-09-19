@@ -3739,7 +3739,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
 private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountViewModel: AccountViewModel) {
     val image = remember(noteEvent) { noteEvent.image() }
     val title = remember(noteEvent) { noteEvent.title() }
-    val summary = remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+    val summary = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null } }
 
     Row(
         modifier = Modifier
