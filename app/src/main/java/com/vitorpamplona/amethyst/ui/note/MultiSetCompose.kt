@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.EmptyTagList
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -484,7 +484,7 @@ fun CrossfadeToDisplayComment(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = true,
-                tags = remember { ImmutableListOfLists() },
+                tags = EmptyTagList,
                 modifier = textBoxModifier,
                 backgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,

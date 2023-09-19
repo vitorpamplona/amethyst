@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.service.RichTextParser
 import com.vitorpamplona.amethyst.service.RichTextViewerState
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.EmptyTagList
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -666,7 +666,7 @@ class RichTextParserTest {
 
     @Test
     fun testTextToParse() {
-        val state = RichTextParser().parseText(textToParse, ImmutableListOfLists())
+        val state = RichTextParser().parseText(textToParse, EmptyTagList)
         Assert.assertEquals(
             "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, zapper.lol, smies.me, baller.hodl",
             state.urlSet.joinToString(", ")
@@ -3989,7 +3989,7 @@ class RichTextParserTest {
 
     @Test
     fun testShortTextToParse() {
-        val state = RichTextParser().parseText("Hi, how are you doing? ", ImmutableListOfLists())
+        val state = RichTextParser().parseText("Hi, how are you doing? ", EmptyTagList)
         Assert.assertTrue(state.urlSet.isEmpty())
         Assert.assertTrue(state.imagesForPager.isEmpty())
         Assert.assertTrue(state.imageList.isEmpty())
@@ -3999,7 +3999,7 @@ class RichTextParserTest {
 
     @Test
     fun testShortNewLinesTextToParse() {
-        val state = RichTextParser().parseText("\nHi, \nhow\n\n\n are you doing? \n", ImmutableListOfLists())
+        val state = RichTextParser().parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList)
         Assert.assertTrue(state.urlSet.isEmpty())
         Assert.assertTrue(state.imagesForPager.isEmpty())
         Assert.assertTrue(state.imageList.isEmpty())
@@ -4019,7 +4019,7 @@ See how it can be done here: https://lnshort.it/live-stream-embeds/
 https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg
         """.trimIndent()
 
-        val state = RichTextParser().parseText(text, ImmutableListOfLists())
+        val state = RichTextParser().parseText(text, EmptyTagList)
         Assert.assertEquals("https://lnshort.it/live-stream-embeds/", state.urlSet.firstOrNull())
         Assert.assertEquals("https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg", state.imagesForPager.keys.firstOrNull())
         Assert.assertEquals("https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg", state.imageList.firstOrNull()?.url)
@@ -4080,7 +4080,7 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
     fun testNewLineAfterImage() {
         val text = "That’s it ! That’s the #note https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg "
 
-        val state = RichTextParser().parseText(text, ImmutableListOfLists())
+        val state = RichTextParser().parseText(text, EmptyTagList)
 
         printStateForDebug(state)
 
@@ -4106,7 +4106,7 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
     fun testSapceAfterImage() {
         val text = "That’s it! https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg That’s the #note"
 
-        val state = RichTextParser().parseText(text, ImmutableListOfLists())
+        val state = RichTextParser().parseText(text, EmptyTagList)
 
         printStateForDebug(state)
 

@@ -129,7 +129,7 @@ import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
@@ -751,9 +751,9 @@ fun LongChannelHeader(
 
                 val tags = remember(channelState) {
                     if (baseChannel is LiveActivitiesChannel) {
-                        baseChannel.info?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+                        baseChannel.info?.tags()?.toImmutableListOfLists() ?: EmptyTagList
                     } else {
-                        ImmutableListOfLists()
+                        EmptyTagList
                     }
                 }
 

@@ -15,16 +15,28 @@ class AppDefinitionEvent(
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun appMetaData() = try {
-        mapper.readValue(
-            ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
-            UserMetadata::class.java
-        )
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
-        null
-    }
+    @Transient
+    private var cachedMetadata: UserMetadata? = null
+
+    fun appMetaData() =
+        if (cachedMetadata != null) {
+            cachedMetadata
+        } else {
+            try {
+                val newMetadata = mapper.readValue(
+                    ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
+                    UserMetadata::class.java
+                )
+
+                cachedMetadata = newMetadata
+
+                newMetadata
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
+                null
+            }
+        }
 
     fun supportedKinds() = tags.filter { it.size > 1 && it[0] == "k" }.mapNotNull {
         runCatching { it[1].toInt() }.getOrNull()

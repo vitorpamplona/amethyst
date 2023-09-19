@@ -179,12 +179,12 @@ import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
@@ -631,7 +631,7 @@ fun LongCommunityHeader(
                 TranslatableRichTextViewer(
                     content = summary ?: stringResource(id = R.string.community_no_descriptor),
                     canPreview = false,
-                    tags = remember { ImmutableListOfLists(emptyList()) },
+                    tags = EmptyTagList,
                     backgroundColor = background,
                     accountViewModel = accountViewModel,
                     nav = nav
@@ -1343,7 +1343,7 @@ fun RenderTextEvent(
                 accountViewModel = accountViewModel
             ) {
                 val modifier = remember(note) { Modifier.fillMaxWidth() }
-                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
                 TranslatableRichTextViewer(
                     content = eventContent,
@@ -1382,7 +1382,7 @@ fun RenderPoll(
             overflow = TextOverflow.Ellipsis
         )
     } else {
-        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
         SensitivityWarning(
             note = note,
@@ -1557,7 +1557,7 @@ fun RenderAppDefinition(
                     Row(
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     ) {
-                        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+                        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
                         val bgColor = MaterialTheme.colors.background
                         val backgroundColor = remember {
                             mutableStateOf(bgColor)
@@ -1630,7 +1630,7 @@ private fun RenderPrivateMessage(
         val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
         val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
 
-        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+        val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
         if (eventContent != null) {
             if (makeItShort && isAuthorTheLoggedUser) {
@@ -1670,7 +1670,7 @@ private fun RenderPrivateMessage(
             ),
             canPreview = !makeItShort,
             Modifier.fillMaxWidth(),
-            ImmutableListOfLists(),
+            EmptyTagList,
             backgroundColor,
             accountViewModel,
             nav
@@ -2308,7 +2308,7 @@ fun RenderPinListEvent(
                     TranslatableRichTextViewer(
                         content = pin,
                         canPreview = true,
-                        tags = remember { ImmutableListOfLists() },
+                        tags = EmptyTagList,
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav
@@ -2407,8 +2407,8 @@ private fun RenderReport(
     TranslatableRichTextViewer(
         content = content,
         canPreview = true,
-        modifier = remember { Modifier },
-        tags = remember { ImmutableListOfLists() },
+        modifier = Modifier,
+        tags = EmptyTagList,
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav
@@ -2880,7 +2880,7 @@ fun DisplayHighlight(
         quote,
         canPreview = canPreview && !makeItShort,
         remember { Modifier.fillMaxWidth() },
-        remember { ImmutableListOfLists<String>(emptyList()) },
+        EmptyTagList,
         backgroundColor,
         accountViewModel,
         nav
@@ -3527,7 +3527,7 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
 
     val defaultBackground = MaterialTheme.colors.background
     val background = remember { mutableStateOf(defaultBackground) }
-    val tags = remember(noteEvent) { noteEvent?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+    val tags = remember(noteEvent) { noteEvent?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
     val eventContent = remember(note.event) {
         val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }

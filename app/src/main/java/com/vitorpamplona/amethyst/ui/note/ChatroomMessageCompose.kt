@@ -25,6 +25,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
@@ -285,7 +287,7 @@ fun NormalChatNote(
             modifier = modif,
             horizontalArrangement = alignment
         ) {
-            val availableBubbleSize = remember { mutableStateOf(0) }
+            val availableBubbleSize = remember { mutableIntStateOf(0) }
             var popupExpanded by remember { mutableStateOf(false) }
 
             val modif2 = remember {
@@ -355,7 +357,7 @@ private fun RenderBubble(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val bubbleSize = remember { mutableStateOf(0) }
+    val bubbleSize = remember { mutableIntStateOf(0) }
 
     val bubbleModifier = remember {
         Modifier
@@ -626,7 +628,7 @@ private fun RenderRegularTextNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
+    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
     val eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 

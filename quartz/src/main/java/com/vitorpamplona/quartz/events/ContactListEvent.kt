@@ -350,6 +350,8 @@ class UserMetadata {
 @Stable
 data class ImmutableListOfLists<T>(val lists: List<List<T>> = emptyList())
 
+val EmptyTagList = ImmutableListOfLists<String>(emptyList())
+
 fun List<List<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
     return ImmutableListOfLists(this)
 }
