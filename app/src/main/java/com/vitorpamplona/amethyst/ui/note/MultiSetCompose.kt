@@ -179,7 +179,7 @@ private fun Galeries(
     val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
 
     if (hasZapEvents) {
-        var zapEvents by remember(multiSetCard) {
+        var zapEvents by remember(multiSetCard.zapEvents) {
             mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
         }
 
