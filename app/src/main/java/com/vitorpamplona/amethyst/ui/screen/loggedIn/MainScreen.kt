@@ -208,7 +208,7 @@ fun MainScreen(
             }
         }
     }
-    val shouldShow = bottomBarOffsetHeightPx.value == 0f || navState.value?.destination?.route?.startsWith("Home") == false
+    val shouldShow = bottomBarOffsetHeightPx.value == 0f
 
     ModalBottomSheetLayout(
         sheetState = sheetState,
