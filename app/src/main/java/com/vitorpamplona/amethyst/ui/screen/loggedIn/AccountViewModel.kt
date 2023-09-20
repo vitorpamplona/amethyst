@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.ui.components.TranslationConfig
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
@@ -195,6 +196,8 @@ class AccountViewModel(val account: Account) : ViewModel() {
         zapRequest: Note,
         zapEvent: Note?
     ): ZapAmountCommentNotification? {
+        checkNotInMainThread()
+
         (zapRequest.event as? LnZapRequestEvent)?.let {
             val decryptedContent = decryptZap(zapRequest)
             val amount = (zapEvent?.event as? LnZapEvent)?.amount
