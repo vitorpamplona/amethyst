@@ -1,10 +1,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +30,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import com.vitorpamplona.quartz.events.EmptyTagList
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -172,7 +171,6 @@ private fun Galeries(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val zapEvents by remember { derivedStateOf { multiSetCard.zapEvents } }
     val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
     val likeEvents by remember { derivedStateOf { multiSetCard.likeEventsByType } }
 
@@ -181,6 +179,16 @@ private fun Galeries(
     val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
 
     if (hasZapEvents) {
+        var zapEvents by remember(multiSetCard) {
+            mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+        }
+
+        LaunchedEffect(key1 = Unit) {
+            accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) {
+                zapEvents = it
+            }
+        }
+
         val (value, elapsed) = measureTimedValue {
             RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
         }
@@ -250,7 +258,7 @@ fun RenderLikeGallery(
 
 @Composable
 fun RenderZapGallery(
-    zapEvents: ImmutableList<CombinedZap>,
+    zapEvents: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
@@ -297,10 +305,29 @@ fun RenderBoostGallery(
     }
 }
 
+@Composable
+fun MapZaps(
+    zaps: ImmutableList<CombinedZap>,
+    accountViewModel: AccountViewModel,
+    content: @Composable (ImmutableList<ZapAmountCommentNotification>) -> Unit
+) {
+    var zapEvents by remember(zaps) {
+        mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+    }
+
+    LaunchedEffect(key1 = Unit) {
+        accountViewModel.decryptAmountMessageInGroup(zaps) {
+            zapEvents = it
+        }
+    }
+
+    content(zapEvents)
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AuthorGalleryZaps(
-    authorNotes: ImmutableList<CombinedZap>,
+    authorNotes: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
@@ -308,21 +335,9 @@ fun AuthorGalleryZaps(
     Column(modifier = StdStartPadding) {
         FlowRow() {
             authorNotes.forEach {
-                ParseAuthorCommentAndAmount(it, backgroundColor, nav, accountViewModel)
+                RenderState(it, backgroundColor, accountViewModel, nav)
             }
         }
-    }
-}
-
-@Composable
-private fun ParseAuthorCommentAndAmount(
-    zap: CombinedZap,
-    backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
-    accountViewModel: AccountViewModel
-) {
-    ParseAuthorCommentAndAmount(zap.request, zap.response, accountViewModel) { state ->
-        RenderState(state, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -361,15 +376,15 @@ private fun ParseAuthorCommentAndAmount(
     onReady(content)
 }
 
-fun click(content: MutableState<ZapAmountCommentNotification>, nav: (String) -> Unit) {
-    content.value.user?.let {
+fun click(content: ZapAmountCommentNotification, nav: (String) -> Unit) {
+    content.user?.let {
         nav(routeFor(it))
     }
 }
 
 @Composable
 private fun RenderState(
-    content: MutableState<ZapAmountCommentNotification>,
+    content: ZapAmountCommentNotification,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -401,97 +416,65 @@ val commentTextSize = 12.sp
 
 @Composable
 private fun DisplayAuthorCommentAndAmount(
-    authorComment: MutableState<ZapAmountCommentNotification>,
+    authorComment: ZapAmountCommentNotification,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
     Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {
-        CrossfadeToDisplayPicture(authorComment, accountViewModel)
-        CrossfadeToDisplayAmount(authorComment)
-    }
-
-    CrossfadeToDisplayComment(authorComment, backgroundColor, nav, accountViewModel)
-}
-
-@Composable
-fun CrossfadeToDisplayPicture(authorComment: MutableState<ZapAmountCommentNotification>, accountViewModel: AccountViewModel) {
-    Crossfade(authorComment.value) {
-        WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(it.user, accountViewModel)
-    }
-}
-
-@Composable
-fun CrossfadeToDisplayAmount(authorComment: MutableState<ZapAmountCommentNotification>) {
-    val visible by remember(authorComment) {
-        derivedStateOf {
-            authorComment.value.amount != null
+        WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(authorComment.user, accountViewModel)
+        authorComment.amount?.let {
+            CrossfadeToDisplayAmount(it)
         }
     }
 
-    AnimatedVisibility(
-        visible = visible,
+    authorComment.comment?.let {
+        CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+    }
+}
+
+@Composable
+fun CrossfadeToDisplayAmount(amount: String) {
+    Box(
         modifier = amountBoxModifier,
-        enter = fadeIn(),
-        exit = fadeOut()
+        contentAlignment = Alignment.BottomCenter
     ) {
-        authorComment.value.amount?.let {
-            Box(
-                modifier = amountBoxModifier,
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                val backgroundColor = MaterialTheme.colors.overPictureBackground
-                Box(
-                    modifier = remember {
-                        Modifier
-                            .width(Size35dp)
-                            .background(backgroundColor)
-                    },
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Text(
-                        text = it,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colors.bitcoinColor,
-                        fontSize = commentTextSize,
-                        modifier = bottomPadding1dp
-                    )
-                }
-            }
+        val backgroundColor = MaterialTheme.colors.overPictureBackground
+        Box(
+            modifier = remember {
+                Modifier
+                    .width(Size35dp)
+                    .background(backgroundColor)
+            },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Text(
+                text = amount,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colors.bitcoinColor,
+                fontSize = commentTextSize,
+                modifier = bottomPadding1dp
+            )
         }
     }
 }
 
 @Composable
 fun CrossfadeToDisplayComment(
-    authorComment: MutableState<ZapAmountCommentNotification>,
+    comment: String,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val visible by remember(authorComment) {
-        derivedStateOf {
-            authorComment.value.comment != null
-        }
-    }
-
-    AnimatedVisibility(
-        visible,
-        enter = fadeIn(),
-        exit = fadeOut()
-    ) {
-        authorComment.value.comment?.let {
-            TranslatableRichTextViewer(
-                content = it,
-                canPreview = true,
-                tags = EmptyTagList,
-                modifier = textBoxModifier,
-                backgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
-    }
+    TranslatableRichTextViewer(
+        content = comment,
+        canPreview = true,
+        tags = EmptyTagList,
+        modifier = textBoxModifier,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -543,25 +526,25 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     accountViewModel: AccountViewModel
 ) {
     WatchUserMetadata(author) { baseUserPicture ->
-        Crossfade(targetState = baseUserPicture) { userPicture ->
-            RobohashAsyncImageProxy(
-                robot = author.pubkeyHex,
-                model = userPicture,
-                contentDescription = stringResource(id = R.string.profile_image),
-                modifier = MaterialTheme.colors.profile35dpModifier,
-                contentScale = ContentScale.Crop
-            )
-        }
+        // Crossfade(targetState = baseUserPicture) { userPicture ->
+        RobohashAsyncImageProxy(
+            robot = author.pubkeyHex,
+            model = baseUserPicture,
+            contentDescription = stringResource(id = R.string.profile_image),
+            modifier = MaterialTheme.colors.profile35dpModifier,
+            contentScale = ContentScale.Crop
+        )
+        // }
     }
 
     WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
-        Crossfade(targetState = isFollowing) {
-            if (it) {
-                Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
-                    FollowingIcon(Size10dp)
-                }
+        // Crossfade(targetState = isFollowing) {
+        if (isFollowing) {
+            Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
+                FollowingIcon(Size10dp)
             }
         }
+        // }
     }
 }
 

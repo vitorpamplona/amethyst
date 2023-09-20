@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
@@ -179,6 +180,38 @@ class AccountViewModel(val account: Account) : ViewModel() {
                 showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
             }
             onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+        }
+    }
+
+    fun decryptAmountMessageInGroup(
+        zaps: ImmutableList<CombinedZap>,
+        onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = ArrayList<ZapAmountCommentNotification>(zaps.size)
+            zaps.forEach {
+                innerDecryptAmountMessage(it.request, it.response)?.let {
+                    list.add(it)
+                }
+            }
+
+            onNewState(list.toImmutableList())
+        }
+    }
+
+    fun decryptAmountMessageInGroup(
+        baseNote: Note,
+        onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = ArrayList<ZapAmountCommentNotification>(baseNote.zaps.size)
+            baseNote.zaps.forEach {
+                innerDecryptAmountMessage(it.key, it.value)?.let {
+                    list.add(it)
+                }
+            }
+
+            onNewState(list.toImmutableList())
         }
     }
 

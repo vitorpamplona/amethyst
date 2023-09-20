@@ -83,7 +83,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
-import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
@@ -460,8 +459,15 @@ private fun WatchZapAndRenderGallery(
     accountViewModel: AccountViewModel
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zapEvents by remember(zapsState) {
-        derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() }
+
+    var zapEvents by remember(zapsState) {
+        mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+    }
+
+    LaunchedEffect(key1 = zapsState) {
+        accountViewModel.decryptAmountMessageInGroup(baseNote) {
+            zapEvents = it
+        }
     }
 
     if (zapEvents.isNotEmpty()) {
