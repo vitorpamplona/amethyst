@@ -2,8 +2,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -51,7 +57,7 @@ import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     accountViewModel: AccountViewModel,
@@ -216,21 +222,27 @@ fun MainScreen(
                 .statusBarsPadding()
                 .nestedScroll(nestedScrollConnection),
             bottomBar = {
-                Crossfade(
+                AnimatedContent(
                     targetState = shouldShow,
-                    animationSpec = tween(durationMillis = 100)
-                ) { state ->
-                    if (state) {
+                    transitionSpec = {
+                        slideInVertically { height -> height } togetherWith
+                            slideOutVertically { height -> height }
+                    }
+                ) { isVisible ->
+                    if (isVisible) {
                         AppBottomBar(accountViewModel, navState, navBottomRow)
                     }
                 }
             },
             topBar = {
-                Crossfade(
+                AnimatedContent(
                     targetState = shouldShow,
-                    animationSpec = tween(durationMillis = 100)
-                ) { state ->
-                    if (state) {
+                    transitionSpec = {
+                        slideInVertically { height -> 0 } togetherWith
+                            slideOutVertically { height -> 0 }
+                    }
+                ) { isVisible ->
+                    if (isVisible) {
                         AppTopBar(
                             followLists,
                             navState,
