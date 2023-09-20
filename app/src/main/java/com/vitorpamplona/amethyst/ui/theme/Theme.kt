@@ -26,6 +26,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.style.ChartStyle
@@ -347,11 +348,14 @@ fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Uni
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
             if (darkTheme) {
                 window.statusBarColor = colors.background.toArgb()
             } else {
                 window.statusBarColor = colors.primary.toArgb()
             }
+            window.navigationBarColor = colors.background.toArgb()
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 }
