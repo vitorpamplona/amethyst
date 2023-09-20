@@ -33,6 +33,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -304,6 +305,26 @@ fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountV
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
 
     LaunchedEffect(accountState) {
-        accountViewModel.translate(content, onTranslated)
+        accountViewModel.runOnIO {
+            LanguageTranslatorService.autoTranslate(
+                content,
+                accountViewModel.account.dontTranslateFrom,
+                accountViewModel.account.translateTo
+            ).addOnCompleteListener { task ->
+                if (task.isSuccessful && !content.equals(task.result.result, true)) {
+                    if (task.result.sourceLang != null && task.result.targetLang != null) {
+                        val preference = accountViewModel.account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
+                        val newConfig = TranslationConfig(
+                            result = task.result.result,
+                            sourceLang = task.result.sourceLang,
+                            targetLang = task.result.targetLang,
+                            showOriginal = preference == task.result.sourceLang
+                        )
+
+                        onTranslated(newConfig)
+                    }
+                }
+            }
+        }
     }
 }
