@@ -15,11 +15,18 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -180,6 +187,23 @@ fun MainScreen(
         }
     }
 
+    val bottomBarHeight = 50.dp
+    val bottomBarHeightPx = with(LocalDensity.current) { bottomBarHeight.roundToPx().toFloat() }
+    val bottomBarOffsetHeightPx = remember { mutableStateOf(0f) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                val newOffset = bottomBarOffsetHeightPx.value + delta
+                bottomBarOffsetHeightPx.value = newOffset.coerceIn(-bottomBarHeightPx, 0f)
+
+                return Offset.Zero
+            }
+        }
+    }
+    val shouldShow = bottomBarOffsetHeightPx.value == 0f || navState.value?.destination?.route?.startsWith("Home") == false
+
     ModalBottomSheetLayout(
         sheetState = sheetState,
         sheetContent = {
@@ -189,12 +213,34 @@ fun MainScreen(
         Scaffold(
             modifier = Modifier
                 .background(MaterialTheme.colors.primaryVariant)
-                .statusBarsPadding(),
+                .statusBarsPadding()
+                .nestedScroll(nestedScrollConnection),
             bottomBar = {
-                AppBottomBar(accountViewModel, navState, navBottomRow)
+                Crossfade(
+                    targetState = shouldShow,
+                    animationSpec = tween(durationMillis = 100)
+                ) { state ->
+                    if (state) {
+                        AppBottomBar(accountViewModel, navState, navBottomRow)
+                    }
+                }
             },
             topBar = {
-                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav, navPopBack)
+                Crossfade(
+                    targetState = shouldShow,
+                    animationSpec = tween(durationMillis = 100)
+                ) { state ->
+                    if (state) {
+                        AppTopBar(
+                            followLists,
+                            navState,
+                            scaffoldState,
+                            accountViewModel,
+                            nav = nav,
+                            navPopBack
+                        )
+                    }
+                }
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
@@ -203,11 +249,27 @@ fun MainScreen(
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navState, accountViewModel, accountStateViewModel, nav, navBottomRow)
+                Crossfade(
+                    targetState = shouldShow,
+                    animationSpec = tween(durationMillis = 100)
+                ) { state ->
+                    if (state) {
+                        FloatingButtons(
+                            navState,
+                            accountViewModel,
+                            accountStateViewModel,
+                            nav,
+                            navBottomRow
+                        )
+                    }
+                }
             },
             scaffoldState = scaffoldState
         ) {
-            Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
+            Column(
+                modifier = Modifier
+                    .padding(bottom = if (bottomBarOffsetHeightPx.value == 0f || navState.value?.destination?.route != Route.Home.base) it.calculateBottomPadding() else 0.dp)
+            ) {
                 AppNavigation(
                     homeFeedViewModel = homeFeedViewModel,
                     repliesFeedViewModel = repliesFeedViewModel,
