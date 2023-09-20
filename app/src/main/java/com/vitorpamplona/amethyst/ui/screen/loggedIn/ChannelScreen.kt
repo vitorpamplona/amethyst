@@ -269,7 +269,7 @@ fun ChannelScreen(
                     mentions = listOfNotNull(replyTo.value?.author),
                     replyTos = listOfNotNull(replyTo.value),
                     channelHex = channel.idHex,
-                    accountViewModel = accountViewModel
+                    dao = accountViewModel
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {

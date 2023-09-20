@@ -14,7 +14,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -40,14 +39,6 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-@Immutable
-data class TranslationConfig(
-    val result: String?,
-    val sourceLang: String?,
-    val targetLang: String?,
-    val showOriginal: Boolean
-)
 
 @Composable
 fun TranslatableRichTextViewer(

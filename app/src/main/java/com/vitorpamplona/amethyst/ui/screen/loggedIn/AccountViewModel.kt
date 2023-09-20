@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.TranslationConfig
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
@@ -55,7 +56,7 @@ import java.math.BigDecimal
 import java.util.Locale
 
 @Stable
-class AccountViewModel(val account: Account) : ViewModel() {
+class AccountViewModel(val account: Account) : ViewModel(), Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
@@ -593,7 +594,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return LocalCache.checkGetOrCreateUser(key)
     }
 
-    suspend fun getOrCreateUser(key: HexKey): User {
+    override suspend fun getOrCreateUser(key: HexKey): User {
         return LocalCache.getOrCreateUser(key)
     }
 
@@ -611,7 +612,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return LocalCache.checkGetOrCreateNote(key)
     }
 
-    suspend fun getOrCreateNote(key: HexKey): Note {
+    override suspend fun getOrCreateNote(key: HexKey): Note {
         return LocalCache.getOrCreateNote(key)
     }
 
@@ -625,7 +626,7 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return LocalCache.getNoteIfExists(hex)
     }
 
-    suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? {
+    override suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? {
         return LocalCache.checkGetOrCreateAddressableNote(key)
     }
 

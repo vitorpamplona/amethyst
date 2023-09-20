@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
@@ -14,7 +14,7 @@ class NewMessageTagger(
     var mentions: List<User>? = null,
     var replyTos: List<Note>? = null,
     var channelHex: String? = null,
-    var accountViewModel: AccountViewModel
+    var dao: Dao
 ) {
 
     val directMentions = mutableSetOf<HexKey>()
@@ -48,13 +48,13 @@ class NewMessageTagger(
                 val results = parseDirtyWordForKey(word)
 
                 if (results?.key?.type == Nip19.Type.USER) {
-                    addUserToMentions(accountViewModel.getOrCreateUser(results.key.hex))
+                    addUserToMentions(dao.getOrCreateUser(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
-                    addNoteToReplyTos(accountViewModel.getOrCreateNote(results.key.hex))
+                    addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
-                    addNoteToReplyTos(accountViewModel.getOrCreateNote(results.key.hex))
+                    addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                    val note = accountViewModel.checkGetOrCreateAddressableNote(results.key.hex)
+                    val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
                         addNoteToReplyTos(note)
                     }
@@ -67,19 +67,19 @@ class NewMessageTagger(
             paragraph.split(' ').map { word: String ->
                 val results = parseDirtyWordForKey(word)
                 if (results?.key?.type == Nip19.Type.USER) {
-                    val user = accountViewModel.getOrCreateUser(results.key.hex)
+                    val user = dao.getOrCreateUser(results.key.hex)
 
                     "nostr:${user.pubkeyNpub()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
-                    val note = accountViewModel.getOrCreateNote(results.key.hex)
+                    val note = dao.getOrCreateNote(results.key.hex)
 
                     "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
-                    val note = accountViewModel.getOrCreateNote(results.key.hex)
+                    val note = dao.getOrCreateNote(results.key.hex)
 
                     "nostr:${note.toNEvent()}${results.restOfWord}"
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                    val note = accountViewModel.checkGetOrCreateAddressableNote(results.key.hex)
+                    val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
                         "nostr:${note.idNote()}${results.restOfWord}"
                     } else {
@@ -92,6 +92,7 @@ class NewMessageTagger(
         }.joinToString("\n")
     }
 
+    @Immutable
     data class DirtyKeyInfo(val key: Nip19.Return, val restOfWord: String)
 
     fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
@@ -155,4 +156,10 @@ class NewMessageTagger(
 
         return null
     }
+}
+
+interface Dao {
+    suspend fun getOrCreateUser(hex: String): User
+    suspend fun getOrCreateNote(hex: String): Note
+    suspend fun checkGetOrCreateAddressableNote(hex: String): Note?
 }
