@@ -117,11 +117,13 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
     }
 
     fun reactToOrDelete(note: Note, reaction: String) {
-        val currentReactions = account.reactionTo(note, reaction)
-        if (currentReactions.isNotEmpty()) {
-            account.delete(currentReactions)
-        } else {
-            account.reactTo(note, reaction)
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentReactions = account.reactionTo(note, reaction)
+            if (currentReactions.isNotEmpty()) {
+                account.delete(currentReactions)
+            } else {
+                account.reactTo(note, reaction)
+            }
         }
     }
 

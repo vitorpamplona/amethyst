@@ -1366,18 +1366,14 @@ private fun ActionableReactionButton(
     onChangeAmount: () -> Unit,
     toRemove: Set<String>
 ) {
-    val scope = rememberCoroutineScope()
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.reactToOrDelete(
-                    baseNote,
-                    reactionType
-                )
-                onDismiss()
-            }
+            accountViewModel.reactToOrDelete(
+                baseNote,
+                reactionType
+            )
+            onDismiss()
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
@@ -1388,13 +1384,11 @@ private fun ActionableReactionButton(
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.reactToOrDelete(
-                            baseNote,
-                            reactionType
-                        )
-                        onDismiss()
-                    }
+                    accountViewModel.reactToOrDelete(
+                        baseNote,
+                        reactionType
+                    )
+                    onDismiss()
                 },
                 onLongClick = {
                     onChangeAmount()
