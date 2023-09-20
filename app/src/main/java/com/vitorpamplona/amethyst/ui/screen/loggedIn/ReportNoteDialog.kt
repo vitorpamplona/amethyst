@@ -56,7 +56,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
         Pair(ReportEvent.ReportType.ILLEGAL, stringResource(R.string.report_dialog_illegal))
     )
 
-    val reasonOptions = remember { reportTypes.map { it.second }.toImmutableList() }
+    val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
     var additionalReason by remember { mutableStateOf("") }
     var selectedReason by remember { mutableStateOf(-1) }
 

@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -107,8 +108,7 @@ fun ZapCustomDialog(
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
-    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
+    val zapOptions = remember { zapTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
     var selectedZapType by remember(accountViewModel) { mutableStateOf(accountViewModel.account.defaultZapType) }
 
     Dialog(
@@ -181,7 +181,6 @@ fun ZapCustomDialog(
                         label = stringResource(id = R.string.zap_type),
                         placeholder = zapTypes.filter { it.first == accountViewModel.account.defaultZapType }.first().second,
                         options = zapOptions,
-                        explainers = zapOptionExplainers,
                         onSelect = {
                             selectedZapType = zapTypes[it].first
                         },

@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -186,8 +187,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
-    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
+    val fileServerOptions = remember { fileServers.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
     val resolver = LocalContext.current.contentResolver
 
     Row(
@@ -252,7 +252,6 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
             label = stringResource(id = R.string.file_server),
             placeholder = fileServers.firstOrNull { it.first == accountViewModel.account.defaultFileServer }?.second ?: fileServers[0].second,
             options = fileServerOptions,
-            explainers = fileServerExplainers,
             onSelect = {
                 postViewModel.selectedServer = fileServers[it].first
             },

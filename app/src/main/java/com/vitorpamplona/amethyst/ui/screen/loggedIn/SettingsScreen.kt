@@ -111,15 +111,15 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val selectedItens = persistentListOf(
-        stringResource(ConnectivityType.ALWAYS.reourceId),
-        stringResource(ConnectivityType.WIFI_ONLY.reourceId),
-        stringResource(ConnectivityType.NEVER.reourceId)
+        TitleExplainer(stringResource(ConnectivityType.ALWAYS.reourceId)),
+        TitleExplainer(stringResource(ConnectivityType.WIFI_ONLY.reourceId)),
+        TitleExplainer(stringResource(ConnectivityType.NEVER.reourceId))
     )
 
     val themeItens = persistentListOf(
-        stringResource(R.string.system),
-        stringResource(R.string.light),
-        stringResource(R.string.dark)
+        TitleExplainer(stringResource(R.string.system)),
+        TitleExplainer(stringResource(R.string.light)),
+        TitleExplainer(stringResource(R.string.dark))
     )
 
     val settings = accountViewModel.account.settings
@@ -132,7 +132,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     val languageEntries = context.getLangPreferenceDropdownEntries()
-    val languageList = languageEntries.keys.toImmutableList()
+    val languageList = languageEntries.keys.map { TitleExplainer(it) }.toImmutableList()
     val languageIndex = getLanguageIndex(languageEntries)
 
     Column(
@@ -149,12 +149,12 @@ fun SettingsScreen(
         ) {
             GlobalScope.launch(Dispatchers.Main) {
                 val job = scope.launch(Dispatchers.IO) {
-                    val locale = languageEntries[languageList[it]]
+                    val locale = languageEntries[languageList[it].title]
                     accountViewModel.account.settings.preferredLanguage = locale
                     LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                 }
                 job.join()
-                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it]])
+                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it].title])
                 AppCompatDelegate.setApplicationLocales(appLocale)
             }
         }
@@ -227,7 +227,7 @@ fun SettingsScreen(
 fun SettingsRow(
     name: Int,
     description: Int,
-    selectedItens: ImmutableList<String>,
+    selectedItens: ImmutableList<TitleExplainer>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit
 ) {
@@ -255,7 +255,7 @@ fun SettingsRow(
 
         TextSpinner(
             label = "",
-            placeholder = selectedItens[selectedIndex],
+            placeholder = selectedItens[selectedIndex].title,
             options = selectedItens,
             onSelect = onSelect,
             modifier = Modifier

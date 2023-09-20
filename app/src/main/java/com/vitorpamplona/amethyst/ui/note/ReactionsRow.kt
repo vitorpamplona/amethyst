@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
@@ -135,13 +134,14 @@ fun ReactionsRow(
 
     InnerReactionRow(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel, nav)
 
+    Spacer(modifier = HalfDoubleVertSpacer)
+
     LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
 
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
+        Spacer(modifier = HalfDoubleVertSpacer)
     }
-
-    Spacer(modifier = HalfDoubleVertSpacer)
 }
 
 @Composable
@@ -251,7 +251,6 @@ private fun LoadAndDisplayZapraiser(
     }
 
     if (zapraiserAmount > 0) {
-        Spacer(modifier = Height4dpModifier)
         Box(
             modifier = remember {
                 ReactionRowZapraiserSize

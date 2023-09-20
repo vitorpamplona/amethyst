@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -54,11 +55,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
 import coil.Coil
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
@@ -88,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
@@ -117,6 +121,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -382,11 +387,12 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
         val list by accountViewModel.storiesListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
-            followLists,
-            list,
-            true
+            followListsModel = followLists,
+            listName = list,
+            withGlobal = true,
+            withRoutes = false
         ) { listName ->
-            accountViewModel.account.changeDefaultStoriesFollowList(listName)
+            accountViewModel.account.changeDefaultStoriesFollowList(listName.code)
         }
     }
 }
@@ -397,11 +403,16 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
         val list by accountViewModel.homeListLiveData.observeAsState(KIND3_FOLLOWS)
 
         FollowList(
-            followLists,
-            list,
-            true
+            followListsModel = followLists,
+            listName = list,
+            withGlobal = true,
+            withRoutes = true
         ) { listName ->
-            accountViewModel.account.changeDefaultHomeFollowList(listName)
+            if (listName.type == CodeNameType.ROUTE) {
+                nav(listName.code)
+            } else {
+                accountViewModel.account.changeDefaultHomeFollowList(listName.code)
+            }
         }
     }
 }
@@ -412,11 +423,12 @@ fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: Scaffold
         val list by accountViewModel.notificationListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
-            followLists,
-            list,
-            true
+            followListsModel = followLists,
+            listName = list,
+            withGlobal = true,
+            withRoutes = false
         ) { listName ->
-            accountViewModel.account.changeDefaultNotificationFollowList(listName)
+            accountViewModel.account.changeDefaultNotificationFollowList(listName.code)
         }
     }
 }
@@ -427,11 +439,12 @@ fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldSta
         val list by accountViewModel.discoveryListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
-            followLists,
-            list,
-            true
+            followListsModel = followLists,
+            listName = list,
+            withGlobal = true,
+            withRoutes = false
         ) { listName ->
-            accountViewModel.account.changeDefaultDiscoveryFollowList(listName)
+            accountViewModel.account.changeDefaultDiscoveryFollowList(listName.code)
         }
     }
 }
@@ -523,37 +536,81 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(followListsModel: FollowListViewModel, listName: String, withGlobal: Boolean, onChange: (String) -> Unit) {
-    val kind3Follow = Pair(KIND3_FOLLOWS, stringResource(id = R.string.follow_list_kind3follows))
-    val globalFollow = Pair(GLOBAL_FOLLOWS, stringResource(id = R.string.follow_list_global))
+fun FollowList(
+    followListsModel: FollowListViewModel,
+    listName: String,
+    withGlobal: Boolean,
+    withRoutes: Boolean,
+    onChange: (CodeName) -> Unit
+) {
+    val context = LocalContext.current
+
+    val kind3Follow = CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows, context), CodeNameType.HARDCODED)
+    val globalFollow = CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global, context), CodeNameType.HARDCODED)
 
     val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
 
-    val followLists by followListsModel.followLists.collectAsState()
+    val followLists by followListsModel.peopleLists.collectAsState()
+    val routeList by followListsModel.routes.collectAsState()
 
     val allLists = remember(followLists) {
-        (defaultOptions + followLists)
+        if (withRoutes) {
+            (defaultOptions + followLists + routeList)
+        } else {
+            (defaultOptions + followLists)
+        }
     }
 
     val followNames by remember(followLists) {
         derivedStateOf {
-            allLists.map { it.second }.toImmutableList()
+            allLists.map { it.name }.toImmutableList()
         }
     }
 
     SimpleTextSpinner(
-        placeholder = allLists.firstOrNull { it.first == listName }?.second ?: "Select an Option",
+        placeholder = allLists.firstOrNull { it.code == listName }?.name?.name() ?: "Select an Option",
         options = followNames,
         onSelect = {
-            onChange(allLists.getOrNull(it)?.first ?: KIND3_FOLLOWS)
+            onChange(allLists.getOrNull(it) ?: kind3Follow)
         }
     )
 }
 
+enum class CodeNameType {
+    HARDCODED, PEOPLE_LIST, ROUTE
+}
+
+abstract class Name {
+    abstract fun name(): String
+}
+
+class GeoHashName(val geoHashTag: String) : Name() {
+    override fun name() = "/g/$geoHashTag"
+}
+class HashtagName(val hashTag: String) : Name() {
+    override fun name() = "#$hashTag"
+}
+class ResourceName(val resourceId: Int, val context: Context) : Name() {
+    override fun name() = context.getString(resourceId)
+}
+
+class PeopleListName(val note: AddressableNote) : Name() {
+    override fun name() = note.dTag() ?: ""
+}
+class CommunityName(val note: AddressableNote) : Name() {
+    override fun name() = "/n/${(note.dTag() ?: "")}"
+}
+
+@Immutable
+data class CodeName(val code: String, val name: Name, val type: CodeNameType)
+
 @Stable
 class FollowListViewModel(val account: Account) : ViewModel() {
-    private var _followLists = MutableStateFlow<ImmutableList<Pair<String, String>>>(emptyList<Pair<String, String>>().toPersistentList())
-    val followLists = _followLists.asStateFlow()
+    private var _peopleLists = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
+    val peopleLists = _peopleLists.asStateFlow()
+
+    private var _routes = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
+    val routes = _routes.asStateFlow()
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) {
@@ -571,14 +628,34 @@ class FollowListViewModel(val account: Account) : ViewModel() {
                 event.pubKey == account.userProfile().pubkeyHex &&
                 (event.tags.size > 1 || event.content.length > 50)
             ) {
-                Pair(event.dTag(), event.dTag())
+                CodeName(event.address().toTag(), PeopleListName(it.value), CodeNameType.PEOPLE_LIST)
             } else {
                 null
             }
-        }.sortedBy { it.second }.toImmutableList()
+        }.sortedBy { it.name.name() }.toImmutableList()
 
-        if (!equalImmutableLists(_followLists.value, newFollowLists)) {
-            _followLists.emit(newFollowLists)
+        if (!equalImmutableLists(_peopleLists.value, newFollowLists)) {
+            _peopleLists.emit(newFollowLists)
+        }
+
+        val communities = account.userProfile().cachedFollowingCommunitiesSet().mapNotNull {
+            LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
+                CodeName("Community/${communityNote.idHex}", CommunityName(communityNote), CodeNameType.ROUTE)
+            }
+        }
+
+        val hashtags = account.userProfile().cachedFollowingTagSet().map {
+            CodeName("Hashtag/$it", HashtagName(it), CodeNameType.ROUTE)
+        }
+
+        val geotags = account.userProfile().cachedFollowingGeohashSet().map {
+            CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
+        }
+
+        val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }.toImmutableList()
+
+        if (!equalImmutableLists(_routes.value, routeList)) {
+            _routes.emit(routeList)
         }
     }
 
@@ -590,7 +667,10 @@ class FollowListViewModel(val account: Account) : ViewModel() {
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 checkNotInMainThread()
-                if (newNotes.any { it.event is PeopleListEvent }) {
+                if (newNotes.any {
+                    it.event?.pubKey() == account.userProfile().pubkeyHex && (it.event is PeopleListEvent || it.event is ContactListEvent)
+                }
+                ) {
                     refresh()
                 }
             }
@@ -612,8 +692,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 @Composable
 fun SimpleTextSpinner(
     placeholder: String,
-    options: ImmutableList<String>,
-    explainers: ImmutableList<String>? = null,
+    options: ImmutableList<Name>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -649,10 +728,68 @@ fun SimpleTextSpinner(
 
     if (optionsShowing) {
         options.isNotEmpty().also {
-            SpinnerSelectionDialog(options = options, explainers = explainers, onDismiss = { optionsShowing = false }) {
-                currentText = options[it]
-                optionsShowing = false
-                onSelect(it)
+            SpinnerSelectionDialog(
+                options = options,
+                onDismiss = { optionsShowing = false },
+                onSelect = {
+                    currentText = options[it].name()
+                    optionsShowing = false
+                    onSelect(it)
+                }
+            ) {
+                RenderOption(it)
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderOption(it: Name) {
+    when (it) {
+        is GeoHashName -> {
+            LoadCityName(it.geoHashTag) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "/g/$it", color = MaterialTheme.colors.onSurface)
+                }
+            }
+        }
+        is HashtagName -> {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = it.name(), color = MaterialTheme.colors.onSurface)
+            }
+        }
+        is ResourceName -> {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(id = it.resourceId), color = MaterialTheme.colors.onSurface)
+            }
+        }
+        is PeopleListName -> {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = it.name(), color = MaterialTheme.colors.onSurface)
+            }
+        }
+        is CommunityName -> {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val name by it.note.live().metadata.map {
+                    "/n/" + (it.note as? AddressableNote)?.dTag()
+                }.observeAsState()
+
+                Text(text = name ?: "", color = MaterialTheme.colors.onSurface)
             }
         }
     }

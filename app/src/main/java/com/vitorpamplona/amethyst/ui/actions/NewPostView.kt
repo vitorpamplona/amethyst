@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -1318,8 +1319,7 @@ fun ImageVideoDescription(
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
-    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
+    val fileServerOptions = remember { fileServers.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
 
     var selectedServer by remember { mutableStateOf(defaultServer) }
     var message by remember { mutableStateOf("") }
@@ -1433,7 +1433,6 @@ fun ImageVideoDescription(
                     label = stringResource(id = R.string.file_server),
                     placeholder = fileServers.filter { it.first == defaultServer }.firstOrNull()?.second ?: fileServers[0].second,
                     options = fileServerOptions,
-                    explainers = fileServerExplainers,
                     onSelect = {
                         selectedServer = fileServers[it].first
                     },

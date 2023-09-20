@@ -2579,7 +2579,7 @@ fun LoadStatuses(
 }
 
 @Composable
-fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
+fun LoadCityName(geohash: String, content: @Composable (String) -> Unit) {
     val context = LocalContext.current
     var cityName by remember(geohash) {
         mutableStateOf<String>(geohash)
@@ -2594,18 +2594,25 @@ fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
         }
     }
 
-    ClickableText(
-        text = AnnotatedString(cityName),
-        onClick = { nav("Geohash/$geohash") },
-        style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colors.primary.copy(
-                alpha = 0.52f
+    content(cityName)
+}
+
+@Composable
+fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
+    LoadCityName(geohash) { cityName ->
+        ClickableText(
+            text = AnnotatedString(cityName),
+            onClick = { nav("Geohash/$geohash") },
+            style = LocalTextStyle.current.copy(
+                color = MaterialTheme.colors.primary.copy(
+                    alpha = 0.52f
+                ),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.Bold
             ),
-            fontSize = Font14SP,
-            fontWeight = FontWeight.Bold
-        ),
-        maxLines = 1
-    )
+            maxLines = 1
+        )
+    }
 }
 
 @Composable

@@ -20,6 +20,7 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,8 +38,7 @@ import kotlinx.collections.immutable.ImmutableList
 fun TextSpinner(
     label: String?,
     placeholder: String,
-    options: ImmutableList<String>,
-    explainers: ImmutableList<String>? = null,
+    options: ImmutableList<TitleExplainer>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -74,8 +74,8 @@ fun TextSpinner(
 
     if (optionsShowing) {
         options.isNotEmpty().also {
-            SpinnerSelectionDialog(options = options, explainers = explainers, onDismiss = { optionsShowing = false }) {
-                currentText = options[it]
+            SpinnerSelectionDialog(options = options, onDismiss = { optionsShowing = false }) {
+                currentText = options[it].title
                 optionsShowing = false
                 onSelect(it)
             }
@@ -85,10 +85,40 @@ fun TextSpinner(
 
 @Composable
 fun SpinnerSelectionDialog(
-    options: ImmutableList<String>,
-    explainers: ImmutableList<String>?,
+    options: ImmutableList<TitleExplainer>,
     onDismiss: () -> Unit,
     onSelect: (Int) -> Unit
+) {
+    SpinnerSelectionDialog(
+        options = options,
+        onSelect = onSelect,
+        onDismiss = onDismiss
+    ) { item ->
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = item.title, color = MaterialTheme.colors.onSurface)
+        }
+        item.explainer?.let {
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Text(text = it, color = Color.Gray, fontSize = Font14SP)
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> SpinnerSelectionDialog(
+    options: ImmutableList<T>,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onRenderItem: @Composable (T) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -106,23 +136,7 @@ fun SpinnerSelectionDialog(
                             }
                     ) {
                         Column() {
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                            ) {
-                                Text(text = item, color = MaterialTheme.colors.onSurface)
-                            }
-                            explainers?.getOrNull(index)?.let {
-                                Spacer(modifier = Modifier.height(5.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.Start,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                ) {
-                                    Text(text = it, color = Color.Gray, fontSize = Font14SP)
-                                }
-                            }
+                            onRenderItem(item)
                         }
                     }
                     if (index < options.lastIndex) {
@@ -133,3 +147,6 @@ fun SpinnerSelectionDialog(
         }
     }
 }
+
+@Immutable
+data class TitleExplainer(val title: String, val explainer: String? = null)

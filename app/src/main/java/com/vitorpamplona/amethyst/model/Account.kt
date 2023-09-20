@@ -2478,13 +2478,7 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(
-                PeopleListEvent.kind,
-                userProfile().pubkeyHex,
-                listName,
-                null
-            ).toTag()
-            val list = LocalCache.addressables[aTag]
+            val list = LocalCache.addressables[listName]
             if (list != null) {
                 val publicHexList = (list.event as? PeopleListEvent)?.bookmarkedPeople() ?: emptySet()
                 val privateHexList = privKey?.let {
@@ -2507,13 +2501,7 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(
-                PeopleListEvent.kind,
-                userProfile().pubkeyHex,
-                listName,
-                null
-            ).toTag()
-            val list = LocalCache.addressables[aTag]
+            val list = LocalCache.addressables[listName]
             if (list != null) {
                 val publicAddresses = list.event?.hashtags() ?: emptySet()
                 val privateAddresses = privKey?.let {
@@ -2536,13 +2524,7 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(
-                PeopleListEvent.kind,
-                userProfile().pubkeyHex,
-                listName,
-                null
-            ).toTag()
-            val list = LocalCache.addressables[aTag]
+            val list = LocalCache.addressables[listName]
             if (list != null) {
                 val publicAddresses = list.event?.geohashes() ?: emptySet()
                 val privateAddresses = privKey?.let {
@@ -2565,13 +2547,7 @@ class Account(
         val privKey = keyPair.privKey
 
         return if (listName != null) {
-            val aTag = ATag(
-                PeopleListEvent.kind,
-                userProfile().pubkeyHex,
-                listName,
-                null
-            ).toTag()
-            val list = LocalCache.addressables[aTag]
+            val list = LocalCache.addressables[listName]
             if (list != null) {
                 val publicAddresses = list.event?.taggedAddresses()?.map { it.toTag() } ?: emptySet()
                 val privateAddresses = privKey?.let {
