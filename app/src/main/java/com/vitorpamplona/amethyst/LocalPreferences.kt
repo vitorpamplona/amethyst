@@ -352,7 +352,11 @@ object LocalPreferences {
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
                     println("Decoding Contact List: " + it)
-                    Event.fromJson(it) as ContactListEvent?
+                    if (it != null) {
+                        Event.fromJson(it) as ContactListEvent?
+                    } else {
+                        null
+                    }
                 }
             } catch (e: Throwable) {
                 Log.w("LocalPreferences", "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}", e)
