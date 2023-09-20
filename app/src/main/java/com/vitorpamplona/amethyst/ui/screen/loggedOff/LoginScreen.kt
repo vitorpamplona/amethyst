@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.AutofillNode
 import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -321,10 +320,10 @@ fun LoginPage(
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
                 Button(
+                    enabled = acceptedTerms.value,
                     onClick = {
                         if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired =
-                                context.getString(R.string.acceptance_of_terms_is_required)
+                            termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
                         }
 
                         if (key.value.text.isBlank()) {
@@ -343,11 +342,7 @@ fun LoginPage(
                     shape = RoundedCornerShape(Size35dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    colors = ButtonDefaults
-                        .buttonColors(
-                            backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
-                        )
+                        .height(50.dp)
                 ) {
                     Text(text = stringResource(R.string.login))
                 }
@@ -356,44 +351,43 @@ fun LoginPage(
             if (PackageUtils.isAmberInstalled(context)) {
                 Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
                     Button(
+                        enabled = acceptedTerms.value,
                         onClick = {
-                            val result = ExternalSignerUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"), "")
+                            if (!acceptedTerms.value) {
+                                termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                                return@Button
+                            }
+
+                            val result = ExternalSignerUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
                             if (result == null) {
                                 loginWithExternalSigner = true
                                 return@Button
-                            }
-                            key.value = TextFieldValue(result)
-                            if (!acceptedTerms.value) {
-                                termsAcceptanceIsRequired =
-                                    context.getString(R.string.acceptance_of_terms_is_required)
-                            }
+                            } else {
+                                key.value = TextFieldValue(result)
+                                if (key.value.text.isBlank()) {
+                                    errorMessage = context.getString(R.string.key_is_required)
+                                    return@Button
+                                }
 
-                            if (key.value.text.isBlank()) {
-                                errorMessage = context.getString(R.string.key_is_required)
-                            }
-
-                            if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                                try {
-                                    accountViewModel.startUI(
-                                        key.value.text,
-                                        useProxy.value,
-                                        proxyPort.value.toInt(),
-                                        true
-                                    )
-                                } catch (e: Exception) {
-                                    Log.e("Login", "Could not sign in", e)
-                                    errorMessage = context.getString(R.string.invalid_key)
+                                if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                                    try {
+                                        accountViewModel.startUI(
+                                            key.value.text,
+                                            useProxy.value,
+                                            proxyPort.value.toInt(),
+                                            true
+                                        )
+                                    } catch (e: Exception) {
+                                        Log.e("Login", "Could not sign in", e)
+                                        errorMessage = context.getString(R.string.invalid_key)
+                                    }
                                 }
                             }
                         },
                         shape = RoundedCornerShape(Size35dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
-                        colors = ButtonDefaults
-                            .buttonColors(
-                                backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
-                            )
+                            .height(50.dp)
                     ) {
                         Text(text = stringResource(R.string.login_with_external_signer))
                     }
