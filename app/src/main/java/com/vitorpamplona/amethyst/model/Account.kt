@@ -1202,7 +1202,7 @@ class Account(
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
                 blurhash = headerInfo.blurHash,
-                description = headerInfo.description,
+                alt = headerInfo.alt,
                 sensitiveContent = headerInfo.sensitiveContent,
                 pubKey = keyPair.pubKey.toHexKey()
             )
@@ -1234,7 +1234,7 @@ class Account(
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
                 blurhash = headerInfo.blurHash,
-                description = headerInfo.description,
+                alt = headerInfo.alt,
                 sensitiveContent = headerInfo.sensitiveContent,
                 privateKey = keyPair.privKey!!
             )
@@ -1273,7 +1273,7 @@ class Account(
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
                 blurhash = headerInfo.blurHash,
-                description = headerInfo.description,
+                alt = headerInfo.alt,
                 sensitiveContent = headerInfo.sensitiveContent,
                 keyPair = keyPair
             )
@@ -1298,7 +1298,7 @@ class Account(
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
                 blurhash = headerInfo.blurHash,
-                description = headerInfo.description,
+                alt = headerInfo.alt,
                 sensitiveContent = headerInfo.sensitiveContent,
                 keyPair = keyPair
             )

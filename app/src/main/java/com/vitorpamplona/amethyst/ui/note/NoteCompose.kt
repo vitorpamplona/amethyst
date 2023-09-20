@@ -3343,7 +3343,7 @@ fun FileHeaderDisplay(note: Note, roundedCorner: Boolean, accountViewModel: Acco
         val blurHash = event.blurhash()
         val hash = event.hash()
         val dimensions = event.dimensions()
-        val description = event.content
+        val description = event.alt() ?: event.content
         val isImage = imageExtensions.any { fullUrl.split("?")[0].lowercase().endsWith(it) }
         val uri = note.toNostrUri()
 
@@ -3407,7 +3407,7 @@ private fun ObserverAndRenderNIP95(
         val localDir = note?.idHex?.let { File(File(appContext.cacheDir, "NIP95"), it) }
         val blurHash = eventHeader.blurhash()
         val dimensions = eventHeader.dimensions()
-        val description = eventHeader.content
+        val description = eventHeader.alt() ?: eventHeader.content
         val mimeType = eventHeader.mimeType()
 
         val newContent = if (mimeType?.startsWith("image") == true) {

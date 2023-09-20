@@ -287,8 +287,8 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-                value = postViewModel.description,
-                onValueChange = { postViewModel.description = it },
+                value = postViewModel.alt,
+                onValueChange = { postViewModel.alt = it },
                 placeholder = {
                     Text(
                         text = stringResource(R.string.content_description_example),

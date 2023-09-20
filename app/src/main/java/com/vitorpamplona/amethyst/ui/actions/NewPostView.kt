@@ -338,8 +338,8 @@ fun NewPostView(
                                         ImageVideoDescription(
                                             url,
                                             account.defaultFileServer,
-                                            onAdd = { description, server, sensitiveContent ->
-                                                postViewModel.upload(url, description, sensitiveContent, server, context, relayList)
+                                            onAdd = { alt, server, sensitiveContent ->
+                                                postViewModel.upload(url, alt, sensitiveContent, server, context, relayList)
                                                 account.changeDefaultFileServer(server)
                                             },
                                             onCancel = {
