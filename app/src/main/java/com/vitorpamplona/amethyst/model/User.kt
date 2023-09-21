@@ -319,7 +319,7 @@ class User(val pubkeyHex: String) {
         return latestContactList?.verifiedFollowKeySet ?: emptySet()
     }
 
-    fun cachedFollowingTagSet(): Set<HexKey> {
+    fun cachedFollowingTagSet(): Set<String> {
         return latestContactList?.verifiedFollowTagSet ?: emptySet()
     }
 

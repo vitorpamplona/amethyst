@@ -22,7 +22,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 fun CommunityScreen(aTagHex: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     if (aTagHex == null) return
 
-    LoadAddressableNote(aTagHex = aTagHex) {
+    LoadAddressableNote(aTagHex = aTagHex, accountViewModel) {
         it?.let {
             PrepareViewModelsCommunityScreen(
                 note = it,

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
@@ -116,7 +117,7 @@ private fun OptionNote(
     nav: (String) -> Unit
 ) {
     val tags = remember(baseNote) {
-        baseNote.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+        baseNote.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList
     }
 
     Row(

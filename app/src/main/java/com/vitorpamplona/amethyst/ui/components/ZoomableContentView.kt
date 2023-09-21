@@ -477,14 +477,16 @@ private fun AddedImageFeatures(
                 if (content.blurhash != null) {
                     DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
                 } else {
-                    FlowRow() {
+                    FlowRow(Modifier.fillMaxWidth()) {
                         DisplayUrlWithLoadingSymbol(content)
                     }
                 }
             }
 
             is AsyncImagePainter.State.Error -> {
-                ClickableUrl(urlText = "${content.url} ", url = content.url)
+                FlowRow(Modifier.fillMaxWidth()) {
+                    ClickableUrl(urlText = "${content.url} ", url = content.url)
+                }
             }
 
             is AsyncImagePainter.State.Success -> {

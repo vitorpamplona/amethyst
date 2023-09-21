@@ -23,6 +23,7 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.components.isValidURL
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
@@ -45,6 +46,7 @@ enum class UserSuggestionAnchor {
 
 @Stable
 open class NewPostViewModel() : ViewModel() {
+    var accountViewModel: AccountViewModel? = null
     var account: Account? = null
     var requiresNIP24: Boolean = false
 
@@ -115,7 +117,7 @@ open class NewPostViewModel() : ViewModel() {
     // NIP24 Wrapped DMs / Group messages
     var nip24 by mutableStateOf(false)
 
-    open fun load(account: Account, replyingTo: Note?, quote: Note?) {
+    open fun load(accountViewModel: AccountViewModel, replyingTo: Note?, quote: Note?) {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
             if (replyNote.event is BaseTextNoteEvent) {
@@ -147,8 +149,8 @@ open class NewPostViewModel() : ViewModel() {
             urlPreview = findUrlInMessage()
         }
 
-        canAddInvoice = account.userProfile().info?.lnAddress() != null
-        canAddZapRaiser = account.userProfile().info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
         contentToAddUrl = null
 
@@ -160,14 +162,26 @@ open class NewPostViewModel() : ViewModel() {
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
 
-        this.account = account
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
     }
 
     fun sendPost(relayList: List<Relay>? = null) {
-        val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex())
+        viewModelScope.launch(Dispatchers.IO) {
+            innerSendPost(relayList)
+        }
+    }
+
+    suspend fun innerSendPost(relayList: List<Relay>? = null) {
+        if (accountViewModel == null) {
+            cancel()
+            return
+        }
+
+        val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex(), accountViewModel!!)
         tagger.run()
 
-        val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null)
+        val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null, accountViewModel!!)
         toUsersTagger.run()
         val dmUsers = toUsersTagger.mentions
 
@@ -285,7 +299,7 @@ open class NewPostViewModel() : ViewModel() {
         cancel()
     }
 
-    fun upload(galleryUri: Uri, description: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
+    fun upload(galleryUri: Uri, alt: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
         isUploadingImage = true
         contentToAddUrl = null
 
@@ -300,7 +314,7 @@ open class NewPostViewModel() : ViewModel() {
                 onReady = { fileUri, contentType, size ->
                     if (server == ServersAvailable.NIP95) {
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent, relayList = relayList)
+                            createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList)
                         }
                     } else {
                         ImageUploader.uploadImage(
@@ -311,7 +325,7 @@ open class NewPostViewModel() : ViewModel() {
                             contentResolver = contentResolver,
                             onSuccess = { imageUrl, mimeType ->
                                 if (isNIP94Server(server)) {
-                                    createNIP94Record(imageUrl, mimeType, description, sensitiveContent)
+                                    createNIP94Record(imageUrl, mimeType, alt, sensitiveContent)
                                 } else {
                                     isUploadingImage = false
                                     message = TextFieldValue(message.text + "\n\n" + imageUrl)
@@ -523,13 +537,13 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             // Images don't seem to be ready immediately after upload
             FileHeader.prepare(
                 imageUrl,
                 mimeType,
-                description,
+                alt,
                 sensitiveContent,
                 onReady = {
                     val note = account?.sendHeader(it, relayList = relayList)
@@ -554,13 +568,13 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
                 "",
                 mimeType,
-                description,
+                alt,
                 sensitiveContent,
                 onReady = {
                     val nip95 = account?.createNip95(bytes, headerInfo = it)

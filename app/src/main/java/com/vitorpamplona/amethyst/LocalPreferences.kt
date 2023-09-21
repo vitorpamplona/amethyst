@@ -8,6 +8,8 @@ import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.DefaultReactions
+import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Nip47URI
@@ -323,11 +325,11 @@ object LocalPreferences {
 
             val zapAmountChoices = getString(PrefKeys.ZAP_AMOUNTS, "[]")?.let {
                 Event.mapper.readValue<List<Long>?>(it)
-            }?.ifEmpty { listOf(500L, 1000L, 5000L) } ?: listOf(500L, 1000L, 5000L)
+            }?.ifEmpty { DefaultZapAmounts } ?: DefaultZapAmounts
 
             val reactionChoices = getString(PrefKeys.REACTION_CHOICES, "[]")?.let {
                 Event.mapper.readValue<List<String>?>(it)
-            }?.ifEmpty { listOf("+") } ?: listOf("+")
+            }?.ifEmpty { DefaultReactions } ?: DefaultReactions
 
             val defaultZapType = getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
                 LnZapEvent.ZapType.values().firstOrNull() { it.name == serverName }
@@ -350,7 +352,11 @@ object LocalPreferences {
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
                     println("Decoding Contact List: " + it)
-                    Event.fromJson(it) as ContactListEvent?
+                    if (it != null) {
+                        Event.fromJson(it) as ContactListEvent?
+                    } else {
+                        null
+                    }
                 }
             } catch (e: Throwable) {
                 Log.w("LocalPreferences", "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}", e)

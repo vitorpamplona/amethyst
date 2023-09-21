@@ -83,14 +83,12 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
-import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
@@ -136,13 +134,14 @@ fun ReactionsRow(
 
     InnerReactionRow(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel, nav)
 
+    Spacer(modifier = HalfDoubleVertSpacer)
+
     LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
 
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
+        Spacer(modifier = HalfDoubleVertSpacer)
     }
-
-    Spacer(modifier = HalfDoubleVertSpacer)
 }
 
 @Composable
@@ -252,7 +251,6 @@ private fun LoadAndDisplayZapraiser(
     }
 
     if (zapraiserAmount > 0) {
-        Spacer(modifier = Height4dpModifier)
         Box(
             modifier = remember {
                 ReactionRowZapraiserSize
@@ -460,8 +458,15 @@ private fun WatchZapAndRenderGallery(
     accountViewModel: AccountViewModel
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
-    val zapEvents by remember(zapsState) {
-        derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() }
+
+    var zapEvents by remember(zapsState) {
+        mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+    }
+
+    LaunchedEffect(key1 = zapsState) {
+        accountViewModel.decryptAmountMessageInGroup(baseNote) {
+            zapEvents = it
+        }
     }
 
     if (zapEvents.isNotEmpty()) {
@@ -1361,18 +1366,14 @@ private fun ActionableReactionButton(
     onChangeAmount: () -> Unit,
     toRemove: Set<String>
 ) {
-    val scope = rememberCoroutineScope()
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.reactToOrDelete(
-                    baseNote,
-                    reactionType
-                )
-                onDismiss()
-            }
+            accountViewModel.reactToOrDelete(
+                baseNote,
+                reactionType
+            )
+            onDismiss()
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
@@ -1383,13 +1384,11 @@ private fun ActionableReactionButton(
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.reactToOrDelete(
-                            baseNote,
-                            reactionType
-                        )
-                        onDismiss()
-                    }
+                    accountViewModel.reactToOrDelete(
+                        baseNote,
+                        reactionType
+                    )
+                    onDismiss()
                 },
                 onLongClick = {
                     onChangeAmount()

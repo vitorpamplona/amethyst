@@ -561,7 +561,7 @@
 
     <string name="error_dialog_zap_error">Unable to send zap</string>
     <string name="error_dialog_talk_to_user">Message the User</string>
-    <string name="error_dialog_button_ok">Ok</string>
+    <string name="error_dialog_button_ok">OK</string>
 
     <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Failed to reach %1$s: %2$s</string>

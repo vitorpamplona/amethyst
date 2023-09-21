@@ -22,6 +22,7 @@ class FileHeaderEvent(
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
     fun size() = tags.firstOrNull { it.size > 1 && it[0] == FILE_SIZE }?.get(1)
+    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
     fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)
     fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
     fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
@@ -41,11 +42,12 @@ class FileHeaderEvent(
         private const val MAGNET_URI = "magnet"
         private const val TORRENT_INFOHASH = "i"
         private const val BLUR_HASH = "blurhash"
+        private const val ALT = "alt"
 
         fun create(
             url: String,
             mimeType: String? = null,
-            description: String? = null,
+            alt: String? = null,
             hash: String? = null,
             size: String? = null,
             dimensions: String? = null,
@@ -60,11 +62,13 @@ class FileHeaderEvent(
             val tags = listOfNotNull(
                 listOf(URL, url),
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
+                alt?.let { listOf(ALT, it) },
                 hash?.let { listOf(HASH, it) },
                 size?.let { listOf(FILE_SIZE, it) },
                 dimensions?.let { listOf(DIMENSION, it) },
                 blurhash?.let { listOf(BLUR_HASH, it) },
                 magnetURI?.let { listOf(MAGNET_URI, it) },
+
                 torrentInfoHash?.let { listOf(TORRENT_INFOHASH, it) },
                 encryptionKey?.let { listOf(ENCRYPTION_KEY, it.key, it.nonce) },
                 sensitiveContent?.let {
@@ -76,7 +80,7 @@ class FileHeaderEvent(
                 }
             )
 
-            val content = description ?: ""
+            val content = alt ?: ""
             val pubKey = keyPair.pubKey.toHexKey()
             val id = generateId(pubKey, createdAt, kind, tags, content)
             val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)

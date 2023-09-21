@@ -209,6 +209,10 @@ object ExternalSignerUtils {
             if (it !== null) {
                 if (it.moveToFirst()) {
                     val index = it.getColumnIndex(columnName)
+                    if (index < 0) {
+                        Log.d("getDataFromResolver", "column '$columnName' not found")
+                        return null
+                    }
                     return it.getString(index)
                 }
             }

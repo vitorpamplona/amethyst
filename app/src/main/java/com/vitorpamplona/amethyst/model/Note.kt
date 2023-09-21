@@ -43,6 +43,10 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
 
         return minOf(publishedAt, lastCreatedAt)
     }
+
+    fun dTag(): String? {
+        return (event as? AddressableEvent)?.dTag()
+    }
 }
 
 @Stable

@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
@@ -40,7 +39,6 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -53,16 +51,9 @@ fun ZapNoteCompose(baseReqResponse: ZapReqResponse, accountViewModel: AccountVie
     }
 
     LaunchedEffect(baseNoteRequest) {
-        launch(Dispatchers.Default) {
-            (baseNoteRequest?.note?.event as? LnZapRequestEvent)?.let {
-                baseNoteRequest?.note?.let {
-                    val decryptedContent = accountViewModel.decryptZap(it)
-                    if (decryptedContent != null) {
-                        baseAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    } else {
-                        baseAuthor = it.author
-                    }
-                }
+        baseNoteRequest?.note?.let {
+            accountViewModel.decryptAmountMessage(it, baseReqResponse.zapEvent) {
+                baseAuthor = it?.user
             }
         }
     }

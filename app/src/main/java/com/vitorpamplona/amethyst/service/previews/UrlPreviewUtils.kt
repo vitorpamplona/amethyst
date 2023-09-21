@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.lang.IllegalArgumentException
 
 private const val ELEMENT_TAG_META = "meta"
 private const val ATTRIBUTE_VALUE_PROPERTY = "property"
@@ -64,7 +65,11 @@ suspend fun getDocument(url: String, timeOut: Int = 30000): Document =
     withContext(Dispatchers.IO) {
         val request: Request = Request.Builder().url(url).get().build()
         val html = HttpClient.getHttpClient().newCall(request).execute().use {
-            it.body.string()
+            if (it.isSuccessful) {
+                it.body.string()
+            } else {
+                throw IllegalArgumentException("Website returned: " + it.code)
+            }
         }
 
         Jsoup.parse(html)

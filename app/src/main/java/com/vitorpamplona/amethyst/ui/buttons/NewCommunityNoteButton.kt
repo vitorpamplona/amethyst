@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun NewCommunityNoteButton(communityIdHex: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    LoadNote(baseNoteHex = communityIdHex) {
+    LoadNote(baseNoteHex = communityIdHex, accountViewModel) {
         it?.let {
             NewCommunityNoteButton(it, accountViewModel, nav)
         }

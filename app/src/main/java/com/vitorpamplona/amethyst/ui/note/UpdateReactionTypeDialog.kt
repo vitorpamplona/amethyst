@@ -314,7 +314,8 @@ private fun EmojiSelector(accountViewModel: AccountViewModel, nav: (String) -> U
             accountViewModel.userProfile().pubkeyHex,
             "",
             null
-        )
+        ),
+        accountViewModel
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by usersEmojiList.live().metadata.map {
@@ -339,7 +340,7 @@ fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: Accou
         state = listState
     ) {
         itemsIndexed(emojiCollections, key = { _, item -> item.toTag() }) { _, item ->
-            LoadAddressableNote(aTag = item) {
+            LoadAddressableNote(aTag = item, accountViewModel) {
                 it?.let {
                     WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick)
                 }

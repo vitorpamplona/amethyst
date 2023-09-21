@@ -243,7 +243,7 @@ private fun RenderWordWithoutPreview(
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, false, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
-        is HashIndexUserSegment -> TagLink(word, nav)
+        is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, false, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> NormalWord(word.segmentText, style)
@@ -270,7 +270,7 @@ private fun RenderWordWithPreview(
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
-        is HashIndexUserSegment -> TagLink(word, nav)
+        is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, true, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> NormalWord(word.segmentText, style)
@@ -654,7 +654,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Co
         }
     } else if (loadedLink?.nip19 != null) {
         Row() {
-            ClickableRoute(loadedLink?.nip19!!, nav)
+            ClickableRoute(loadedLink?.nip19!!, accountViewModel, nav)
         }
     } else {
         val text = remember {
@@ -763,8 +763,8 @@ private fun InlineIcon(hashtagIcon: HashtagIcon) =
     }
 
 @Composable
-fun TagLink(word: HashIndexUserSegment, nav: (String) -> Unit) {
-    LoadUser(baseUserHex = word.hex) {
+fun TagLink(word: HashIndexUserSegment, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    LoadUser(baseUserHex = word.hex, accountViewModel) {
         if (it == null) {
             Text(text = word.segmentText)
         } else {
@@ -776,15 +776,15 @@ fun TagLink(word: HashIndexUserSegment, nav: (String) -> Unit) {
 }
 
 @Composable
-fun LoadNote(baseNoteHex: String, content: @Composable (Note?) -> Unit) {
+fun LoadNote(baseNoteHex: String, accountViewModel: AccountViewModel, content: @Composable (Note?) -> Unit) {
     var note by remember(baseNoteHex) {
-        mutableStateOf<Note?>(LocalCache.getNoteIfExists(baseNoteHex))
+        mutableStateOf<Note?>(accountViewModel.getNoteIfExists(baseNoteHex))
     }
 
     if (note == null) {
         LaunchedEffect(key1 = baseNoteHex) {
-            launch(Dispatchers.IO) {
-                note = LocalCache.checkGetOrCreateNote(baseNoteHex)
+            accountViewModel.checkGetOrCreateNote(baseNoteHex) {
+                note = it
             }
         }
     }
@@ -794,7 +794,7 @@ fun LoadNote(baseNoteHex: String, content: @Composable (Note?) -> Unit) {
 
 @Composable
 fun TagLink(word: HashIndexEventSegment, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    LoadNote(baseNoteHex = word.hex) {
+    LoadNote(baseNoteHex = word.hex, accountViewModel) {
         if (it == null) {
             Text(text = remember { word.segmentText.toShortenHex() })
         } else {

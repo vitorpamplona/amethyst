@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -219,8 +220,7 @@ fun UpdateZapAmountDialog(
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
-    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
+    val zapOptions = remember { zapTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
 
     LaunchedEffect(accountViewModel, nip47uri) {
         postViewModel.load()
@@ -361,7 +361,6 @@ fun UpdateZapAmountDialog(
                                 placeholder = zapTypes.filter { it.first == accountViewModel.defaultZapType() }
                                     .first().second,
                                 options = zapOptions,
-                                explainers = zapOptionExplainers,
                                 onSelect = {
                                     postViewModel.selectedZapType = zapTypes[it].first
                                 },

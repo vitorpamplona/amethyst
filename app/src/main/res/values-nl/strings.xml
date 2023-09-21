@@ -458,6 +458,7 @@
     <string name="messages_group_descriptor">Leden van deze groep</string>
     <string name="messages_new_subject_message">Uitleg aan leden</string>
     <string name="messages_new_subject_message_placeholder">De naam veranderen voor de nieuwe doelen.</string>
+    <string name="paste_from_clipboard">Plakken vanaf klembord</string>
     <string name="language_description">Voor de interface van de app</string>
     <string name="theme_description">Donker-, Licht- of Systeemthema</string>
     <string name="automatically_load_images_gifs_description">Automatisch afbeeldingen en GIF\'s laden</string>
@@ -468,6 +469,7 @@
     <string name="copy_the_note_id_to_the_clipboard">Note naar klembord kopiëren</string>
     <string name="created_at">Gemaakt op</string>
     <string name="rules">Regels</string>
+    <string name="login_with_external_signer">Login met Amber</string>
     <string name="status_update">Status bijwerken</string>
     <string name="lightning_wallets_not_found">Fout bij het parsen van foutberichten</string>
     <string name="poll_zap_value_min_max_explainer">Stemmen worden gewogen door het aantal zap. U kunt een minimumbedrag instellen om spammers te voorkomen en een maximumbedrag om te voorkomen dat een grote zappers de enquête overneemt. Gebruik hetzelfde bedrag in beide velden om ervoor te zorgen dat elke stem hetzelfde wordt gewaardeerd. Laat het leeg om elk bedrag te accepteren.</string>
@@ -496,4 +498,6 @@
     <string name="lightning_wallets_not_found2">Lightning wallets niet gevonden</string>
     <string name="paid">Betaald</string>
     <string name="wallet_number">Wallet %1$s</string>
+    <string name="error_opening_external_signer">Fout bij openen ondertekenapp</string>
+    <string name="sign_request_rejected">Ondertekenverzoek afgewezen</string>
 </resources>

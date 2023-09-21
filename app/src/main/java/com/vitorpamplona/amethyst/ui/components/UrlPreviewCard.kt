@@ -62,7 +62,7 @@ fun UrlPreviewCard(
                     style = MaterialTheme.typography.caption,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                        .padding(start = 10.dp, end = 10.dp, top = 5.dp),
                     color = Color.Gray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -97,9 +98,9 @@ import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.IdentityClaim
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.MastodonIdentity
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
@@ -118,7 +119,7 @@ import java.math.BigDecimal
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     if (userId == null) return
 
-    var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(userId)) }
+    var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userId)) }
 
     if (userBase == null) {
         LaunchedEffect(userId) {
@@ -280,7 +281,6 @@ fun ProfileScreen(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun RenderSurface(
     baseUser: User,
     threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
@@ -383,7 +383,7 @@ private fun RenderScreen(
 ) {
     val pagerState = rememberPagerState { 9 }
 
-    Column() {
+    Column {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
         ScrollableTabRow(
             backgroundColor = MaterialTheme.colors.background,
@@ -449,7 +449,7 @@ private fun CreateAndRenderTabs(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val tabs = listOf<@Composable() (() -> Unit)?>(
+    val tabs = listOf<@Composable (() -> Unit)?>(
         { Text(text = stringResource(R.string.notes)) },
         { Text(text = stringResource(R.string.replies)) },
         { FollowTabHeader(baseUser) },
@@ -486,7 +486,7 @@ private fun RelaysTabHeader(baseUser: User) {
 @Composable
 private fun ReportsTabHeader(baseUser: User) {
     val userState by baseUser.live().reports.observeAsState()
-    var userReports by remember { mutableStateOf(0) }
+    var userReports by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -503,11 +503,11 @@ private fun ReportsTabHeader(baseUser: User) {
 
 @Composable
 private fun FollowedTagsTabHeader(baseUser: User) {
-    var usertags by remember { mutableStateOf(0) }
+    var usertags by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = baseUser) {
         launch(Dispatchers.IO) {
-            val contactList = baseUser?.latestContactList
+            val contactList = baseUser.latestContactList
 
             val newTags = (contactList?.verifiedFollowTagSet?.count() ?: 0)
 
@@ -524,7 +524,7 @@ private fun FollowedTagsTabHeader(baseUser: User) {
 private fun BookmarkTabHeader(baseUser: User) {
     val userState by baseUser.live().bookmarks.observeAsState()
 
-    var userBookmarks by remember { mutableStateOf(0) }
+    var userBookmarks by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -715,8 +715,6 @@ private fun ProfileActions(
     if (isMe) {
         EditButton(accountViewModel.account)
     }
-
-    val scope = rememberCoroutineScope()
 
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
         if (isHidden) {
@@ -940,7 +938,7 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    DisplayBadges(baseUser, nav)
+    DisplayBadges(baseUser, accountViewModel, nav)
 
     DisplayNip05ProfileStatus(user, accountViewModel)
 
@@ -1002,7 +1000,7 @@ private fun DrawAdditionalInfo(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
-                tags = remember { ImmutableListOfLists<String>(emptyList()) },
+                tags = EmptyTagList,
                 backgroundColor = background,
                 accountViewModel = accountViewModel,
                 nav = nav
@@ -1114,7 +1112,7 @@ private fun DisplayAppRecommendations(
     ) { state ->
         when (state) {
             is FeedState.Loaded -> {
-                Column() {
+                Column {
                     Text(stringResource(id = R.string.recommended_apps))
 
                     FlowRow(
@@ -1137,7 +1135,7 @@ private fun DisplayAppRecommendations(
 private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
     val appState by baseApp.live().metadata.observeAsState()
 
-    var appLogo by remember { mutableStateOf<String?>(null) }
+    var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = appState) {
         launch(Dispatchers.Default) {
@@ -1174,6 +1172,7 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
 @Composable
 private fun DisplayBadges(
     baseUser: User,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     LoadAddressableNote(
@@ -1182,17 +1181,26 @@ private fun DisplayBadges(
             baseUser.pubkeyHex,
             BadgeProfilesEvent.standardDTAg,
             null
-        )
-    ) {
-        if (it != null) {
-            val badgeList by it.live().metadata.map {
-                (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
-            }.distinctUntilChanged().observeAsState()
-
-            badgeList?.let { list ->
-                RenderBadgeList(list, nav)
-            }
+        ),
+        accountViewModel
+    ) { note ->
+        if (note != null) {
+            WatchAndRenderBadgeList(note, nav)
         }
+    }
+}
+
+@Composable
+private fun WatchAndRenderBadgeList(
+    note: AddressableNote,
+    nav: (String) -> Unit
+) {
+    val badgeList by note.live().metadata.map {
+        (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
+    }.distinctUntilChanged().observeAsState()
+
+    badgeList?.let { list ->
+        RenderBadgeList(list, nav)
     }
 }
 
@@ -1215,7 +1223,7 @@ private fun RenderBadgeList(
 @Composable
 private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit) {
     var baseNote by remember {
-        mutableStateOf<Note?>(LocalCache.getNoteIfExists(badgeAwardEventHex))
+        mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex))
     }
 
     LaunchedEffect(key1 = badgeAwardEventHex) {
@@ -1460,7 +1468,7 @@ fun TabFollows(baseUser: User, feedViewModel: UserFeedViewModel, accountViewMode
     WatchFollowChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
@@ -1471,7 +1479,7 @@ fun TabFollowers(baseUser: User, feedViewModel: UserFeedViewModel, accountViewMo
     WatchFollowerChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
@@ -1506,7 +1514,7 @@ fun TabReceivedZaps(baseUser: User, zapFeedViewModel: NostrUserProfileZapsFeedVi
     WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
         }
     }
@@ -1529,7 +1537,7 @@ fun TabReports(baseUser: User, feedViewModel: NostrUserProfileReportFeedViewMode
     WatchReportsAndUpdateFeed(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             RefresheableFeedView(
                 feedViewModel,
                 null,
@@ -1701,7 +1709,6 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         onDismissRequest = onDismiss
     ) {
         val clipboardManager = LocalClipboardManager.current
-        val scope = rememberCoroutineScope()
 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
             Text(stringResource(R.string.copy_user_id))

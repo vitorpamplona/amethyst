@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -612,7 +613,7 @@ fun Waveform(
     DrawWaveform(waveform, waveformProgress, modifier)
 
     val restartFlow = remember {
-        mutableStateOf(0)
+        mutableIntStateOf(0)
     }
 
     // Keeps the screen on while playing and viewing videos.
