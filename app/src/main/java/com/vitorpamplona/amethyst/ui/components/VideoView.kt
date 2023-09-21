@@ -282,12 +282,14 @@ fun GetVideoController(
         UUID.randomUUID().toString()
     }
 
+    val scope = rememberCoroutineScope()
+
     // Prepares a VideoPlayer from the foreground service.
-    LaunchedEffect(key1 = videoUri) {
+    DisposableEffect(key1 = videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
         if (controller.value == null) {
-            launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 PlaybackClientController.prepareController(
                     uid,
                     videoUri,
@@ -351,12 +353,20 @@ fun GetVideoController(
                 }
             }
         }
+
+        onDispose {
+            if (!keepPlaying.value) {
+                // Stops and releases the media.
+                controller.value?.stop()
+                controller.value?.release()
+                controller.value = null
+            }
+        }
     }
 
     // User pauses and resumes the app. What to do with videos?
-    val scope = rememberCoroutineScope()
     val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(key1 = videoUri) {
+    DisposableEffect(key1 = lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 // if the controller is null, restarts the controller with a new one
@@ -364,7 +374,7 @@ fun GetVideoController(
                 if (controller.value == null) {
                     scope.launch(Dispatchers.IO) {
                         PlaybackClientController.prepareController(
-                            UUID.randomUUID().toString(),
+                            uid,
                             videoUri,
                             nostrUriCallback,
                             context
@@ -408,13 +418,6 @@ fun GetVideoController(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-
-            if (!keepPlaying.value) {
-                // Stops and releases the media.
-                controller.value?.stop()
-                controller.value?.release()
-                controller.value = null
-            }
         }
     }
 
