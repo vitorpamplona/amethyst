@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -216,11 +217,14 @@ fun MainScreen(
             }
         }
     }
+
     val shouldShow = remember {
         derivedStateOf {
             abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
         }
     }
+
+    WatchNavStateToUpdateBarVisibility(navState, bottomBarOffsetHeightPx)
 
     ModalBottomSheetLayout(
         sheetState = sheetState,
@@ -311,6 +315,13 @@ fun MainScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun WatchNavStateToUpdateBarVisibility(navState: State<NavBackStackEntry?>, bottomBarOffsetHeightPx: MutableState<Float>) {
+    LaunchedEffect(key1 = navState.value) {
+        bottomBarOffsetHeightPx.value = 0f
     }
 }
 
