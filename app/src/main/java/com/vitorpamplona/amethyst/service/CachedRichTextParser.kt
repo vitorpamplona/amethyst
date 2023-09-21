@@ -11,7 +11,6 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.hashTagsPattern
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
-import com.vitorpamplona.amethyst.ui.components.startsWithNIP19Scheme
 import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -290,3 +289,9 @@ class SchemelessUrlSegment(segment: String, val url: String, val extras: String?
 
 @Immutable
 class RegularTextSegment(segment: String) : Segment(segment)
+
+fun startsWithNIP19Scheme(word: String): Boolean {
+    val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
+
+    return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
+}

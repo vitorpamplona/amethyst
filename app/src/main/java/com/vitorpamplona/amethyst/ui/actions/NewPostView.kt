@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
+import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
 import com.vitorpamplona.amethyst.ui.components.*
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
