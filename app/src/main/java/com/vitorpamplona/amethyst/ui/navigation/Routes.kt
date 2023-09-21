@@ -150,6 +150,14 @@ sealed class Route(
         route = "Settings",
         icon = R.drawable.ic_settings
     )
+
+    companion object {
+        val InvertedLayouts = setOf(
+            Channel.route,
+            Room.route,
+            RoomByAuthor.route
+        )
+    }
 }
 
 // **
