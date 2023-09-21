@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 const val SHORT_TEXT_LENGTH = 350
+const val SHORTEN_AFTER_LINES = 10
 
 @Composable
 fun ExpandableRichTextViewer(
@@ -45,11 +46,24 @@ fun ExpandableRichTextViewer(
     var showFullText by remember { mutableStateOf(false) }
 
     val whereToCut = remember(content) {
-        // Cuts the text in the first space after 350
+        // Cuts the text in the first space or new line after SHORT_TEXT_LENGTH characters
         val firstSpaceAfterCut = content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
         val firstNewLineAfterCut = content.indexOf('\n', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
 
-        minOf(firstSpaceAfterCut, firstNewLineAfterCut)
+        // or after SHORTEN_AFTER_LINES lines
+        val numberOfLines = content.count { it == '\n' }
+
+        if (numberOfLines > SHORTEN_AFTER_LINES) {
+            val shortContent = content.lines().take(SHORTEN_AFTER_LINES)
+            var charactersInLines = 0
+            for (line in shortContent) {
+                // +1 because new line character is omitted from .lines
+                charactersInLines += (line.length + 1)
+            }
+            charactersInLines
+        } else {
+            minOf(firstSpaceAfterCut, firstNewLineAfterCut)
+        }
     }
 
     val text by remember(content) {
