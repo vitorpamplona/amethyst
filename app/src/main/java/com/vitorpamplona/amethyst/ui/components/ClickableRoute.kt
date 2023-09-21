@@ -677,7 +677,7 @@ fun InLineIconRenderer(
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 1.dp)
+                            .padding(horizontal = 0.dp)
                     )
                 }
             )
