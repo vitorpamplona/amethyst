@@ -292,7 +292,7 @@ fun MainScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(bottom = if (shouldShow.value) it.calculateBottomPadding() else 0.dp)
+                    .padding(bottom = it.calculateBottomPadding())
             ) {
                 AppNavigation(
                     homeFeedViewModel = homeFeedViewModel,
