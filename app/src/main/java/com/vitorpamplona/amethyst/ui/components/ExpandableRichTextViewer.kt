@@ -53,17 +53,18 @@ fun ExpandableRichTextViewer(
         // or after SHORTEN_AFTER_LINES lines
         val numberOfLines = content.count { it == '\n' }
 
+        var charactersInLines = minOf(firstSpaceAfterCut, firstNewLineAfterCut)
+
         if (numberOfLines > SHORTEN_AFTER_LINES) {
             val shortContent = content.lines().take(SHORTEN_AFTER_LINES)
-            var charactersInLines = 0
+            charactersInLines = 0
             for (line in shortContent) {
                 // +1 because new line character is omitted from .lines
                 charactersInLines += (line.length + 1)
             }
-            charactersInLines
-        } else {
-            minOf(firstSpaceAfterCut, firstNewLineAfterCut)
         }
+
+        minOf(firstSpaceAfterCut, firstNewLineAfterCut, charactersInLines)
     }
 
     val text by remember(content) {
