@@ -448,6 +448,7 @@
     <string name="messages_group_descriptor">Členové této skupiny</string>
     <string name="messages_new_subject_message">Vysvětlení členům</string>
     <string name="messages_new_subject_message_placeholder">Změna názvu pro nové cíle.</string>
+    <string name="paste_from_clipboard">Vložit ze schránky</string>
     <string name="language_description">Pro rozhraní aplikace</string>
     <string name="theme_description">Tmavé, světlé nebo systémové téma</string>
     <string name="automatically_load_images_gifs_description">Automaticky načítat obrázky a GIFy</string>
@@ -458,6 +459,7 @@
     <string name="copy_the_note_id_to_the_clipboard">Kopírovat ID poznámky do schránky</string>
     <string name="created_at">Vytvořeno</string>
     <string name="rules">Pravidla</string>
+    <string name="login_with_external_signer">Přihlásit se pomocí Amber</string>
     <string name="status_update">Aktualizovat svůj stav</string>
     <string name="lightning_wallets_not_found">Chyba při zpracování chybové zprávy</string>
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
@@ -473,27 +475,19 @@
     <string name="active_for_chats">Chaty</string>
     <string name="active_for_global">Celosvětové</string>
     <string name="active_for_search">Hledání</string>
-
-    <string name="login_with_external_signer">Přihlásit se pomocí Amber</string>
-    <string name="paste_from_clipboard">Vložit ze schránky</string>
-
     <string name="zap_split_title">Rozdělit a přeposlat Zaps</string>
     <string name="zap_split_explainer">Podporované klienty budou Zapy rozdělovat a přeposílat uživatelům přidaným zde místo vám</string>
     <string name="zap_split_serarch_and_add_user">Hledat a přidat uživatele</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Uživatelské jméno nebo zobrazované jméno</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel %1$s nemá nastavenou bleskovou adresu pro přijímání satoshi</string>
     <string name="zap_split_weight">Procenta</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Rozdělování Zapů s</string>
     <string name="forwarding_zaps_to">Přeposílání Zapů na</string>
-
     <string name="lightning_wallets_not_found2">Bleskové peněženky nenalezený</string>
     <string name="paid">Zaplaceno</string>
     <string name="wallet_number">Peněženka %1$s</string>
     <string name="error_opening_external_signer">Chyba při otevírání aplikace pro podpis</string>
     <string name="sign_request_rejected">Žádost o podpis byla zamítnuta</string>
-
     <string name="no_wallet_found_with_error">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury (Chyba: %1$s). Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="no_wallet_found">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury. Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
-
 </resources>
