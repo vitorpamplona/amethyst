@@ -413,9 +413,20 @@ fun ZapVote(
         }
 
         if (wantsToPay.isNotEmpty()) {
-            PayViaIntentDialog(payingInvoices = wantsToPay, accountViewModel = accountViewModel) {
-                wantsToPay = persistentListOf()
-            }
+            PayViaIntentDialog(
+                payingInvoices = wantsToPay,
+                accountViewModel = accountViewModel,
+                onClose = {
+                    wantsToPay = persistentListOf()
+                },
+                onError = {
+                    wantsToPay = persistentListOf()
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                }
+            )
         }
 
         if (showErrorMessageDialog != null) {

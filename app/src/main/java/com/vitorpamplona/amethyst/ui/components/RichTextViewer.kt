@@ -1,7 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.util.Log
-import android.util.Patterns
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicText
@@ -113,7 +111,7 @@ fun RichTextViewer(
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
-            RenderContentAsMarkdown(content, tags, nav)
+            RenderContentAsMarkdown(content, tags, accountViewModel, nav)
         } else {
             RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
         }
@@ -320,7 +318,7 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
 }
 
 @Composable
-private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<String>?, nav: (String) -> Unit) {
+private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<String>?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val uri = LocalUriHandler.current
     val onClick = remember {
         { link: String ->
@@ -338,7 +336,7 @@ private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<
         MaterialRichText(
             style = MaterialTheme.colors.markdownStyle
         ) {
-            RefreshableContent(content, tags) {
+            RefreshableContent(content, tags, accountViewModel) {
                 Markdown(
                     content = it,
                     markdownParseOptions = MarkdownParseOptions.Default,
@@ -350,13 +348,14 @@ private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<
 }
 
 @Composable
-private fun RefreshableContent(content: String, tags: ImmutableListOfLists<String>?, onCompose: @Composable (String) -> Unit) {
+private fun RefreshableContent(content: String, tags: ImmutableListOfLists<String>?, accountViewModel: AccountViewModel, onCompose: @Composable (String) -> Unit) {
     var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(content) }
 
-    ObserverAllNIP19References(content, tags) {
-        val newMarkdownWithSpecialContent = returnMarkdownWithSpecialContent(content, tags)
-        if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
-            markdownWithSpecialContent = newMarkdownWithSpecialContent
+    ObserverAllNIP19References(content, tags, accountViewModel) {
+        accountViewModel.returnMarkdownWithSpecialContent(content, tags) { newMarkdownWithSpecialContent ->
+            if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
+                markdownWithSpecialContent = newMarkdownWithSpecialContent
+            }
         }
     }
 
@@ -366,47 +365,47 @@ private fun RefreshableContent(content: String, tags: ImmutableListOfLists<Strin
 }
 
 @Composable
-fun ObserverAllNIP19References(content: String, tags: ImmutableListOfLists<String>?, onRefresh: () -> Unit) {
+fun ObserverAllNIP19References(content: String, tags: ImmutableListOfLists<String>?, accountViewModel: AccountViewModel, onRefresh: () -> Unit) {
     var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
 
     LaunchedEffect(key1 = content) {
-        launch(Dispatchers.IO) {
-            nip19References = returnNIP19References(content, tags)
+        accountViewModel.returnNIP19References(content, tags) {
+            nip19References = it
             onRefresh()
         }
     }
 
     nip19References.forEach {
-        ObserveNIP19(it, onRefresh)
+        ObserveNIP19(it, accountViewModel, onRefresh)
     }
 }
 
 @Composable
 fun ObserveNIP19(
     it: Nip19.Return,
+    accountViewModel: AccountViewModel,
     onRefresh: () -> Unit
 ) {
     if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-        ObserveNIP19Event(it, onRefresh)
+        ObserveNIP19Event(it, accountViewModel, onRefresh)
     } else if (it.type == Nip19.Type.USER) {
-        ObserveNIP19User(it, onRefresh)
+        ObserveNIP19User(it, accountViewModel, onRefresh)
     }
 }
 
 @Composable
 private fun ObserveNIP19Event(
     it: Nip19.Return,
+    accountViewModel: AccountViewModel,
     onRefresh: () -> Unit
 ) {
-    var baseNote by remember(it) { mutableStateOf<Note?>(LocalCache.getNoteIfExists(it.hex)) }
+    var baseNote by remember(it) { mutableStateOf<Note?>(accountViewModel.getNoteIfExists(it.hex)) }
 
     if (baseNote == null) {
         LaunchedEffect(key1 = it.hex) {
-            launch(Dispatchers.IO) {
-                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                        launch(Dispatchers.Main) { baseNote = note }
-                    }
+            if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                accountViewModel.checkGetOrCreateNote(it.hex)?.let { note ->
+                    launch(Dispatchers.Main) { baseNote = note }
                 }
             }
         }
@@ -423,9 +422,7 @@ fun ObserveNote(note: Note, onRefresh: () -> Unit) {
 
     LaunchedEffect(key1 = loadedNoteId) {
         if (loadedNoteId != null) {
-            launch(Dispatchers.IO) {
-                onRefresh()
-            }
+            onRefresh()
         }
     }
 }
@@ -433,17 +430,16 @@ fun ObserveNote(note: Note, onRefresh: () -> Unit) {
 @Composable
 private fun ObserveNIP19User(
     it: Nip19.Return,
+    accountViewModel: AccountViewModel,
     onRefresh: () -> Unit
 ) {
-    var baseUser by remember(it) { mutableStateOf<User?>(LocalCache.getUserIfExists(it.hex)) }
+    var baseUser by remember(it) { mutableStateOf<User?>(accountViewModel.getUserIfExists(it.hex)) }
 
     if (baseUser == null) {
         LaunchedEffect(key1 = it.hex) {
-            launch(Dispatchers.IO) {
-                if (it.type == Nip19.Type.USER) {
-                    LocalCache.checkGetOrCreateUser(it.hex)?.let { user ->
-                        launch(Dispatchers.Main) { baseUser = user }
-                    }
+            if (it.type == Nip19.Type.USER) {
+                accountViewModel.checkGetOrCreateUser(it.hex)?.let { user ->
+                    launch(Dispatchers.Main) { baseUser = user }
                 }
             }
         }
@@ -460,158 +456,9 @@ private fun ObserveUser(user: User, onRefresh: () -> Unit) {
 
     LaunchedEffect(key1 = loadedUserMetaId) {
         if (loadedUserMetaId != null) {
-            launch(Dispatchers.IO) {
-                onRefresh()
-            }
+            onRefresh()
         }
     }
-}
-
-private fun getDisplayNameAndNIP19FromTag(tag: String, tags: ImmutableListOfLists<String>): Pair<String, String>? {
-    val matcher = tagIndex.matcher(tag)
-    val (index, suffix) = try {
-        matcher.find()
-        Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
-    } catch (e: Exception) {
-        Log.w("Tag Parser", "Couldn't link tag $tag", e)
-        Pair(null, null)
-    }
-
-    if (index != null && index >= 0 && index < tags.lists.size) {
-        val tag = tags.lists[index]
-
-        if (tag.size > 1) {
-            if (tag[0] == "p") {
-                LocalCache.checkGetOrCreateUser(tag[1])?.let {
-                    return Pair(it.toBestDisplayName(), it.pubkeyNpub())
-                }
-            } else if (tag[0] == "e" || tag[0] == "a") {
-                LocalCache.checkGetOrCreateNote(tag[1])?.let {
-                    return Pair(it.idDisplayNote(), it.toNEvent())
-                }
-            }
-        }
-    }
-
-    return null
-}
-
-private fun getDisplayNameFromNip19(nip19: Nip19.Return): Pair<String, String>? {
-    if (nip19.type == Nip19.Type.USER) {
-        LocalCache.users[nip19.hex]?.let {
-            return Pair(it.toBestDisplayName(), it.pubkeyNpub())
-        }
-    } else if (nip19.type == Nip19.Type.NOTE) {
-        LocalCache.notes[nip19.hex]?.let {
-            return Pair(it.idDisplayNote(), it.toNEvent())
-        }
-    } else if (nip19.type == Nip19.Type.ADDRESS) {
-        LocalCache.addressables[nip19.hex]?.let {
-            return Pair(it.idDisplayNote(), it.toNEvent())
-        }
-    } else if (nip19.type == Nip19.Type.EVENT) {
-        LocalCache.notes[nip19.hex]?.let {
-            return Pair(it.idDisplayNote(), it.toNEvent())
-        }
-    }
-
-    return null
-}
-
-private fun returnNIP19References(content: String, tags: ImmutableListOfLists<String>?): List<Nip19.Return> {
-    val listOfReferences = mutableListOf<Nip19.Return>()
-    content.split('\n').forEach { paragraph ->
-        paragraph.split(' ').forEach { word: String ->
-            if (startsWithNIP19Scheme(word)) {
-                val parsedNip19 = Nip19.uriToRoute(word)
-                parsedNip19?.let {
-                    listOfReferences.add(it)
-                }
-            }
-        }
-    }
-
-    tags?.lists?.forEach {
-        if (it[0] == "p" && it.size > 1) {
-            listOfReferences.add(Nip19.Return(Nip19.Type.USER, it[1], null, null, null, ""))
-        } else if (it[0] == "e" && it.size > 1) {
-            listOfReferences.add(Nip19.Return(Nip19.Type.NOTE, it[1], null, null, null, ""))
-        } else if (it[0] == "a" && it.size > 1) {
-            listOfReferences.add(Nip19.Return(Nip19.Type.ADDRESS, it[1], null, null, null, ""))
-        }
-    }
-
-    return listOfReferences
-}
-
-private fun returnMarkdownWithSpecialContent(content: String, tags: ImmutableListOfLists<String>?): String {
-    var returnContent = ""
-    content.split('\n').forEach { paragraph ->
-        paragraph.split(' ').forEach { word: String ->
-            if (isValidURL(word)) {
-                val removedParamsFromUrl = word.split("?")[0].lowercase()
-                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    returnContent += "![]($word) "
-                } else {
-                    returnContent += "[$word]($word) "
-                }
-            } else if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) {
-                returnContent += "[$word](mailto:$word) "
-            } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
-                returnContent += "[$word](tel:$word) "
-            } else if (startsWithNIP19Scheme(word)) {
-                val parsedNip19 = Nip19.uriToRoute(word)
-                returnContent += if (parsedNip19 !== null) {
-                    val pair = getDisplayNameFromNip19(parsedNip19)
-                    if (pair != null) {
-                        val (displayName, nip19) = pair
-                        "[$displayName](nostr:$nip19) "
-                    } else {
-                        "$word "
-                    }
-                } else {
-                    "$word "
-                }
-            } else if (word.startsWith("#")) {
-                if (tagIndex.matcher(word).matches() && tags != null) {
-                    val pair = getDisplayNameAndNIP19FromTag(word, tags)
-                    if (pair != null) {
-                        returnContent += "[${pair.first}](nostr:${pair.second}) "
-                    } else {
-                        returnContent += "$word "
-                    }
-                } else if (hashTagsPattern.matcher(word).matches()) {
-                    val hashtagMatcher = hashTagsPattern.matcher(word)
-
-                    val (myTag, mySuffix) = try {
-                        hashtagMatcher.find()
-                        Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
-                    } catch (e: Exception) {
-                        Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
-                        Pair(null, null)
-                    }
-
-                    if (myTag != null) {
-                        returnContent += "[#$myTag](nostr:Hashtag?id=$myTag)$mySuffix "
-                    } else {
-                        returnContent += "$word "
-                    }
-                } else {
-                    returnContent += "$word "
-                }
-            } else {
-                returnContent += "$word "
-            }
-        }
-        returnContent += "\n"
-    }
-    return returnContent
-}
-
-fun startsWithNIP19Scheme(word: String): Boolean {
-    val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
-
-    return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
 }
 
 @Immutable

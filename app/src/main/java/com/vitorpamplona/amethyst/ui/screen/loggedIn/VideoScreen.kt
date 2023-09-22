@@ -445,14 +445,11 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
-        val scope = rememberCoroutineScope()
         ReplyReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
-            scope.launch {
-                routeFor(
-                    baseNote,
-                    accountViewModel.userProfile()
-                )?.let { nav(it) }
-            }
+            routeFor(
+                baseNote,
+                accountViewModel.userProfile()
+            )?.let { nav(it) }
         }
         BoostReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote

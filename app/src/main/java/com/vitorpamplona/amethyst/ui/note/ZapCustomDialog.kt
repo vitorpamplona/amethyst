@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -144,6 +145,7 @@ fun ZapCustomDialog(
                             onPayViaIntent = onPayViaIntent,
                             zapType = selectedZapType
                         )
+                        onClose()
                     }
                 }
 
@@ -298,88 +300,103 @@ fun ErrorMessageDialog(
 fun PayViaIntentDialog(
     payingInvoices: ImmutableList<ZapPaymentHandler.Payable>,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onError: (String) -> Unit
 ) {
     val context = LocalContext.current
 
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false
-        )
-    ) {
-        Surface() {
-            Column(modifier = Modifier.padding(10.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CloseButton(onPress = onClose)
-                }
-
-                Spacer(modifier = DoubleVertSpacer)
-
-                payingInvoices.forEachIndexed { index, it ->
-                    val paid = remember {
-                        mutableStateOf(false)
+    if (payingInvoices.size == 1) {
+        payViaIntent(payingInvoices.first().invoice, context, onError)
+    } else {
+        Dialog(
+            onDismissRequest = onClose,
+            properties = DialogProperties(
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Surface() {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CloseButton(onPress = onClose)
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size10dp)) {
-                        if (it.user != null) {
-                            BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
-                        } else {
-                            DisplayBlankAuthor(size = Size55dp)
+                    Spacer(modifier = DoubleVertSpacer)
+
+                    payingInvoices.forEachIndexed { index, it ->
+                        val paid = remember {
+                            mutableStateOf(false)
                         }
 
-                        Spacer(modifier = DoubleHorzSpacer)
-
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size10dp)) {
                             if (it.user != null) {
-                                UsernameDisplay(it.user, showPlayButton = false)
+                                BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
                             } else {
-                                Text(
-                                    text = stringResource(id = R.string.wallet_number, index + 1),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
+                                DisplayBlankAuthor(size = Size55dp)
                             }
-                            Row() {
-                                Text(
-                                    text = showAmount((it.amountMilliSats / 1000.0f).toBigDecimal()),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-                                Spacer(modifier = StdHorzSpacer)
-                                Text(
-                                    text = stringResource(id = R.string.sats),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
+
+                            Spacer(modifier = DoubleHorzSpacer)
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                if (it.user != null) {
+                                    UsernameDisplay(it.user, showPlayButton = false)
+                                } else {
+                                    Text(
+                                        text = stringResource(id = R.string.wallet_number, index + 1),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp
+                                    )
+                                }
+                                Row() {
+                                    Text(
+                                        text = showAmount((it.amountMilliSats / 1000.0f).toBigDecimal()),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp
+                                    )
+                                    Spacer(modifier = StdHorzSpacer)
+                                    Text(
+                                        text = stringResource(id = R.string.sats),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp
+                                    )
+                                }
                             }
-                        }
 
-                        Spacer(modifier = DoubleHorzSpacer)
+                            Spacer(modifier = DoubleHorzSpacer)
 
-                        PayButton(isActive = !paid.value) {
-                            paid.value = true
+                            PayButton(isActive = !paid.value) {
+                                paid.value = true
 
-                            val uri = "lightning:" + it.invoice
-
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                            ContextCompat.startActivity(context, intent, null)
+                                payViaIntent(it.invoice, context, onError)
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+fun payViaIntent(invoice: String, context: Context, onError: (String) -> Unit) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$invoice"))
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        ContextCompat.startActivity(context, intent, null)
+    } catch (e: Exception) {
+        if (e.message != null) {
+            onError(context.getString(R.string.no_wallet_found_with_error, e.message!!))
+        } else {
+            onError(context.getString(R.string.no_wallet_found))
         }
     }
 }

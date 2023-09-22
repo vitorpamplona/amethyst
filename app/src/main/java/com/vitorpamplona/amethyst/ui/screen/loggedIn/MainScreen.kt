@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
+import com.vitorpamplona.amethyst.ui.navigation.Route.Companion.InvertedLayouts
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
@@ -193,8 +196,7 @@ fun MainScreen(
         }
     }
 
-    val bottomBarHeight = 50.dp
-    val bottomBarHeightPx = with(LocalDensity.current) { bottomBarHeight.roundToPx().toFloat() }
+    val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
     val bottomBarOffsetHeightPx = remember { mutableStateOf(0f) }
 
     val nestedScrollConnection = remember {
@@ -202,13 +204,27 @@ fun MainScreen(
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
                 val newOffset = bottomBarOffsetHeightPx.value + delta
-                bottomBarOffsetHeightPx.value = newOffset.coerceIn(-bottomBarHeightPx, 0f)
+
+                val currentRoute = navState.value?.destination?.route
+
+                bottomBarOffsetHeightPx.value = if (currentRoute !in InvertedLayouts) {
+                    newOffset.coerceIn(-bottomBarHeightPx, 0f)
+                } else {
+                    newOffset.coerceIn(0f, bottomBarHeightPx)
+                }
 
                 return Offset.Zero
             }
         }
     }
-    val shouldShow = bottomBarOffsetHeightPx.value == 0f
+
+    val shouldShow = remember {
+        derivedStateOf {
+            abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
+        }
+    }
+
+    WatchNavStateToUpdateBarVisibility(navState, bottomBarOffsetHeightPx)
 
     ModalBottomSheetLayout(
         sheetState = sheetState,
@@ -223,7 +239,7 @@ fun MainScreen(
                 .nestedScroll(nestedScrollConnection),
             bottomBar = {
                 AnimatedContent(
-                    targetState = shouldShow,
+                    targetState = shouldShow.value,
                     transitionSpec = {
                         slideInVertically { height -> height } togetherWith
                             slideOutVertically { height -> height }
@@ -236,7 +252,7 @@ fun MainScreen(
             },
             topBar = {
                 AnimatedContent(
-                    targetState = shouldShow,
+                    targetState = shouldShow.value,
                     transitionSpec = {
                         slideInVertically { height -> 0 } togetherWith
                             slideOutVertically { height -> 0 }
@@ -262,7 +278,7 @@ fun MainScreen(
             },
             floatingActionButton = {
                 Crossfade(
-                    targetState = shouldShow,
+                    targetState = shouldShow.value,
                     animationSpec = tween(durationMillis = 100)
                 ) { state ->
                     if (state) {
@@ -280,7 +296,7 @@ fun MainScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(bottom = if (bottomBarOffsetHeightPx.value == 0f || navState.value?.destination?.route != Route.Home.base) it.calculateBottomPadding() else 0.dp)
+                    .padding(bottom = it.calculateBottomPadding())
             ) {
                 AppNavigation(
                     homeFeedViewModel = homeFeedViewModel,
@@ -299,6 +315,13 @@ fun MainScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun WatchNavStateToUpdateBarVisibility(navState: State<NavBackStackEntry?>, bottomBarOffsetHeightPx: MutableState<Float>) {
+    LaunchedEffect(key1 = navState.value) {
+        bottomBarOffsetHeightPx.value = 0f
     }
 }
 
