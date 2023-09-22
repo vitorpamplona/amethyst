@@ -482,4 +482,27 @@
     <string name="active_for_chats">Chattar</string>
     <string name="active_for_global">Globalt</string>
     <string name="active_for_search">Sök</string>
+
+    <string name="login_with_external_signer">Logga in med Amber</string>
+    <string name="paste_from_clipboard">Klistra in från urklipp</string>
+
+    <string name="zap_split_title">Dela och vidarebefordra Zaps</string>
+    <string name="zap_split_explainer">Stödjande klienter kommer att dela och vidarebefordra zaps till användarna som har lagts till här istället för dig</string>
+    <string name="zap_split_serarch_and_add_user">Sök och lägg till användare</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Användarnamn eller visningsnamn</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren %1$s har inte ställt in en blixtfakturaadress för att ta emot satoshis</string>
+    <string name="zap_split_weight">Procent</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Delar zaps med</string>
+    <string name="forwarding_zaps_to">Vidarebefordrar zaps till</string>
+
+    <string name="lightning_wallets_not_found2">Blixtpengar hittades inte</string>
+    <string name="paid">Betald</string>
+    <string name="wallet_number">Plånbok %1$s</string>
+    <string name="error_opening_external_signer">Fel vid öppning av signeringsapp</string>
+    <string name="sign_request_rejected">Underteckningsbegäran avvisad</string>
+
+    <string name="no_wallet_found_with_error">Inga plånböcker hittades för att betala en blixtfaktura (Fel: %1$s). Installera en blixtpengaplånbok för att använda zaps</string>
+    <string name="no_wallet_found">Inga plånböcker hittades för att betala en blixtfaktura. Installera en blixtpengaplånbok för att använda zaps</string>
+
 </resources>
