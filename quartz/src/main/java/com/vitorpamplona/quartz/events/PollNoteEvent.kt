@@ -27,13 +27,16 @@ class PollNoteEvent(
         tags.filter { it.size > 2 && it[0] == POLL_OPTION }
             .associate { it[1].toInt() to it[2] }
 
-    fun getTagInt(property: String): Int? {
+    fun minimumAmount() = tags.firstOrNull() { it.size > 1 && it[0] == VALUE_MINIMUM }?.getOrNull(1)?.toLongOrNull()
+    fun maximumAmount() = tags.firstOrNull() { it.size > 1 && it[0] == VALUE_MAXIMUM }?.getOrNull(1)?.toLongOrNull()
+
+    fun getTagLong(property: String): Long? {
         val number = tags.firstOrNull() { it.size > 1 && it[0] == property }?.get(1)
 
         return if (number.isNullOrBlank() || number == "null") {
             null
         } else {
-            number.toInt()
+            number.toLong()
         }
     }
 
@@ -71,11 +74,18 @@ class PollNoteEvent(
             pollOptions.forEach { poll_op ->
                 tags.add(listOf(POLL_OPTION, poll_op.key.toString(), poll_op.value))
             }
-            tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
-            tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
-            tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
-            tags.add(listOf(CLOSED_AT, closedAt.toString()))
-
+            valueMaximum?.let {
+                tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
+            }
+            valueMinimum?.let {
+                tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
+            }
+            consensusThreshold?.let {
+                tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
+            }
+            closedAt?.let {
+                tags.add(listOf(CLOSED_AT, closedAt.toString()))
+            }
             zapReceiver?.forEach {
                 tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
