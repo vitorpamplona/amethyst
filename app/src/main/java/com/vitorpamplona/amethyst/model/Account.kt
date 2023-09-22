@@ -265,6 +265,7 @@ class Account(
 
         var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
             val content = ExternalSignerUtils.content[event.id]
             if (content.isBlank()) {
                 return
