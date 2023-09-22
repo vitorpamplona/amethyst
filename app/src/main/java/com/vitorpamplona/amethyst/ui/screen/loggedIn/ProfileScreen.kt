@@ -955,7 +955,17 @@ private fun DrawAdditionalInfo(
 
             ClickableText(
                 text = AnnotatedString(website.removePrefix("https://")),
-                onClick = { website.let { runCatching { uri.openUri(it) } } },
+                onClick = {
+                    website.let {
+                        runCatching {
+                            if (it.contains("://")) {
+                                uri.openUri(it)
+                            } else {
+                                uri.openUri("http://$it")
+                            }
+                        }
+                    }
+                },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
