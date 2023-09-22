@@ -248,6 +248,9 @@ fun ChannelScreen(
                     .weight(1f, true)
             }
         ) {
+            if (channel is LiveActivitiesChannel) {
+                ShowVideoStreaming(channel, accountViewModel)
+            }
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
