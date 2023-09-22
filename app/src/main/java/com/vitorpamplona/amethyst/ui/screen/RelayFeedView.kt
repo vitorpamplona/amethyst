@@ -70,16 +70,20 @@ class RelayFeedViewModel : ViewModel() {
     }
 
     fun subscribeTo(user: User) {
-        currentUser = user
-        user.live().relays.observeForever(listener)
-        user.live().relayInfo.observeForever(listener)
-        invalidateData()
+        if (currentUser != user) {
+            currentUser = user
+            user.live().relays.observeForever(listener)
+            user.live().relayInfo.observeForever(listener)
+            invalidateData()
+        }
     }
 
     fun unsubscribeTo(user: User) {
-        user.live().relays.removeObserver(listener)
-        user.live().relayInfo.removeObserver(listener)
-        currentUser = null
+        if (currentUser == user) {
+            user.live().relays.removeObserver(listener)
+            user.live().relayInfo.removeObserver(listener)
+            currentUser = null
+        }
     }
 
     private val bundler = BundledUpdate(250, Dispatchers.IO)

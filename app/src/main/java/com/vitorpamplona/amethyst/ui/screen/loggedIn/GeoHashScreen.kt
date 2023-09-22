@@ -65,12 +65,16 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
 
     NostrGeohashDataSource.loadHashtag(tag)
 
-    LaunchedEffect(tag) {
+    DisposableEffect(tag) {
         NostrGeohashDataSource.start()
         feedViewModel.invalidateData()
+        onDispose {
+            NostrGeohashDataSource.loadHashtag(null)
+            NostrGeohashDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hashtag Start")
@@ -88,8 +92,6 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            NostrGeohashDataSource.loadHashtag(null)
-            NostrGeohashDataSource.stop()
         }
     }
 

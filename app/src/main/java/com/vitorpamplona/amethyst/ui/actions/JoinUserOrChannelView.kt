@@ -194,7 +194,7 @@ private fun RenderSearch(
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Join Start")
