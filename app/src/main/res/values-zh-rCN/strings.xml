@@ -457,6 +457,7 @@
     <string name="messages_group_descriptor">此群组成员</string>
     <string name="messages_new_subject_message">对成员的解释</string>
     <string name="messages_new_subject_message_placeholder">为新目标更改名称。</string>
+    <string name="paste_from_clipboard">粘贴自剪贴板</string>
     <string name="language_description">用于应用程序界面</string>
     <string name="theme_description">暗色、亮色或系统主题</string>
     <string name="automatically_load_images_gifs_description">自动加载图像和 GIF</string>
@@ -467,6 +468,7 @@
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
     <string name="created_at">创建于</string>
     <string name="rules">规则</string>
+    <string name="login_with_external_signer">使用 Amber 登录</string>
     <string name="status_update">更新你的状态</string>
     <string name="lightning_wallets_not_found">错误解析错误消息</string>
     <string name="poll_zap_value_min_max_explainer">投票按照打闪金额进行加权。 你可以设置最小金额以避免垃圾邮件，也可以设置最大金额以避免大型攻击者攻击民意调查。在两个字段中使用相同的金额以确保每张投票的价值相同。 留空即可接受任何金额。</string>
@@ -483,4 +485,20 @@
     <string name="active_for_chats">聊天</string>
     <string name="active_for_global">全球</string>
     <string name="active_for_search">搜索</string>
+    <string name="zap_split_title">拆分及转发打闪</string>
+    <string name="zap_split_explainer">支持的客户端将会把打闪拆分及转发到在这里添加的用户，而不是你的</string>
+    <string name="zap_split_serarch_and_add_user">搜索并添加用户</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">用户名或显示名</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未设置接收聪的闪电地址</string>
+    <string name="zap_split_weight">百分比</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">与此用户拆分打闪</string>
+    <string name="forwarding_zaps_to">将打闪转发到</string>
+    <string name="lightning_wallets_not_found2">找不到闪电钱包</string>
+    <string name="paid">已支付</string>
+    <string name="wallet_number">钱包 %1$s</string>
+    <string name="error_opening_external_signer">打开签名应用时出错</string>
+    <string name="sign_request_rejected">签名请求被拒绝了</string>
+    <string name="no_wallet_found_with_error">找不到支付闪电发票的钱包（错误：%1$s）。请安装闪电钱包来使用打闪</string>
+    <string name="no_wallet_found">找不到支付闪电发票的钱包。请安装闪电钱包来使用打闪</string>
 </resources>
