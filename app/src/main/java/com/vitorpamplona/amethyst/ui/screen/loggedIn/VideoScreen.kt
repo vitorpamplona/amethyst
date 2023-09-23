@@ -89,7 +89,7 @@ fun VideoScreen(
 
     WatchAccountForVideoScreen(videoFeedView = videoFeedView, accountViewModel = accountViewModel)
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Video Start")

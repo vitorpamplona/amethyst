@@ -234,9 +234,6 @@ fun ChatroomScreen(
 
     LaunchedEffect(room, accountViewModel) {
         launch(Dispatchers.IO) {
-            NostrChatroomDataSource.start()
-            feedViewModel.invalidateData()
-
             newPostModel.imageUploadingError.collect { error ->
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
@@ -246,6 +243,16 @@ fun ChatroomScreen(
     }
 
     DisposableEffect(room, accountViewModel) {
+        NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
+        NostrChatroomDataSource.start()
+        feedViewModel.invalidateData()
+
+        onDispose {
+            NostrChatroomDataSource.stop()
+        }
+    }
+
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Private Message Start")

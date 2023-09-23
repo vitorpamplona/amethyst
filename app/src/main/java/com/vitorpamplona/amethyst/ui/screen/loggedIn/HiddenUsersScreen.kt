@@ -61,7 +61,7 @@ fun HiddenUsersScreen(
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hidden Users Start")

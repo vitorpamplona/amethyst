@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -110,7 +109,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LongChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LongRoomHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowVideoStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -355,11 +353,6 @@ private fun ChannelTopBar(
 ) {
     LoadChannel(baseChannelHex = id, accountViewModel) { baseChannel ->
         FlexibleTopBarWithBackButton(
-            prefixRow = {
-                if (baseChannel is LiveActivitiesChannel) {
-                    ShowVideoStreaming(baseChannel, accountViewModel)
-                }
-            },
             title = {
                 ShortChannelHeader(
                     baseChannel = baseChannel,

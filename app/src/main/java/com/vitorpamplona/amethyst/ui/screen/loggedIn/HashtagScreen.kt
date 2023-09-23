@@ -12,7 +12,6 @@ import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -61,12 +60,17 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
 
     NostrHashtagDataSource.loadHashtag(tag)
 
-    LaunchedEffect(tag) {
+    DisposableEffect(tag) {
         NostrHashtagDataSource.start()
         feedViewModel.invalidateData()
+
+        onDispose {
+            NostrHashtagDataSource.loadHashtag(null)
+            NostrHashtagDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hashtag Start")
@@ -84,8 +88,6 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            NostrHashtagDataSource.loadHashtag(null)
-            NostrHashtagDataSource.stop()
         }
     }
 

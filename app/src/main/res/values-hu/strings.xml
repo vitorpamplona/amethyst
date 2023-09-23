@@ -458,6 +458,7 @@
     <string name="messages_group_descriptor">A csoport tagjai</string>
     <string name="messages_new_subject_message">Magyarázat a csoport tagjainak</string>
     <string name="messages_new_subject_message_placeholder">Az új célok érdekében, a név megváltoztatása.</string>
+    <string name="paste_from_clipboard">Beszúrás vágólapról</string>
     <string name="language_description">Az applikáció felülete</string>
     <string name="theme_description">Sötét, Világos vagy Rendszer által használt téma</string>
     <string name="automatically_load_images_gifs_description">Képek és GIF-ek automatikus betöltése</string>
@@ -468,6 +469,7 @@
     <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
     <string name="created_at">Létrehozva</string>
     <string name="rules">Szabályok</string>
+    <string name="login_with_external_signer">Bejelentkezés Amber-el</string>
     <string name="status_update">Állapotod megjelenítése</string>
     <string name="lightning_wallets_not_found">Hiba a hibaüzenet elemzésekor</string>
     <string name="poll_zap_value_min_max_explainer">A szavazatokat a Zap-ek összegével súlyozzuk. Beállíthatsz egy minimális összeget, hogy a kéretlen leveleket elkerüld, és egy maximális összeget annak elkerülésére, hogy a szavazás feletti irányítást a nagy Zapperek vegyék át. Mindkét mezőben ugyanazt az összeget használd, hogy minden szavazat azonos értéket kapjon. Bármilyen összeg elfogadásához, hagyjd üresen.</string>
@@ -484,4 +486,20 @@
     <string name="active_for_chats">Chat</string>
     <string name="active_for_global">Globális</string>
     <string name="active_for_search">Keresés</string>
+    <string name="zap_split_title">Zap-ek megosztása és továbbítása</string>
+    <string name="zap_split_explainer">A támogató kliensek a zapokat, az itt hozzáadott felhasználóknak helyetted felosztják és továbbítják</string>
+    <string name="zap_split_serarch_and_add_user">Felhasználó keresése és hozzáadása</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Felhasználónév vagy megjelenítendő név</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A %1$s felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
+    <string name="zap_split_weight">Százalék</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Zap-ek megosztása</string>
+    <string name="forwarding_zaps_to">Zap-ek továbbítása</string>
+    <string name="lightning_wallets_not_found2">Lightning tárca nem található</string>
+    <string name="paid">Fizetve</string>
+    <string name="wallet_number">Tárca: %1$s</string>
+    <string name="error_opening_external_signer">Hiba az aláíró alkalmazás megnyitásakor</string>
+    <string name="sign_request_rejected">Aláírási kérés elutasítva</string>
+    <string name="no_wallet_found_with_error">Nem található tárca a Lighning számla kifizetésére (Hiba: %1$s). Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
+    <string name="no_wallet_found">Nem található tárca a Lighning számla kifizetésére. Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
 </resources>

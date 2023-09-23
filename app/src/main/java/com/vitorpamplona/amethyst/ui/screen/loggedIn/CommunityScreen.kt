@@ -56,7 +56,7 @@ fun CommunityScreen(note: AddressableNote, feedViewModel: NostrCommunityFeedView
         feedViewModel.invalidateData()
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Community Start")

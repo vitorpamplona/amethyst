@@ -12,7 +12,6 @@
     <string name="could_not_decrypt_the_message">Não foi possível descriptografar a mensagem</string>
     <string name="group_picture">Imagem do grupo</string>
     <string name="explicit_content">Conteúdo explícito</string>
-    <string name="spam">Spam</string>
     <string name="impersonation">Representação</string>
     <string name="illegal_behavior">Comportamento ilegal</string>
     <string name="unknown">Desconhecido</string>
@@ -36,7 +35,6 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Faça login com uma chave privada para poder enviar Zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Faça login com uma chave privada para poder seguir</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Faça login com uma chave privada para poder remover seguidores</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Contagem de visualizações</string>
     <string name="boost">Impulsionar</string>
     <string name="boosted">impulsionado</string>
@@ -78,7 +76,6 @@
     <string name="failed_to_upload_the_image">Falha ao enviar imagem</string>
     <string name="relay_address">Endereço do Relay</string>
     <string name="posts">Postagens</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">Erros</string>
     <string name="home_feed">Feed principal</string>
     <string name="private_message_feed">Feed de mensagens privadas</string>
@@ -116,7 +113,6 @@
     <string name="follows">"Seguindo"</string>
     <string name="reports">"Denúncias"</string>
     <string name="more_options">Mais opções</string>
-    <string name="relays">" Relays"</string>
     <string name="website">Site</string>
     <string name="lightning_address">Endereço Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copiar a chave Nsec (sua senha) para backup</string>
@@ -170,9 +166,6 @@
     <string name="nip_05">Endereço Nostr</string>
     <string name="never">nunca</string>
     <string name="now">agora</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Nudez</string>
     <string name="profanity_hateful_speech">Palavrões / Discurso de ódio</string>
     <string name="report_hateful_speech">Denunciar discurso de ódio</string>
@@ -267,7 +260,6 @@
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Fechar depois</string>
     <string name="poll_closing_time_days">dias</string>
     <string name="poll_is_closed">Enquete está fechada para novos votos</string>
@@ -330,7 +322,6 @@
     <string name="no">Não</string>
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
-    <string name="follow_list_global">Global</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conecte-se através do Tor com o Orbot
         \n\n1. Instale o [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Iniciar Orbot
@@ -347,7 +338,6 @@
     <string name="app_notification_dms_channel_description">Notifica você quando chega uma mensagem privada</string>
     <string name="app_notification_zaps_channel_name">Zaps Recebidos</string>
     <string name="app_notification_zaps_channel_description">Notifica quando alguém te manda um zap</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
     <string name="reply_notify">Notificar: </string>
@@ -384,7 +374,6 @@
     <string name="limitations">Limitações</string>
     <string name="countries">Países</string>
     <string name="languages">Línguas</string>
-    <string name="tags">Tags</string>
     <string name="posting_policy">Política de postagem</string>
     <string name="message_length">Tamanho da mensagem</string>
     <string name="subscriptions">Assinaturas</string>
@@ -408,10 +397,8 @@
     <string name="live_stream_has_ended">Transmissão ao vivo encerrada</string>
     <string name="are_you_sure_you_want_to_log_out">Sair exclui todas as suas informações locais. Certifique-se de fazer backup de suas chaves privadas para evitar a perda de sua conta. Você quer continuar?</string>
     <string name="followed_tags">Tags Seguidas</string>
-    <string name="relay_setup">Relays</string>
     <string name="discover_live">Ao vivo</string>
     <string name="discover_community">Comunidade</string>
-    <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Postagens Aprovadas</string>
     <string name="groups_no_descriptor">Este grupo não tem uma descrição ou regras. Fale com o proprietário para adicionar</string>
     <string name="community_no_descriptor">Esta comunidade não tem uma descrição. Fale com o proprietário para adicionar</string>
@@ -442,7 +429,7 @@
     <string name="select_a_relay_to_continue">Selecione um relay para continuar</string>
     <string name="zap_forward_title">Encaminhar Zaps para:</string>
     <string name="zap_forward_explainer">Os clientes que suportam encaminharão zaps para o endereço lightning ou perfil de usuário abaixo, em vez do seu</string>
-    <string name="geohash_title">"Expor localização como "</string>
+    <string name="geohash_title">Expor localização como </string>
     <string name="geohash_explainer">Adiciona um Geohash da sua localização à postagem. O público saberá que você está a 5 km (3 milhas) do local atual</string>
     <string name="add_sensitive_content_explainer">Adiciona aviso de conteúdo sensível antes de mostrar seu conteúdo. Isso é ideal para qualquer conteúdo NSFW ou conteúdo que algumas pessoas possam considerar ofensivo ou perturbador</string>
     <string name="new_feature_nip24_might_not_be_available_title">Novo recurso</string>
@@ -453,10 +440,11 @@
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Assunto</string>
     <string name="messages_new_message_subject_caption">Tema da conversa</string>
-    <string name="messages_new_message_to_caption">\@Usuário1, @Usuário2, @Usuário3</string>
+    <string name="messages_new_message_to_caption">"\@Usuário1, @Usuário2, @Usuário3"</string>
     <string name="messages_group_descriptor">Membros deste grupo</string>
     <string name="messages_new_subject_message">Explicação aos membros</string>
     <string name="messages_new_subject_message_placeholder">Mudando o nome dos novos objetivos.</string>
+    <string name="paste_from_clipboard">Colar da área de transferência</string>
     <string name="language_description">Para a interface do aplicativo</string>
     <string name="theme_description">Tema Escuro, Claro ou Sistema</string>
     <string name="automatically_load_images_gifs_description">Carregar automaticamente imagens e GIFs</string>
@@ -467,6 +455,7 @@
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
     <string name="created_at">Criado em</string>
     <string name="rules">Regras</string>
+    <string name="login_with_external_signer">Login com Amber</string>
     <string name="status_update">Atualize seu status</string>
     <string name="lightning_wallets_not_found">Erro ao analisar mensagem de erro</string>
     <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
@@ -476,22 +465,17 @@
     <string name="relay_information_document_error_reach_server">Falha ao acessar %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Falha ao analisar o resultado de %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s falhou com o código %2$s</string>
-    <string name="active_for">"Ativo para: "</string>
+    <string name="active_for">Ativo para: </string>
     <string name="active_for_home">Início</string>
     <string name="active_for_msg">Mensagens diretas</string>
     <string name="active_for_chats">Bate-papos</string>
-    <string name="active_for_global">Global</string>
     <string name="active_for_search">Pesquisa</string>
-    <string name="paste_from_clipboard">Colar da área de transferência</string>
-    <string name="login_with_external_signer">Login com Amber</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="zap_split_title">Dividir e encaminhar Zaps</string>
     <string name="zap_split_explainer">Os clientes que suportam dividirão e encaminharão zaps para os usuários adicionados aqui em vez dos seus</string>
     <string name="zap_split_serarch_and_add_user">Pesquisar e adicionar usuário</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Nome de usuário ou nome de exibição</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">O usuário %1$s não possui um endereço lightning configurado para receber sats</string>
     <string name="zap_split_weight">Percentual</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Dividindo zaps com</string>
     <string name="forwarding_zaps_to">Encaminhando zaps para</string>
     <string name="lightning_wallets_not_found2">Carteira Lightning não encontrada</string>

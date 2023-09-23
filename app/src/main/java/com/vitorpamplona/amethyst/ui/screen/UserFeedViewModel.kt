@@ -118,6 +118,8 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
             checkNotInMainThread()
 
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 invalidateData()
             }
         }

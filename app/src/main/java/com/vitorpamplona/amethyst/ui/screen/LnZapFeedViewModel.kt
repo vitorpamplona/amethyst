@@ -87,6 +87,8 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : View
             checkNotInMainThread()
 
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 invalidateData()
             }
         }
