@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -206,15 +207,18 @@ fun MainScreen(
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = available.y
-                val newOffset = bottomBarOffsetHeightPx.value + delta
+                val newOffset = bottomBarOffsetHeightPx.value + available.y
 
-                val currentRoute = navState.value?.destination?.route
-
-                bottomBarOffsetHeightPx.value = if (currentRoute !in InvertedLayouts) {
-                    newOffset.coerceIn(-bottomBarHeightPx, 0f)
+                if (accountViewModel.account.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+                    bottomBarOffsetHeightPx.value = if (navState.value?.destination?.route !in InvertedLayouts) {
+                        newOffset.coerceIn(-bottomBarHeightPx, 0f)
+                    } else {
+                        newOffset.coerceIn(0f, bottomBarHeightPx)
+                    }
                 } else {
-                    newOffset.coerceIn(0f, bottomBarHeightPx)
+                    if (abs(bottomBarOffsetHeightPx.value) > 0.1) {
+                        bottomBarOffsetHeightPx.value = 0f
+                    }
                 }
 
                 return Offset.Zero

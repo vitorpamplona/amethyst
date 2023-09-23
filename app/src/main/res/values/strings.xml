@@ -499,6 +499,8 @@
     <string name="automatically_load_images_gifs">Image Preview</string>
     <string name="automatically_play_videos">Video Playback</string>
     <string name="automatically_show_url_preview">URL Preview</string>
+    <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
+    <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
     <string name="load_image">Load Image</string>
 
     <string name="spamming_users">Spammers</string>

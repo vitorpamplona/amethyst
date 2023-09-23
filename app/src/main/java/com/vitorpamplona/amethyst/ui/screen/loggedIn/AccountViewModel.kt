@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -95,6 +96,12 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         automaticallyShowUrlPreview: ConnectivityType
     ) {
         account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
+    }
+
+    fun updateAutomaticallyHideNavBars(
+        automaticallyHideHavBars: BooleanType
+    ) {
+        account.updateAutomaticallyHideHavBars(automaticallyHideHavBars)
     }
 
     fun updateAutomaticallyShowImages(

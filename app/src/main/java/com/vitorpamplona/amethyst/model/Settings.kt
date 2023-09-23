@@ -8,7 +8,8 @@ class Settings(
     var preferredLanguage: String? = null,
     var automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
     var automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS
+    var automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
+    var automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS
 )
 
 enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val reourceId: Int) {
@@ -35,6 +36,31 @@ fun parseConnectivityType(screenCode: Int): ConnectivityType {
         ConnectivityType.NEVER.screenCode -> ConnectivityType.NEVER
         else -> {
             ConnectivityType.ALWAYS
+        }
+    }
+}
+
+enum class BooleanType(val prefCode: Boolean?, val screenCode: Int, val reourceId: Int) {
+    ALWAYS(null, 0, R.string.connectivity_type_always),
+    NEVER(false, 1, R.string.connectivity_type_never)
+}
+
+fun parseBooleanType(code: Boolean?): BooleanType {
+    return when (code) {
+        BooleanType.ALWAYS.prefCode -> BooleanType.ALWAYS
+        BooleanType.NEVER.prefCode -> BooleanType.NEVER
+        else -> {
+            BooleanType.ALWAYS
+        }
+    }
+}
+
+fun parseBooleanType(screenCode: Int): BooleanType {
+    return when (screenCode) {
+        BooleanType.ALWAYS.screenCode -> BooleanType.ALWAYS
+        BooleanType.NEVER.screenCode -> BooleanType.NEVER
+        else -> {
+            BooleanType.ALWAYS
         }
     }
 }

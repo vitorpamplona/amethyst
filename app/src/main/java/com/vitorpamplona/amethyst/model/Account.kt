@@ -180,6 +180,14 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun updateAutomaticallyHideHavBars(
+        automaticallyHideHavBars: BooleanType
+    ) {
+        settings.automaticallyHideNavigationBars = automaticallyHideHavBars
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun updateAutomaticallyShowImages(
         automaticallyShowImages: ConnectivityType
     ) {

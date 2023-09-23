@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.DefaultReactions
 import com.vitorpamplona.amethyst.model.DefaultZapAmounts
@@ -16,6 +17,7 @@ import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.Settings
+import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -76,6 +78,7 @@ private object PrefKeys {
     const val THEME = "theme"
     const val PREFERRED_LANGUAGE = "preferred_Language"
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
+    const val AUTOMATICALLY_HIDE_NAV_BARS = "automatically_hide_nav_bars"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
 }
 
@@ -272,6 +275,11 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, account.settings.automaticallyShowUrlPreview.prefCode!!)
             }
+            if (account.settings.automaticallyHideNavigationBars.prefCode == null) {
+                remove(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)
+            } else {
+                putBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, account.settings.automaticallyHideNavigationBars.prefCode!!)
+            }
             putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
         }.apply()
     }
@@ -416,6 +424,11 @@ object LocalPreferences {
                     parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
                 } else {
                     ConnectivityType.ALWAYS
+                }
+                settings.automaticallyHideNavigationBars = if (contains(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)) {
+                    parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
+                } else {
+                    BooleanType.ALWAYS
                 }
 
                 settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")
