@@ -491,6 +491,12 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
+    fun hide(word: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.hideWord(word)
+        }
+    }
+
     fun showUser(pubkeyHex: String) {
         viewModelScope.launch(Dispatchers.IO) {
             account.showUser(pubkeyHex)

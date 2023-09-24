@@ -258,9 +258,7 @@ fun FeedError(errorMessage: String, onRefresh: () -> Unit) {
 @Composable
 fun FeedEmpty(onRefresh: () -> Unit) {
     Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
+        Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

@@ -292,7 +292,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                 singleLine = true,
                 trailingIcon = {
                     if (hasChanged) {
-                        UserStatusSendButton() {
+                        SendButton() {
                             accountViewModel.createStatus(currentStatus.value)
                             focusManager.clearFocus(true)
                         }
@@ -338,7 +338,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                     singleLine = true,
                     trailingIcon = {
                         if (hasChanged) {
-                            UserStatusSendButton() {
+                            SendButton() {
                                 accountViewModel.updateStatus(it, thisStatus.value)
                                 focusManager.clearFocus(true)
                             }
@@ -356,7 +356,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
 }
 
 @Composable
-fun UserStatusSendButton(onClick: () -> Unit) {
+fun SendButton(onClick: () -> Unit) {
     IconButton(
         modifier = Size26Modifier,
         onClick = onClick

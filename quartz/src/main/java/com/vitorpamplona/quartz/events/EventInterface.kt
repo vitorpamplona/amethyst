@@ -29,6 +29,10 @@ interface EventInterface {
 
     fun hasValidSignature(): Boolean
 
+    fun isTagged(key: String, tag: String): Boolean
+    fun isAnyTagged(key: String, tags: Set<String>): Boolean
+    fun isTaggedWord(word: String): Boolean
+
     fun isTaggedUser(idHex: String): Boolean
     fun isTaggedUsers(idHex: Set<String>): Boolean
 

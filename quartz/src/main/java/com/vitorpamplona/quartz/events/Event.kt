@@ -125,14 +125,20 @@ open class Event(
 
     override fun matchTag1With(text: String) = tags.any { it.size > 1 && it[1].contains(text, true) }
 
-    override fun isTaggedUser(idHex: String) = tags.any { it.size > 1 && it[0] == "p" && it[1] == idHex }
-    override fun isTaggedUsers(idHexes: Set<String>) = tags.any { it.size > 1 && it[0] == "p" && it[1] in idHexes }
+    override fun isTagged(key: String, tag: String) = tags.any { it.size > 1 && it[0] == key && it[1] == tag }
 
-    override fun isTaggedEvent(idHex: String) = tags.any { it.size > 1 && it[0] == "e" && it[1] == idHex }
+    override fun isAnyTagged(key: String, tags: Set<String>) = this.tags.any { it.size > 1 && it[0] == key && it[1] in tags }
 
-    override fun isTaggedAddressableNote(idHex: String) = tags.any { it.size > 1 && it[0] == "a" && it[1] == idHex }
+    override fun isTaggedWord(word: String) = isTagged("word", word)
 
-    override fun isTaggedAddressableNotes(idHexes: Set<String>) = tags.any { it.size > 1 && it[0] == "a" && it[1] in idHexes }
+    override fun isTaggedUser(idHex: String) = isTagged("p", idHex)
+    override fun isTaggedUsers(idHexes: Set<String>) = isAnyTagged("p", idHexes)
+
+    override fun isTaggedEvent(idHex: String) = isTagged("e", idHex)
+
+    override fun isTaggedAddressableNote(idHex: String) = isTagged("a", idHex)
+
+    override fun isTaggedAddressableNotes(idHexes: Set<String>) = isAnyTagged( "a", idHexes)
 
     override fun isTaggedHash(hashtag: String) = tags.any { it.size > 1 && it[0] == "t" && it[1].equals(hashtag, true) }
 
