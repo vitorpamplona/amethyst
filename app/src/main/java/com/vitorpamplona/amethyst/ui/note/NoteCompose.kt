@@ -2250,14 +2250,23 @@ fun RemoveButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun AddButton(text: Int = R.string.add, onClick: () -> Unit) {
+fun AddButton(
+    text: Int = R.string.add,
+    isActive: Boolean = true,
+    modifier: Modifier = Modifier.padding(start = 3.dp),
+    onClick: () -> Unit
+) {
     Button(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = onClick,
+        modifier = modifier,
+        onClick = {
+            if (isActive) {
+                onClick()
+            }
+        },
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
+                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             ),
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
     ) {

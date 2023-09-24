@@ -50,7 +50,7 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.SendButton
+import com.vitorpamplona.amethyst.ui.note.AddButton
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenWordsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.StringFeedView
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -202,7 +204,7 @@ private fun HiddenWordsFeed(
 
 @Composable
 private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
-    Row {
+    Row(modifier = Modifier.padding(vertical = Size10dp)) {
         val currentWordToAdd = remember {
             mutableStateOf("")
         }
@@ -229,17 +231,17 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
             ),
             keyboardActions = KeyboardActions(
                 onSend = {
-                    accountViewModel.hide(currentWordToAdd.value)
-                    currentWordToAdd.value = ""
+                    if (hasChanged) {
+                        accountViewModel.hide(currentWordToAdd.value)
+                        currentWordToAdd.value = ""
+                    }
                 }
             ),
             singleLine = true,
             trailingIcon = {
-                if (hasChanged) {
-                    SendButton {
-                        accountViewModel.hide(currentWordToAdd.value)
-                        currentWordToAdd.value = ""
-                    }
+                AddButton(isActive = hasChanged, modifier = HorzPadding) {
+                    accountViewModel.hide(currentWordToAdd.value)
+                    currentWordToAdd.value = ""
                 }
             }
         )
