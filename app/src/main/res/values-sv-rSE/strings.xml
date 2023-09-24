@@ -428,6 +428,8 @@
     <string name="automatically_load_images_gifs">Ladda automatiskt bilder/gif</string>
     <string name="automatically_play_videos">Spela automatiskt videor</string>
     <string name="automatically_show_url_preview">Visa automatiskt förhandsgranskning av URL</string>
+    <string name="automatically_hide_nav_bars">Omslutande bläddring</string>
+    <string name="automatically_hide_nav_bars_description">Dölj navigeringsfält vid bläddring</string>
     <string name="load_image">Ladda bild</string>
     <string name="spamming_users">Spammare</string>
     <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>
@@ -490,6 +492,7 @@
     <string name="zap_split_serarch_and_add_user_placeholder">Användarnamn eller visningsnamn</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren %1$s har inte ställt in en blixtfakturaadress för att ta emot satoshis</string>
     <string name="zap_split_weight">Procent</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Delar zaps med</string>
     <string name="forwarding_zaps_to">Vidarebefordrar zaps till</string>
     <string name="lightning_wallets_not_found2">Blixtpengar hittades inte</string>
