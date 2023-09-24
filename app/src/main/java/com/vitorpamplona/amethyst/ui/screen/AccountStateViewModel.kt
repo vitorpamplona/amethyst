@@ -88,7 +88,7 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
         GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.start(account, context)
+            ServiceManager.restartIfDifferentAccount(account, context)
         }
         GlobalScope.launch(Dispatchers.Main) {
             account.saveable.observeForever(saveListener)
