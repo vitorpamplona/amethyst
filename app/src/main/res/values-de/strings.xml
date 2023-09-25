@@ -481,8 +481,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="forwarding_zaps_to">Zaps weiterleiten an</string>
     <string name="lightning_wallets_not_found2">Lightning-Wallets nicht gefunden</string>
     <string name="paid">Bezahlt</string>
+    <string name="wallet_number">Brieftasche %1$s</string>
     <string name="error_opening_external_signer">Fehler beim Öffnen der Signatur-App</string>
     <string name="sign_request_rejected">Signaturanfrage abgelehnt</string>
     <string name="no_wallet_found_with_error">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen (Fehler: %1$s). Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
     <string name="no_wallet_found">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen. Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
+    <string name="automatically_hide_nav_bars">Immersives Scrollen</string>
+    <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
+    <string name="hidden_words">Versteckte Wörter</string>
+    <string name="hide_new_word_label">Neues Wort oder neuen Satz verstecken</string>
 </resources>
