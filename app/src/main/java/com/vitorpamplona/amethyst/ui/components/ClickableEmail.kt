@@ -13,11 +13,12 @@ import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 fun ClickableEmail(email: String) {
+    val stripped = email.replaceFirst("mailto:", "")
     val context = LocalContext.current
 
     ClickableText(
-        text = remember { AnnotatedString(email) },
-        onClick = { runCatching { context.sendMail(email) } },
+        text = remember { AnnotatedString(stripped) },
+        onClick = { runCatching { context.sendMail(stripped) } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
     )
 }
