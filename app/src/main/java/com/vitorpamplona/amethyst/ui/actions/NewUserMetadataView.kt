@@ -17,7 +17,6 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,7 +37,6 @@ import kotlinx.coroutines.withContext
 fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         postViewModel.load(account)
@@ -88,43 +86,22 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         .padding(10.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            label = { Text(text = stringResource(R.string.display_name)) },
-                            modifier = Modifier.weight(1f),
-                            value = postViewModel.displayName.value,
-                            onValueChange = { postViewModel.displayName.value = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.my_display_name),
-                                    color = MaterialTheme.colors.placeholderText
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.Sentences
-                            ),
-                            singleLine = true
-                        )
-
-                        Text("@", Modifier.padding(5.dp))
-
-                        OutlinedTextField(
-                            label = { Text(text = stringResource(R.string.username)) },
-                            modifier = Modifier.weight(1f),
-                            value = postViewModel.userName.value,
-                            onValueChange = { postViewModel.userName.value = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.my_username),
-                                    color = MaterialTheme.colors.placeholderText
-                                )
-                            },
-                            singleLine = true
-                        )
-                    }
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.display_name)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.displayName.value,
+                        onValueChange = { postViewModel.displayName.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.my_display_name),
+                                color = MaterialTheme.colors.placeholderText
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences
+                        ),
+                        singleLine = true
+                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
