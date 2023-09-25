@@ -572,7 +572,7 @@ private fun RenderVideoPlayer(
         )
 
         waveform?.let {
-            Waveform(it, controller, Modifier.align(Alignment.Center))
+            Waveform(it, controller, remember { Modifier.align(Alignment.Center) })
         }
 
         val startingMuteState = remember(controller) {
@@ -593,7 +593,7 @@ private fun RenderVideoPlayer(
             controller.volume = if (mute) 0f else 1f
         }
 
-        KeepPlayingButton(keepPlaying, controllerVisible, Modifier.align(Alignment.TopEnd)) { newKeepPlaying: Boolean ->
+        KeepPlayingButton(keepPlaying, controllerVisible, remember { Modifier.align(Alignment.TopEnd) }) { newKeepPlaying: Boolean ->
             // If something else is playing and the user marks this video to keep playing, stops the other one.
             if (newKeepPlaying) {
                 if (keepPlayingMutex != null && keepPlayingMutex != controller) {
