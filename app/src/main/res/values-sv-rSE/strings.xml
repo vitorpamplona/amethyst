@@ -502,4 +502,6 @@
     <string name="sign_request_rejected">Underteckningsbegäran avvisad</string>
     <string name="no_wallet_found_with_error">Inga plånböcker hittades för att betala en blixtfaktura (Fel: %1$s). Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="no_wallet_found">Inga plånböcker hittades för att betala en blixtfaktura. Installera en blixtpengaplånbok för att använda zaps</string>
+    <string name="hidden_words">Dolda ord</string>
+    <string name="hide_new_word_label">Dölj nytt ord eller mening</string>
 </resources>
