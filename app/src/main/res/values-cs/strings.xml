@@ -420,6 +420,8 @@
     <string name="automatically_load_images_gifs">Automaticky načítat obrázky/gif</string>
     <string name="automatically_play_videos">Automaticky přehrávat videa</string>
     <string name="automatically_show_url_preview">Automaticky zobrazit náhled URL</string>
+    <string name="automatically_hide_nav_bars">Imersivní rolování</string>
+    <string name="automatically_hide_nav_bars_description">Skrýt navigační panely při rolování</string>
     <string name="load_image">Načíst obrázek</string>
     <string name="spamming_users">Spamovací uživatelé</string>
     <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>
@@ -490,8 +492,6 @@
     <string name="sign_request_rejected">Žádost o podpis byla zamítnuta</string>
     <string name="no_wallet_found_with_error">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury (Chyba: %1$s). Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="no_wallet_found">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury. Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
-    <string name="automatically_hide_nav_bars">Imersivní rolování</string>
-    <string name="automatically_hide_nav_bars_description">Skrýt navigační panely při rolování</string>
     <string name="hidden_words">Skrytá slova</string>
     <string name="hide_new_word_label">Skrýt nové slovo nebo větu</string>
 </resources>
