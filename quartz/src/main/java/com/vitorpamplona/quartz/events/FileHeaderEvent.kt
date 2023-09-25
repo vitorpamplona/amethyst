@@ -62,7 +62,7 @@ class FileHeaderEvent(
             val tags = listOfNotNull(
                 listOf(URL, url),
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
-                alt?.let { listOf(ALT, it) },
+                alt?.ifBlank { null }?.let { listOf(ALT, it) },
                 hash?.let { listOf(HASH, it) },
                 size?.let { listOf(FILE_SIZE, it) },
                 dimensions?.let { listOf(DIMENSION, it) },
