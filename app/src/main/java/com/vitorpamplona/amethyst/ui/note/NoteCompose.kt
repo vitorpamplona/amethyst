@@ -233,7 +233,7 @@ fun NoteCompose(
 ) {
     val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = hasEvent) {
+    Crossfade(targetState = hasEvent, label = "Event presence") {
         if (it) {
             CheckHiddenNoteCompose(
                 note = baseNote,

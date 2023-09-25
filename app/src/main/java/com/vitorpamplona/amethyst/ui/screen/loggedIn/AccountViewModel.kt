@@ -606,7 +606,7 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         return LocalCache.getUserIfExists(hex)
     }
 
-    suspend fun checkGetOrCreateNote(key: HexKey): Note? {
+    private suspend fun checkGetOrCreateNote(key: HexKey): Note? {
         return LocalCache.checkGetOrCreateNote(key)
     }
 
@@ -634,7 +634,7 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
-    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
+    private suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
         return LocalCache.getOrCreateAddressableNote(key)
     }
 
@@ -654,7 +654,7 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
-    suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
+    private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
         return LocalCache.checkGetOrCreateChannel(key)
     }
 
@@ -705,9 +705,27 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
+    fun parseNIP19(str: String, onNote: (LoadedBechLink) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            Nip19.uriToRoute(str)?.let {
+                var returningNote: Note? = null
+                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                        returningNote = note
+                    }
+                }
+
+                onNote(LoadedBechLink(returningNote, it))
+            }
+        }
+    }
+
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
             return AccountViewModel(account) as AccountViewModel
         }
     }
 }
+
+@Immutable
+data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
