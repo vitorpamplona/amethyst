@@ -111,7 +111,15 @@ fun RelayInformationDialog(
                 Section(stringResource(R.string.contact))
 
                 Box(modifier = Modifier.padding(start = 10.dp)) {
-                    ClickableEmail(relayInfo.contact ?: "")
+                    relayInfo.contact?.let {
+                        if (it.startsWith("https:")) {
+                            ClickableUrl(urlText = it, url = it)
+                        } else if (it.startsWith("mailto:") || it.contains('@')) {
+                            ClickableEmail(it)
+                        } else {
+                            SectionContent(it)
+                        }
+                    }
                 }
 
                 Section(stringResource(R.string.supports))
