@@ -192,7 +192,7 @@ dependencies {
     implementation 'id.zelory:compressor:3.0.1'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'io.mockk:mockk:1.13.7'
+    testImplementation 'io.mockk:mockk:1.13.8'
     androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
