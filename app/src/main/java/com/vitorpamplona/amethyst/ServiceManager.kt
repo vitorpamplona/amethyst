@@ -142,6 +142,13 @@ object ServiceManager {
             LocalCache.pruneExpiredEvents()
         }
     }
+
+    fun restartIfDifferentAccount(account: Account, context: Context) {
+        if (this.account != account) {
+            pause()
+            start(account, context)
+        }
+    }
 }
 
 object SingletonDiskCache {

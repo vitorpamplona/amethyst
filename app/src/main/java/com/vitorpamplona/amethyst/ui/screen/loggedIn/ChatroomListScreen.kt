@@ -67,7 +67,7 @@ fun ChatroomListScreen(
     WatchAccountForListScreen(knownFeedViewModel, newFeedViewModel, accountViewModel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.start()

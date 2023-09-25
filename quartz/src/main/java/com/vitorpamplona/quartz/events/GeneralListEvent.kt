@@ -66,7 +66,8 @@ abstract class GeneralListEvent(
         return privateTagsCache
     }
 
-    fun privateTagsOrEmpty(privKey: ByteArray): List<List<String>> {
+    fun privateTagsOrEmpty(privKey: ByteArray?): List<List<String>> {
+        if (privKey == null) return emptyList()
         return privateTags(privKey) ?: emptyList()
     }
 

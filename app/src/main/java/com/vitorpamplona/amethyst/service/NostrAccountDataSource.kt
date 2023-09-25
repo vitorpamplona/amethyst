@@ -145,6 +145,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     }
 
     override fun consume(event: Event, relay: Relay) {
+        checkNotInMainThread()
+
         if (LocalCache.justVerify(event)) {
             if (event is GiftWrapEvent) {
                 val privateKey = account.keyPair.privKey

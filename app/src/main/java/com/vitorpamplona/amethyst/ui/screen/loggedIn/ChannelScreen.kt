@@ -196,9 +196,6 @@ fun ChannelScreen(
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
-        NostrChannelDataSource.start()
-        feedViewModel.invalidateData(true)
-
         launch(Dispatchers.IO) {
             newPostModel.imageUploadingError.collect { error ->
                 withContext(Dispatchers.Main) {
@@ -209,6 +206,17 @@ fun ChannelScreen(
     }
 
     DisposableEffect(accountViewModel) {
+        NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
+        NostrChannelDataSource.start()
+        feedViewModel.invalidateData(true)
+
+        onDispose {
+            NostrChannelDataSource.clear()
+            NostrChannelDataSource.stop()
+        }
+    }
+
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Channel Start")
@@ -240,6 +248,9 @@ fun ChannelScreen(
                     .weight(1f, true)
             }
         ) {
+            if (channel is LiveActivitiesChannel) {
+                ShowVideoStreaming(channel, accountViewModel)
+            }
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,

@@ -40,6 +40,7 @@ import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -122,10 +123,16 @@ fun SettingsScreen(
         TitleExplainer(stringResource(R.string.dark))
     )
 
+    val booleanItems = persistentListOf(
+        TitleExplainer(stringResource(ConnectivityType.ALWAYS.reourceId)),
+        TitleExplainer(stringResource(ConnectivityType.NEVER.reourceId))
+    )
+
     val settings = accountViewModel.account.settings
     val showImagesIndex = settings.automaticallyShowImages.screenCode
     val videoIndex = settings.automaticallyStartPlayback.screenCode
     val linkIndex = settings.automaticallyShowUrlPreview.screenCode
+    val hideNavBarsIndex = settings.automaticallyHideNavigationBars.screenCode
 
     val themeIndex = themeViewModel.theme.value ?: 0
 
@@ -217,6 +224,22 @@ fun SettingsScreen(
 
             scope.launch(Dispatchers.IO) {
                 accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
+                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+            }
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.automatically_hide_nav_bars,
+            R.string.automatically_hide_nav_bars_description,
+            booleanItems,
+            hideNavBarsIndex
+        ) {
+            val automaticallyHideNavBars = parseBooleanType(it)
+
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.updateAutomaticallyHideNavBars(automaticallyHideNavBars)
                 LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
             }
         }

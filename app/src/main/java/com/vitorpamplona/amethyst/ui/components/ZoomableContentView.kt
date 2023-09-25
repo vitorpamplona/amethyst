@@ -614,7 +614,7 @@ fun ZoomableImageDialog(
 ) {
     val view = LocalView.current
 
-    DisposableEffect(key1 = Unit) {
+    DisposableEffect(key1 = view) {
         if (Build.VERSION.SDK_INT >= 30) {
             view.windowInsetsController?.hide(
                 android.view.WindowInsets.Type.systemBars()

@@ -673,16 +673,24 @@ open class Note(val idHex: String) {
     }
 
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
-        if (event == null) return false
+        val thisEvent = event ?: return false
 
-        val isBoostedNoteHidden = if (event is GenericRepostEvent || event is RepostEvent || event is CommunityPostApprovalEvent) {
+        val isBoostedNoteHidden = if (thisEvent is GenericRepostEvent || thisEvent is RepostEvent || thisEvent is CommunityPostApprovalEvent) {
             replyTo?.lastOrNull()?.isHiddenFor(accountChoices) ?: false
         } else {
             false
         }
 
-        val isSensitive = event?.isSensitive() ?: false
-        return isBoostedNoteHidden ||
+        val isHiddenByWord = if (thisEvent is BaseTextNoteEvent) {
+            accountChoices.hiddenWords.any {
+                thisEvent.content.contains(it, true)
+            }
+        } else {
+            false
+        }
+
+        val isSensitive = thisEvent.isSensitive()
+        return isBoostedNoteHidden || isHiddenByWord ||
             accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
             accountChoices.spammers.contains(author?.pubkeyHex) ||
             (isSensitive && accountChoices.showSensitiveContent == false)

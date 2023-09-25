@@ -105,6 +105,7 @@ class Account(
     data class LiveHiddenUsers(
         val hiddenUsers: ImmutableSet<String>,
         val spammers: ImmutableSet<String>,
+        val hiddenWords: ImmutableSet<String>,
         val showSensitiveContent: Boolean?
     )
 
@@ -129,23 +130,25 @@ class Account(
 
                         LiveHiddenUsers(
                             hiddenUsers = persistentSetOf(),
-                            spammers = localLive?.account?.transientHiddenUsers
-                                ?: persistentSetOf(),
+                            hiddenWords = persistentSetOf(),
+                            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
                             showSensitiveContent = showSensitiveContent
                         )
                     } else {
                         blockList.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
                         val liveBlockedUsers = blockList.publicAndPrivateUsers(blockList.decryptedContent ?: "")
+                        val liveBlockedWords = blockList.publicAndPrivateWords(blockList.decryptedContent ?: "")
                         LiveHiddenUsers(
                             hiddenUsers = liveBlockedUsers,
-                            spammers = localLive?.account?.transientHiddenUsers
-                                ?: persistentSetOf(),
+                            hiddenWords = liveBlockedWords,
+                            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
                             showSensitiveContent = showSensitiveContent
                         )
                     }
                 } else {
                     LiveHiddenUsers(
                         hiddenUsers = persistentSetOf(),
+                        hiddenWords = persistentSetOf(),
                         spammers = localLive?.account?.transientHiddenUsers
                             ?: persistentSetOf(),
                         showSensitiveContent = showSensitiveContent
@@ -153,8 +156,10 @@ class Account(
                 }
             } else {
                 val liveBlockedUsers = blockList?.publicAndPrivateUsers(keyPair.privKey)
+                val liveBlockedWords = blockList?.publicAndPrivateWords(keyPair.privKey)
                 LiveHiddenUsers(
                     hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
+                    hiddenWords = liveBlockedWords ?: persistentSetOf(),
                     spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
                     showSensitiveContent = showSensitiveContent
                 )
@@ -176,6 +181,14 @@ class Account(
         automaticallyShowUrlPreview: ConnectivityType
     ) {
         settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun updateAutomaticallyHideHavBars(
+        automaticallyHideHavBars: BooleanType
+    ) {
+        settings.automaticallyHideNavigationBars = automaticallyHideHavBars
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -265,6 +278,7 @@ class Account(
 
         var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(event)
             val content = ExternalSignerUtils.content[event.id]
             if (content.isBlank()) {
                 return
@@ -2267,6 +2281,157 @@ class Account(
         return returningList
     }
 
+    fun hideWord(word: String) {
+        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+        if (loginWithExternalSigner) {
+            val id = blockList?.id
+            val encryptedContent = if (id == null) {
+                val privateTags = listOf(listOf("word", word))
+                val msg = Event.mapper.writeValueAsString(privateTags)
+
+                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
+                val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
+                ExternalSignerUtils.content.remove("encrypted")
+                if (encryptedContent.isBlank()) return
+                encryptedContent
+            } else {
+                var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
+                if (decryptedContent == null) {
+                    ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
+                    val content = ExternalSignerUtils.content[id] ?: ""
+                    if (content.isBlank()) return
+                    decryptedContent = content
+                }
+
+                val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("word", word))
+                val msg = Event.mapper.writeValueAsString(privateTags)
+                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
+                val eventContent = ExternalSignerUtils.content[id] ?: ""
+                if (eventContent.isBlank()) return
+                eventContent
+            }
+
+            var event = if (blockList != null) {
+                PeopleListEvent.addWord(
+                    earlierVersion = blockList,
+                    word = word,
+                    isPrivate = true,
+                    pubKey = keyPair.pubKey.toHexKey(),
+                    encryptedContent
+                )
+            } else {
+                PeopleListEvent.createListWithWord(
+                    name = PeopleListEvent.blockList,
+                    word = word,
+                    isPrivate = true,
+                    pubKey = keyPair.pubKey.toHexKey(),
+                    encryptedContent
+                )
+            }
+
+            ExternalSignerUtils.openSigner(event)
+
+            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
+            if (eventContent.isBlank()) return
+            event = PeopleListEvent(
+                event.id,
+                event.pubKey,
+                event.createdAt,
+                event.tags,
+                event.content,
+                eventContent
+            )
+
+            Client.send(event)
+            LocalCache.consume(event)
+        } else {
+            val event = if (blockList != null) {
+                PeopleListEvent.addWord(
+                    earlierVersion = blockList,
+                    word = word,
+                    isPrivate = true,
+                    privateKey = keyPair.privKey!!
+                )
+            } else {
+                PeopleListEvent.createListWithWord(
+                    name = PeopleListEvent.blockList,
+                    word = word,
+                    isPrivate = true,
+                    privateKey = keyPair.privKey!!
+                )
+            }
+
+            Client.send(event)
+            LocalCache.consume(event)
+        }
+
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
+    fun showWord(word: String) {
+        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+
+        if (blockList != null) {
+            if (loginWithExternalSigner) {
+                val content = blockList.content
+                val encryptedContent = if (content.isBlank()) {
+                    val privateTags = listOf(listOf("word", word))
+                    val msg = Event.mapper.writeValueAsString(privateTags)
+
+                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
+                    if (eventContent.isBlank()) return
+                    eventContent
+                } else {
+                    var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
+                    if (decryptedContent == null) {
+                        ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
+                        val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
+                        if (eventContent.isBlank()) return
+                        decryptedContent = eventContent
+                    }
+                    val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("word", word))
+                    val msg = Event.mapper.writeValueAsString(privateTags)
+                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
+                    if (eventContent.isBlank()) return
+                    eventContent
+                }
+
+                var event = PeopleListEvent.removeTag(
+                    earlierVersion = blockList,
+                    tag = word,
+                    isPrivate = true,
+                    pubKey = keyPair.pubKey.toHexKey(),
+                    encryptedContent
+                )
+
+                ExternalSignerUtils.openSigner(event)
+                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
+                if (eventContent.isBlank()) return
+                event = PeopleListEvent.create(event, eventContent)
+
+                Client.send(event)
+                LocalCache.consume(event)
+            } else {
+                val event = PeopleListEvent.removeWord(
+                    earlierVersion = blockList,
+                    word = word,
+                    isPrivate = true,
+                    privateKey = keyPair.privKey!!
+                )
+
+                Client.send(event)
+                LocalCache.consume(event)
+            }
+        }
+
+        transientHiddenUsers = (transientHiddenUsers - word).toImmutableSet()
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun hideUser(pubkeyHex: String) {
         val blockList = migrateHiddenUsersIfNeeded(getBlockList())
         if (loginWithExternalSigner) {
@@ -2275,7 +2440,7 @@ class Account(
                 val privateTags = listOf(listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
                 val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
                 ExternalSignerUtils.content.remove("encrypted")
                 if (encryptedContent.isBlank()) return
@@ -2384,9 +2549,9 @@ class Account(
                     eventContent
                 }
 
-                var event = PeopleListEvent.addUser(
+                var event = PeopleListEvent.removeTag(
                     earlierVersion = blockList,
-                    pubKeyHex = pubkeyHex,
+                    tag = pubkeyHex,
                     isPrivate = true,
                     pubKey = keyPair.pubKey.toHexKey(),
                     encryptedContent

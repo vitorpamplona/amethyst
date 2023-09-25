@@ -2250,14 +2250,23 @@ fun RemoveButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun AddButton(text: Int = R.string.add, onClick: () -> Unit) {
+fun AddButton(
+    text: Int = R.string.add,
+    isActive: Boolean = true,
+    modifier: Modifier = Modifier.padding(start = 3.dp),
+    onClick: () -> Unit
+) {
     Button(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = onClick,
+        modifier = modifier,
+        onClick = {
+            if (isActive) {
+                onClick()
+            }
+        },
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
+                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
             ),
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
     ) {
@@ -3101,26 +3110,28 @@ fun DisplayUncitedHashtags(
     eventContent: String,
     nav: (String) -> Unit
 ) {
-    val hasHashtags = remember {
+    val hasHashtags = remember(eventContent) {
         hashtags.isNotEmpty()
     }
 
     if (hasHashtags) {
+        val unusedHashtags = remember(eventContent) {
+            hashtags.filter { !eventContent.contains(it, true) }
+        }
+
         FlowRow(
             modifier = remember { Modifier.padding(top = 5.dp) }
         ) {
-            hashtags.forEach { hashtag ->
-                if (!eventContent.contains(hashtag, true)) {
-                    ClickableText(
-                        text = AnnotatedString("#$hashtag "),
-                        onClick = { nav("Hashtag/$hashtag") },
-                        style = LocalTextStyle.current.copy(
-                            color = MaterialTheme.colors.primary.copy(
-                                alpha = 0.52f
-                            )
+            unusedHashtags.forEach { hashtag ->
+                ClickableText(
+                    text = remember { AnnotatedString("#$hashtag ") },
+                    onClick = { nav("Hashtag/$hashtag") },
+                    style = LocalTextStyle.current.copy(
+                        color = MaterialTheme.colors.primary.copy(
+                            alpha = 0.52f
                         )
                     )
-                }
+                )
             }
         }
     }

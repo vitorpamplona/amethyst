@@ -206,34 +206,34 @@ fun VideoViewInner(
         )
     }
 
+    val mediaItem = remember(videoUri) {
+        MediaItem.Builder()
+            .setMediaId(videoUri)
+            .setUri(videoUri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setArtist(authorName?.ifBlank { null })
+                    .setTitle(title?.ifBlank { null } ?: videoUri)
+                    .setArtworkUri(
+                        try {
+                            if (artworkUri != null) {
+                                Uri.parse(artworkUri)
+                            } else {
+                                null
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    )
+                    .build()
+            )
+            .build()
+    }
+
     if (!automaticallyStartPlayback.value) {
         ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
     } else {
         VideoPlayerActiveMutex(videoUri) { activeOnScreen ->
-            val mediaItem = remember(videoUri) {
-                MediaItem.Builder()
-                    .setMediaId(videoUri)
-                    .setUri(videoUri)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setArtist(authorName?.ifBlank { null })
-                            .setTitle(title?.ifBlank { null } ?: videoUri)
-                            .setArtworkUri(
-                                try {
-                                    if (artworkUri != null) {
-                                        Uri.parse(artworkUri)
-                                    } else {
-                                        null
-                                    }
-                                } catch (e: Exception) {
-                                    null
-                                }
-                            )
-                            .build()
-                    )
-                    .build()
-            }
-
             GetVideoController(
                 mediaItem = mediaItem,
                 videoUri = videoUri,
@@ -288,8 +288,8 @@ fun GetVideoController(
     DisposableEffect(key1 = videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
-        if (controller.value == null) {
-            scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
+            if (controller.value == null) {
                 PlaybackClientController.prepareController(
                     uid,
                     videoUri,
@@ -335,21 +335,21 @@ fun GetVideoController(
                         }
                     }
                 }
-            }
-        } else {
-            controller.value?.let {
-                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                    if (it.isPlaying) {
-                        // There is a video playing, start this one on mute.
-                        it.volume = 0f
-                    } else {
-                        // There is no other video playing. Use the default mute state to
-                        // decide if sound is on or not.
-                        it.volume = if (defaultToStart) 0f else 1f
-                    }
+            } else {
+                controller.value?.let {
+                    if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                        if (it.isPlaying) {
+                            // There is a video playing, start this one on mute.
+                            it.volume = 0f
+                        } else {
+                            // There is no other video playing. Use the default mute state to
+                            // decide if sound is on or not.
+                            it.volume = if (defaultToStart) 0f else 1f
+                        }
 
-                    it.setMediaItem(mediaItem)
-                    it.prepare()
+                        it.setMediaItem(mediaItem)
+                        it.prepare()
+                    }
                 }
             }
         }
@@ -371,8 +371,8 @@ fun GetVideoController(
             if (event == Lifecycle.Event.ON_RESUME) {
                 // if the controller is null, restarts the controller with a new one
                 // if the controller is not null, just continue playing what the controller was playing
-                if (controller.value == null) {
-                    scope.launch(Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
+                    if (controller.value == null) {
                         PlaybackClientController.prepareController(
                             uid,
                             videoUri,
@@ -526,7 +526,8 @@ private fun RenderVideoPlayer(
                     .defaultMinSize(minHeight = 100.dp)
                     .align(Alignment.Center)
             } else {
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .defaultMinSize(minHeight = 100.dp)
                     .align(Alignment.Center)
             },
@@ -697,7 +698,7 @@ fun ControlWhenPlayerIsActive(
     val view = LocalView.current
 
     // Keeps the screen on while playing and viewing videos.
-    DisposableEffect(key1 = controller) {
+    DisposableEffect(key1 = controller, key2 = view) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 // doesn't consider the mutex because the screen can turn off if the video

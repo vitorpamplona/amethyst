@@ -284,7 +284,7 @@ fun AppNavigation(
         actionableNextPage = null
     }
 
-    DisposableEffect(navController) {
+    DisposableEffect(activity) {
         val consumer = Consumer<Intent> { intent ->
             val uri = intent?.data?.toString()
             val newPage = uriToRoute(uri)

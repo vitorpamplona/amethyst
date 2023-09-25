@@ -238,11 +238,15 @@ fun ProfileScreen(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
+    DisposableEffect(accountViewModel) {
         NostrUserProfileDataSource.start()
+        onDispose {
+            NostrUserProfileDataSource.loadUserProfile(null)
+            NostrUserProfileDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profidle Start")
@@ -259,9 +263,6 @@ fun ProfileScreen(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            println("Profile Dispose")
-            NostrUserProfileDataSource.loadUserProfile(null)
-            NostrUserProfileDataSource.stop()
         }
     }
 
@@ -954,7 +955,17 @@ private fun DrawAdditionalInfo(
 
             ClickableText(
                 text = AnnotatedString(website.removePrefix("https://")),
-                onClick = { website.let { runCatching { uri.openUri(it) } } },
+                onClick = {
+                    website.let {
+                        runCatching {
+                            if (it.contains("://")) {
+                                uri.openUri(it)
+                            } else {
+                                uri.openUri("http://$it")
+                            }
+                        }
+                    }
+                },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
@@ -1567,6 +1578,13 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> U
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(user) {
+        feedViewModel.subscribeTo(user)
+        onDispose {
+            feedViewModel.unsubscribeTo(user)
+        }
+    }
+
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profile Relay Start")

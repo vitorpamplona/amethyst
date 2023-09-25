@@ -33,9 +33,12 @@ class PollNoteViewModel : ViewModel() {
 
     private var pollEvent: PollNoteEvent? = null
     private var pollOptions: Map<Int, String>? = null
-    private var valueMaximum: Int? = null
-    private var valueMinimum: Int? = null
-    private var closedAt: Int? = null
+    private var valueMaximum: Long? = null
+    private var valueMinimum: Long? = null
+    private var valueMaximumBD: BigDecimal? = null
+    private var valueMinimumBD: BigDecimal? = null
+
+    private var closedAt: Long? = null
     private var consensusThreshold: BigDecimal? = null
 
     private var totalZapped: BigDecimal = BigDecimal.ZERO
@@ -49,10 +52,12 @@ class PollNoteViewModel : ViewModel() {
         pollNote = note
         pollEvent = pollNote?.event as PollNoteEvent
         pollOptions = pollEvent?.pollOptions()
-        valueMaximum = pollEvent?.getTagInt(VALUE_MAXIMUM)
-        valueMinimum = pollEvent?.getTagInt(VALUE_MINIMUM)
-        consensusThreshold = pollEvent?.getTagInt(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
-        closedAt = pollEvent?.getTagInt(CLOSED_AT)
+        valueMaximum = pollEvent?.getTagLong(VALUE_MAXIMUM)
+        valueMinimum = pollEvent?.getTagLong(VALUE_MINIMUM)
+        valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
+        valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
+        consensusThreshold = pollEvent?.getTagLong(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
+        closedAt = pollEvent?.getTagLong(CLOSED_AT)
     }
 
     fun refreshTallies() {
@@ -110,6 +115,29 @@ class PollNoteViewModel : ViewModel() {
         } catch (e: Exception) { null }
     }
 
+    fun isValidInputVoteAmount(amount: BigDecimal?): Boolean {
+        if (amount == null) {
+            return false
+        } else if (valueMinimum == null && valueMaximum == null) {
+            if (amount > BigDecimal.ZERO) {
+                return true
+            }
+        } else if (valueMinimum == null) {
+            if (amount > BigDecimal.ZERO && amount <= valueMaximumBD!!) {
+                return true
+            }
+        } else if (valueMaximum == null) {
+            if (amount >= valueMinimumBD!!) {
+                return true
+            }
+        } else {
+            if ((valueMinimumBD!! <= amount) && (amount <= valueMaximumBD!!)) {
+                return true
+            }
+        }
+        return false
+    }
+
     fun isValidInputVoteAmount(amount: Long?): Boolean {
         if (amount == null) {
             return false
@@ -145,24 +173,29 @@ class PollNoteViewModel : ViewModel() {
     private fun zappedPollOptionAmount(option: Int): BigDecimal {
         return pollNote?.zaps?.values?.sumOf {
             val event = it?.event as? LnZapEvent
-            if (event?.zappedPollOption() == option) {
-                event.amount ?: BigDecimal(0)
+            val zapAmount = event?.amount ?: BigDecimal.ZERO
+            val isValidAmount = isValidInputVoteAmount(event?.amount)
+
+            if (isValidAmount && event?.zappedPollOption() == option) {
+                zapAmount
             } else {
-                BigDecimal(0)
+                BigDecimal.ZERO
             }
-        } ?: BigDecimal(0)
+        } ?: BigDecimal.ZERO
     }
 
     private fun totalZapped(): BigDecimal {
         return pollNote?.zaps?.values?.sumOf {
             val zapEvent = (it?.event as? LnZapEvent)
+            val zapAmount = zapEvent?.amount ?: BigDecimal.ZERO
+            val isValidAmount = isValidInputVoteAmount(zapEvent?.amount)
 
-            if (zapEvent?.zappedPollOption() != null) {
-                zapEvent.amount ?: BigDecimal(0)
+            if (isValidAmount && zapEvent?.zappedPollOption() != null) {
+                zapAmount
             } else {
-                BigDecimal(0)
+                BigDecimal.ZERO
             }
-        } ?: BigDecimal(0)
+        } ?: BigDecimal.ZERO
     }
 
     fun createZapOptionsThatMatchThePollingParameters(): List<Long> {
@@ -176,8 +209,8 @@ class PollNoteViewModel : ViewModel() {
                 }
             }
         }
-        valueMinimum?.let { options.add(it.toLong()) }
-        valueMaximum?.let { options.add(it.toLong()) }
+        valueMinimum?.let { options.add(it) }
+        valueMaximum?.let { options.add(it) }
 
         return options.toSet().sorted()
     }

@@ -16,6 +16,7 @@ class BookmarkListEvent(
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    @Transient
     var decryptedContent = ""
 
     companion object {

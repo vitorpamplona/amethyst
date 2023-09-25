@@ -292,7 +292,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                 singleLine = true,
                 trailingIcon = {
                     if (hasChanged) {
-                        UserStatusSendButton() {
+                        SendButton() {
                             accountViewModel.createStatus(currentStatus.value)
                             focusManager.clearFocus(true)
                         }
@@ -338,7 +338,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
                     singleLine = true,
                     trailingIcon = {
                         if (hasChanged) {
-                            UserStatusSendButton() {
+                            SendButton() {
                                 accountViewModel.updateStatus(it, thisStatus.value)
                                 focusManager.clearFocus(true)
                             }
@@ -356,7 +356,7 @@ private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewMo
 }
 
 @Composable
-fun UserStatusSendButton(onClick: () -> Unit) {
+fun SendButton(onClick: () -> Unit) {
     IconButton(
         modifier = Size26Modifier,
         onClick = onClick
@@ -508,17 +508,19 @@ fun ListContent(
             route = Route.BlockedUsers.route
         )
 
-        IconRow(
-            title = stringResource(R.string.backup_keys),
-            icon = R.drawable.ic_key,
-            tint = MaterialTheme.colors.onBackground,
-            onClick = {
-                coroutineScope.launch {
-                    scaffoldState.drawerState.close()
+        accountViewModel.account.keyPair.privKey?.let {
+            IconRow(
+                title = stringResource(R.string.backup_keys),
+                icon = R.drawable.ic_key,
+                tint = MaterialTheme.colors.onBackground,
+                onClick = {
+                    coroutineScope.launch {
+                        scaffoldState.drawerState.close()
+                    }
+                    backupDialogOpen = true
                 }
-                backupDialogOpen = true
-            }
-        )
+            )
+        }
 
         val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
         IconRow(
