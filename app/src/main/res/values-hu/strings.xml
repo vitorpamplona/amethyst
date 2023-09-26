@@ -430,6 +430,8 @@
     <string name="automatically_load_images_gifs">Képek/GIF-ek automatikus betöltése</string>
     <string name="automatically_play_videos">Videók automatikus betöltése</string>
     <string name="automatically_show_url_preview">Az URL előnézetének automatikus megjelenítése</string>
+    <string name="automatically_hide_nav_bars">Magával ragadó görgetés</string>
+    <string name="automatically_hide_nav_bars_description">Navigációs sáv görgetés közbeni elrejtése</string>
     <string name="load_image">Kép Betöltése</string>
     <string name="spamming_users">Spammerek</string>
     <string name="muted_button">Lenémítva. Kattínts a feloldásért</string>
@@ -502,4 +504,6 @@
     <string name="sign_request_rejected">Aláírási kérés elutasítva</string>
     <string name="no_wallet_found_with_error">Nem található tárca a Lighning számla kifizetésére (Hiba: %1$s). Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
     <string name="no_wallet_found">Nem található tárca a Lighning számla kifizetésére. Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
+    <string name="hidden_words">Elrejtett Szavak</string>
+    <string name="hide_new_word_label">Új szó vagy mondat elrejtése</string>
 </resources>
