@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "61f0e1ad1ed3d8c000f0e6aed13271cb",
+    "identityHash": "3a6dc7255bc17f213394e2ee3fe7c6a2",
     "entities": [
       {
         "tableName": "EventEntity",
@@ -85,7 +85,7 @@
       },
       {
         "tableName": "TagEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`pk` INTEGER PRIMARY KEY AUTOINCREMENT, `pkEvent` INTEGER, `position` INTEGER NOT NULL, `col0` TEXT, `col1` TEXT, `col2` TEXT, `col3` TEXT, `col4` TEXT, `col5` TEXT, FOREIGN KEY(`pkEvent`) REFERENCES `EventEntity`(`pk`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`pk` INTEGER PRIMARY KEY AUTOINCREMENT, `pkEvent` INTEGER, `position` INTEGER NOT NULL, `col0Name` TEXT, `col1Value` TEXT, `col2Differentiator` TEXT, `col3Amount` TEXT, `col4Plus` TEXT NOT NULL, FOREIGN KEY(`pkEvent`) REFERENCES `EventEntity`(`pk`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "pk",
@@ -106,40 +106,34 @@
             "notNull": true
           },
           {
-            "fieldPath": "col0",
-            "columnName": "col0",
+            "fieldPath": "col0Name",
+            "columnName": "col0Name",
             "affinity": "TEXT",
             "notNull": false
           },
           {
-            "fieldPath": "col1",
-            "columnName": "col1",
+            "fieldPath": "col1Value",
+            "columnName": "col1Value",
             "affinity": "TEXT",
             "notNull": false
           },
           {
-            "fieldPath": "col2",
-            "columnName": "col2",
+            "fieldPath": "col2Differentiator",
+            "columnName": "col2Differentiator",
             "affinity": "TEXT",
             "notNull": false
           },
           {
-            "fieldPath": "col3",
-            "columnName": "col3",
+            "fieldPath": "col3Amount",
+            "columnName": "col3Amount",
             "affinity": "TEXT",
             "notNull": false
           },
           {
-            "fieldPath": "col4",
-            "columnName": "col4",
+            "fieldPath": "col4Plus",
+            "columnName": "col4Plus",
             "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "col5",
-            "columnName": "col5",
-            "affinity": "TEXT",
-            "notNull": false
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -150,23 +144,23 @@
         },
         "indices": [
           {
-            "name": "search_by_pk_event",
+            "name": "tags_by_pk_event",
             "unique": false,
             "columnNames": [
               "pkEvent"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `search_by_pk_event` ON `${TABLE_NAME}` (`pkEvent`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `tags_by_pk_event` ON `${TABLE_NAME}` (`pkEvent`)"
           },
           {
-            "name": "search_by_tags_on_person_or_events",
+            "name": "tags_by_tags_on_person_or_events",
             "unique": false,
             "columnNames": [
-              "col0",
-              "col1"
+              "col0Name",
+              "col1Value"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `search_by_tags_on_person_or_events` ON `${TABLE_NAME}` (`col0`, `col1`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `tags_by_tags_on_person_or_events` ON `${TABLE_NAME}` (`col0Name`, `col1Value`)"
           }
         ],
         "foreignKeys": [
@@ -187,7 +181,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '61f0e1ad1ed3d8c000f0e6aed13271cb')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3a6dc7255bc17f213394e2ee3fe7c6a2')"
     ]
   }
 }

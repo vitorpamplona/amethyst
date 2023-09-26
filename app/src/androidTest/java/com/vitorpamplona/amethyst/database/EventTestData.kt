@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.database
 
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.TextNoteEvent
 
 val SimpleNoteWithTag = Event(
     id = "5e96f9b3bd4913b0560002d0862358592003c8e82c3722baa9688fbdff6306b1",

@@ -57,13 +57,11 @@ fun EventWithTags.toEvent(): Event {
 
 fun TagEntity.toTags(): List<String> {
     return listOfNotNull(
-        col0,
-        col1,
-        col2,
-        col3,
-        col4,
-        col5
-    )
+        col0Name,
+        col1Value,
+        col2Differentiator,
+        col3Amount
+    ).plus(col4Plus)
 }
 
 fun Event.toEventWithTags(): EventWithTags {
@@ -79,12 +77,11 @@ fun Event.toEventWithTags(): EventWithTags {
     val dbTags = tags.mapIndexed { index, tag ->
         TagEntity(
             position = index,
-            col0 = tag.getOrNull(0),
-            col1 = tag.getOrNull(1),
-            col2 = tag.getOrNull(2),
-            col3 = tag.getOrNull(3),
-            col4 = tag.getOrNull(4),
-            col5 = tag.getOrNull(5)
+            col0Name = tag.getOrNull(0), // tag name
+            col1Value = tag.getOrNull(1), // tag value
+            col2Differentiator = tag.getOrNull(2), // marker
+            col3Amount = tag.getOrNull(3), // value
+            col4Plus = if (tag.size > 4) tag.subList(4, tag.size) else emptyList()
         )
     }
 

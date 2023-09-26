@@ -4,8 +4,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
-import com.google.gson.reflect.TypeToken
-import com.vitorpamplona.amethyst.service.model.Event
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -44,9 +44,8 @@ class LargeDbTest {
 
         println("Large JSON of Events: Open")
 
-        val eventArray = Event.gson.fromJson(
-            InputStreamReader(fullDBInputStream),
-            object : TypeToken<ArrayList<Event>?>() {}.type
+        val eventArray = Event.mapper.readValue<ArrayList<Event>?>(
+            InputStreamReader(fullDBInputStream)
         ) as List<Event>
 
         println("Large JSON of Events: Parsed ${eventArray.size}")
@@ -78,9 +77,8 @@ class LargeDbTest {
 
         println("Large JSON of Events: Open")
 
-        val eventArray = Event.gson.fromJson(
-            InputStreamReader(fullDBInputStream),
-            object : TypeToken<ArrayList<Event>?>() {}.type
+        val eventArray = Event.mapper.readValue<ArrayList<Event>?>(
+            InputStreamReader(fullDBInputStream)
         ) as List<Event>
 
         println("Large JSON of Events: Parsed ${eventArray.size}")

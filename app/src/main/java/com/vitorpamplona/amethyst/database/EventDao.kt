@@ -51,8 +51,8 @@ interface EventDao {
             "FROM EventEntity " +
             "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
             "WHERE EventEntity.kind = :kind " +
-            "  AND TagEntity.col0 = 'p' " +
-            "  AND TagEntity.col1 in (:pubkeys) " +
+            "  AND TagEntity.col0Name = 'p' " +
+            "  AND TagEntity.col1Value in (:pubkeys) " +
             "ORDER BY createdAt DESC"
     )
     @Transaction
@@ -62,8 +62,8 @@ interface EventDao {
         "SELECT EventEntity.pk, EventEntity.id, EventEntity.pubkey, EventEntity.createdAt, EventEntity.kind, EventEntity.content, EventEntity.sig " +
             "FROM EventEntity " +
             "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
-            "WHERE TagEntity.col0 = :col0 " +
-            "AND TagEntity.col1 = :col1 " +
+            "WHERE TagEntity.col0Name = :col0 " +
+            "AND TagEntity.col1Value = :col1 " +
             "ORDER BY createdAt DESC"
     )
     @Transaction
@@ -73,8 +73,8 @@ interface EventDao {
         "SELECT COUNT(DISTINCT(EventEntity.id)) " +
             "FROM EventEntity " +
             "INNER JOIN TagEntity ON EventEntity.pk = TagEntity.pkEvent " +
-            "WHERE TagEntity.col0 = :col0 " +
-            "AND TagEntity.col1 = :col1 " +
+            "WHERE TagEntity.col0Name = :col0 " +
+            "AND TagEntity.col1Value = :col1 " +
             "ORDER BY createdAt DESC"
     )
     fun getRowCountByTag(col0: String, col1: String): Int
