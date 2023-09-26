@@ -34,11 +34,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 
 @Composable
 fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
@@ -61,7 +61,7 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = onClose)
+                    CloseButton(onPress = onClose)
                 }
 
                 Column(

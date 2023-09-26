@@ -4,7 +4,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 
 class CommunityFeedFilter(val note: AddressableNote, val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -21,6 +21,7 @@ class CommunityFeedFilter(val note: AddressableNote, val account: Account) : Add
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val myUnapprovedPosts = collection.asSequence()
+            .filter { it.event is CommunityPostApprovalEvent } // Only Approvals
             .filter { it.author?.pubkeyHex == account.userProfile().pubkeyHex } // made by the logged in user
             .filter { it.event?.isTaggedAddressableNote(note.idHex) == true } // for this community
             .filter { it.isNewThread() } // check if it is a new thread

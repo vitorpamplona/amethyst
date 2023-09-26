@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -17,39 +18,30 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
-import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
-import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -58,16 +50,12 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
-    lateinit var navController: NavHostController
-
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
+        ExternalSignerUtils.start(this)
+
         super.onCreate(savedInstanceState)
 
-        val uri = intent?.data?.toString()
-        val startingPage = uriToRoute(uri)
-
-        LocalPreferences.migrateSingleUserPrefs()
         val language = LocalPreferences.getPreferredLanguage()
         if (language.isNotBlank()) {
             val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
@@ -75,30 +63,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContent {
-            navController = rememberNavController()
             val themeViewModel: ThemeViewModel = viewModel()
 
             themeViewModel.onChange(LocalPreferences.getTheme())
             AmethystTheme(themeViewModel) {
                 // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colors.background
+                ) {
                     val accountStateViewModel: AccountStateViewModel = viewModel {
                         AccountStateViewModel(this@MainActivity)
                     }
 
-                    AccountScreen(accountStateViewModel, themeViewModel, navController)
+                    AccountScreen(accountStateViewModel, themeViewModel)
                 }
-            }
-
-            var actionableNextPage by remember { mutableStateOf(startingPage) }
-            actionableNextPage?.let {
-                LaunchedEffect(it) {
-                    navController.navigate(it) {
-                        popUpTo(Route.Home.route)
-                        launchSingleTop = true
-                    }
-                }
-                actionableNextPage = null
             }
         }
 
@@ -108,10 +87,9 @@ class MainActivity : AppCompatActivity() {
             .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
             .build()
 
-        val connectivityManager = getSystemService(ConnectivityManager::class.java) as ConnectivityManager
+        val connectivityManager =
+            getSystemService(ConnectivityManager::class.java) as ConnectivityManager
         connectivityManager.requestNetwork(networkRequest, networkCallback)
-
-        Client.lenient = true
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -123,18 +101,25 @@ class MainActivity : AppCompatActivity() {
 
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.start(this@MainActivity)
+            if (ServiceManager.shouldPauseService) {
+                ServiceManager.start(this@MainActivity)
+            }
         }
 
-        PushNotificationUtils().init(LocalPreferences.allSavedAccounts())
+        GlobalScope.launch(Dispatchers.IO) {
+            PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
+        }
     }
 
     override fun onPause() {
-        if (BuildConfig.DEBUG) {
-            debugState(this)
-        }
+        ServiceManager.cleanObservers()
+        // if (BuildConfig.DEBUG) {
+        debugState(this)
+        // }
 
-        ServiceManager.pause()
+        if (ServiceManager.shouldPauseService) {
+            ServiceManager.pause()
+        }
         super.onPause()
     }
 
@@ -154,43 +139,8 @@ class MainActivity : AppCompatActivity() {
         super.onTrimMemory(level)
         println("Trim Memory $level")
         GlobalScope.launch(Dispatchers.Default) {
-            ServiceManager.cleanUp()
+            ServiceManager.trimMemory()
         }
-    }
-
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-
-        if (this::navController.isInitialized) {
-            val uri = intent?.data?.toString()
-            val startingPage = uriToRoute(uri)
-
-            startingPage?.let { route ->
-                val currentRoute = getRouteWithArguments(navController)
-                if (!isSameRoute(currentRoute, route)) {
-                    navController.navigate(route) {
-                        popUpTo(Route.Home.route)
-                        launchSingleTop = true
-                    }
-                }
-            }
-        }
-    }
-
-    private fun isSameRoute(currentRoute: String?, newRoute: String): Boolean {
-        if (currentRoute == null) return false
-
-        if (currentRoute == newRoute) {
-            return true
-        }
-
-        if (newRoute.startsWith("Event/") && currentRoute.contains("/")) {
-            if (newRoute.split("/")[1] == currentRoute.split("/")[1]) {
-                return true
-            }
-        }
-
-        return false
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -201,8 +151,10 @@ class MainActivity : AppCompatActivity() {
             Log.d("NETWORKCALLBACK", "onAvailable: Disconnecting and connecting again")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
-                ServiceManager.start(this@MainActivity)
+                if (ServiceManager.shouldPauseService) {
+                    ServiceManager.pause()
+                    ServiceManager.start(this@MainActivity)
+                }
             }
         }
 
@@ -214,7 +166,8 @@ class MainActivity : AppCompatActivity() {
             super.onCapabilitiesChanged(network, networkCapabilities)
 
             GlobalScope.launch(Dispatchers.IO) {
-                val hasMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                val hasMobileData =
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
                 val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                 Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $hasMobileData")
                 Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasWifi $hasWifi")
@@ -231,7 +184,9 @@ class MainActivity : AppCompatActivity() {
             Log.d("NETWORKCALLBACK", "onLost: Disconnecting and pausing relay's connection")
             // Only starts after login
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
+                if (ServiceManager.shouldPauseService) {
+                    ServiceManager.pause()
+                }
             }
         }
     }
@@ -239,9 +194,15 @@ class MainActivity : AppCompatActivity() {
 
 class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
 
+    @SuppressLint("MissingSuperCall")
     override fun createIntent(context: Context, input: String): Intent {
-        return super.createIntent(context, input).apply {
+        // Force only images and videos to be selectable
+        // Force OPEN Document because of the resulting URI must be passed to the
+        // Playback service and the picker's permissions only allow the activity to read the URI
+        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
             // Force only images and videos to be selectable
+            type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
         }
     }
@@ -260,7 +221,9 @@ fun uriToRoute(uri: String?): String? {
                 Nip19.Type.NOTE -> "Note/${nip19.hex}"
                 Nip19.Type.EVENT -> {
                     if (nip19.kind == PrivateDmEvent.kind) {
-                        "Room/${nip19.author}"
+                        nip19.author?.let {
+                            "RoomByAuthor/$it"
+                        }
                     } else if (nip19.kind == ChannelMessageEvent.kind || nip19.kind == ChannelCreateEvent.kind || nip19.kind == ChannelMetadataEvent.kind) {
                         "Channel/${nip19.hex}"
                     } else {

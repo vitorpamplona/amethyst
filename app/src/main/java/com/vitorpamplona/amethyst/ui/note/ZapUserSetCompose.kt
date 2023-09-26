@@ -5,12 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,8 +24,11 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.screen.ZapUserSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,12 +87,38 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
                 }
             }
 
-            Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
-                val zapEvents by remember { derivedStateOf { zapSetCard.zapEvents } }
-                AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
+            Column(modifier = Modifier) {
+                Row(Modifier.fillMaxWidth()) {
+                    MapZaps(zapSetCard.zapEvents, accountViewModel) {
+                        AuthorGalleryZaps(it, backgroundColor, nav, accountViewModel)
+                    }
+                }
 
-                UserCompose(baseUser = zapSetCard.user, accountViewModel = accountViewModel, nav = nav)
+                Spacer(DoubleVertSpacer)
+
+                Row(Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    UserPicture(
+                        zapSetCard.user,
+                        Size55dp,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+
+                    Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            UsernameDisplay(zapSetCard.user)
+                        }
+
+                        AboutDisplay(zapSetCard.user)
+                    }
+                }
+
+                Spacer(DoubleVertSpacer)
             }
         }
+
+        Divider(
+            thickness = DividerThickness
+        )
     }
 }

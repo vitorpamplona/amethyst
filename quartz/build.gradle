@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+android {
+    namespace 'com.vitorpamplona.quartz'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 34
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core-ktx:$core_ktx_version"
+
+    // @Immutable and @Stable
+    implementation "androidx.compose.runtime:runtime:$compose_ui_version"
+
+    // Bitcoin secp256k1 bindings to Android
+    api 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.1'
+
+    // LibSodium for XChaCha encryption
+    implementation "com.goterl:lazysodium-android:5.1.0@aar"
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
+
+    api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2'
+
+    // immutable collections to avoid recomposition
+    api("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
+
+    // Parses URLs from Text:
+    api "io.github.url-detector:url-detector:0.1.23"
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -50,12 +51,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -72,9 +68,14 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -91,24 +92,10 @@ fun ChannelCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.distinctUntilChanged().observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = isBlank) {
+    Crossfade(targetState = hasEvent) {
         if (it) {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                BlankNote(
-                    remember {
-                        modifier.combinedClickable(
-                            onClick = { },
-                            onLongClick = showPopup
-                        )
-                    },
-                    false
-                )
-            }
-        } else {
             if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
                 CheckHiddenChannelCardCompose(
                     baseNote,
@@ -118,6 +105,18 @@ fun ChannelCardCompose(
                     showHidden,
                     accountViewModel,
                     nav
+                )
+            }
+        } else {
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                BlankNote(
+                    remember {
+                        modifier.combinedClickable(
+                            onClick = { },
+                            onLongClick = showPopup
+                        )
+                    },
+                    false
                 )
             }
         }
@@ -135,13 +134,9 @@ fun CheckHiddenChannelCardCompose(
     nav: (String) -> Unit
 ) {
     if (showHidden) {
-        var state by remember {
+        val state by remember {
             mutableStateOf(
-                NoteComposeReportState(
-                    isAcceptable = true,
-                    canPreview = true,
-                    relevantReports = persistentSetOf()
-                )
+                AccountViewModel.NoteComposeReportState()
             )
         }
 
@@ -185,19 +180,14 @@ fun LoadedChannelCardCompose(
 ) {
     var state by remember {
         mutableStateOf(
-            NoteComposeReportState(
-                isAcceptable = true,
-                canPreview = true,
-                relevantReports = persistentSetOf()
-            )
+            AccountViewModel.NoteComposeReportState()
         )
     }
 
     val scope = rememberCoroutineScope()
 
-    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
-        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+    WatchForReports(note, accountViewModel) { newState ->
+        if (state != newState) {
             scope.launch(Dispatchers.Main) {
                 state = newState
             }
@@ -219,7 +209,7 @@ fun LoadedChannelCardCompose(
 
 @Composable
 fun RenderChannelCardReportState(
-    state: NoteComposeReportState,
+    state: AccountViewModel.NoteComposeReportState,
     note: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
@@ -233,6 +223,7 @@ fun RenderChannelCardReportState(
         if (showHiddenNote) {
             HiddenNote(
                 state.relevantReports,
+                state.isHiddenAuthor,
                 accountViewModel,
                 modifier,
                 false,
@@ -361,6 +352,10 @@ fun InnerChannelCardWithReactions(
             )
         }
     }
+
+    Divider(
+        thickness = DividerThickness
+    )
 }
 
 @Composable
@@ -621,7 +616,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 Spacer(modifier = StdHorzSpacer)
                 LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -651,7 +646,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
 fun RenderChannelThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteEvent = baseNote.event as? ChannelCreateEvent ?: return
 
-    LoadChannel(baseChannelHex = baseNote.idHex) {
+    LoadChannel(baseChannelHex = baseNote.idHex, accountViewModel) {
         RenderChannelThumb(baseNote = baseNote, channel = it, accountViewModel, nav)
     }
 }
@@ -735,7 +730,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 Spacer(modifier = StdHorzSpacer)
                 LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -764,7 +759,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Gallery(users: List<User>, accountViewModel: AccountViewModel) {
-    FlowRow(verticalAlignment = CenterVertically) {
+    FlowRow(verticalArrangement = Arrangement.Center) {
         users.take(6).forEach {
             ClickableUserPicture(it, Size35dp, accountViewModel)
         }

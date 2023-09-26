@@ -40,17 +40,17 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NIP30Parser
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.service.nip19.Nip19
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -61,20 +61,21 @@ import kotlinx.coroutines.launch
 @Composable
 fun ClickableRoute(
     nip19: Nip19.Return,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     when (nip19.type) {
         Nip19.Type.USER -> {
-            DisplayUser(nip19, nav)
+            DisplayUser(nip19, accountViewModel, nav)
         }
         Nip19.Type.ADDRESS -> {
-            DisplayAddress(nip19, nav)
+            DisplayAddress(nip19, accountViewModel, nav)
         }
         Nip19.Type.NOTE -> {
-            DisplayNote(nip19, nav)
+            DisplayNote(nip19, accountViewModel, nav)
         }
         Nip19.Type.EVENT -> {
-            DisplayEvent(nip19, nav)
+            DisplayEvent(nip19, accountViewModel, nav)
         }
         else -> {
             Text(
@@ -87,33 +88,14 @@ fun ClickableRoute(
 }
 
 @Composable
-private fun LoadNote(
-    hex: String,
-    content: @Composable (Note) -> Unit
-) {
-    var noteBase by remember(hex) { mutableStateOf(LocalCache.getNoteIfExists(hex)) }
-
-    if (noteBase == null) {
-        LaunchedEffect(key1 = hex) {
-            launch(Dispatchers.IO) {
-                noteBase = LocalCache.checkGetOrCreateNote(hex)
-            }
-        }
-    }
-
-    noteBase?.let {
-        content(it)
-    }
-}
-
-@Composable
 private fun DisplayEvent(
     nip19: Nip19.Return,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadNote(nip19.hex) {
+    LoadNote(nip19.hex, accountViewModel) {
         if (it != null) {
-            DisplayNoteLink(it, nip19, nav)
+            DisplayNoteLink(it, nip19, accountViewModel, nav)
         } else {
             CreateClickableText(
                 clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
@@ -128,11 +110,12 @@ private fun DisplayEvent(
 @Composable
 private fun DisplayNote(
     nip19: Nip19.Return,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadNote(nip19.hex) {
+    LoadNote(nip19.hex, accountViewModel = accountViewModel) {
         if (it != null) {
-            DisplayNoteLink(it, nip19, nav)
+            DisplayNoteLink(it, nip19, accountViewModel, nav)
         } else {
             CreateClickableText(
                 clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
@@ -148,6 +131,7 @@ private fun DisplayNote(
 private fun DisplayNoteLink(
     it: Note,
     nip19: Nip19.Return,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val noteState by it.live().metadata.observeAsState()
@@ -169,11 +153,15 @@ private fun DisplayNoteLink(
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
-            route = remember(noteState) { "Room/${note.author?.pubkeyHex}" },
+            route = remember(noteState) {
+                (note.author?.pubkeyHex ?: nip19.hex).let {
+                    "RoomByAuthor/$it"
+                }
+            },
             nav = nav
         )
     } else if (channelHex != null) {
-        LoadChannel(baseChannelHex = channelHex) { baseChannel ->
+        LoadChannel(baseChannelHex = channelHex, accountViewModel) { baseChannel ->
             val channelState by baseChannel.live.observeAsState()
             val channelDisplayName by remember(channelState) {
                 derivedStateOf {
@@ -201,14 +189,15 @@ private fun DisplayNoteLink(
 @Composable
 private fun DisplayAddress(
     nip19: Nip19.Return,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var noteBase by remember(nip19) { mutableStateOf(LocalCache.getNoteIfExists(nip19.hex)) }
+    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.hex)) }
 
     if (noteBase == null) {
         LaunchedEffect(key1 = nip19.hex) {
-            launch(Dispatchers.IO) {
-                noteBase = LocalCache.checkGetOrCreateAddressableNote(nip19.hex)
+            accountViewModel.checkGetOrCreateAddressableNote(nip19.hex) {
+                noteBase = it
             }
         }
     }
@@ -240,14 +229,19 @@ private fun DisplayAddress(
 @Composable
 private fun DisplayUser(
     nip19: Nip19.Return,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var userBase by remember(nip19) { mutableStateOf(LocalCache.getUserIfExists(nip19.hex)) }
+    var userBase by remember(nip19) {
+        mutableStateOf(
+            accountViewModel.getUserIfExists(nip19.hex)
+        )
+    }
 
     if (userBase == null) {
         LaunchedEffect(key1 = nip19.hex) {
-            launch(Dispatchers.IO) {
-                userBase = LocalCache.checkGetOrCreateUser(nip19.hex)
+            accountViewModel.checkGetOrCreateUser(nip19.hex) {
+                userBase = it
             }
         }
     }
@@ -683,7 +677,7 @@ fun InLineIconRenderer(
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 1.dp)
+                            .padding(horizontal = 0.dp)
                     )
                 }
             )

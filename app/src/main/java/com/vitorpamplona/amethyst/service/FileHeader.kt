@@ -3,8 +3,9 @@ package com.vitorpamplona.amethyst.service
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.toHexKey
 import io.trbl.blurhash.BlurHash
 import kotlin.math.roundToInt
 
@@ -15,16 +16,16 @@ class FileHeader(
     val size: Int,
     val dim: String?,
     val blurHash: String?,
-    val description: String? = null,
+    val alt: String? = null,
     val sensitiveContent: Boolean = false
 ) {
     companion object {
-        suspend fun prepare(fileUrl: String, mimeType: String?, description: String?, sensitiveContent: Boolean, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
+        suspend fun prepare(fileUrl: String, mimeType: String?, alt: String?, sensitiveContent: Boolean, onReady: (FileHeader) -> Unit, onError: () -> Unit) {
             try {
                 val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl)
 
                 if (imageData != null) {
-                    prepare(imageData, fileUrl, mimeType, description, sensitiveContent, onReady, onError)
+                    prepare(imageData, fileUrl, mimeType, alt, sensitiveContent, onReady, onError)
                 } else {
                     onError()
                 }
@@ -38,7 +39,7 @@ class FileHeader(
             data: ByteArray,
             fileUrl: String,
             mimeType: String?,
-            description: String?,
+            alt: String?,
             sensitiveContent: Boolean,
             onReady: (FileHeader) -> Unit,
             onError: () -> Unit
@@ -78,7 +79,7 @@ class FileHeader(
                     Pair(null, null)
                 }
 
-                onReady(FileHeader(fileUrl, mimeType, hash, size, dim, blurHash, description, sensitiveContent))
+                onReady(FileHeader(fileUrl, mimeType, hash, size, dim, blurHash, alt, sensitiveContent))
             } catch (e: Exception) {
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
                 onError()

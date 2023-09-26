@@ -18,7 +18,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,9 +29,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlidingCarousel(
+    pagerState: PagerState,
     modifier: Modifier = Modifier,
-    pagerState: PagerState = remember { PagerState() },
-    itemsCount: Int,
     itemContent: @Composable (index: Int) -> Unit
 ) {
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
@@ -40,7 +38,7 @@ fun SlidingCarousel(
     Box(
         modifier = modifier.fillMaxWidth()
     ) {
-        HorizontalPager(pageCount = itemsCount, state = pagerState) { page ->
+        HorizontalPager(state = pagerState) { page ->
             itemContent(page)
         }
 
@@ -55,7 +53,7 @@ fun SlidingCarousel(
         ) {
             DotsIndicator(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                totalDots = itemsCount,
+                totalDots = pagerState.pageCount,
                 selectedIndex = if (isDragged) pagerState.currentPage else pagerState.targetPage,
                 dotSize = 8.dp
             )

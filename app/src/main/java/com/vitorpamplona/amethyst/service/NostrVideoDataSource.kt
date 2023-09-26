@@ -1,12 +1,12 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 
 object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     lateinit var account: Account
@@ -14,16 +14,12 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     val latestEOSEs = EOSEAccount()
 
     fun createContextualFilter(): TypedFilter? {
-        val follows = account.selectedUsersFollowList(account.defaultStoriesFollowList)
-
-        val followKeys = follows?.map {
-            it.substring(0, 6)
-        }
+        val follows = account.selectedUsersFollowList(account.defaultStoriesFollowList)?.toList()
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter = JsonFilter(
-                authors = followKeys,
+                authors = follows,
                 kinds = listOf(FileHeaderEvent.kind, FileStorageHeaderEvent.kind),
                 limit = 200,
                 since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultStoriesFollowList)?.relayList

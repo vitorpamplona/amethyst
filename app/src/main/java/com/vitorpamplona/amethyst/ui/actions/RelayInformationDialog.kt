@@ -1,8 +1,5 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,27 +25,24 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelayInformation
-import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.note.LoadUser
+import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Request
-import okhttp3.Response
-import java.io.IOException
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RelayInformationDialog(
     onClose: () -> Unit,
+    relayBriefInfo: RelayBriefInfo,
     relayInfo: RelayInformation,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -74,23 +68,30 @@ fun RelayInformationDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         onClose()
                     })
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Title(relayInfo.name ?: "")
-                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = StdPadding.fillMaxWidth()) {
+                    Column() {
+                        RenderRelayIcon(
+                            relayBriefInfo.favIcon,
+                            Size55dp
+                        )
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    SectionContent(relayInfo.description ?: "")
+                    Spacer(modifier = DoubleHorzSpacer)
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row() {
+                            Title(relayInfo.name?.trim() ?: "")
+                        }
+
+                        Row() {
+                            SubtitleContent(relayInfo.description?.trim() ?: "")
+                        }
+                    }
                 }
 
                 Section(stringResource(R.string.owner))
@@ -110,7 +111,15 @@ fun RelayInformationDialog(
                 Section(stringResource(R.string.contact))
 
                 Box(modifier = Modifier.padding(start = 10.dp)) {
-                    ClickableEmail(relayInfo.contact ?: "")
+                    relayInfo.contact?.let {
+                        if (it.startsWith("https:")) {
+                            ClickableUrl(urlText = it, url = it)
+                        } else if (it.startsWith("mailto:") || it.contains('@')) {
+                            ClickableEmail(it)
+                        } else {
+                            SectionContent(it)
+                        }
+                    }
                 }
 
                 Section(stringResource(R.string.supports))
@@ -212,7 +221,7 @@ private fun DisplaySupportedNips(relayInfo: RelayInformation) {
             val text = item.toString().padStart(2, '0')
             Box(Modifier.padding(10.dp)) {
                 ClickableUrl(
-                    urlText = "$text",
+                    urlText = text,
                     url = "https://github.com/nostr-protocol/nips/blob/master/$text.md"
                 )
             }
@@ -222,7 +231,7 @@ private fun DisplaySupportedNips(relayInfo: RelayInformation) {
             val text = item.padStart(2, '0')
             Box(Modifier.padding(10.dp)) {
                 ClickableUrl(
-                    urlText = "$text",
+                    urlText = text,
                     url = "https://github.com/nostr-protocol/nips/blob/master/$text.md"
                 )
             }
@@ -247,7 +256,7 @@ private fun DisplayOwnerInformation(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadUser(baseUserHex = userHex) {
+    LoadUser(baseUserHex = userHex, accountViewModel) {
         Crossfade(it) {
             if (it != null) {
                 UserCompose(baseUser = it, accountViewModel = accountViewModel, showDiviser = false, nav = nav)
@@ -258,13 +267,18 @@ private fun DisplayOwnerInformation(
 
 @Composable
 fun Title(text: String) {
-    Spacer(modifier = DoubleVertSpacer)
     Text(
         text = text,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp
     )
-    Spacer(modifier = DoubleVertSpacer)
+}
+
+@Composable
+fun SubtitleContent(text: String) {
+    Text(
+        text = text
+    )
 }
 
 @Composable
@@ -284,86 +298,4 @@ fun SectionContent(text: String) {
         modifier = Modifier.padding(start = 10.dp),
         text = text
     )
-}
-
-fun loadRelayInfo(
-    dirtyUrl: String,
-    context: Context,
-    scope: CoroutineScope,
-    onInfo: (RelayInformation) -> Unit
-) {
-    try {
-        val url = if (dirtyUrl.contains("://")) {
-            dirtyUrl
-                .replace("wss://", "https://")
-                .replace("ws://", "http://")
-        } else {
-            "https://$dirtyUrl"
-        }
-
-        val request: Request = Request
-            .Builder()
-            .header("Accept", "application/nostr+json")
-            .url(url)
-            .build()
-
-        HttpClient.getHttpClient()
-            .newCall(request)
-            .enqueue(
-                object : Callback {
-                    override fun onResponse(call: Call, response: Response) {
-                        checkNotInMainThread()
-                        response.use {
-                            val body = it.body.string()
-                            try {
-                                if (it.isSuccessful) {
-                                    onInfo(RelayInformation.fromJson(body))
-                                } else {
-                                    scope.launch {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                Log.e("RelayInfoFail", "Resulting Message from Relay $dirtyUrl in not parseable: $body", e)
-                                scope.launch {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                }
-                            }
-                        }
-                    }
-
-                    override fun onFailure(call: Call, e: IOException) {
-                        Log.e("RelayInfoFail", "Resulting Message from Relay in not parseable $dirtyUrl", e)
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                        }
-                    }
-                }
-            )
-    } catch (e: Exception) {
-        Log.e("RelayInfoFail", "Invalid URL $dirtyUrl", e)
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.an_error_ocurred_trying_to_get_relay_information, dirtyUrl),
-                    Toast.LENGTH_SHORT
-                ).show()
-        }
-    }
 }

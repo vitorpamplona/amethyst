@@ -57,7 +57,7 @@ fun ChatroomListScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState() { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     var moreActionsExpanded by remember { mutableStateOf(false) }
@@ -67,7 +67,7 @@ fun ChatroomListScreen(
     WatchAccountForListScreen(knownFeedViewModel, newFeedViewModel, accountViewModel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrChatroomListDataSource.start()
@@ -135,7 +135,10 @@ fun ChatroomListScreen(
                     }
                 }
 
-                HorizontalPager(pageCount = 2, state = pagerState) { page ->
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
                     ChatroomListFeedView(
                         viewModel = tabs[page].viewModel,
                         accountViewModel = accountViewModel,

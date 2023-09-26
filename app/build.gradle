@@ -1,28 +1,28 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jlleitschuh.gradle.ktlint' version "11.3.1"
+    id 'org.jlleitschuh.gradle.ktlint' version "11.5.1"
     id 'com.google.gms.google-services'
     id 'kotlin-kapt'
 }
 
 android {
     namespace 'com.vitorpamplona.amethyst'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
-        targetSdk 33
-        versionCode 266
-        versionName "0.71.0"
+        targetSdk 34
+        versionCode 308
+        versionName "0.78.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
 
-        resConfigs("ar", "cs", "de", "eo", "es", "fa", "fr", "hu", "night", "nl", "pt-rBR", "ru", "sv-rSE", "ta", "tr", "uk", "zh", "sh-rHK", "zh-rTW", "ja")
+        resourceConfigurations += ['ar', 'cs', 'de', 'eo', 'es', 'fa', 'fr', 'hu', 'in', 'ja', 'night', 'nl', 'pt-rBR', 'ru', 'sv-rSE', 'ta', 'th', 'tr', 'uk', 'zh', 'sh-rHK', 'zh-rTW']
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -33,9 +33,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Make sure all of JSON parsers work when activating these.
-            //minifyEnabled true
-            //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            //signingConfig signingConfigs.debug
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
+            minifyEnabled true
             resValue "string", "app_name", "@string/app_name_release"
         }
         debug {
@@ -45,7 +45,7 @@ android {
         }
     }
 
-    flavorDimensions "channel"
+    flavorDimensions = ["channel"]
 
     productFlavors {
         play {
@@ -62,7 +62,7 @@ android {
         abi {
             enable true
             reset()
-            include "x86", "x86_64"
+            include "x86", "x86_64", "arm64-v8a", "armeabi-v7a"
             universalApk true
         }
     }
@@ -81,7 +81,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.4.7"
+        kotlinCompilerExtensionVersion "1.5.1"
     }
 
     packagingOptions {
@@ -95,7 +95,8 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation project(path: ':quartz')
+    implementation "androidx.core:core-ktx:$core_ktx_version"
     implementation 'androidx.activity:activity-compose:1.7.2'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
@@ -104,7 +105,7 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:$fragment_version"
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation "androidx.navigation:navigation-compose:$nav_version"
 
     // Observe Live data as State
     implementation "androidx.compose.runtime:runtime-livedata:$compose_ui_version"
@@ -116,24 +117,18 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
-    implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
-    implementation "net.engawapg.lib:zoomable:1.4.3"
+    // Zoomable images
+    implementation 'net.engawapg.lib:zoomable:1.5.1'
 
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
-    // Bitcoin secp256k1 bindings to Android
-    implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.1'
-
     // Websockets API
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
-    // Json Serialization TODO: We might need to converge between gson and Jackson (we are usin both)
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2'
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-
-    // link preview
+    // HTML Parsing for Link Preview
     implementation 'org.jsoup:jsoup:1.16.1'
 
     // Encrypted Key Storage
@@ -157,11 +152,8 @@ dependencies {
     // Permission to upload pictures:
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
 
-    // Parses URLs from Text:
-    implementation "io.github.url-detector:url-detector:0.1.23"
-
     // For QR generation
-    implementation 'com.google.zxing:core:3.5.1'
+    implementation 'com.google.zxing:core:3.5.2'
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Markdown
@@ -176,9 +168,9 @@ dependencies {
 
     // Language picker and Theme chooser
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
-    implementation 'androidx.media3:media3-ui:1.1.0'
-    implementation 'androidx.media3:media3-session:1.1.0'
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
+    implementation "androidx.media3:media3-ui:$media3_version"
+    implementation "androidx.media3:media3-session:$media3_version"
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'
@@ -187,7 +179,7 @@ dependencies {
     playImplementation 'com.google.mlkit:translate:17.0.1'
 
     // PushNotifications
-    playImplementation platform('com.google.firebase:firebase-bom:32.2.0')
+    playImplementation platform('com.google.firebase:firebase-bom:32.2.3')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Charts
@@ -196,19 +188,16 @@ dependencies {
     implementation "com.patrykandpatrick.vico:views:${vico_version}"
     implementation "com.patrykandpatrick.vico:compose-m2:${vico_version}"
 
-    // immutable collections to avoid recomposition
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
-
     // GeoHash
     implementation 'com.github.drfonfon:android-kotlin-geohash:1.0'
+
+    // Waveform visualizer
+    implementation 'com.github.lincollincol:compose-audiowaveform:1.1.1'
 
     // Video compression lib
     implementation 'com.github.AbedElazizShe:LightCompressor:1.3.1'
     // Image compression lib
     implementation 'id.zelory:compressor:3.0.1'
-
-    // Automatic memory leak detection
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
 
     // Local Database
     implementation "androidx.room:room-runtime:$room_version"
@@ -219,7 +208,7 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'io.mockk:mockk:1.13.5'
+    testImplementation 'io.mockk:mockk:1.13.8'
     androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"

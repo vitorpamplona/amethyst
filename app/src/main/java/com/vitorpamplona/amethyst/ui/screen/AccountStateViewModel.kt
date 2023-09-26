@@ -7,22 +7,22 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.hexToByteArray
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.KeyPair
-import com.vitorpamplona.amethyst.service.bechToBytes
-import com.vitorpamplona.amethyst.service.nip19.Nip19
-import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.bechToBytes
+import com.vitorpamplona.quartz.encoders.hexToByteArray
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
+
+val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
 
 @Stable
 class AccountStateViewModel(val context: Context) : ViewModel() {
@@ -45,22 +45,21 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
         }
     }
 
-    fun startUI(key: String, useProxy: Boolean, proxyPort: Int) {
-        val pattern = Pattern.compile(".+@.+\\.[a-z]+")
+    fun startUI(key: String, useProxy: Boolean, proxyPort: Int, loginWithExternalSigner: Boolean = false) {
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         val account =
             if (key.startsWith("nsec")) {
-                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
             } else if (pubKeyParsed != null) {
-                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
-            } else if (pattern.matcher(key).matches()) {
+                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
+            } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
             } else {
-                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
+                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
@@ -88,9 +87,8 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
-            ServiceManager.start(account, context)
+        GlobalScope.launch(Dispatchers.IO) {
+            ServiceManager.restartIfDifferentAccount(account, context)
         }
         GlobalScope.launch(Dispatchers.Main) {
             account.saveable.observeForever(saveListener)

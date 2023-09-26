@@ -48,6 +48,7 @@ val HalfDoubleVertSpacer = Modifier.height(7.dp)
 val Size0dp = 0.dp
 val Size5dp = 5.dp
 val Size10dp = 10.dp
+val Size12dp = 12.dp
 val Size13dp = 13.dp
 val Size15dp = 15.dp
 val Size16dp = 16.dp
@@ -59,7 +60,9 @@ val Size22dp = 22.dp
 val Size24dp = 24.dp
 val Size25dp = 25.dp
 val Size30dp = 30.dp
+val Size34dp = 34.dp
 val Size35dp = 35.dp
+val Size40dp = 40.dp
 val Size55dp = 55.dp
 val Size75dp = 75.dp
 
@@ -72,6 +75,11 @@ val StdPadding = Modifier.padding(10.dp)
 
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
+
+val HorzPadding = Modifier.padding(horizontal = 10.dp)
+val VertPadding = Modifier.padding(vertical = 10.dp)
+
+val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
 
 val Size6Modifier = Modifier.size(6.dp)
 val Size10Modifier = Modifier.size(10.dp)
@@ -104,7 +112,8 @@ val UserNameMaxRowHeight = Modifier.fillMaxWidth()
 
 val Height4dpModifier = Modifier.height(4.dp)
 
-val AccountPictureModifier = Modifier.width(55.dp).height(55.dp).clip(shape = CircleShape)
+val AccountPictureModifier = Modifier.size(55.dp).clip(shape = CircleShape)
+val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
 
 val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
 val ShowMoreRelaysButtonIconModifier = Modifier.size(15.dp)
@@ -122,7 +131,7 @@ val ChatHeadlineBorders = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.
 
 val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
-val NIP05IconSize = Modifier.size(14.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
+val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
 val EditFieldModifier = Modifier
     .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)

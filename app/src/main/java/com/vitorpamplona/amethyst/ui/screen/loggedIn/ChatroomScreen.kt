@@ -1,58 +1,117 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
+import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.DisplayRoomSubject
+import com.vitorpamplona.amethyst.ui.note.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.note.LoadUser
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatroomScreen(
-    userId: String?,
+    roomId: String?,
+    draftMessage: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    if (userId == null) return
+    if (roomId == null) return
 
-    LoadUser(userId) {
+    LoadRoom(roomId, accountViewModel) {
         it?.let {
             PrepareChatroomViewModels(
-                baseUser = it,
+                room = it,
+                draftMessage = draftMessage,
                 accountViewModel = accountViewModel,
                 nav = nav
             )
@@ -61,20 +120,97 @@ fun ChatroomScreen(
 }
 
 @Composable
-fun PrepareChatroomViewModels(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ChatroomScreenByAuthor(
+    authorPubKeyHex: String?,
+    draftMessage: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    if (authorPubKeyHex == null) return
+
+    LoadRoomByAuthor(authorPubKeyHex, accountViewModel) {
+        it?.let {
+            PrepareChatroomViewModels(
+                room = it,
+                draftMessage = draftMessage,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        }
+    }
+}
+
+@Composable
+fun LoadRoom(roomId: String, accountViewModel: AccountViewModel, content: @Composable (ChatroomKey?) -> Unit) {
+    var room by remember(roomId) {
+        mutableStateOf<ChatroomKey?>(null)
+    }
+
+    if (room == null) {
+        LaunchedEffect(key1 = roomId) {
+            launch(Dispatchers.IO) {
+                val newRoom = accountViewModel.userProfile().privateChatrooms.keys.firstOrNull { it.hashCode().toString() == roomId }
+                if (room != newRoom) {
+                    room = newRoom
+                }
+            }
+        }
+    }
+
+    content(room)
+}
+
+@Composable
+fun LoadRoomByAuthor(authorPubKeyHex: String, accountViewModel: AccountViewModel, content: @Composable (ChatroomKey?) -> Unit) {
+    val room by remember(authorPubKeyHex) {
+        mutableStateOf<ChatroomKey?>(ChatroomKey(persistentSetOf(authorPubKeyHex)))
+    }
+
+    content(room)
+}
+
+@Composable
+fun PrepareChatroomViewModels(
+    room: ChatroomKey,
+    draftMessage: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     val feedViewModel: NostrChatroomFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "ChatroomViewModels",
+        key = room.hashCode().toString() + "ChatroomViewModels",
         factory = NostrChatroomFeedViewModel.Factory(
-            baseUser,
+            room,
             accountViewModel.account
         )
     )
 
     val newPostModel: NewPostViewModel = viewModel()
+    newPostModel.accountViewModel = accountViewModel
     newPostModel.account = accountViewModel.account
+    newPostModel.requiresNIP24 = room.users.size > 1
+    if (newPostModel.requiresNIP24) {
+        newPostModel.nip24 = true
+    }
+
+    LaunchedEffect(key1 = newPostModel) {
+        launch(Dispatchers.IO) {
+            val hasNIP24 = accountViewModel.userProfile().privateChatrooms[room]?.roomMessages?.any {
+                it.event is ChatMessageEvent && (it.event as ChatMessageEvent).pubKey != accountViewModel.userProfile().pubkeyHex
+            }
+            if (hasNIP24 == true && newPostModel.nip24 == false) {
+                newPostModel.nip24 = true
+            }
+        }
+    }
+
+    if (draftMessage != null) {
+        LaunchedEffect(key1 = draftMessage) {
+            newPostModel.message = TextFieldValue(draftMessage)
+        }
+    }
 
     ChatroomScreen(
-        baseUser = baseUser,
+        room = room,
         feedViewModel = feedViewModel,
         newPostModel = newPostModel,
         accountViewModel = accountViewModel,
@@ -84,7 +220,7 @@ fun PrepareChatroomViewModels(baseUser: User, accountViewModel: AccountViewModel
 
 @Composable
 fun ChatroomScreen(
-    baseUser: User,
+    room: ChatroomKey,
     feedViewModel: NostrChatroomFeedViewModel,
     newPostModel: NewPostViewModel,
     accountViewModel: AccountViewModel,
@@ -92,15 +228,12 @@ fun ChatroomScreen(
 ) {
     val context = LocalContext.current
 
-    NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, baseUser)
+    NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(baseUser, accountViewModel) {
+    LaunchedEffect(room, accountViewModel) {
         launch(Dispatchers.IO) {
-            NostrChatroomDataSource.start()
-            feedViewModel.invalidateData()
-
             newPostModel.imageUploadingError.collect { error ->
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
@@ -109,7 +242,17 @@ fun ChatroomScreen(
         }
     }
 
-    DisposableEffect(baseUser, accountViewModel) {
+    DisposableEffect(room, accountViewModel) {
+        NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
+        NostrChatroomDataSource.start()
+        feedViewModel.invalidateData()
+
+        onDispose {
+            NostrChatroomDataSource.stop()
+        }
+    }
+
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Private Message Start")
@@ -129,10 +272,7 @@ fun ChatroomScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        ChatroomHeader(baseUser, accountViewModel, nav = nav)
-
         val replyTo = remember { mutableStateOf<Note?>(null) }
-
         Column(
             modifier = Modifier
                 .fillMaxHeight()
@@ -143,7 +283,7 @@ fun ChatroomScreen(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = "Room/${baseUser.pubkeyHex}",
+                routeForLastRead = "Room/${room.hashCode()}",
                 onWantsToReply = {
                     replyTo.value = it
                 }
@@ -161,15 +301,26 @@ fun ChatroomScreen(
         val scope = rememberCoroutineScope()
 
         // LAST ROW
-        EditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
+        PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
-                accountViewModel.account.sendPrivateMessage(
-                    message = newPostModel.message.text,
-                    toUser = baseUser,
-                    replyingTo = replyTo.value,
-                    mentions = null,
-                    wantsToMarkAsSensitive = false
-                )
+                if (newPostModel.nip24 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
+                    accountViewModel.account.sendNIP24PrivateMessage(
+                        message = newPostModel.message.text,
+                        toUsers = room.users.toList(),
+                        replyingTo = replyTo.value,
+                        mentions = null,
+                        wantsToMarkAsSensitive = false
+                    )
+                } else {
+                    accountViewModel.account.sendPrivateMessage(
+                        message = newPostModel.message.text,
+                        toUser = room.users.first(),
+                        replyingTo = replyTo.value,
+                        mentions = null,
+                        wantsToMarkAsSensitive = false
+                    )
+                }
+
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 feedViewModel.sendToTop()
@@ -179,35 +330,440 @@ fun ChatroomScreen(
 }
 
 @Composable
-fun ChatroomHeader(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    Column(
-        modifier = Modifier.clickable(
-            onClick = { nav("User/${baseUser.pubkeyHex}") }
-        )
+fun PrivateMessageEditFieldRow(
+    channelScreenModel: NewPostViewModel,
+    isPrivate: Boolean,
+    accountViewModel: AccountViewModel,
+    onSendNewMessage: () -> Unit
+) {
+    Row(
+        modifier = EditFieldModifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        val context = LocalContext.current
+
+        MyTextField(
+            value = channelScreenModel.message,
+            onValueChange = {
+                channelScreenModel.updateMessage(it)
+            },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences
+            ),
+            shape = EditFieldBorder,
+            modifier = Modifier.weight(1f, true),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.reply_here),
+                    color = MaterialTheme.colors.placeholderText
+                )
+            },
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            trailingIcon = {
+                PostButton(
+                    onPost = {
+                        onSendNewMessage()
+                    },
+                    isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
+                    modifier = EditFieldTrailingIconModifier
+                )
+            },
+            leadingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+                    UploadFromGallery(
+                        isUploading = channelScreenModel.isUploadingImage,
+                        tint = MaterialTheme.colors.placeholderText,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .padding(start = 2.dp)
+                    ) {
+                        val fileServer = if (isPrivate) {
+                            // TODO: Make private servers
+                            when (accountViewModel.account.defaultFileServer) {
+                                ServersAvailable.NOSTR_BUILD -> ServersAvailable.NOSTR_BUILD
+                                ServersAvailable.NOSTRIMG -> ServersAvailable.NOSTRIMG
+                                ServersAvailable.NOSTRFILES_DEV -> ServersAvailable.NOSTRFILES_DEV
+                                ServersAvailable.NOSTRCHECK_ME -> ServersAvailable.NOSTRCHECK_ME
+
+                                ServersAvailable.NOSTR_BUILD_NIP_94 -> ServersAvailable.NOSTR_BUILD
+                                ServersAvailable.NOSTRIMG_NIP_94 -> ServersAvailable.NOSTRIMG
+                                ServersAvailable.NOSTRFILES_DEV_NIP_94 -> ServersAvailable.NOSTRFILES_DEV
+                                ServersAvailable.NOSTRCHECK_ME_NIP_94 -> ServersAvailable.NOSTRCHECK_ME
+
+                                ServersAvailable.NIP95 -> ServersAvailable.NOSTR_BUILD
+                            }
+                        } else {
+                            accountViewModel.account.defaultFileServer
+                        }
+
+                        channelScreenModel.upload(it, "", false, fileServer, context)
+                    }
+
+                    var wantsToActivateNIP24 by remember {
+                        mutableStateOf(false)
+                    }
+
+                    if (wantsToActivateNIP24) {
+                        NewFeatureNIP24AlertDialog(
+                            accountViewModel = accountViewModel,
+                            onConfirm = {
+                                channelScreenModel.toggleNIP04And24()
+                            },
+                            onDismiss = {
+                                wantsToActivateNIP24 = false
+                            }
+                        )
+                    }
+
+                    IconButton(
+                        modifier = Size30Modifier,
+                        onClick = {
+                            if (!accountViewModel.hideNIP24WarningDialog && !channelScreenModel.nip24 && !channelScreenModel.requiresNIP24) {
+                                wantsToActivateNIP24 = true
+                            } else {
+                                channelScreenModel.toggleNIP04And24()
+                            }
+                        }
+                    ) {
+                        if (channelScreenModel.nip24) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.incognito),
+                                null,
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(18.dp),
+                                tint = MaterialTheme.colors.primary
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(id = R.drawable.incognito_off),
+                                null,
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(18.dp),
+                                tint = MaterialTheme.colors.placeholderText
+                            )
+                        }
+                    }
+                }
+            },
+            colors = TextFieldDefaults.textFieldColors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
+    }
+}
+
+@Composable
+fun NewFeatureNIP24AlertDialog(accountViewModel: AccountViewModel, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+
+    QuickActionAlertDialog(
+        title = stringResource(R.string.new_feature_nip24_might_not_be_available_title),
+        textContent = stringResource(R.string.new_feature_nip24_might_not_be_available_description),
+        buttonIconResource = R.drawable.incognito,
+        buttonText = stringResource(R.string.new_feature_nip24_activate),
+        onClickDoOnce = {
+            scope.launch(Dispatchers.IO) {
+                onConfirm()
+            }
+            onDismiss()
+        },
+        onClickDontShowAgain = {
+            scope.launch(Dispatchers.IO) {
+                onConfirm()
+                accountViewModel.dontShowNIP24WarningDialog()
+            }
+            onDismiss()
+        },
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+fun ChatroomHeader(
+    room: ChatroomKey,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    if (room.users.size == 1) {
+        LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
+            if (baseUser != null) {
+                ChatroomHeader(baseUser = baseUser, modifier = modifier, accountViewModel = accountViewModel, nav = nav)
+            }
+        }
+    } else {
+        GroupChatroomHeader(room = room, modifier = modifier, accountViewModel = accountViewModel, nav = nav)
+    }
+}
+
+@Composable
+fun ChatroomHeader(
+    baseUser: User,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                onClick = { nav("User/${baseUser.pubkeyHex}") }
+            )
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = modifier
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ClickableUserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
-                    size = Size35dp
+                    size = Size34dp
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        UsernameDisplay(baseUser)
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseUser)
-                    }
+                    UsernameDisplay(baseUser)
+                    ObserveDisplayNip05Status(baseUser, accountViewModel = accountViewModel, nav = nav)
                 }
             }
         }
 
         Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
+    }
+}
+
+@Composable
+fun GroupChatroomHeader(
+    room: ChatroomKey,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val expanded = remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                expanded.value = !expanded.value
+            }
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = modifier
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NonClickableUserPictures(
+                    users = room.users,
+                    accountViewModel = accountViewModel,
+                    size = Size34dp
+                )
+
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel.userProfile())
+                    DisplayUserSetAsSubject(room, accountViewModel, FontWeight.Normal)
+                }
+            }
+
+            if (expanded.value) {
+                LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
+            }
+        }
+
+        Divider(
+            thickness = 0.25.dp
+        )
+    }
+}
+
+@Composable
+private fun EditRoomSubjectButton(room: ChatroomKey, accountViewModel: AccountViewModel) {
+    var wantsToPost by remember {
+        mutableStateOf(false)
+    }
+
+    if (wantsToPost) {
+        NewSubjectView({ wantsToPost = false }, accountViewModel, room)
+    }
+
+    Button(
+        modifier = Modifier
+            .padding(horizontal = 3.dp)
+            .width(50.dp),
+        onClick = { wantsToPost = true },
+        shape = ButtonBorder,
+        colors = ButtonDefaults
+            .buttonColors(
+                backgroundColor = MaterialTheme.colors.primary
+            )
+    ) {
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.EditNote,
+            contentDescription = stringResource(R.string.edits_the_channel_metadata)
+        )
+    }
+}
+
+@Composable
+fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room: ChatroomKey) {
+    Dialog(
+        onDismissRequest = { onClose() },
+        properties = DialogProperties(
+            dismissOnClickOutside = false
+        )
+    ) {
+        Surface {
+            val groupName = remember {
+                mutableStateOf<String>(accountViewModel.userProfile().privateChatrooms[room]?.subject ?: "")
+            }
+            val message = remember {
+                mutableStateOf<String>("")
+            }
+            val scope = rememberCoroutineScope()
+
+            Column(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CloseButton(onPress = {
+                        onClose()
+                    })
+
+                    PostButton(
+                        onPost = {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.account.sendNIP24PrivateMessage(
+                                    message = message.value,
+                                    toUsers = room.users.toList(),
+                                    subject = groupName.value.ifBlank { null },
+                                    replyingTo = null,
+                                    mentions = null,
+                                    wantsToMarkAsSensitive = false
+                                )
+                            }
+
+                            onClose()
+                        },
+                        true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.messages_new_message_subject)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = groupName.value,
+                    onValueChange = { groupName.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.messages_new_message_subject_caption),
+                            color = MaterialTheme.colors.placeholderText
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.messages_new_subject_message)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    value = message.value,
+                    onValueChange = { message.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.messages_new_subject_message_placeholder),
+                            color = MaterialTheme.colors.placeholderText
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    maxLines = 10
+
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LongRoomHeader(
+    room: ChatroomKey,
+    lineModifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val list = remember(room) {
+        room.users.toPersistentList()
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(id = R.string.messages_group_descriptor),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center
+        )
+
+        EditRoomSubjectButton(room, accountViewModel)
+    }
+
+    LazyColumn(
+        modifier = Modifier,
+        state = rememberLazyListState()
+    ) {
+        itemsIndexed(list, key = { _, item -> item }) { _, item ->
+            LoadUser(baseUserHex = item, accountViewModel) {
+                if (it != null) {
+                    UserCompose(
+                        baseUser = it,
+                        overallModifier = lineModifier,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RoomNameOnlyDisplay(room: ChatroomKey, modifier: Modifier, fontWeight: FontWeight = FontWeight.Bold, loggedInUser: User) {
+    val roomSubject by loggedInUser.live().messages.map {
+        it.user.privateChatrooms[room]?.subject
+    }.distinctUntilChanged().observeAsState(loggedInUser.privateChatrooms[room]?.subject)
+
+    Crossfade(targetState = roomSubject, modifier) {
+        if (it != null && it.isNotBlank()) {
+            DisplayRoomSubject(it, fontWeight)
+        }
     }
 }

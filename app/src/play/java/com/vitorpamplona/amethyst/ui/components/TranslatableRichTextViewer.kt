@@ -14,7 +14,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -35,20 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-@Immutable
-data class TranslationConfig(
-    val result: String?,
-    val sourceLang: String?,
-    val targetLang: String?,
-    val showOriginal: Boolean
-)
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -312,18 +303,17 @@ private fun TranslationMessage(
 @Composable
 fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountViewModel, onTranslated: (TranslationConfig) -> Unit) {
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-    val account = remember(accountState) { accountState?.account } ?: return
 
     LaunchedEffect(accountState) {
-        launch(Dispatchers.IO) {
+        accountViewModel.runOnIO {
             LanguageTranslatorService.autoTranslate(
                 content,
-                account.dontTranslateFrom,
-                account.translateTo
+                accountViewModel.account.dontTranslateFrom,
+                accountViewModel.account.translateTo
             ).addOnCompleteListener { task ->
                 if (task.isSuccessful && !content.equals(task.result.result, true)) {
                     if (task.result.sourceLang != null && task.result.targetLang != null) {
-                        val preference = account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
+                        val preference = accountViewModel.account.preferenceBetween(task.result.sourceLang!!, task.result.targetLang!!)
                         val newConfig = TranslationConfig(
                             result = task.result.result,
                             sourceLang = task.result.sourceLang,
@@ -331,9 +321,7 @@ fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountV
                             showOriginal = preference == task.result.sourceLang
                         )
 
-                        // withContext(Dispatchers.Main) {
                         onTranslated(newConfig)
-                        // }
                     }
                 }
             }

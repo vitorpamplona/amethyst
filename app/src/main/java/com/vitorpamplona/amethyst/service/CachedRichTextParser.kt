@@ -6,15 +6,14 @@ import android.util.Patterns
 import androidx.compose.runtime.Immutable
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlContent
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.hashTagsPattern
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
-import com.vitorpamplona.amethyst.ui.components.startsWithNIP19Scheme
 import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
@@ -54,10 +53,12 @@ object CachedRichTextParser {
 
 // Android9 seems to have an issue starting this regex.
 val noProtocolUrlValidator = try {
-    Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]*[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
+    Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)")
 } catch (e: Exception) {
     Pattern.compile("(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)")
 }
+
+val HTTPRegex = "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
 
 class RichTextParser() {
     fun parseText(
@@ -75,8 +76,7 @@ class RichTextParser() {
             } else if (it.originalUrl.contains("。")) {
                 null
             } else {
-                val pattern = "^((http|https)://)?([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
-                if (pattern.matches(it.originalUrl)) {
+                if (HTTPRegex.matches(it.originalUrl)) {
                     it.originalUrl
                 } else {
                     null
@@ -119,7 +119,7 @@ class RichTextParser() {
 
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.split(' ')
+            val wordList = paragraph.trimEnd().split(' ')
             wordList.forEach { word ->
                 val wordSegment = wordIdentifier(word, images, urls, emojis, tags)
                 if (wordSegment !is RegularTextSegment) {
@@ -179,11 +179,11 @@ class RichTextParser() {
             BechSegment(word)
         } else if (word.startsWith("#")) {
             parseHash(word, tags)
-        } else if (schemelessMatcher.find()) {
+        } else if (word.contains(".") && schemelessMatcher.find()) {
             val url = schemelessMatcher.group(1) // url
             val additionalChars = schemelessMatcher.group(4) // additional chars
-            val pattern = "^([A-Za-z0-9-]+(\\.[A-Za-z0-9]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
-            if (pattern.matches(word)) {
+            val pattern = """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?""".toRegex(RegexOption.IGNORE_CASE)
+            if (pattern.find(word) != null) {
                 SchemelessUrlSegment(word, url, additionalChars)
             } else {
                 RegularTextSegment(word)
@@ -289,3 +289,9 @@ class SchemelessUrlSegment(segment: String, val url: String, val extras: String?
 
 @Immutable
 class RegularTextSegment(segment: String) : Segment(segment)
+
+fun startsWithNIP19Scheme(word: String): Boolean {
+    val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
+
+    return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
+}

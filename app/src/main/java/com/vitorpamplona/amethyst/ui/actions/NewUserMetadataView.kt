@@ -67,7 +67,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.clear()
                         onClose()
                     })
@@ -82,45 +82,26 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                 }
 
                 Column(
-                    modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            label = { Text(text = stringResource(R.string.display_name)) },
-                            modifier = Modifier.weight(1f),
-                            value = postViewModel.displayName.value,
-                            onValueChange = { postViewModel.displayName.value = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.my_display_name),
-                                    color = MaterialTheme.colors.placeholderText
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.Sentences
-                            ),
-                            singleLine = true
-                        )
-
-                        Text("@", Modifier.padding(5.dp))
-
-                        OutlinedTextField(
-                            label = { Text(text = stringResource(R.string.username)) },
-                            modifier = Modifier.weight(1f),
-                            value = postViewModel.userName.value,
-                            onValueChange = { postViewModel.userName.value = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.my_username),
-                                    color = MaterialTheme.colors.placeholderText
-                                )
-                            },
-                            singleLine = true
-                        )
-                    }
+                    OutlinedTextField(
+                        label = { Text(text = stringResource(R.string.display_name)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.displayName.value,
+                        onValueChange = { postViewModel.displayName.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.my_display_name),
+                                color = MaterialTheme.colors.placeholderText
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences
+                        ),
+                        singleLine = true
+                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
 

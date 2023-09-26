@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
@@ -60,14 +61,14 @@ import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
-import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.PeopleListEvent
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
+import com.vitorpamplona.quartz.events.AudioTrackEvent
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -113,10 +114,11 @@ private fun VerticalDivider(color: Color) =
 fun LongPressToQuickAction(baseNote: Note, accountViewModel: AccountViewModel, content: @Composable (() -> Unit) -> Unit) {
     val popupExpanded = remember { mutableStateOf(false) }
     val showPopup = remember { { popupExpanded.value = true } }
+    val hidePopup = remember { { popupExpanded.value = false } }
 
     content(showPopup)
 
-    NoteQuickActionMenu(baseNote, popupExpanded.value, { popupExpanded.value = false }, accountViewModel)
+    NoteQuickActionMenu(baseNote, popupExpanded.value, hidePopup, accountViewModel)
 }
 
 @Composable
@@ -252,10 +254,8 @@ private fun RenderMainPopup(
                             stringResource(R.string.quick_action_block)
                         ) {
                             if (accountViewModel.hideBlockAlertDialog) {
-                                scope.launch(Dispatchers.IO) {
-                                    note.author?.let { accountViewModel.hide(it) }
-                                    onDismiss()
-                                }
+                                note.author?.let { accountViewModel.hide(it) }
+                                onDismiss()
                             } else {
                                 showBlockAlertDialog.value = true
                             }
@@ -429,10 +429,66 @@ private fun BlockAlertDialog(note: Note, accountViewModel: AccountViewModel, onD
     )
 
 @Composable
-private fun QuickActionAlertDialog(
+fun QuickActionAlertDialog(
     title: String,
     textContent: String,
     buttonIcon: ImageVector,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onClickDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    QuickActionAlertDialog(
+        title = title,
+        textContent = textContent,
+        icon = {
+            Icon(
+                imageVector = buttonIcon,
+                contentDescription = null
+            )
+        },
+        buttonText = buttonText,
+        buttonColors = buttonColors,
+        onClickDoOnce = onClickDoOnce,
+        onClickDontShowAgain = onClickDontShowAgain,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+fun QuickActionAlertDialog(
+    title: String,
+    textContent: String,
+    buttonIconResource: Int,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onClickDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    QuickActionAlertDialog(
+        title = title,
+        textContent = textContent,
+        icon = {
+            Icon(
+                painter = painterResource(buttonIconResource),
+                contentDescription = null
+            )
+        },
+        buttonText = buttonText,
+        buttonColors = buttonColors,
+        onClickDoOnce = onClickDoOnce,
+        onClickDontShowAgain = onClickDontShowAgain,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+fun QuickActionAlertDialog(
+    title: String,
+    textContent: String,
+    icon: @Composable () -> Unit,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -461,10 +517,7 @@ private fun QuickActionAlertDialog(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = buttonIcon,
-                            contentDescription = null
-                        )
+                        icon()
                         Spacer(Modifier.width(8.dp))
                         Text(buttonText)
                     }

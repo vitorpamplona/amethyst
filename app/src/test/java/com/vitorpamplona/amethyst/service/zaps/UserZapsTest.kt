@@ -1,9 +1,9 @@
 package com.vitorpamplona.amethyst.service.zaps
 
-import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEventInterface
-import com.vitorpamplona.amethyst.service.model.zaps.UserZaps
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.LnZapEventInterface
+import com.vitorpamplona.quartz.events.zaps.UserZaps
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert

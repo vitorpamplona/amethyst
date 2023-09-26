@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Amethyst"
 include ':app'
+include ':benchmark'
+include ':quartz'

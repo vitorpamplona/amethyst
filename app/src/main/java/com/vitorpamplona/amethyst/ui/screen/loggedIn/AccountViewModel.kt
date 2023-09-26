@@ -1,45 +1,90 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.BooleanType
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ConnectivityType
-import com.vitorpamplona.amethyst.model.HexKey
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelayInformation
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
-import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.amethyst.service.Nip05Verifier
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.actions.Dao
+import com.vitorpamplona.amethyst.ui.components.MarkdownParser
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
+import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
+import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.screen.CombinedZap
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
+import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.UserMetadata
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
 
 @Stable
-class AccountViewModel(val account: Account) : ViewModel() {
+class AccountViewModel(val account: Account) : ViewModel(), Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
+
+    val discoveryListLiveData = account.live.map {
+        it.account.defaultDiscoveryFollowList
+    }.distinctUntilChanged()
+
+    val homeListLiveData = account.live.map {
+        it.account.defaultHomeFollowList
+    }.distinctUntilChanged()
+
+    val notificationListLiveData = account.live.map {
+        it.account.defaultNotificationFollowList
+    }.distinctUntilChanged()
+
+    val storiesListLiveData = account.live.map {
+        it.account.defaultStoriesFollowList
+    }.distinctUntilChanged()
+
+    val showSensitiveContentChanges = account.live.map {
+        it.account.showSensitiveContent
+    }.distinctUntilChanged()
 
     fun updateAutomaticallyStartPlayback(
         automaticallyStartPlayback: ConnectivityType
@@ -53,6 +98,12 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
     }
 
+    fun updateAutomaticallyHideNavBars(
+        automaticallyHideHavBars: BooleanType
+    ) {
+        account.updateAutomaticallyHideHavBars(automaticallyHideHavBars)
+    }
+
     fun updateAutomaticallyShowImages(
         automaticallyShowImages: ConnectivityType
     ) {
@@ -61,6 +112,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     fun isWriteable(): Boolean {
         return account.isWriteable()
+    }
+
+    fun loggedInWithExternalSigner(): Boolean {
+        return account.loginWithExternalSigner
     }
 
     fun userProfile(): User {
@@ -72,11 +127,13 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun reactToOrDelete(note: Note, reaction: String) {
-        val currentReactions = account.reactionTo(note, reaction)
-        if (currentReactions.isNotEmpty()) {
-            account.delete(currentReactions)
-        } else {
-            account.reactTo(note, reaction)
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentReactions = account.reactionTo(note, reaction)
+            if (currentReactions.isNotEmpty()) {
+                account.delete(currentReactions)
+            } else {
+                account.reactTo(note, reaction)
+            }
         }
     }
 
@@ -101,75 +158,127 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.delete(account.boostsTo(note))
     }
 
-    fun calculateIfNoteWasZappedByAccount(zappedNote: Note): Boolean {
-        return account.calculateIfNoteWasZappedByAccount(zappedNote)
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note, onWasZapped: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.Default) {
+            onWasZapped(account.calculateIfNoteWasZappedByAccount(zappedNote))
+        }
     }
 
-    fun calculateZapAmount(zappedNote: Note): BigDecimal {
+    suspend fun calculateZapAmount(zappedNote: Note): BigDecimal {
         return account.calculateZappedAmount(zappedNote)
     }
 
-    fun zap(note: Note, amount: Long, pollOption: Int?, message: String, context: Context, onError: (String) -> Unit, onProgress: (percent: Float) -> Unit, zapType: LnZapEvent.ZapType) {
-        val lud16 = note.event?.zapAddress() ?: note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
-
-        if (lud16.isNullOrBlank()) {
-            onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
-            return
+    fun calculateZapAmount(zappedNote: Note, onZapAmount: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onZapAmount(showAmount(account.calculateZappedAmount(zappedNote)))
         }
+    }
 
-        var zapRequestJson = ""
+    fun calculateZapraiser(zappedNote: Note, onZapraiserStatus: (ZapraiserStatus) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
+            val newZapAmount = calculateZapAmount(zappedNote)
+            var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
-        if (zapType != LnZapEvent.ZapType.NONZAP) {
-            val zapRequest = account.createZapRequestFor(note, pollOption, message, zapType)
-            if (zapRequest != null) {
-                zapRequestJson = zapRequest.toJson()
+            if (percentage > 1) {
+                percentage = 1f
+            }
+
+            val newZapraiserProgress = percentage
+            val newZapraiserLeft = if (percentage > 0.99) {
+                "0"
+            } else {
+                showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+            }
+            onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+        }
+    }
+
+    fun decryptAmountMessageInGroup(
+        zaps: ImmutableList<CombinedZap>,
+        onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = ArrayList<ZapAmountCommentNotification>(zaps.size)
+            zaps.forEach {
+                innerDecryptAmountMessage(it.request, it.response)?.let {
+                    list.add(it)
+                }
+            }
+
+            onNewState(list.toImmutableList())
+        }
+    }
+
+    fun decryptAmountMessageInGroup(
+        baseNote: Note,
+        onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = ArrayList<ZapAmountCommentNotification>(baseNote.zaps.size)
+            baseNote.zaps.forEach {
+                innerDecryptAmountMessage(it.key, it.value)?.let {
+                    list.add(it)
+                }
+            }
+
+            onNewState(list.toImmutableList())
+        }
+    }
+
+    fun decryptAmountMessage(
+        zapRequest: Note,
+        zapEvent: Note?,
+        onNewState: (ZapAmountCommentNotification?) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent))
+        }
+    }
+
+    private suspend fun innerDecryptAmountMessage(
+        zapRequest: Note,
+        zapEvent: Note?
+    ): ZapAmountCommentNotification? {
+        checkNotInMainThread()
+
+        (zapRequest.event as? LnZapRequestEvent)?.let {
+            val decryptedContent = decryptZap(zapRequest)
+            val amount = (zapEvent?.event as? LnZapEvent)?.amount
+            if (decryptedContent != null) {
+                val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
+                return ZapAmountCommentNotification(
+                    newAuthor,
+                    decryptedContent.content.ifBlank { null },
+                    showAmountAxis(amount)
+                )
+            } else {
+                if (!zapRequest.event?.content().isNullOrBlank() || amount != null) {
+                    return ZapAmountCommentNotification(
+                        zapRequest.author,
+                        zapRequest.event?.content()?.ifBlank { null },
+                        showAmountAxis(amount)
+                    )
+                }
             }
         }
+        return null
+    }
 
-        onProgress(0.10f)
-
-        LightningAddressResolver().lnAddressInvoice(
-            lud16,
-            amount,
-            message,
-            zapRequestJson,
-            onSuccess = {
-                onProgress(0.7f)
-                if (account.hasWalletConnectSetup()) {
-                    account.sendZapPaymentRequestFor(
-                        bolt11 = it,
-                        note,
-                        onResponse = { response ->
-                            if (response is PayInvoiceErrorResponse) {
-                                onProgress(0.0f)
-                                onError(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: "Error parsing error message"
-                                )
-                            } else {
-                                onProgress(1f)
-                            }
-                        }
-                    )
-                    onProgress(0.8f)
-
-                    // Awaits for the event to come back to LocalCache.
-                    viewModelScope.launch(Dispatchers.IO) {
-                        delay(5000)
-                        onProgress(0f)
-                    }
-                } else {
-                    runCatching {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-                        ContextCompat.startActivity(context, intent, null)
-                    }
-                    onProgress(0f)
-                }
-            },
-            onError = onError,
-            onProgress = onProgress
-        )
+    fun zap(
+        note: Note,
+        amount: Long,
+        pollOption: Int?,
+        message: String,
+        context: Context,
+        onError: (String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+        zapType: LnZapEvent.ZapType
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            ZapPaymentHandler(account).zap(note, amount, pollOption, message, context, onError, onProgress, onPayViaIntent, zapType)
+        }
     }
 
     fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
@@ -177,7 +286,10 @@ class AccountViewModel(val account: Account) : ViewModel() {
     }
 
     fun report(user: User, type: ReportEvent.ReportType) {
-        account.report(user, type)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.report(user, type)
+            account.hideUser(user.pubkeyHex)
+        }
     }
 
     fun boost(note: Note) {
@@ -196,8 +308,24 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.addPrivateBookmark(note)
     }
 
+    fun addPrivateBookmark(note: Note, decryptedContent: String) {
+        account.addPrivateBookmark(note, decryptedContent)
+    }
+
+    fun addPublicBookmark(note: Note, decryptedContent: String) {
+        account.addPublicBookmark(note, decryptedContent)
+    }
+
+    fun removePublicBookmark(note: Note, decryptedContent: String) {
+        account.removePublicBookmark(note, decryptedContent)
+    }
+
     fun addPublicBookmark(note: Note) {
         account.addPublicBookmark(note)
+    }
+
+    fun removePrivateBookmark(note: Note, decryptedContent: String) {
+        account.removePrivateBookmark(note, decryptedContent)
     }
 
     fun removePrivateBookmark(note: Note) {
@@ -230,14 +358,6 @@ class AccountViewModel(val account: Account) : ViewModel() {
 
     fun decryptZap(note: Note): Event? {
         return account.decryptZapContentAuthor(note)
-    }
-
-    fun hide(user: User) {
-        account.hideUser(user.pubkeyHex)
-    }
-
-    fun show(user: User) {
-        account.showUser(user.pubkeyHex)
     }
 
     fun translateTo(lang: Locale) {
@@ -280,6 +400,13 @@ class AccountViewModel(val account: Account) : ViewModel() {
         account.setHideDeleteRequestDialog()
     }
 
+    val hideNIP24WarningDialog: Boolean
+        get() = account.hideNIP24WarningDialog
+
+    fun dontShowNIP24WarningDialog() {
+        account.setHideNIP24WarningDialog()
+    }
+
     val hideBlockAlertDialog: Boolean
         get() = account.hideBlockAlertDialog
 
@@ -303,25 +430,305 @@ class AccountViewModel(val account: Account) : ViewModel() {
         return account.defaultZapType
     }
 
-    fun isNoteAcceptable(note: Note, onReady: (Boolean, Boolean, ImmutableSet<Note>) -> Unit) {
-        val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
-        val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
+    @Immutable
+    data class NoteComposeReportState(
+        val isAcceptable: Boolean = true,
+        val canPreview: Boolean = true,
+        val isHiddenAuthor: Boolean = false,
+        val relevantReports: ImmutableSet<Note> = persistentSetOf()
+    )
 
-        if (isFromLoggedIn || isFromLoggedInFollow) {
-            // No need to process if from trusted people
-            onReady(true, true, persistentSetOf())
-        } else {
-            val newCanPreview = !note.hasAnyReports()
+    fun isNoteAcceptable(note: Note, onReady: (NoteComposeReportState) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+            val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
 
-            val newIsAcceptable = account.isAcceptable(note)
-
-            if (newCanPreview && newIsAcceptable) {
-                // No need to process reports if nothing is wrong
-                onReady(true, true, persistentSetOf())
+            if (isFromLoggedIn || isFromLoggedInFollow) {
+                // No need to process if from trusted people
+                onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
+            } else if (note.author?.let { account.isHidden(it) } == true) {
+                onReady(NoteComposeReportState(false, false, true, persistentSetOf()))
             } else {
-                val newRelevantReports = account.getRelevantReports(note)
+                val newCanPreview = !note.hasAnyReports()
 
-                onReady(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+                val newIsAcceptable = account.isAcceptable(note)
+
+                if (newCanPreview && newIsAcceptable) {
+                    // No need to process reports if nothing is wrong
+                    onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
+                } else {
+                    val newRelevantReports = account.getRelevantReports(note)
+
+                    onReady(
+                        NoteComposeReportState(
+                            newIsAcceptable,
+                            newCanPreview,
+                            false,
+                            newRelevantReports.toImmutableSet()
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun unwrap(event: GiftWrapEvent): Event? {
+        return account.unwrap(event)
+    }
+    fun unseal(event: SealedGossipEvent): Event? {
+        return account.unseal(event)
+    }
+
+    fun show(user: User) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.showUser(user.pubkeyHex)
+        }
+    }
+
+    fun hide(user: User) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.hideUser(user.pubkeyHex)
+        }
+    }
+
+    fun hide(word: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.hideWord(word)
+        }
+    }
+
+    fun showUser(pubkeyHex: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.showUser(pubkeyHex)
+        }
+    }
+
+    fun createStatus(newStatus: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.createStatus(newStatus)
+        }
+    }
+
+    fun updateStatus(it: AddressableNote, newStatus: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.updateStatus(it, newStatus)
+        }
+    }
+
+    fun deleteStatus(it: AddressableNote) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.deleteStatus(it)
+        }
+    }
+
+    fun checkIfOnline(url: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isOnline = OnlineChecker.isOnline(url)
+            onResult(isOnline)
+        }
+    }
+
+    fun urlPreview(url: String, onResult: suspend (UrlPreviewState) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            UrlCachedPreviewer.previewInfo(url, onResult)
+        }
+    }
+
+    fun loadReactionTo(note: Note?, onNewReactionType: (String?) -> Unit) {
+        if (note == null) return
+
+        viewModelScope.launch(Dispatchers.Default) {
+            onNewReactionType(note.getReactionBy(userProfile()))
+        }
+    }
+
+    fun verifyNip05(userMetadata: UserMetadata, pubkeyHex: String, onResult: (Boolean) -> Unit) {
+        val nip05 = userMetadata.nip05?.ifBlank { null } ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            Nip05Verifier().verifyNip05(
+                nip05,
+                onSuccess = {
+                    // Marks user as verified
+                    if (it == pubkeyHex) {
+                        userMetadata.nip05Verified = true
+                        userMetadata.nip05LastVerificationTime = TimeUtils.now()
+
+                        onResult(userMetadata.nip05Verified)
+                    } else {
+                        userMetadata.nip05Verified = false
+                        userMetadata.nip05LastVerificationTime = 0
+
+                        onResult(userMetadata.nip05Verified)
+                    }
+                },
+                onError = {
+                    userMetadata.nip05LastVerificationTime = 0
+                    userMetadata.nip05Verified = false
+
+                    onResult(userMetadata.nip05Verified)
+                }
+            )
+        }
+    }
+
+    fun retrieveRelayDocument(
+        dirtyUrl: String,
+        onInfo: (RelayInformation) -> Unit,
+        onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            Nip11CachedRetriever.loadRelayInfo(dirtyUrl, onInfo, onError)
+        }
+    }
+
+    fun runOnIO(runOnIO: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runOnIO()
+        }
+    }
+
+    suspend fun checkGetOrCreateUser(key: HexKey): User? {
+        return LocalCache.checkGetOrCreateUser(key)
+    }
+
+    override suspend fun getOrCreateUser(key: HexKey): User {
+        return LocalCache.getOrCreateUser(key)
+    }
+
+    fun checkGetOrCreateUser(key: HexKey, onResult: (User?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateUser(key))
+        }
+    }
+
+    fun getUserIfExists(hex: HexKey): User? {
+        return LocalCache.getUserIfExists(hex)
+    }
+
+    private suspend fun checkGetOrCreateNote(key: HexKey): Note? {
+        return LocalCache.checkGetOrCreateNote(key)
+    }
+
+    override suspend fun getOrCreateNote(key: HexKey): Note {
+        return LocalCache.getOrCreateNote(key)
+    }
+
+    fun checkGetOrCreateNote(key: HexKey, onResult: (Note?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateNote(key))
+        }
+    }
+
+    fun getNoteIfExists(hex: HexKey): Note? {
+        return LocalCache.getNoteIfExists(hex)
+    }
+
+    override suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? {
+        return LocalCache.checkGetOrCreateAddressableNote(key)
+    }
+
+    fun checkGetOrCreateAddressableNote(key: HexKey, onResult: (AddressableNote?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateAddressableNote(key))
+        }
+    }
+
+    private suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
+        return LocalCache.getOrCreateAddressableNote(key)
+    }
+
+    fun getOrCreateAddressableNote(key: ATag, onResult: (AddressableNote?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(getOrCreateAddressableNote(key))
+        }
+    }
+
+    fun getAddressableNoteIfExists(key: String): AddressableNote? {
+        return LocalCache.addressables[key]
+    }
+
+    fun findStatusesForUser(myUser: User, onResult: (ImmutableList<AddressableNote>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(LocalCache.findStatusesForUser(myUser))
+        }
+    }
+
+    private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
+        return LocalCache.checkGetOrCreateChannel(key)
+    }
+
+    fun checkGetOrCreateChannel(key: HexKey, onResult: (Channel?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onResult(checkGetOrCreateChannel(key))
+        }
+    }
+
+    fun getChannelIfExists(hex: HexKey): Channel? {
+        return LocalCache.getChannelIfExists(hex)
+    }
+
+    fun loadParticipants(participants: List<Participant>, onReady: (ImmutableList<Pair<Participant, User>>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val participantUsers = participants.mapNotNull { part ->
+                checkGetOrCreateUser(part.key)?.let {
+                    Pair(
+                        part,
+                        it
+                    )
+                }
+            }.toImmutableList()
+
+            onReady(participantUsers)
+        }
+    }
+
+    fun loadUsers(hexList: List<String>, onReady: (ImmutableList<User>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onReady(
+                hexList.mapNotNull { hex ->
+                    checkGetOrCreateUser(hex)
+                }.sortedBy { account.isFollowing(it) }.reversed().toImmutableList()
+            )
+        }
+    }
+
+    fun returnNIP19References(content: String, tags: ImmutableListOfLists<String>?, onNewReferences: (List<Nip19.Return>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onNewReferences(MarkdownParser().returnNIP19References(content, tags))
+        }
+    }
+
+    fun returnMarkdownWithSpecialContent(content: String, tags: ImmutableListOfLists<String>?, onNewContent: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onNewContent(MarkdownParser().returnMarkdownWithSpecialContent(content, tags))
+        }
+    }
+
+    fun parseNIP19(str: String, onNote: (LoadedBechLink) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            Nip19.uriToRoute(str)?.let {
+                var returningNote: Note? = null
+                if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
+                        returningNote = note
+                    }
+                }
+
+                onNote(LoadedBechLink(returningNote, it))
+            }
+        }
+    }
+
+    fun loadAndMarkAsRead(routeForLastRead: String, baseNoteCreatedAt: Long?, onIsNew: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val lastTime = account.loadLastRead(routeForLastRead)
+
+            if (baseNoteCreatedAt != null) {
+                account.markAsRead(routeForLastRead, baseNoteCreatedAt)
+                onIsNew(baseNoteCreatedAt > lastTime)
+            } else {
+                onIsNew(false)
             }
         }
     }
@@ -332,3 +739,6 @@ class AccountViewModel(val account: Account) : ViewModel() {
         }
     }
 }
+
+@Immutable
+data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)

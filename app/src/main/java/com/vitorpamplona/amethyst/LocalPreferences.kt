@@ -3,28 +3,29 @@ package com.vitorpamplona.amethyst
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.DefaultReactions
+import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
+import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.Settings
-import com.vitorpamplona.amethyst.model.hexToByteArray
+import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
-import com.vitorpamplona.amethyst.model.toHexKey
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.KeyPair
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.Event.Companion.getRefinedEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.toNpub
-import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
-import com.vitorpamplona.amethyst.ui.note.Nip47URI
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.hexToByteArray
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.LnZapEvent
 import java.io.File
 import java.util.Locale
 
@@ -37,7 +38,8 @@ private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 @Immutable
 data class AccountInfo(
     val npub: String,
-    val hasPrivKey: Boolean = false
+    val hasPrivKey: Boolean,
+    val loggedInWithExternalSigner: Boolean
 )
 
 private object PrefKeys {
@@ -64,6 +66,7 @@ private object PrefKeys {
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
+    const val HIDE_NIP_24_WARNING_DIALOG = "hide_nip24_warning_dialog"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
@@ -75,17 +78,16 @@ private object PrefKeys {
     const val THEME = "theme"
     const val PREFERRED_LANGUAGE = "preferred_Language"
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
-    val LAST_READ: (String) -> String = { route -> "last_read_route_$route" }
+    const val AUTOMATICALLY_HIDE_NAV_BARS = "automatically_hide_nav_bars"
+    const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
 }
-
-private val gson = GsonBuilder().create()
 
 object LocalPreferences {
     private const val comma = ","
 
     private var _currentAccount: String? = null
 
-    private fun currentAccount(): String? {
+    fun currentAccount(): String? {
         if (_currentAccount == null) {
             _currentAccount = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
         }
@@ -204,8 +206,16 @@ object LocalPreferences {
 
     fun allSavedAccounts(): List<AccountInfo> {
         return savedAccounts().map { npub ->
-            AccountInfo(npub = npub)
+            AccountInfo(
+                npub,
+                hasPrivKey(npub),
+                getLoggedInWithExternalSigner(npub)
+            )
         }
+    }
+
+    fun allLocalAccountNPubs(): Set<String> {
+        return savedAccounts().toSet()
     }
 
     fun saveToEncryptedStorage(account: Account) {
@@ -216,33 +226,35 @@ object LocalPreferences {
             putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
             putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
             putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
-            putString(PrefKeys.RELAYS, gson.toJson(account.localRelays))
+            putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(account.localRelays))
             putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
-            putString(PrefKeys.LANGUAGE_PREFS, gson.toJson(account.languagePreferences))
+            putString(PrefKeys.LANGUAGE_PREFS, Event.mapper.writeValueAsString(account.languagePreferences))
             putString(PrefKeys.TRANSLATE_TO, account.translateTo)
-            putString(PrefKeys.ZAP_AMOUNTS, gson.toJson(account.zapAmountChoices))
-            putString(PrefKeys.REACTION_CHOICES, gson.toJson(account.reactionChoices))
-            putString(PrefKeys.DEFAULT_ZAPTYPE, gson.toJson(account.defaultZapType))
-            putString(PrefKeys.DEFAULT_FILE_SERVER, gson.toJson(account.defaultFileServer))
+            putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(account.zapAmountChoices))
+            putString(PrefKeys.REACTION_CHOICES, Event.mapper.writeValueAsString(account.reactionChoices))
+            putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.name)
+            putString(PrefKeys.DEFAULT_FILE_SERVER, account.defaultFileServer.name)
             putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
             putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList)
             putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, account.defaultNotificationFollowList)
             putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, account.defaultDiscoveryFollowList)
-            putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, gson.toJson(account.zapPaymentRequest))
-            putString(PrefKeys.LATEST_CONTACT_LIST, Event.gson.toJson(account.backupContactList))
+            putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, Event.mapper.writeValueAsString(account.zapPaymentRequest))
+            putString(PrefKeys.LATEST_CONTACT_LIST, Event.mapper.writeValueAsString(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
+            putBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, account.hideNIP24WarningDialog)
             putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
             putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
             putInt(PrefKeys.PROXY_PORT, account.proxyPort)
             putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
             putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
-            putString(PrefKeys.LAST_READ_PER_ROUTE, gson.toJson(account.lastReadPerRoute))
+            putString(PrefKeys.LAST_READ_PER_ROUTE, Event.mapper.writeValueAsString(account.lastReadPerRoute))
 
             if (account.showSensitiveContent == null) {
                 remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
             } else {
                 putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
             }
+            putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.loginWithExternalSigner)
         }.apply()
 
         val globalPrefs = encryptedPreferences()
@@ -263,6 +275,11 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, account.settings.automaticallyShowUrlPreview.prefCode!!)
             }
+            if (account.settings.automaticallyHideNavigationBars.prefCode == null) {
+                remove(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)
+            } else {
+                putBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, account.settings.automaticallyHideNavigationBars.prefCode!!)
+            }
             putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
         }.apply()
     }
@@ -274,17 +291,19 @@ object LocalPreferences {
     }
 
     fun getTheme(): Int {
-        encryptedPreferences().apply {
-            return getInt(PrefKeys.THEME, 0)
-        }
+        return encryptedPreferences().getInt(PrefKeys.THEME, 0)
     }
 
     fun getPreferredLanguage(): String {
-        var language = ""
-        encryptedPreferences().apply {
-            language = getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
-        }
-        return language
+        return encryptedPreferences().getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
+    }
+
+    private fun getLoggedInWithExternalSigner(npub: String): Boolean {
+        return encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
+    }
+
+    private fun hasPrivKey(npub: String): Boolean {
+        return (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
     }
 
     fun loadFromEncryptedStorage(): Account? {
@@ -300,10 +319,10 @@ object LocalPreferences {
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
             val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
             val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
-            val localRelays = gson.fromJson(
-                getString(PrefKeys.RELAYS, "[]"),
-                object : TypeToken<Set<RelaySetupInfo>>() {}.type
-            ) ?: setOf<RelaySetupInfo>()
+            val localRelays = getString(PrefKeys.RELAYS, "[]")?.let {
+                println("LocalRelays: $it")
+                Event.mapper.readValue<Set<RelaySetupInfo>?>(it)
+            } ?: setOf<RelaySetupInfo>()
 
             val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
             val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
@@ -312,62 +331,63 @@ object LocalPreferences {
             val defaultNotificationFollowList = getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
             val defaultDiscoveryFollowList = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
-            val zapAmountChoices = gson.fromJson(
-                getString(PrefKeys.ZAP_AMOUNTS, "[]"),
-                object : TypeToken<List<Long>>() {}.type
-            ) ?: listOf(500L, 1000L, 5000L)
+            val zapAmountChoices = getString(PrefKeys.ZAP_AMOUNTS, "[]")?.let {
+                Event.mapper.readValue<List<Long>?>(it)
+            }?.ifEmpty { DefaultZapAmounts } ?: DefaultZapAmounts
 
-            val reactionChoices = gson.fromJson<List<String>>(
-                getString(PrefKeys.REACTION_CHOICES, "[]"),
-                object : TypeToken<List<String>>() {}.type
-            ).ifEmpty { listOf("+") } ?: listOf("+")
+            val reactionChoices = getString(PrefKeys.REACTION_CHOICES, "[]")?.let {
+                Event.mapper.readValue<List<String>?>(it)
+            }?.ifEmpty { DefaultReactions } ?: DefaultReactions
 
-            val defaultZapType = gson.fromJson(
-                getString(PrefKeys.DEFAULT_ZAPTYPE, "PUBLIC"),
-                object : TypeToken<LnZapEvent.ZapType>() {}.type
-            ) ?: LnZapEvent.ZapType.PUBLIC
+            val defaultZapType = getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
+                LnZapEvent.ZapType.values().firstOrNull() { it.name == serverName }
+            } ?: LnZapEvent.ZapType.PUBLIC
 
-            val defaultFileServer = gson.fromJson(
-                getString(PrefKeys.DEFAULT_FILE_SERVER, "NOSTR_BUILD"),
-                object : TypeToken<ServersAvailable>() {}.type
-            ) ?: ServersAvailable.NOSTR_BUILD
+            val defaultFileServer = getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
+                ServersAvailable.values().firstOrNull() { it.name == serverName }
+            } ?: ServersAvailable.NOSTR_BUILD
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                    gson.fromJson(it, Nip47URI::class.java)
+                    Event.mapper.readValue<Nip47URI?>(it)
                 }
             } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Error Decoding Zap Payment Request Server ${getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)}", e)
                 e.printStackTrace()
                 null
             }
 
             val latestContactList = try {
                 getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
-                    Event.gson.fromJson(it, Event::class.java)
-                        .getRefinedEvent(true) as ContactListEvent
+                    println("Decoding Contact List: " + it)
+                    if (it != null) {
+                        Event.fromJson(it) as ContactListEvent?
+                    } else {
+                        null
+                    }
                 }
             } catch (e: Throwable) {
-                e.printStackTrace()
+                Log.w("LocalPreferences", "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}", e)
                 null
             }
 
             val languagePreferences = try {
                 getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
-                    gson.fromJson(
-                        it,
-                        object : TypeToken<Map<String, String>>() {}.type
-                    ) as Map<String, String>
+                    Event.mapper.readValue<Map<String, String>?>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Error Decoding Language Preferences ${getString(PrefKeys.LANGUAGE_PREFS, null)}", e)
                 e.printStackTrace()
                 mapOf()
             }
 
             val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
             val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
+            val hideNIP24WarningDialog = getBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, false)
             val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
             val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+            val loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
 
             val showSensitiveContent = if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
                 getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
@@ -379,12 +399,10 @@ object LocalPreferences {
 
             val lastReadPerRoute = try {
                 getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
-                    gson.fromJson(
-                        it,
-                        object : TypeToken<Map<String, Long>>() {}.type
-                    ) as Map<String, Long>
+                    Event.mapper.readValue<Map<String, Long>?>(it)
                 } ?: mapOf()
             } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Error Decoding Last Read per route ${getString(PrefKeys.LAST_READ_PER_ROUTE, null)}", e)
                 e.printStackTrace()
                 mapOf()
             }
@@ -406,6 +424,11 @@ object LocalPreferences {
                     parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
                 } else {
                     ConnectivityType.ALWAYS
+                }
+                settings.automaticallyHideNavigationBars = if (contains(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)) {
+                    parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
+                } else {
+                    BooleanType.ALWAYS
                 }
 
                 settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")
@@ -431,6 +454,7 @@ object LocalPreferences {
                 zapPaymentRequest = zapPaymentRequestServer,
                 hideDeleteRequestDialog = hideDeleteRequestDialog,
                 hideBlockAlertDialog = hideBlockAlertDialog,
+                hideNIP24WarningDialog = hideNIP24WarningDialog,
                 backupContactList = latestContactList,
                 proxy = proxy,
                 proxyPort = proxyPort,
@@ -438,51 +462,11 @@ object LocalPreferences {
                 warnAboutPostsWithReports = warnAboutReports,
                 filterSpamFromStrangers = filterSpam,
                 lastReadPerRoute = lastReadPerRoute,
-                settings = settings
+                settings = settings,
+                loginWithExternalSigner = loginWithExternalSigner
             )
 
             return a
         }
-    }
-
-    fun migrateSingleUserPrefs() {
-        if (currentAccount() != null) return
-
-        val pubkey = encryptedPreferences().getString(PrefKeys.NOSTR_PUBKEY, null) ?: return
-        val npub = Hex.decode(pubkey).toNpub()
-
-        val stringPrefs = listOf(
-            PrefKeys.NOSTR_PRIVKEY,
-            PrefKeys.NOSTR_PUBKEY,
-            PrefKeys.RELAYS,
-            PrefKeys.LANGUAGE_PREFS,
-            PrefKeys.TRANSLATE_TO,
-            PrefKeys.ZAP_AMOUNTS,
-            PrefKeys.LATEST_CONTACT_LIST
-        )
-
-        val stringSetPrefs = listOf(
-            PrefKeys.FOLLOWING_CHANNELS,
-            PrefKeys.HIDDEN_USERS,
-            PrefKeys.DONT_TRANSLATE_FROM
-        )
-
-        encryptedPreferences().apply {
-            val appPrefs = this
-            encryptedPreferences(npub).edit().apply {
-                val userPrefs = this
-
-                stringPrefs.forEach { userPrefs.putString(it, appPrefs.getString(it, null)) }
-                stringSetPrefs.forEach { userPrefs.putStringSet(it, appPrefs.getStringSet(it, null)) }
-                userPrefs.putBoolean(
-                    PrefKeys.HIDE_DELETE_REQUEST_DIALOG,
-                    appPrefs.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
-                )
-            }.apply()
-        }
-
-        encryptedPreferences().edit().clear().apply()
-        addAccount(npub)
-        updateCurrentAccount(npub)
     }
 }

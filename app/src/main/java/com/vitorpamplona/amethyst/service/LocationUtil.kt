@@ -6,7 +6,6 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Bundle
 import android.os.HandlerThread
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -53,9 +52,6 @@ class LocationUtil(context: Context) {
             locationStateFlow.value = location
         }
 
-        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-        }
-
         override fun onProviderEnabled(provider: String) {
             providerState.value = true
         }
@@ -67,7 +63,7 @@ class LocationUtil(context: Context) {
 }
 
 class ReverseGeoLocationUtil {
-    fun execute(
+    suspend fun execute(
         location: Location,
         context: Context
     ): String? {

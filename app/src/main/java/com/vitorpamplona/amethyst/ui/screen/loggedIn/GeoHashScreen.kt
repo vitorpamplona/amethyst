@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -34,7 +35,7 @@ import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -64,12 +65,16 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
 
     NostrGeohashDataSource.loadHashtag(tag)
 
-    LaunchedEffect(tag) {
+    DisposableEffect(tag) {
         NostrGeohashDataSource.start()
         feedViewModel.invalidateData()
+        onDispose {
+            NostrGeohashDataSource.loadHashtag(null)
+            NostrGeohashDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hashtag Start")
@@ -87,8 +92,6 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            NostrGeohashDataSource.loadHashtag(null)
-            NostrGeohashDataSource.stop()
         }
     }
 
@@ -96,7 +99,6 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            GeoHashHeader(tag, accountViewModel)
             RefresheableFeedView(
                 feedViewModel,
                 null,
@@ -108,48 +110,53 @@ fun GeoHashScreen(tag: String, feedViewModel: NostrGeoHashFeedViewModel, account
 }
 
 @Composable
-fun GeoHashHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
+fun GeoHashHeader(tag: String, modifier: Modifier = StdPadding, account: AccountViewModel, onClick: () -> Unit = { }) {
     Column(
-        Modifier.clickable { onClick() }
+        Modifier.fillMaxWidth().clickable { onClick() }
     ) {
-        Column(modifier = HalfPadding) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        val context = LocalContext.current
-                        val cityName = remember(tag) {
-                            ReverseGeoLocationUtil().execute(tag.toGeoHash().toLocation(), context)
-                        }
+        Column(modifier = modifier) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
 
-                        Text(
-                            "$cityName ($tag)",
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        HashtagActionOptions(tag, account)
-                    }
-                }
+                GeoHashActionOptions(tag, account)
             }
         }
 
         Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
     }
 }
 
 @Composable
-private fun HashtagActionOptions(
+fun DislayGeoTagHeader(geohash: String, modifier: Modifier) {
+    val context = LocalContext.current
+
+    var cityName by remember(geohash) {
+        mutableStateOf<String>(geohash)
+    }
+
+    LaunchedEffect(key1 = geohash) {
+        launch(Dispatchers.IO) {
+            val newCityName = ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank { null }
+            if (newCityName != null && newCityName != cityName) {
+                cityName = "$newCityName ($geohash)"
+            }
+        }
+    }
+
+    Text(
+        cityName,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel
 ) {
@@ -166,14 +173,20 @@ private fun HashtagActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollowGeohash(tag)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -184,14 +197,20 @@ private fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.followGeohash(tag)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {

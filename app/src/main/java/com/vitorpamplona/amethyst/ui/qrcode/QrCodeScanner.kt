@@ -4,13 +4,12 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.nip19.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19
 
 @Composable
 fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
@@ -40,8 +39,6 @@ fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
 
 @Composable
 fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-
     val qrLauncher =
         rememberLauncherForActivityResult(ScanContract()) {
             if (it.contents != null) {
@@ -59,7 +56,7 @@ fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
         addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)
     }
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(Unit) {
         qrLauncher.launch(scanOptions)
         onDispose { }
     }

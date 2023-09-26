@@ -3,28 +3,31 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.nip19.Nip19
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.toNote
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import fr.acinq.secp256k1.Hex
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.toNote
+import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.regex.Pattern
-
-val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 @Stable
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
@@ -40,6 +43,10 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
 
         return minOf(publishedAt, lastCreatedAt)
     }
+
+    fun dTag(): String? {
+        return (event as? AddressableEvent)?.dTag()
+    }
 }
 
 @Stable
@@ -51,20 +58,20 @@ open class Note(val idHex: String) {
     var replyTo: List<Note>? = null
 
     // These fields are updated every time an event related to this note is received.
-    var replies = setOf<Note>()
+    var replies = listOf<Note>()
         private set
-    var reactions = mapOf<String, Set<Note>>()
+    var reactions = mapOf<String, List<Note>>()
         private set
-    var boosts = setOf<Note>()
+    var boosts = listOf<Note>()
         private set
-    var reports = mapOf<User, Set<Note>>()
+    var reports = mapOf<User, List<Note>>()
         private set
     var zaps = mapOf<Note, Note?>()
         private set
     var zapPayments = mapOf<Note, Note?>()
         private set
 
-    var relays = setOf<String>()
+    var relays = listOf<String>()
         private set
 
     var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
@@ -73,7 +80,22 @@ open class Note(val idHex: String) {
     open fun idNote() = id().toNote()
 
     open fun toNEvent(): String {
-        return Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+        val myEvent = event
+        return if (myEvent is WrappedEvent) {
+            val host = myEvent.host
+            if (host != null) {
+                Nip19.createNEvent(
+                    host.id,
+                    host.pubKey,
+                    host.kind(),
+                    relays.firstOrNull()
+                )
+            } else {
+                Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+            }
+        } else {
+            Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+        }
     }
 
     fun toNostrUri(): String {
@@ -104,11 +126,13 @@ open class Note(val idHex: String) {
     open fun createdAt() = event?.createdAt()
 
     fun loadEvent(event: Event, author: User, replyTo: List<Note>) {
-        this.event = event
-        this.author = author
-        this.replyTo = replyTo
+        if (this.event?.id() != event.id()) {
+            this.event = event
+            this.author = author
+            this.replyTo = replyTo
 
-        liveSet?.metadata?.invalidateData()
+            liveSet?.innerMetadata?.invalidateData()
+        }
     }
 
     fun formattedDateTime(timestamp: Long): String {
@@ -116,20 +140,63 @@ open class Note(val idHex: String) {
             .format(DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss"))
     }
 
+    data class LevelSignature(val signature: String, val createdAt: Long?, val author: User?)
+
     /**
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */
-    fun replyLevelSignature(cachedSignatures: MutableMap<Note, String> = mutableMapOf()): String {
+    fun replyLevelSignature(
+        eventsToConsider: Set<HexKey>,
+        cachedSignatures: MutableMap<Note, LevelSignature>,
+        account: User,
+        accountFollowingSet: Set<String>,
+        now: Long
+    ): LevelSignature {
         val replyTo = replyTo
         if (event is RepostEvent || event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()) {
-            return "/" + formattedDateTime(createdAt() ?: 0) + ";"
+            return LevelSignature(
+                signature = "/" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) + ";",
+                createdAt = createdAt(),
+                author = author
+            )
         }
 
-        return replyTo
-            .map {
-                cachedSignatures[it] ?: it.replyLevelSignature(cachedSignatures).apply { cachedSignatures.put(it, this) }
-            }
-            .maxBy { it.length }.removeSuffix(";") + "/" + formattedDateTime(createdAt() ?: 0) + ";"
+        val parent = (
+            replyTo
+                .filter { it.idHex in eventsToConsider } // This forces the signature to be based on a branch, avoiding two roots
+                .map {
+                    cachedSignatures[it] ?: it.replyLevelSignature(
+                        eventsToConsider,
+                        cachedSignatures,
+                        account,
+                        accountFollowingSet,
+                        now
+                    ).apply { cachedSignatures.put(it, this) }
+                }
+                .maxByOrNull { it.signature.length }
+            )
+
+        val parentSignature = parent?.signature?.removeSuffix(";") ?: ""
+
+        val threadOrder = if (parent?.author == author && createdAt() != null) {
+            // author of the thread first, in **ascending** order
+            "9" + formattedDateTime((parent?.createdAt ?: 0) + (now - (createdAt() ?: 0))) + idHex.substring(0, 8)
+        } else if (author?.pubkeyHex == account.pubkeyHex) {
+            "8" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) // my replies
+        } else if (author?.pubkeyHex in accountFollowingSet) {
+            "7" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) // my follows replies.
+        } else {
+            "0" + formattedDateTime(createdAt() ?: 0) + idHex.substring(0, 8) // everyone else.
+        }
+
+        val mySignature = LevelSignature(
+            signature = parentSignature + "/" + threadOrder + ";",
+            createdAt = createdAt(),
+            author = author
+        )
+
+        cachedSignatures[this] = mySignature
+        return mySignature
     }
 
     fun replyLevel(cachedLevels: MutableMap<Note, Int> = mutableMapOf()): Int {
@@ -146,32 +213,68 @@ open class Note(val idHex: String) {
     fun addReply(note: Note) {
         if (note !in replies) {
             replies = replies + note
-            liveSet?.replies?.invalidateData()
+            liveSet?.innerReplies?.invalidateData()
         }
     }
 
     fun removeReply(note: Note) {
-        replies = replies - note
-        liveSet?.replies?.invalidateData()
+        if (note in replies) {
+            replies = replies - note
+            liveSet?.innerReplies?.invalidateData()
+        }
     }
+
     fun removeBoost(note: Note) {
-        boosts = boosts - note
-        liveSet?.boosts?.invalidateData()
+        if (note in boosts) {
+            boosts = boosts - note
+            liveSet?.innerBoosts?.invalidateData()
+        }
     }
+
+    fun removeAllChildNotes(): List<Note> {
+        val toBeRemoved = replies +
+            reactions.values.flatten() +
+            boosts +
+            reports.values.flatten() +
+            zaps.keys +
+            zaps.values.filterNotNull() +
+            zapPayments.keys +
+            zapPayments.values.filterNotNull()
+
+        replies = listOf<Note>()
+        reactions = mapOf<String, List<Note>>()
+        boosts = listOf<Note>()
+        reports = mapOf<User, List<Note>>()
+        zaps = mapOf<Note, Note?>()
+        zapPayments = mapOf<Note, Note?>()
+        relays = listOf<String>()
+        lastReactionsDownloadTime = emptyMap()
+
+        liveSet?.innerReplies?.invalidateData()
+        liveSet?.innerReactions?.invalidateData()
+        liveSet?.innerBoosts?.invalidateData()
+        liveSet?.innerReports?.invalidateData()
+        liveSet?.innerZaps?.invalidateData()
+
+        return toBeRemoved
+    }
+
     fun removeReaction(note: Note) {
         val tags = note.event?.tags() ?: emptyList()
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
             reactions[reaction]?.let {
-                val newList = it.minus(note)
-                if (newList.isEmpty()) {
-                    reactions = reactions.minus(reaction)
-                } else {
-                    reactions = reactions + Pair(reaction, newList)
-                }
+                if (note in it) {
+                    val newList = it.minus(note)
+                    if (newList.isEmpty()) {
+                        reactions = reactions.minus(reaction)
+                    } else {
+                        reactions = reactions + Pair(reaction, newList)
+                    }
 
-                liveSet?.reactions?.invalidateData()
+                    liveSet?.innerReactions?.invalidateData()
+                }
             }
         }
     }
@@ -182,7 +285,7 @@ open class Note(val idHex: String) {
         if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
-                liveSet?.reports?.invalidateData()
+                liveSet?.innerReports?.invalidateData()
             }
         }
     }
@@ -190,29 +293,28 @@ open class Note(val idHex: String) {
     fun removeZap(note: Note) {
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
-            val toRemove = zaps.filterValues { it == note }
-            zaps = zaps.minus(toRemove.keys)
-            liveSet?.zaps?.invalidateData()
+            zaps = zaps.filterValues { it != note }
+            liveSet?.innerZaps?.invalidateData()
         }
     }
 
     fun removeZapPayment(note: Note) {
         if (zapPayments[note] != null) {
             zapPayments = zapPayments.minus(note)
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         } else if (zapPayments.containsValue(note)) {
             val toRemove = zapPayments.filterValues { it == note }
             zapPayments = zapPayments.minus(toRemove.keys)
-            liveSet?.zaps?.invalidateData()
+            liveSet?.innerZaps?.invalidateData()
         }
     }
 
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
-            liveSet?.boosts?.invalidateData()
+            liveSet?.innerBoosts?.invalidateData()
         }
     }
 
@@ -234,12 +336,12 @@ open class Note(val idHex: String) {
         if (zapRequest !in zaps.keys) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         } else if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         }
     }
@@ -262,12 +364,12 @@ open class Note(val idHex: String) {
         if (zapPaymentRequest !in zapPayments.keys) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         } else if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                liveSet?.innerZaps?.invalidateData()
             }
         }
     }
@@ -277,11 +379,11 @@ open class Note(val idHex: String) {
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction !in reactions.keys) {
-            reactions = reactions + Pair(reaction, setOf(note))
-            liveSet?.reactions?.invalidateData()
+            reactions = reactions + Pair(reaction, listOf(note))
+            liveSet?.innerReactions?.invalidateData()
         } else if (reactions[reaction]?.contains(note) == false) {
             reactions = reactions + Pair(reaction, (reactions[reaction] ?: emptySet()) + note)
-            liveSet?.reactions?.invalidateData()
+            liveSet?.innerReactions?.invalidateData()
         }
     }
 
@@ -289,18 +391,18 @@ open class Note(val idHex: String) {
         val author = note.author ?: return
 
         if (author !in reports.keys) {
-            reports = reports + Pair(author, setOf(note))
-            liveSet?.reports?.invalidateData()
+            reports = reports + Pair(author, listOf(note))
+            liveSet?.innerReports?.invalidateData()
         } else if (reports[author]?.contains(note) == false) {
             reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
-            liveSet?.reports?.invalidateData()
+            liveSet?.innerReports?.invalidateData()
         }
     }
 
     fun addRelay(relay: Relay) {
         if (relay.url !in relays) {
             relays = relays + relay.url
-            liveSet?.relays?.invalidateData()
+            liveSet?.innerRelays?.invalidateData()
         }
     }
 
@@ -382,8 +484,8 @@ open class Note(val idHex: String) {
         return boosts.any { it.author?.pubkeyHex == user.pubkeyHex }
     }
 
-    fun reportsBy(user: User): Set<Note> {
-        return reports[user] ?: emptySet()
+    fun hasReportsBy(user: User): Boolean {
+        return reports[user]?.isNotEmpty() ?: false
     }
 
     fun reportAuthorsBy(users: Set<HexKey>): List<User> {
@@ -398,10 +500,6 @@ open class Note(val idHex: String) {
         return reportAuthorsBy(users).mapNotNull {
             reports[it]
         }.flatten()
-    }
-
-    fun countReactions(): Int {
-        return reactions.values.sumOf { it.size }
     }
 
     fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
@@ -547,11 +645,15 @@ open class Note(val idHex: String) {
         }
 
         replyTo = null
-        replies = emptySet()
+        replies = emptyList()
         reactions = emptyMap()
-        boosts = emptySet()
+        boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
+    }
+
+    fun clearEOSE() {
+        lastReactionsDownloadTime = emptyMap()
     }
 
     var liveSet: NoteLiveSet? = null
@@ -565,37 +667,90 @@ open class Note(val idHex: String) {
 
     fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
+            liveSet?.destroy()
             liveSet = null
         }
     }
 
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
-        if (event == null) return false
+        val thisEvent = event ?: return false
 
-        val isBoostedNoteHidden = if (event is GenericRepostEvent || event is RepostEvent || event is CommunityPostApprovalEvent) {
+        val isBoostedNoteHidden = if (thisEvent is GenericRepostEvent || thisEvent is RepostEvent || thisEvent is CommunityPostApprovalEvent) {
             replyTo?.lastOrNull()?.isHiddenFor(accountChoices) ?: false
         } else {
             false
         }
 
-        val isSensitive = event?.isSensitive() ?: false
-        return isBoostedNoteHidden ||
+        val isHiddenByWord = if (thisEvent is BaseTextNoteEvent) {
+            accountChoices.hiddenWords.any {
+                thisEvent.content.contains(it, true)
+            }
+        } else {
+            false
+        }
+
+        val isSensitive = thisEvent.isSensitive()
+        return isBoostedNoteHidden || isHiddenByWord ||
             accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
             accountChoices.spammers.contains(author?.pubkeyHex) ||
             (isSensitive && accountChoices.showSensitiveContent == false)
     }
 }
 
+@Stable
 class NoteLiveSet(u: Note) {
     // Observers line up here.
-    val metadata: NoteLiveData = NoteLiveData(u)
+    val innerMetadata = NoteBundledRefresherLiveData(u)
+    val innerReactions = NoteBundledRefresherLiveData(u)
+    val innerBoosts = NoteBundledRefresherLiveData(u)
+    val innerReplies = NoteBundledRefresherLiveData(u)
+    val innerReports = NoteBundledRefresherLiveData(u)
+    val innerRelays = NoteBundledRefresherLiveData(u)
+    val innerZaps = NoteBundledRefresherLiveData(u)
 
-    val reactions: NoteLiveData = NoteLiveData(u)
-    val boosts: NoteLiveData = NoteLiveData(u)
-    val replies: NoteLiveData = NoteLiveData(u)
-    val reports: NoteLiveData = NoteLiveData(u)
-    val relays: NoteLiveData = NoteLiveData(u)
-    val zaps: NoteLiveData = NoteLiveData(u)
+    val metadata = innerMetadata.map { it }
+    val reactions = innerReactions.map { it }
+    val boosts = innerBoosts.map { it }
+    val replies = innerReplies.map { it }
+    val reports = innerReports.map { it }
+    val relays = innerRelays.map { it }
+    val zaps = innerZaps.map { it }
+
+    val authorChanges = innerMetadata.map {
+        it.note.author
+    }
+
+    val hasEvent = innerMetadata.map {
+        it.note.event != null
+    }.distinctUntilChanged()
+
+    val hasReactions = innerZaps.combineWith(innerBoosts, innerReactions) { zapState, boostState, reactionState ->
+        zapState?.note?.zaps?.isNotEmpty() ?: false ||
+            boostState?.note?.boosts?.isNotEmpty() ?: false ||
+            reactionState?.note?.reactions?.isNotEmpty() ?: false
+    }.distinctUntilChanged()
+
+    val replyCount = innerReplies.map {
+        it.note.replies.size
+    }.distinctUntilChanged()
+
+    val reactionCount = innerReactions.map {
+        it.note.reactions.values.sumOf { it.size }
+    }.distinctUntilChanged()
+
+    val boostCount = innerBoosts.map {
+        it.note.boosts.size
+    }.distinctUntilChanged()
+
+    val boostList = innerBoosts.map {
+        it.note.boosts.toImmutableList()
+    }.distinctUntilChanged()
+
+    val relayInfo = innerRelays.map {
+        it.note.relays.map {
+            RelayBriefInfo(it)
+        }.toImmutableList()
+    }
 
     fun isInUse(): Boolean {
         return metadata.hasObservers() ||
@@ -604,13 +759,34 @@ class NoteLiveSet(u: Note) {
             replies.hasObservers() ||
             reports.hasObservers() ||
             relays.hasObservers() ||
-            zaps.hasObservers()
+            zaps.hasObservers() ||
+            authorChanges.hasObservers() ||
+            hasEvent.hasObservers() ||
+            hasReactions.hasObservers() ||
+            replyCount.hasObservers() ||
+            reactionCount.hasObservers() ||
+            boostCount.hasObservers() ||
+            boostList.hasObservers()
+    }
+
+    fun destroy() {
+        innerMetadata.destroy()
+        innerReactions.destroy()
+        innerBoosts.destroy()
+        innerReplies.destroy()
+        innerReports.destroy()
+        innerRelays.destroy()
+        innerZaps.destroy()
     }
 }
 
-class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
+class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
+
+    fun destroy() {
+        bundler.cancel()
+    }
 
     fun invalidateData() {
         checkNotInMainThread()
@@ -618,12 +794,21 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
         bundler.invalidate() {
             checkNotInMainThread()
 
-            if (hasActiveObservers()) {
-                postValue(NoteState(note))
-            }
+            postValue(NoteState(note))
         }
     }
 
+    fun <Y> map(
+        transform: (NoteState) -> Y
+    ): NoteLoadingLiveData<Y> {
+        val initialValue = this.value?.let { transform(it) }
+        val result = NoteLoadingLiveData(note, initialValue)
+        result.addSource(this) { x -> result.value = transform(x) }
+        return result
+    }
+}
+
+class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveData<Y>(initialValue) {
     override fun onActive() {
         super.onActive()
         if (note is AddressableNote) {
@@ -645,3 +830,10 @@ class NoteLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
 
 @Immutable
 class NoteState(val note: Note)
+
+@Immutable
+data class RelayBriefInfo(
+    val url: String,
+    val displayUrl: String = url.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/").intern(),
+    val favIcon: String = "https://$displayUrl/favicon.ico".intern()
+)

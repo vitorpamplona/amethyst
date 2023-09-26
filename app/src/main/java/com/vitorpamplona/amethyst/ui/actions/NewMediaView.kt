@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -45,9 +46,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +59,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val account = accountViewModel.accountLiveData.value?.account ?: return
+    val account = accountViewModel.account
     val resolver = LocalContext.current.contentResolver
     val context = LocalContext.current
 
@@ -78,13 +81,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeRelays()?.filter {
-        it.write
-    }?.map {
-        it
-    } ?: account.convertLocalRelays().filter {
-        it.write
-    }
+    var relayList = account.activeWriteRelays()
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -100,7 +97,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
         ) {
             if (showRelaysDialog) {
                 RelaySelectionDialog(
-                    list = relayList,
+                    preSelectedList = relayList,
                     onClose = {
                         showRelaysDialog = false
                     },
@@ -122,7 +119,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })
@@ -190,8 +187,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
         Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
     )
 
-    val fileServerOptions = remember { fileServers.map { it.second }.toImmutableList() }
-    val fileServerExplainers = remember { fileServers.map { it.third }.toImmutableList() }
+    val fileServerOptions = remember { fileServers.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
     val resolver = LocalContext.current.contentResolver
 
     Row(
@@ -220,7 +216,8 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
                         } catch (e: Exception) {
-                            postViewModel.imageUploadingError.emit("Unable to load file")
+                            postViewModel.imageUploadingError.emit("Unable to load thumbnail, but the video can be uploaded")
+                            Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                         }
                     }
                 }
@@ -240,6 +237,7 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
             postViewModel.galleryUri?.let {
                 VideoView(
                     videoUri = it.toString(),
+                    roundedCorner = false,
                     accountViewModel = accountViewModel
                 )
             }
@@ -254,7 +252,6 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
             label = stringResource(id = R.string.file_server),
             placeholder = fileServers.firstOrNull { it.first == accountViewModel.account.defaultFileServer }?.second ?: fileServers[0].second,
             options = fileServerOptions,
-            explainers = fileServerExplainers,
             onSelect = {
                 postViewModel.selectedServer = fileServers[it].first
             },
@@ -290,8 +287,8 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-                value = postViewModel.description,
-                onValueChange = { postViewModel.description = it },
+                value = postViewModel.alt,
+                onValueChange = { postViewModel.alt = it },
                 placeholder = {
                     Text(
                         text = stringResource(R.string.content_description_example),

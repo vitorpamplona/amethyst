@@ -8,8 +8,11 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.disk.DiskCache
+import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -29,17 +32,25 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
+import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
+import java.io.File
 
 object ServiceManager {
+    var shouldPauseService: Boolean = true // to not open amber in a loop trying to use auth relays and registering for notifications
+    private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
 
     fun start(account: Account, context: Context) {
         this.account = account
+        ExternalSignerUtils.account = account
         start(context)
     }
 
     @Synchronized
     fun start(context: Context) {
+        if (isStarted && account != null) {
+            return
+        }
         Log.d("ServiceManager", "Starting Relay Services")
 
         val myAccount = account
@@ -55,7 +66,8 @@ object ServiceManager {
                     add(GifDecoder.Factory())
                 }
                 add(SvgDecoder.Factory())
-            } // .logger(DebugLogger())
+            }.logger(DebugLogger())
+                .diskCache { SingletonDiskCache.get(context.applicationContext) }
                 .okHttpClient { HttpClient.getHttpClient() }
                 .respectCacheHeaders(false)
                 .build()
@@ -83,6 +95,7 @@ object ServiceManager {
             NostrSingleEventDataSource.start()
             NostrSingleChannelDataSource.start()
             NostrSingleUserDataSource.start()
+            isStarted = true
         }
     }
 
@@ -108,16 +121,57 @@ object ServiceManager {
         NostrVideoDataSource.stop()
 
         Client.disconnect()
+        isStarted = false
     }
 
-    fun cleanUp() {
+    fun cleanObservers() {
         LocalCache.cleanObservers()
+    }
+
+    fun trimMemory() {
+        LocalCache.cleanObservers()
+
+        val accounts = LocalPreferences.allLocalAccountNPubs().mapNotNull { decodePublicKeyAsHexOrNull(it) }.toSet()
 
         account?.let {
             LocalCache.pruneOldAndHiddenMessages(it)
             LocalCache.pruneHiddenMessages(it)
-            LocalCache.pruneContactLists(it)
-            // LocalCache.pruneNonFollows(it)
+            LocalCache.pruneContactLists(accounts)
+            LocalCache.pruneRepliesAndReactions(accounts)
+            LocalCache.prunePastVersionsOfReplaceables()
+            LocalCache.pruneExpiredEvents()
+        }
+    }
+
+    fun restartIfDifferentAccount(account: Account, context: Context) {
+        if (this.account != account) {
+            pause()
+            start(account, context)
         }
     }
 }
+
+object SingletonDiskCache {
+
+    private const val DIRECTORY = "image_cache"
+    private var instance: DiskCache? = null
+
+    @Synchronized
+    fun get(context: Context): DiskCache {
+        return instance ?: run {
+            // Create the singleton disk cache instance.
+            DiskCache.Builder()
+                .directory(context.safeCacheDir.resolve(DIRECTORY))
+                .maxSizePercent(0.2)
+                .maximumMaxSizeBytes(500L * 1024 * 1024) // 250MB
+                .build()
+                .also { instance = it }
+        }
+    }
+}
+
+internal val Context.safeCacheDir: File
+    get() {
+        val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
+        return cacheDir.apply { mkdirs() }
+    }

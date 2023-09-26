@@ -1,7 +1,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
-import android.content.Context
+import android.app.Activity
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.AutofillNode
 import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -36,13 +38,20 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
+import com.vitorpamplona.amethyst.service.PackageUtils
+import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -63,6 +72,58 @@ fun LoginPage(
     val useProxy = remember { mutableStateOf(false) }
     val proxyPort = remember { mutableStateOf("9050") }
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var loginWithExternalSigner by remember { mutableStateOf(false) }
+    val activity = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            loginWithExternalSigner = false
+            ExternalSignerUtils.isActivityRunning = false
+            ServiceManager.shouldPauseService = true
+            if (it.resultCode != Activity.RESULT_OK) {
+                scope.launch(Dispatchers.Main) {
+                    Toast.makeText(
+                        Amethyst.instance,
+                        "Sign request rejected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return@rememberLauncherForActivityResult
+            } else {
+                val event = it.data?.getStringExtra("signature") ?: ""
+                key.value = TextFieldValue(event)
+                if (!acceptedTerms.value) {
+                    termsAcceptanceIsRequired =
+                        context.getString(R.string.acceptance_of_terms_is_required)
+                }
+
+                if (key.value.text.isBlank()) {
+                    errorMessage = context.getString(R.string.key_is_required)
+                }
+
+                if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                    try {
+                        accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt(), true)
+                    } catch (e: Exception) {
+                        Log.e("Login", "Could not sign in", e)
+                        errorMessage = context.getString(R.string.invalid_key)
+                    }
+                }
+            }
+        }
+    )
+
+    LaunchedEffect(loginWithExternalSigner) {
+        if (loginWithExternalSigner) {
+            ExternalSignerUtils.openSigner(
+                "",
+                SignerType.GET_PUBLIC_KEY,
+                activity,
+                "",
+                ""
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -229,7 +290,7 @@ fun LoginPage(
                 }
             }
 
-            if (isPackageInstalled(context, "org.torproject.android")) {
+            if (PackageUtils.isOrbotInstalled(context)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = useProxy.value,
@@ -259,10 +320,10 @@ fun LoginPage(
 
             Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
                 Button(
+                    enabled = acceptedTerms.value,
                     onClick = {
                         if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired =
-                                context.getString(R.string.acceptance_of_terms_is_required)
+                            termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
                         }
 
                         if (key.value.text.isBlank()) {
@@ -281,13 +342,55 @@ fun LoginPage(
                     shape = RoundedCornerShape(Size35dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    colors = ButtonDefaults
-                        .buttonColors(
-                            backgroundColor = if (acceptedTerms.value) MaterialTheme.colors.primary else Color.Gray
-                        )
+                        .height(50.dp)
                 ) {
                     Text(text = stringResource(R.string.login))
+                }
+            }
+
+            if (PackageUtils.isAmberInstalled(context)) {
+                Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
+                    Button(
+                        enabled = acceptedTerms.value,
+                        onClick = {
+                            if (!acceptedTerms.value) {
+                                termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                                return@Button
+                            }
+
+                            val result = ExternalSignerUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
+                            if (result == null) {
+                                loginWithExternalSigner = true
+                                return@Button
+                            } else {
+                                key.value = TextFieldValue(result)
+                                if (key.value.text.isBlank()) {
+                                    errorMessage = context.getString(R.string.key_is_required)
+                                    return@Button
+                                }
+
+                                if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                                    try {
+                                        accountViewModel.startUI(
+                                            key.value.text,
+                                            useProxy.value,
+                                            proxyPort.value.toInt(),
+                                            true
+                                        )
+                                    } catch (e: Exception) {
+                                        Log.e("Login", "Could not sign in", e)
+                                        errorMessage = context.getString(R.string.invalid_key)
+                                    }
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(Size35dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text(text = stringResource(R.string.login_with_external_signer))
+                    }
                 }
             }
         }
@@ -314,8 +417,4 @@ fun LoginPage(
             )
         )
     }
-}
-
-fun isPackageInstalled(context: Context, target: String): Boolean {
-    return context.packageManager.getInstalledApplications(0).find { info -> info.packageName == target } != null
 }

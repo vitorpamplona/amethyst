@@ -15,6 +15,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -24,27 +25,27 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 @Composable
-fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true) {
+fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true, textColor: Color = Color.Unspecified) {
     val authorState by baseNote.live().metadata.map {
         it.note.author
     }.observeAsState(baseNote.author)
 
     Crossfade(targetState = authorState, modifier = weight) {
         it?.let {
-            UsernameDisplay(it, weight, showPlayButton)
+            UsernameDisplay(it, weight, showPlayButton, textColor = textColor)
         }
     }
 }
 
 @Composable
-fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true) {
+fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton: Boolean = true, fontWeight: FontWeight = FontWeight.Bold, textColor: Color = Color.Unspecified) {
     val npubDisplay by remember {
         derivedStateOf {
             baseUser.pubkeyDisplayHex()
@@ -57,9 +58,9 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton:
 
     Crossfade(targetState = userMetadata, modifier = weight) {
         if (it != null) {
-            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton)
+            UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton, fontWeight, textColor)
         } else {
-            NPubDisplay(npubDisplay, weight)
+            NPubDisplay(npubDisplay, weight, fontWeight, textColor)
         }
     }
 }
@@ -71,27 +72,30 @@ private fun UserNameDisplay(
     npubDisplay: String,
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
-    showPlayButton: Boolean = true
+    showPlayButton: Boolean = true,
+    fontWeight: FontWeight = FontWeight.Bold,
+    textColor: Color = Color.Unspecified
 ) {
     if (bestUserName != null && bestDisplayName != null && bestDisplayName != bestUserName) {
-        UserAndUsernameDisplay(bestDisplayName, tags, bestUserName, modifier, showPlayButton)
+        UserAndUsernameDisplay(bestDisplayName.trim(), tags, bestUserName.trim(), modifier, showPlayButton, fontWeight, textColor)
     } else if (bestDisplayName != null) {
-        UserDisplay(bestDisplayName, tags, modifier, showPlayButton)
+        UserDisplay(bestDisplayName.trim(), tags, modifier, showPlayButton, fontWeight, textColor)
     } else if (bestUserName != null) {
-        UserDisplay(bestUserName, tags, modifier, showPlayButton)
+        UserDisplay(bestUserName.trim(), tags, modifier, showPlayButton, fontWeight, textColor)
     } else {
-        NPubDisplay(npubDisplay, modifier)
+        NPubDisplay(npubDisplay, modifier, fontWeight, textColor)
     }
 }
 
 @Composable
-fun NPubDisplay(npubDisplay: String, modifier: Modifier) {
+fun NPubDisplay(npubDisplay: String, modifier: Modifier, fontWeight: FontWeight = FontWeight.Bold, textColor: Color = Color.Unspecified) {
     Text(
         text = npubDisplay,
-        fontWeight = FontWeight.Bold,
+        fontWeight = fontWeight,
+        modifier = modifier,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier
+        color = textColor
     )
 }
 
@@ -100,16 +104,19 @@ private fun UserDisplay(
     bestDisplayName: String,
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
-    showPlayButton: Boolean = true
+    showPlayButton: Boolean = true,
+    fontWeight: FontWeight = FontWeight.Bold,
+    textColor: Color = Color.Unspecified
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
-            fontWeight = FontWeight.Bold,
+            fontWeight = fontWeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = modifier
+            modifier = modifier,
+            color = textColor
         )
         if (showPlayButton) {
             Spacer(StdHorzSpacer)
@@ -124,23 +131,28 @@ private fun UserAndUsernameDisplay(
     tags: ImmutableListOfLists<String>?,
     bestUserName: String,
     modifier: Modifier,
-    showPlayButton: Boolean = true
+    showPlayButton: Boolean = true,
+    fontWeight: FontWeight = FontWeight.Bold,
+    textColor: Color = Color.Unspecified
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
             text = bestDisplayName,
             tags = tags,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
+            fontWeight = fontWeight,
+            maxLines = 1,
+            modifier = modifier,
+            color = textColor
         )
+        /*
         CreateTextWithEmoji(
             text = remember { "@$bestUserName" },
             tags = tags,
             color = MaterialTheme.colors.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
+
+        )*/
         if (showPlayButton) {
             Spacer(StdHorzSpacer)
             DrawPlayName(bestDisplayName)

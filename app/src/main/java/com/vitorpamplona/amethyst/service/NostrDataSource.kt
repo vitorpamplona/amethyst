@@ -2,25 +2,29 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.TimeUtils
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.model.Event
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.Subscription
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.Error
 
 abstract class NostrDataSource(val debugName: String) {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private var subscriptions = mapOf<String, Subscription>()
     data class Counter(var counter: Int)
 
     private var eventCounter = mapOf<String, Counter>()
+    var changingFilters = AtomicBoolean()
 
     fun printCounter() {
         eventCounter.forEach {
@@ -39,7 +43,7 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
-                LocalCache.verifyAndConsume(event, relay)
+                consume(event, relay)
             }
         }
 
@@ -47,7 +51,7 @@ abstract class NostrDataSource(val debugName: String) {
             // Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
         }
 
-        override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
+        override fun onRelayStateChange(type: Relay.Type, relay: Relay, subscriptionId: String?) {
             // Log.d("RELAY", "Relay ${relay.url} ${when (type) {
             //  Relay.Type.CONNECT -> "connected."
             //  Relay.Type.DISCONNECT -> "disconnected."
@@ -55,13 +59,19 @@ abstract class NostrDataSource(val debugName: String) {
             //  Relay.Type.EOSE -> "sent all events it had stored."
             // }}")
 
-            if (type == Relay.Type.EOSE && channel != null) {
+            if (type == Relay.Type.EOSE && subscriptionId != null && subscriptionId in subscriptions.keys) {
                 // updates a per subscripton since date
-                subscriptions[channel]?.updateEOSE(TimeUtils.now(), relay.url)
+                subscriptions[subscriptionId]?.updateEOSE(
+                    TimeUtils.fiveMinutesAgo(), // in case people's clock is slighly off.
+                    relay.url
+                )
             }
         }
 
         override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
+            if (success) {
+                markAsSeenOnRelay(eventId, relay)
+            }
         }
 
         override fun onAuth(relay: Relay, challenge: String) {
@@ -77,6 +87,8 @@ abstract class NostrDataSource(val debugName: String) {
     fun destroy() {
         stop()
         Client.unsubscribe(clientListener)
+        scope.cancel()
+        bundler.cancel()
     }
 
     open fun start() {
@@ -107,18 +119,19 @@ abstract class NostrDataSource(val debugName: String) {
     private val bundler = BundledUpdate(300, Dispatchers.IO)
 
     fun invalidateFilters() {
-        bundler.invalidate() {
-            // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
+        scope.launch(Dispatchers.IO) {
+            bundler.invalidate() {
+                // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            resetFiltersSuspend()
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                resetFiltersSuspend()
+            }
         }
     }
 
     fun resetFilters() {
-        val scope = CoroutineScope(Job() + Dispatchers.IO)
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             resetFiltersSuspend()
         }
     }
@@ -132,6 +145,8 @@ abstract class NostrDataSource(val debugName: String) {
         val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
         // saves the current content to only update if it changes
         val currentFilters = activeSubscriptions.associate { it.id to it.toJson() }
+
+        changingFilters.getAndSet(true)
 
         updateChannelFilters()
 
@@ -164,6 +179,16 @@ abstract class NostrDataSource(val debugName: String) {
                 }
             }
         }
+
+        changingFilters.getAndSet(false)
+    }
+
+    open fun consume(event: Event, relay: Relay) {
+        LocalCache.verifyAndConsume(event, relay)
+    }
+
+    open fun markAsSeenOnRelay(eventId: String, relay: Relay) {
+        LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
     }
 
     open fun loadFromDatabase() {}

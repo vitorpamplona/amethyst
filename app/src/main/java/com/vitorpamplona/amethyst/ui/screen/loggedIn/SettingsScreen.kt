@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ExposedDropdownMenuBox
 import androidx.compose.material.ExposedDropdownMenuDefaults
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
@@ -26,20 +28,26 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -104,146 +112,179 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val selectedItens = persistentListOf(
-        stringResource(ConnectivityType.ALWAYS.reourceId),
-        stringResource(ConnectivityType.WIFI_ONLY.reourceId),
-        stringResource(ConnectivityType.NEVER.reourceId)
+        TitleExplainer(stringResource(ConnectivityType.ALWAYS.reourceId)),
+        TitleExplainer(stringResource(ConnectivityType.WIFI_ONLY.reourceId)),
+        TitleExplainer(stringResource(ConnectivityType.NEVER.reourceId))
     )
-    val settings = accountViewModel.account.settings
-    val index = settings.automaticallyShowImages.screenCode
-    val videoIndex = settings.automaticallyStartPlayback.screenCode
-    val linkIndex = settings.automaticallyShowUrlPreview.screenCode
 
     val themeItens = persistentListOf(
-        stringResource(R.string.system),
-        stringResource(R.string.light),
-        stringResource(R.string.dark)
+        TitleExplainer(stringResource(R.string.system)),
+        TitleExplainer(stringResource(R.string.light)),
+        TitleExplainer(stringResource(R.string.dark))
     )
+
+    val booleanItems = persistentListOf(
+        TitleExplainer(stringResource(ConnectivityType.ALWAYS.reourceId)),
+        TitleExplainer(stringResource(ConnectivityType.NEVER.reourceId))
+    )
+
+    val settings = accountViewModel.account.settings
+    val showImagesIndex = settings.automaticallyShowImages.screenCode
+    val videoIndex = settings.automaticallyStartPlayback.screenCode
+    val linkIndex = settings.automaticallyShowUrlPreview.screenCode
+    val hideNavBarsIndex = settings.automaticallyHideNavigationBars.screenCode
+
     val themeIndex = themeViewModel.theme.value ?: 0
 
     val context = LocalContext.current
 
     val languageEntries = context.getLangPreferenceDropdownEntries()
-    val languageList = languageEntries.keys.toImmutableList()
+    val languageList = languageEntries.keys.map { TitleExplainer(it) }.toImmutableList()
     val languageIndex = getLanguageIndex(languageEntries)
 
     Column(
-        StdPadding
+        Modifier
+            .padding(top = Size10dp, start = Size20dp, end = Size20dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Section(stringResource(R.string.application_preferences))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+        SettingsRow(
+            R.string.language,
+            R.string.language_description,
+            languageList,
+            languageIndex
         ) {
-            TextSpinner(
-                label = stringResource(R.string.language),
-                placeholder = languageList[languageIndex],
-                options = languageList,
-                onSelect = {
-                    GlobalScope.launch(Dispatchers.Main) {
-                        val job = scope.launch(Dispatchers.IO) {
-                            val locale = languageEntries[languageList[it]]
-                            accountViewModel.account.settings.preferredLanguage = locale
-                            LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-                        }
-                        job.join()
-                        val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it]])
-                        AppCompatDelegate.setApplicationLocales(appLocale)
-                    }
-                },
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                    .weight(1f)
+            GlobalScope.launch(Dispatchers.Main) {
+                val job = scope.launch(Dispatchers.IO) {
+                    val locale = languageEntries[languageList[it].title]
+                    accountViewModel.account.settings.preferredLanguage = locale
+                    LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+                }
+                job.join()
+                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it].title])
+                AppCompatDelegate.setApplicationLocales(appLocale)
+            }
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.theme,
+            R.string.theme_description,
+            themeItens,
+            themeIndex
+        ) {
+            themeViewModel.onChange(it)
+            scope.launch(Dispatchers.IO) {
+                LocalPreferences.updateTheme(it)
+            }
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.automatically_load_images_gifs,
+            R.string.automatically_load_images_gifs_description,
+            selectedItens,
+            showImagesIndex
+        ) {
+            val automaticallyShowImages = parseConnectivityType(it)
+
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.updateAutomaticallyShowImages(automaticallyShowImages)
+                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+            }
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.automatically_play_videos,
+            R.string.automatically_play_videos_description,
+            selectedItens,
+            videoIndex
+        ) {
+            val automaticallyStartPlayback = parseConnectivityType(it)
+
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
+                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+            }
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.automatically_show_url_preview,
+            R.string.automatically_show_url_preview_description,
+            selectedItens,
+            linkIndex
+        ) {
+            val automaticallyShowUrlPreview = parseConnectivityType(it)
+
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
+                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+            }
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.automatically_hide_nav_bars,
+            R.string.automatically_hide_nav_bars_description,
+            booleanItems,
+            hideNavBarsIndex
+        ) {
+            val automaticallyHideNavBars = parseBooleanType(it)
+
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.updateAutomaticallyHideNavBars(automaticallyHideNavBars)
+                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsRow(
+    name: Int,
+    description: Int,
+    selectedItens: ImmutableList<TitleExplainer>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.weight(2.0f),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                text = stringResource(name),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = stringResource(description),
+                style = MaterialTheme.typography.caption,
+                color = Color.Gray,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextSpinner(
-                label = stringResource(R.string.theme),
-                placeholder = themeItens[themeIndex],
-                options = themeItens,
-                onSelect = {
-                    themeViewModel.onChange(it)
-                    scope.launch(Dispatchers.IO) {
-                        LocalPreferences.updateTheme(it)
-                    }
-                },
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                    .weight(1f)
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextSpinner(
-                label = stringResource(R.string.automatically_load_images_gifs),
-                placeholder = selectedItens[index],
-                options = selectedItens,
-                onSelect = {
-                    val automaticallyShowImages = parseConnectivityType(it)
-
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.updateAutomaticallyShowImages(automaticallyShowImages)
-                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-                    }
-                },
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                    .weight(1f)
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextSpinner(
-                label = stringResource(R.string.automatically_play_videos),
-                placeholder = selectedItens[videoIndex],
-                options = selectedItens,
-                onSelect = {
-                    val automaticallyStartPlayback = parseConnectivityType(it)
-
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
-                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-                    }
-                },
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                    .weight(1f)
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextSpinner(
-                label = stringResource(R.string.automatically_show_url_preview),
-                placeholder = selectedItens[linkIndex],
-                options = selectedItens,
-                onSelect = {
-                    val automaticallyShowUrlPreview = parseConnectivityType(it)
-
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
-                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-                    }
-                },
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                    .weight(1f)
-            )
-        }
+        TextSpinner(
+            label = "",
+            placeholder = selectedItens[selectedIndex].title,
+            options = selectedItens,
+            onSelect = onSelect,
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                .weight(1f)
+        )
     }
 }
 

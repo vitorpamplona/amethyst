@@ -5,19 +5,25 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.amethyst.model.TimeUtils
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+open class DiscoverLiveFeedFilter(
+    val account: Account
+) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList
+        return account.userProfile().pubkeyHex + "-" + followList()
+    }
+
+    open fun followList(): String {
+        return account.defaultDiscoveryFollowList
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultDiscoveryFollowList == PeopleListEvent.blockList
+        return followList() == PeopleListEvent.blockList
     }
 
     override fun feed(): List<Note> {
@@ -39,15 +45,15 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val isGlobal = account.defaultDiscoveryFollowList == GLOBAL_FOLLOWS
         val isHiddenList = showHiddenKey()
 
-        val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
-        val followingTagSet = account.selectedTagsFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
-        val followingGeohashSet = account.selectedGeohashesFollowList(account.defaultDiscoveryFollowList) ?: emptySet()
+        val followingKeySet = account.selectedUsersFollowList(followList()) ?: emptySet()
+        val followingTagSet = account.selectedTagsFollowList(followList()) ?: emptySet()
+        val followingGeohashSet = account.selectedGeohashesFollowList(followList()) ?: emptySet()
 
         val activities = collection
             .asSequence()
             .filter { it.event is LiveActivitiesEvent }
             .filter {
-                isGlobal || it.author?.pubkeyHex in followingKeySet || it.event?.isTaggedHashes(
+                isGlobal || (it.event as LiveActivitiesEvent).participantsIntersect(followingKeySet) || it.event?.isTaggedHashes(
                     followingTagSet
                 ) == true || it.event?.isTaggedGeoHashes(
                     followingGeohashSet
@@ -61,7 +67,7 @@ open class DiscoverLiveFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        val followingKeySet = account.selectedUsersFollowList(account.defaultDiscoveryFollowList)
+        val followingKeySet = account.selectedUsersFollowList(followList())
 
         val counter = ParticipantListBuilder()
         val participantCounts = collection.associate {

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -24,9 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.lnurl.LnInvoiceUtil
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -66,6 +67,7 @@ fun MayBeInvoicePreview(lnbcWord: String) {
 @Composable
 fun InvoicePreview(lnInvoice: String, amount: String?) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -118,9 +120,18 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
                     .fillMaxWidth()
                     .padding(vertical = 10.dp),
                 onClick = {
-                    runCatching {
+                    try {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$lnInvoice"))
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         startActivity(context, intent, null)
+                    } catch (e: Exception) {
+                        scope.launch {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.lightning_wallets_not_found),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 },
                 shape = QuoteBorder,

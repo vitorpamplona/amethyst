@@ -26,20 +26,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.LnZapRequestEvent
 import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -52,16 +51,9 @@ fun ZapNoteCompose(baseReqResponse: ZapReqResponse, accountViewModel: AccountVie
     }
 
     LaunchedEffect(baseNoteRequest) {
-        launch(Dispatchers.Default) {
-            (baseNoteRequest?.note?.event as? LnZapRequestEvent)?.let {
-                baseNoteRequest?.note?.let {
-                    val decryptedContent = accountViewModel.decryptZap(it)
-                    if (decryptedContent != null) {
-                        baseAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    } else {
-                        baseAuthor = it.author
-                    }
-                }
+        baseNoteRequest?.note?.let {
+            accountViewModel.decryptAmountMessage(it, baseReqResponse.zapEvent) {
+                baseAuthor = it?.user
             }
         }
     }
@@ -173,23 +165,15 @@ fun UserActionOptions(
     accountViewModel: AccountViewModel
 ) {
     val scope = rememberCoroutineScope()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
 
-    val isHidden by remember(accountState, blockList) {
-        derivedStateOf {
-            accountState?.account?.isHidden(baseAuthor) ?: false
-        }
-    }
-
-    if (isHidden) {
-        ShowUserButton {
-            scope.launch(Dispatchers.IO) {
+    WatchIsHiddenUser(baseAuthor, accountViewModel) { isHidden ->
+        if (isHidden) {
+            ShowUserButton {
                 accountViewModel.show(baseAuthor)
             }
+        } else {
+            ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
         }
-    } else {
-        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
     }
 }
 
@@ -218,14 +202,20 @@ fun ShowFollowingOrUnfollowingButton(
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.unfollow(baseAuthor)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -236,14 +226,20 @@ fun ShowFollowingOrUnfollowingButton(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.follow(baseAuthor)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {

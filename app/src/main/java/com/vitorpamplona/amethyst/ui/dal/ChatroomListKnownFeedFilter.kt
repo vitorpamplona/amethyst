@@ -3,10 +3,10 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.actions.updated
-import kotlin.time.ExperimentalTime
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.ChatroomKeyable
 import kotlin.time.measureTimedValue
 
 class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
@@ -22,7 +22,10 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
 
         val privateChatrooms = me.privateChatrooms
         val messagingWith = privateChatrooms.keys.filter {
-            (it.pubkeyHex in followingKeySet || me.hasSentMessagesTo(it)) && !account.isHidden(it)
+            (
+                privateChatrooms[it]?.senderIntersects(followingKeySet) == true ||
+                    me.hasSentMessagesTo(it)
+                ) && !account.isAllHidden(it.users)
         }
 
         val privateMessages = messagingWith.mapNotNull { it ->
@@ -46,7 +49,6 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             .reversed()
     }
 
-    @OptIn(ExperimentalTime::class)
     override fun updateListWith(oldList: List<Note>, newItems: Set<Note>): List<Note> {
         val (feed, elapsed) = measureTimedValue {
             val me = account.userProfile()
@@ -64,24 +66,34 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
             var myNewList = oldList
 
             newRelevantPublicMessages.forEach { newNotePair ->
+                var hasUpdated = false
                 oldList.forEach { oldNote ->
-                    if (
-                        (newNotePair.key == oldNote.channelHex()) && (newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)
-                    ) {
-                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    if (newNotePair.key == oldNote.channelHex()) {
+                        hasUpdated = true
+                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                            myNewList = myNewList.updated(oldNote, newNotePair.value)
+                        }
                     }
+                }
+                if (!hasUpdated) {
+                    myNewList = myNewList.plus(newNotePair.value)
                 }
             }
 
             newRelevantPrivateMessages.forEach { newNotePair ->
+                var hasUpdated = false
                 oldList.forEach { oldNote ->
-                    val oldRoom = (oldNote.event as? PrivateDmEvent)?.talkingWith(me.pubkeyHex)
+                    val oldRoom = (oldNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
 
-                    if (
-                        (newNotePair.key == oldRoom) && (newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)
-                    ) {
-                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    if (newNotePair.key == oldRoom) {
+                        hasUpdated = true
+                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                            myNewList = myNewList.updated(oldNote, newNotePair.value)
+                        }
                     }
+                }
+                if (!hasUpdated) {
+                    myNewList = myNewList.plus(newNotePair.value)
                 }
             }
 
@@ -126,23 +138,25 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         return newRelevantPublicMessages
     }
 
-    private fun filterRelevantPrivateMessages(newItems: Set<Note>, account: Account): MutableMap<String, Note> {
+    private fun filterRelevantPrivateMessages(newItems: Set<Note>, account: Account): MutableMap<ChatroomKey, Note> {
         val me = account.userProfile()
         val followingKeySet = account.followingKeySet()
 
-        val newRelevantPrivateMessages = mutableMapOf<String, Note>()
-        newItems.filter { it.event is PrivateDmEvent }.forEach { newNote ->
-            val roomUserHex = (newNote.event as? PrivateDmEvent)?.talkingWith(me.pubkeyHex)
-            val roomUser = roomUserHex?.let { LocalCache.users[it] }
+        val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
+        newItems.filter { it.event is ChatroomKeyable }.forEach { newNote ->
+            val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
+            val room = account.userProfile().privateChatrooms[roomKey]
 
-            if (roomUserHex != null && (newNote.author?.pubkeyHex == me.pubkeyHex || roomUserHex in followingKeySet || me.hasSentMessagesTo(roomUser)) && !account.isHidden(roomUserHex)) {
-                val lastNote = newRelevantPrivateMessages.get(roomUserHex)
-                if (lastNote != null) {
-                    if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
-                        newRelevantPrivateMessages.put(roomUserHex, newNote)
+            if (roomKey != null && room != null) {
+                if ((newNote.author?.pubkeyHex == me.pubkeyHex || room.senderIntersects(followingKeySet) || me.hasSentMessagesTo(roomKey)) && !account.isAllHidden(roomKey.users)) {
+                    val lastNote = newRelevantPrivateMessages.get(roomKey)
+                    if (lastNote != null) {
+                        if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                            newRelevantPrivateMessages.put(roomKey, newNote)
+                        }
+                    } else {
+                        newRelevantPrivateMessages.put(roomKey, newNote)
                     }
-                } else {
-                    newRelevantPrivateMessages.put(roomUserHex, newNote)
                 }
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,8 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AddBountyAmountViewModel : ViewModel() {
     private var account: Account? = null
@@ -80,6 +83,7 @@ class AddBountyAmountViewModel : ViewModel() {
 fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onClose: () -> Unit) {
     val postViewModel: AddBountyAmountViewModel = viewModel()
     postViewModel.load(accountViewModel.account, bounty)
+    val scope = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -89,21 +93,27 @@ fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onCl
         )
     ) {
         Surface() {
-            Column(modifier = Modifier.padding(10.dp).width(IntrinsicSize.Min)) {
+            Column(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .width(IntrinsicSize.Min)
+            ) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })
 
                     PostButton(
                         onPost = {
-                            postViewModel.sendPost()
-                            onClose()
+                            scope.launch(Dispatchers.IO) {
+                                postViewModel.sendPost()
+                                onClose()
+                            }
                         },
                         isActive = postViewModel.hasChanged()
                     )

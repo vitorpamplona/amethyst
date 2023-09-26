@@ -38,9 +38,9 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
+import com.vitorpamplona.quartz.events.ChatroomKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,14 +55,15 @@ class NostrChannelFeedViewModel(val channel: Channel, val account: Account) : Fe
         }
     }
 }
-class NostrChatroomFeedViewModel(val user: User, val account: Account) : FeedViewModel(ChatroomFeedFilter(user, account)) {
-    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+class NostrChatroomFeedViewModel(val user: ChatroomKey, val account: Account) : FeedViewModel(ChatroomFeedFilter(user, account)) {
+    class Factory(val user: ChatroomKey, val account: Account) : ViewModelProvider.Factory {
         override fun <NostrChatRoomFeedViewModel : ViewModel> create(modelClass: Class<NostrChatRoomFeedViewModel>): NostrChatRoomFeedViewModel {
             return NostrChatroomFeedViewModel(user, account) as NostrChatRoomFeedViewModel
         }
     }
 }
 
+@Stable
 class NostrVideoFeedViewModel(val account: Account) : FeedViewModel(VideoFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrVideoFeedViewModel : ViewModel> create(modelClass: Class<NostrVideoFeedViewModel>): NostrVideoFeedViewModel {
@@ -95,10 +96,10 @@ class NostrDiscoverChatFeedViewModel(val account: Account) : FeedViewModel(Disco
     }
 }
 
-class NostrThreadFeedViewModel(val noteId: String) : FeedViewModel(ThreadFeedFilter(noteId)) {
-    class Factory(val noteId: String) : ViewModelProvider.Factory {
+class NostrThreadFeedViewModel(account: Account, noteId: String) : FeedViewModel(ThreadFeedFilter(account, noteId)) {
+    class Factory(val account: Account, val noteId: String) : ViewModelProvider.Factory {
         override fun <NostrThreadFeedViewModel : ViewModel> create(modelClass: Class<NostrThreadFeedViewModel>): NostrThreadFeedViewModel {
-            return NostrThreadFeedViewModel(noteId) as NostrThreadFeedViewModel
+            return NostrThreadFeedViewModel(account, noteId) as NostrThreadFeedViewModel
         }
     }
 }
@@ -227,8 +228,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     private fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             refreshSuspended()
         }
     }
@@ -237,7 +237,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
         checkNotInMainThread()
 
         lastFeedKey = localFilter.feedKey()
-        val notes = localFilter.loadTop().toImmutableList()
+        val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
@@ -250,8 +250,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     private fun updateFeed(notes: ImmutableList<Note>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { FeedState.Empty }
@@ -292,20 +291,24 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
+        viewModelScope.launch(Dispatchers.IO) {
+            bundler.invalidate(ignoreIfDoing) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+            }
         }
     }
 
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
-            bundler.invalidate(false) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-                sendToTop()
+            viewModelScope.launch(Dispatchers.IO) {
+                bundler.invalidate(false) {
+                    // adds the time to perform the refresh into this delay
+                    // holding off new updates in case of heavy refresh routines.
+                    refreshSuspended()
+                    sendToTop()
+                }
             }
         }
     }
@@ -337,6 +340,8 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     override fun onCleared() {
+        bundlerInsert.cancel()
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

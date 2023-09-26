@@ -26,8 +26,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
+import com.patrykandpatrick.vico.compose.style.ChartStyle
+import com.patrykandpatrick.vico.core.DefaultColors
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 
 private val DarkColorPalette = darkColors(
@@ -284,6 +287,12 @@ val Colors.overPictureBackground: Color
 val Colors.bitcoinColor: Color
     get() = if (isLight) BitcoinLight else BitcoinDark
 
+val Colors.warningColor: Color
+    get() = if (isLight) LightWarningColor else DarkWarningColor
+
+val Colors.allGoodColor: Color
+    get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
+
 val Colors.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 
@@ -301,6 +310,22 @@ val Colors.replyModifier: Modifier
 
 val Colors.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
+
+val Colors.chartStyle: ChartStyle
+    get() {
+        val defaultColors = if (isLight) DefaultColors.Light else DefaultColors.Dark
+        return ChartStyle.fromColors(
+            axisLabelColor = Color(defaultColors.axisLabelColor),
+            axisGuidelineColor = Color(defaultColors.axisGuidelineColor),
+            axisLineColor = Color(defaultColors.axisLineColor),
+            entityColors = listOf(
+                defaultColors.entity1Color,
+                defaultColors.entity2Color,
+                defaultColors.entity3Color
+            ).map(::Color),
+            elevationOverlayColor = Color(defaultColors.elevationOverlayColor)
+        )
+    }
 
 @Composable
 fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Unit) {
@@ -323,11 +348,14 @@ fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Uni
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
             if (darkTheme) {
                 window.statusBarColor = colors.background.toArgb()
             } else {
                 window.statusBarColor = colors.primary.toArgb()
             }
+            window.navigationBarColor = colors.background.toArgb()
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 }

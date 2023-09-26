@@ -57,33 +57,35 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
-import com.vitorpamplona.amethyst.service.model.CommunityDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
-import com.vitorpamplona.amethyst.service.model.EmojiPackEvent
-import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.HighlightEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PeopleListEvent
-import com.vitorpamplona.amethyst.service.model.PinListEvent
-import com.vitorpamplona.amethyst.service.model.PollNoteEvent
-import com.vitorpamplona.amethyst.service.model.RelaySetEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.*
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
+import com.vitorpamplona.quartz.events.AudioTrackEvent
+import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.EmojiPackEvent
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PinListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.RelaySetEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -145,7 +147,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
                                 if (index == 0) {
-                                    ProvideTextStyle(TextStyle(fontSize = 16.sp, lineHeight = 1.20.em)) {
+                                    ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
                                         NoteMaster(
                                             item,
                                             modifier = Modifier.drawReplyLevel(
@@ -261,6 +263,7 @@ fun NoteMaster(
 
         HiddenNote(
             reports,
+            note.author?.let { account.isHidden(it) } ?: false,
             accountViewModel,
             Modifier,
             false,
@@ -327,7 +330,12 @@ fun NoteMaster(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) })
+                        ObserveDisplayNip05Status(baseNote, remember { Modifier.weight(1f) }, accountViewModel, nav)
+
+                        val geo = remember { noteEvent.getGeoHash() }
+                        if (geo != null) {
+                            DisplayLocation(geo, nav)
+                        }
 
                         val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
                         if (baseReward != null) {
@@ -371,13 +379,15 @@ fun NoteMaster(
                             nav = nav
                         )
                     } else if (noteEvent is FileHeaderEvent) {
-                        FileHeaderDisplay(baseNote, accountViewModel)
+                        FileHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
-                        FileStorageHeaderDisplay(baseNote, accountViewModel)
+                        FileStorageHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
                         AudioTrackHeader(noteEvent, baseNote, accountViewModel, nav)
+                    } else if (noteEvent is AudioHeaderEvent) {
+                        AudioHeader(noteEvent, baseNote, accountViewModel, nav)
                     } else if (noteEvent is CommunityPostApprovalEvent) {
                         RenderPostApproval(
                             baseNote,
@@ -452,6 +462,13 @@ fun NoteMaster(
                         )
                     }
                 }
+            }
+
+            val noteEvent = baseNote.event
+            val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+            if (zapSplits && noteEvent != null) {
+                Spacer(modifier = DoubleVertSpacer)
+                DisplayZapSplits(noteEvent, accountViewModel, nav)
             }
 
             ReactionsRow(note, true, accountViewModel, nav)
@@ -580,20 +597,20 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
             noteEvent.title()?.let {
+                Spacer(modifier = DoubleVertSpacer)
                 Text(
                     text = it,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Light,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            noteEvent.summary()?.let {
+            noteEvent.summary()?.ifBlank { null }?.let {
+                Spacer(modifier = DoubleVertSpacer)
                 Text(
                     text = it,
                     modifier = Modifier.fillMaxWidth(),

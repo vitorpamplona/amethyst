@@ -75,17 +75,21 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Relay Pages (NIP-11)
 - [x] HTTP Auth (NIP-98)
 - [x] Zapraiser (NIP-TBD)
-- [x] Moderated Communities (NIP-172)
+- [x] Moderated Communities (NIP-72)
 - [x] Emoji Packs (Kind:30030)
 - [x] Personal Emoji Lists (Kind:10030)
 - [x] Classifieds (Kind:30403)
+- [x] Private Messages and Small Groups (NIP-24)
+- [x] Gift Wraps & Seals (NIP-59)
+- [x] Versioned Encrypted Payloads (NIP-44)
+- [x] Expiration Support (NIP-40)
+- [x] Status Event (NIP-38)
 - [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
 - [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
 - [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Workspaces
-- [ ] Expiration Support (NIP-40)
 - [ ] Infinity Scroll
 - [ ] Relay List Metadata (NIP-65)
 - [ ] Signing Requests (NIP-46)
@@ -102,7 +106,7 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 
 This is a native Android app made with Kotlin and Jetpack Compose.
 The app uses a modified version of the [nostrpostrlib](https://github.com/Giszmo/NostrPostr/tree/master/nostrpostrlib) to talk to Nostr relays.
-The overall architecture consists in the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
+The overall architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
 
 The repository layer stores Nostr Events as Notes and Users separately. Those classes use LiveData objects to
@@ -168,7 +172,7 @@ For the Play build:
 keytool -genkey -v -keystore <my-release-key.keystore> -alias <alias_name> -keyalg RSA -keysize 2048 -validity 10000
 openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.jks.base64.txt
 ```
-2. Create 4 Secret Key variables on your GitHub repository and fill in with the signing key information
+2. Create four Secret Key variables on your GitHub repository and fill in the signing key information
     - `KEY_ALIAS` <- `<alias_name>`
     - `KEY_PASSWORD` <- `<your password>`
     - `KEY_STORE_PASSWORD` <- `<your key store password>`
@@ -188,15 +192,15 @@ The relay also learns which public keys you are requesting, meaning your public 
 Relays have all your data in raw text. They know your IP, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) with the exception of Private Zaps and Private DMs.
 
 # DM Privacy #
-While the content of direct messages (DMs) is only visible to you, and your DM nostr counterparty, everyone can see that and when you and your counterparty are DM-ing each other.
+While the content of direct messages (DMs) is only visible to you and your DM counterparty, everyone can see when you and your counterparty DM each other.
 
 # Visibility & Permanence of Your Content on nostr
 ## Information Visibility ##
 Content that you share can be shared to other relays. 
-Information that you share is publicly visible to anyone reading from relays that have your information. Your information may also be visible to nostr users who do not share relays with you.
+Information that you share publicly is visible to anyone reading from relays that have your information. Your information may also be visible to nostr users who do not share relays with you.
 
 ## Information Permanence ##
-Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee deleting or editing any content once posted. 
+Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee edit or deletion of any content once posted. 
 
 # Screenshots
 

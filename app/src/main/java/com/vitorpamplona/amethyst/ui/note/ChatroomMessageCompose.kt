@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -23,6 +25,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,21 +36,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMetadataEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -58,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -66,8 +64,15 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toImmutableSet
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -80,12 +85,20 @@ fun ChatroomMessageCompose(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val isBlank by baseNote.live().metadata.map {
-        it.note.event == null
-    }.observeAsState(baseNote.event == null)
+    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = isBlank) {
+    Crossfade(targetState = hasEvent) {
         if (it) {
+            CheckHiddenChatMessage(
+                baseNote,
+                routeForLastRead,
+                innerQuote,
+                parentBackgroundColor,
+                accountViewModel,
+                nav,
+                onWantsToReply
+            )
+        } else {
             LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                 BlankNote(
                     remember {
@@ -96,16 +109,6 @@ fun ChatroomMessageCompose(
                     }
                 )
             }
-        } else {
-            CheckHiddenChatMessage(
-                baseNote,
-                routeForLastRead,
-                innerQuote,
-                parentBackgroundColor,
-                accountViewModel,
-                nav,
-                onWantsToReply
-            )
         }
     }
 }
@@ -120,15 +123,9 @@ fun CheckHiddenChatMessage(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-
-    val isHidden by remember(accountState) {
-        derivedStateOf {
-            val isSensitive = baseNote.event?.isSensitive() ?: false
-
-            accountState?.account?.isHidden(baseNote.author!!) == true || (isSensitive && accountState?.account?.showSensitiveContent == false)
-        }
-    }
+    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+        baseNote.isHiddenFor(it)
+    }.observeAsState(accountViewModel.isNoteHidden(baseNote))
 
     if (!isHidden) {
         LoadedChatMessageCompose(
@@ -155,17 +152,13 @@ fun LoadedChatMessageCompose(
 ) {
     var state by remember {
         mutableStateOf(
-            NoteComposeReportState(
-                isAcceptable = true,
-                canPreview = true,
-                relevantReports = persistentSetOf()
-            )
+            AccountViewModel.NoteComposeReportState()
         )
     }
 
-    WatchForReports(baseNote, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
-        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            state = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports.toImmutableSet())
+    WatchForReports(baseNote, accountViewModel) { newState ->
+        if (state != newState) {
+            state = newState
         }
     }
 
@@ -181,6 +174,7 @@ fun LoadedChatMessageCompose(
         if (it) {
             HiddenNote(
                 state.relevantReports,
+                state.isHiddenAuthor,
                 accountViewModel,
                 Modifier,
                 innerQuote,
@@ -222,7 +216,17 @@ fun NormalChatNote(
 ) {
     val drawAuthorInfo by remember {
         derivedStateOf {
-            note.event !is PrivateDmEvent && (innerQuote || !accountViewModel.isLoggedUser(note.author))
+            val noteEvent = note.event
+            if (accountViewModel.isLoggedUser(note.author)) {
+                false // never shows the user's pictures
+            } else if (noteEvent is PrivateDmEvent) {
+                false // one-on-one, never shows it.
+            } else if (noteEvent is ChatMessageEvent) {
+                // only shows in a group chat.
+                noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex).users.size > 1
+            } else {
+                true
+            }
         }
     }
 
@@ -254,9 +258,11 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            val createdAt = note.createdAt()
-            if (createdAt != null) {
-                accountViewModel.account.markAsRead(routeForLastRead, createdAt)
+            launch(Dispatchers.IO) {
+                val createdAt = note.createdAt()
+                if (createdAt != null) {
+                    accountViewModel.account.markAsRead(routeForLastRead, createdAt)
+                }
             }
         }
     }
@@ -281,7 +287,7 @@ fun NormalChatNote(
             modifier = modif,
             horizontalArrangement = alignment
         ) {
-            val availableBubbleSize = remember { mutableStateOf(0) }
+            val availableBubbleSize = remember { mutableIntStateOf(0) }
             var popupExpanded by remember { mutableStateOf(false) }
 
             val modif2 = remember {
@@ -351,7 +357,7 @@ private fun RenderBubble(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val bubbleSize = remember { mutableStateOf(0) }
+    val bubbleSize = remember { mutableIntStateOf(0) }
 
     val bubbleModifier = remember {
         Modifier
@@ -545,6 +551,8 @@ private fun StatusRow(
 ) {
     Column(modifier = ReactionRowHeightChat) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
+            IncognitoBadge(baseNote)
+            Spacer(modifier = StdHorzSpacer)
             ChatTimeAgo(baseNote)
             RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
@@ -555,7 +563,7 @@ private fun StatusRow(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
             LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+            ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
             ReplyReaction(
                 baseNote = baseNote,
@@ -572,19 +580,42 @@ private fun StatusRow(
 }
 
 @Composable
-fun ChatTimeAgo(baseNote: Note) {
-    val context = LocalContext.current
+fun IncognitoBadge(baseNote: Note) {
+    if (baseNote.event is ChatMessageEvent) {
+        Icon(
+            painter = painterResource(id = R.drawable.incognito),
+            null,
+            modifier = Modifier
+                .padding(top = 1.dp)
+                .size(14.dp),
+            tint = MaterialTheme.colors.placeholderText
+        )
+    } else if (baseNote.event is PrivateDmEvent) {
+        Icon(
+            painter = painterResource(id = R.drawable.incognito_off),
+            null,
+            modifier = Modifier
+                .padding(top = 1.dp)
+                .size(14.dp),
+            tint = MaterialTheme.colors.placeholderText
+        )
+    }
+}
 
-    val timeStr by remember(baseNote) {
+@Composable
+fun ChatTimeAgo(baseNote: Note) {
+    val nowStr = stringResource(id = R.string.now)
+
+    val time by remember(baseNote) {
         derivedStateOf {
-            timeAgoShort(baseNote.createdAt() ?: 0, context = context)
+            timeAgoShort(baseNote.createdAt() ?: 0, nowStr)
         }
     }
 
     Text(
-        text = timeStr,
+        text = time,
         color = MaterialTheme.colors.placeholderText,
-        fontSize = 12.sp,
+        fontSize = Font12SP,
         maxLines = 1
     )
 }
@@ -597,8 +628,8 @@ private fun RenderRegularTextNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists() }
-    val eventContent = remember { accountViewModel.decrypt(note) }
+    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+    val eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
     if (eventContent != null) {
@@ -607,7 +638,7 @@ private fun RenderRegularTextNote(
             accountViewModel = accountViewModel
         ) {
             TranslatableRichTextViewer(
-                content = eventContent,
+                content = eventContent!!,
                 canPreview = canPreview,
                 modifier = modifier,
                 tags = tags,

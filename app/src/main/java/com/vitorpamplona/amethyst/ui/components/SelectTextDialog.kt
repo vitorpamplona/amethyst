@@ -48,7 +48,7 @@ fun SelectTextDialog(text: String, onDismiss: () -> Unit) {
                     IconButton(
                         onClick = onDismiss
                     ) {
-                        ArrowBackIcon(Size24dp)
+                        ArrowBackIcon()
                     }
                     Text(text = stringResource(R.string.select_text_dialog_top))
                 }

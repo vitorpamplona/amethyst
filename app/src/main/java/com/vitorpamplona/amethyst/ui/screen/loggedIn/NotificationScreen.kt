@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,8 +57,10 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import com.vitorpamplona.amethyst.ui.theme.chartStyle
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormat
 import kotlin.math.roundToInt
 
 @Composable
@@ -72,7 +75,7 @@ fun NotificationScreen(
     CheckifItNeedsToRequestNotificationPermission()
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 NostrAccountDataSource.invalidateFilters()
@@ -92,6 +95,7 @@ fun NotificationScreen(
             SummaryBar(
                 model = userReactionsStatsModel
             )
+
             RefresheableCardView(
                 viewModel = notifFeedViewModel,
                 accountViewModel = accountViewModel,
@@ -103,15 +107,21 @@ fun NotificationScreen(
     }
 }
 
+// TODO: Turn this into an Account flag
+var hasAlreadyAskedNotificationPermissions = false
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CheckifItNeedsToRequestNotificationPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAlreadyAskedNotificationPermissions) {
         val notificationPermissionState = rememberPermissionState(
             Manifest.permission.POST_NOTIFICATIONS
         )
 
         if (!notificationPermissionState.status.isGranted) {
+            hasAlreadyAskedNotificationPermissions = true
+
+            // This will pause the APP, including the connection with relays.
             LaunchedEffect(notificationPermissionState) {
                 notificationPermissionState.launchPermissionRequest()
             }
@@ -184,26 +194,10 @@ fun SummaryBar(model: UserReactionsViewModel) {
                 .padding(vertical = 10.dp, horizontal = 20.dp)
                 .clickable(onClick = { showChart = !showChart })
         ) {
-            ProvideChartStyle() {
-                val axisModel by model.axisLabels.collectAsState()
-                val chartModel by model.chartModel.collectAsState()
-                chartModel?.let {
-                    Chart(
-                        chart = remember(lineChartCount, lineChartZaps) {
-                            lineChartCount.plus(lineChartZaps)
-                        },
-                        model = it,
-                        startAxis = startAxis(
-                            valueFormatter = CountAxisValueFormatter()
-                        ),
-                        endAxis = endAxis(
-                            valueFormatter = AmountAxisValueFormatter()
-                        ),
-                        bottomAxis = bottomAxis(
-                            valueFormatter = LabelValueFormatter(axisModel)
-                        )
-                    )
-                }
+            ProvideChartStyle(
+                chartStyle = MaterialTheme.colors.chartStyle
+            ) {
+                ObserveAndShowChart(model, lineChartCount, lineChartZaps)
             }
         }
     }
@@ -211,6 +205,33 @@ fun SummaryBar(model: UserReactionsViewModel) {
     Divider(
         thickness = 0.25.dp
     )
+}
+
+@Composable
+private fun ObserveAndShowChart(
+    model: UserReactionsViewModel,
+    lineChartCount: LineChart,
+    lineChartZaps: LineChart
+) {
+    val axisModel by model.axisLabels.collectAsState()
+    val chartModel by model.chartModel.collectAsState()
+    chartModel?.let {
+        Chart(
+            chart = remember(lineChartCount, lineChartZaps) {
+                lineChartCount.plus(lineChartZaps)
+            },
+            model = it,
+            startAxis = startAxis(
+                valueFormatter = CountAxisValueFormatter()
+            ),
+            endAxis = endAxis(
+                valueFormatter = AmountAxisValueFormatter()
+            ),
+            bottomAxis = bottomAxis(
+                valueFormatter = LabelValueFormatter(axisModel)
+            )
+        )
+    }
 }
 
 @Stable
@@ -243,14 +264,19 @@ class AmountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.End>
     }
 }
 
+var dfG: DecimalFormat = DecimalFormat("#G")
+var dfM: DecimalFormat = DecimalFormat("#M")
+var dfK: DecimalFormat = DecimalFormat("#k")
+var dfN: DecimalFormat = DecimalFormat("#")
+
 fun showAmountAxis(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> "%.0fG".format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> "%.0fM".format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneKilo -> "%.0fk".format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> "%.0f".format(amount)
+        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        else -> dfN.format(amount)
     }
 }

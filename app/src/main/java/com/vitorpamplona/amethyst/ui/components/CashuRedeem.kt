@@ -149,7 +149,7 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                             scope.launch {
                                 Toast.makeText(
                                     context,
-                                    "No Lightning Address set",
+                                    context.getString(R.string.no_lightning_address_set),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -180,7 +180,7 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                             var orignaltoken = token.token
                             clipboardManager.setText(AnnotatedString("$orignaltoken"))
                             scope.launch {
-                                Toast.makeText(context, "Copied token to clipboard", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.copied_token_to_clipboard), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },

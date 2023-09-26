@@ -2,7 +2,7 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.ReportEvent
+import com.vitorpamplona.quartz.events.ReportEvent
 
 class UserProfileReportsFeedFilter(val user: User) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {

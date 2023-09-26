@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <queries>
         <package android:name="org.torproject.android"/>
+        <package android:name="com.greenart7c3.nostrsigner"/>
+        <package android:name="com.greenart7c3.nostrsigner.debug"/>
     </queries>
 
     <!-- Doesn't require a camera -->
@@ -60,7 +62,7 @@
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
         android:localeConfig="@xml/locales_config"
-        tools:targetApi="33">
+        tools:targetApi="34">
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"

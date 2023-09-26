@@ -6,11 +6,11 @@
     <string name="profile_image">Profile Image</string>
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
-    <string name="post_was_flagged_as_inappropriate_by">Post was flagged as inappropriate by</string>
-    <string name="post_not_found">Post not found</string>
+    <string name="post_was_flagged_as_inappropriate_by">Post was reported by</string>
+    <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="channel_image">Channel Image</string>
     <string name="referenced_event_not_found">Referenced event not found</string>
-    <string name="could_not_decrypt_the_message">Could Not decrypt the message</string>
+    <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
     <string name="group_picture">Group Picture</string>
     <string name="explicit_content">Explicit Content</string>
     <string name="spam">Spam</string>
@@ -48,6 +48,8 @@
     <string name="and">" and "</string>
     <string name="in_channel">"in channel "</string>
     <string name="profile_banner">Profile Banner</string>
+    <string name="payment_successful">Payment Successful</string>
+    <string name="error_parsing_error_message">Error parsing error message</string>
     <string name="following">" Following"</string>
     <string name="followers">" Followers"</string>
     <string name="profile">Profile</string>
@@ -99,9 +101,9 @@
     <string name="failed_to_save_the_image">Failed to save the image</string>
     <string name="upload_image">Upload Image</string>
     <string name="uploading">Uploading…</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address setup to receive sats</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
     <string name="reply_here">"reply here.. "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copy Channel ID (Note) to the Clipboard</string>
     <string name="edits_the_channel_metadata">Edits the Channel Metadata</string>
     <string name="join">Join</string>
@@ -433,7 +435,7 @@
     <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats to goal</string>
     <string name="read_from_relay">Read from Relay</string>
     <string name="write_to_relay">Write to Relay</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">An error ocurred trying to get relay information from %1$s</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
     <string name="owner">Owner</string>
     <string name="version">Version</string>
     <string name="software">Software</string>
@@ -458,6 +460,8 @@
     <string name="payment">Payment</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Redeem</string>
+    <string name="no_lightning_address_set">No Lightning Address set</string>
+    <string name="copied_token_to_clipboard">Copied token to clipboard</string>
 
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
@@ -489,12 +493,14 @@
     <string name="system">System</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
-    <string name="application_preferences">Application preferences</string>
+    <string name="application_preferences">Application Preferences</string>
     <string name="language">Language</string>
     <string name="theme">Theme</string>
-    <string name="automatically_load_images_gifs">Automatically load images/gifs</string>
-    <string name="automatically_play_videos">Automatically play videos</string>
-    <string name="automatically_show_url_preview">Automatically show url preview</string>
+    <string name="automatically_load_images_gifs">Image Preview</string>
+    <string name="automatically_play_videos">Video Playback</string>
+    <string name="automatically_show_url_preview">URL Preview</string>
+    <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
+    <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
     <string name="load_image">Load Image</string>
 
     <string name="spamming_users">Spammers</string>
@@ -508,6 +514,7 @@
     <string name="nip05_checking">Checking Nostr address</string>
     <string name="select_deselect_all">Select/Deselect all</string>
     <string name="default_relays">Default</string>
+    <string name="select_a_relay_to_continue">Select a relay to continue</string>
 
     <string name="zap_forward_title">Forward Zaps to:</string>
     <string name="zap_forward_explainer">Supporting clients will forward zaps to the LNAddress or User Profile below instead of yours</string>
@@ -516,4 +523,79 @@
     <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
 
     <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
+
+    <string name="new_feature_nip24_might_not_be_available_title">New Feature</string>
+    <string name="new_feature_nip24_might_not_be_available_description">Activating this mode requires Amethyst to send a NIP-24 message (GiftWrapped, Sealed Direct and Group Messages). NIP-24 is new and most clients have not implemented it yet. Make sure the receiver is using a compatible client.</string>
+    <string name="new_feature_nip24_activate">Activate</string>
+
+    <string name="messages_create_public_chat">Public</string>
+    <string name="messages_new_message">Private</string>
+    <string name="messages_new_message_to">To</string>
+    <string name="messages_new_message_subject">Subject</string>
+    <string name="messages_new_message_subject_caption">Topic of the conversation</string>
+    <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
+
+    <string name="messages_group_descriptor">Members of this group</string>
+    <string name="messages_new_subject_message">Explanation to members</string>
+    <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
+
+    <string name="paste_from_clipboard">Paste from clipboard</string>
+  
+    <string name="language_description">For the App\'s Interface</string>
+    <string name="theme_description">Dark, Light or System theme</string>
+    <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
+    <string name="automatically_play_videos_description">Automatically plays videos and GIFs</string>
+    <string name="automatically_show_url_preview_description">Show URL previews</string>
+    <string name="load_image_description">When to load images</string>
+
+    <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
+    <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
+
+    <string name="created_at">Created at</string>
+    <string name="rules">Rules</string>
+
+    <string name="login_with_external_signer">Login with Amber</string>
+
+    <string name="status_update">Update your status</string>
+
+    <string name="lightning_wallets_not_found">Error parsing error message</string>
+    <string name="poll_zap_value_min_max_explainer">Votes are weighted by the zap amount. You can set a minimum amount to avoid spammers and a maximum amount to avoid a large zappers taking over the poll. Use the same amount in both fields to make sure every vote is valued the same amount. Leave it empty to accept any amount.</string>
+
+    <string name="error_dialog_zap_error">Unable to send zap</string>
+    <string name="error_dialog_talk_to_user">Message the User</string>
+    <string name="error_dialog_button_ok">OK</string>
+
+    <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Failed to parse result from %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s failed with code %2$s</string>
+    <string name="active_for">Active for: </string>
+
+    <string name="active_for_home">Home</string>
+    <string name="active_for_msg">DMs</string>
+    <string name="active_for_chats">Chats</string>
+    <string name="active_for_global">Global</string>
+    <string name="active_for_search">Search</string>
+
+    <string name="zap_split_title">Split and Forward Zaps</string>
+    <string name="zap_split_explainer">Supporting clients will split and forward zaps to the users added here instead of yours</string>
+    <string name="zap_split_serarch_and_add_user">Search and Add User</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Username or display name</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">User %1$s does not have a lightning address set up to receive sats</string>
+    <string name="zap_split_weight">Percentage</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Splitting zaps with</string>
+    <string name="forwarding_zaps_to">Forwarding zaps to</string>
+
+    <string name="lightning_wallets_not_found2">Lightning wallets not found</string>
+    <string name="paid">Paid</string>
+    <string name="wallet_number">Wallet %1$s</string>
+    <string name="error_opening_external_signer">Error opening signer app</string>
+    <string name="sign_request_rejected">Sign request rejected</string>
+
+    <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
+    <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
+
+    <string name="hidden_words">Hidden Words</string>
+    <string name="hide_new_word_label">Hide new word or sentence</string>
 </resources>

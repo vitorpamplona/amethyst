@@ -57,9 +57,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.EmojiPackSelectionEvent
-import com.vitorpamplona.amethyst.service.model.EmojiUrl
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
@@ -68,6 +65,9 @@ import com.vitorpamplona.amethyst.ui.components.TextType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.events.EmojiUrl
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
@@ -155,7 +155,7 @@ fun UpdateReactionTypeDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })
@@ -314,7 +314,8 @@ private fun EmojiSelector(accountViewModel: AccountViewModel, nav: (String) -> U
             accountViewModel.userProfile().pubkeyHex,
             "",
             null
-        )
+        ),
+        accountViewModel
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by usersEmojiList.live().metadata.map {
@@ -339,7 +340,7 @@ fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: Accou
         state = listState
     ) {
         itemsIndexed(emojiCollections, key = { _, item -> item.toTag() }) { _, item ->
-            LoadAddressableNote(aTag = item) {
+            LoadAddressableNote(aTag = item, accountViewModel) {
                 it?.let {
                     WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick)
                 }

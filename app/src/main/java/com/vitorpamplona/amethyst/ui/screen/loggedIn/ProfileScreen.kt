@@ -54,21 +54,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.model.ATag
-import com.vitorpamplona.amethyst.service.model.AppDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeDefinitionEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.IdentityClaim
-import com.vitorpamplona.amethyst.service.model.PayInvoiceErrorResponse
-import com.vitorpamplona.amethyst.service.model.PayInvoiceSuccessResponse
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequestCard
@@ -102,7 +93,23 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.GitHubIdentity
+import com.vitorpamplona.quartz.events.IdentityClaim
+import com.vitorpamplona.quartz.events.MastodonIdentity
+import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.TelegramIdentity
+import com.vitorpamplona.quartz.events.TwitterIdentity
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -112,7 +119,7 @@ import java.math.BigDecimal
 fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     if (userId == null) return
 
-    var userBase by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(userId)) }
+    var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userId)) }
 
     if (userBase == null) {
         LaunchedEffect(userId) {
@@ -231,11 +238,15 @@ fun ProfileScreen(
 
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
+    DisposableEffect(accountViewModel) {
         NostrUserProfileDataSource.start()
+        onDispose {
+            NostrUserProfileDataSource.loadUserProfile(null)
+            NostrUserProfileDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profidle Start")
@@ -252,9 +263,6 @@ fun ProfileScreen(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            println("Profile Dispose")
-            NostrUserProfileDataSource.loadUserProfile(null)
-            NostrUserProfileDataSource.stop()
         }
     }
 
@@ -274,7 +282,6 @@ fun ProfileScreen(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun RenderSurface(
     baseUser: User,
     threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
@@ -302,7 +309,6 @@ private fun RenderSurface(
                     columnSize = it
                 }
         ) {
-            val pagerState = rememberPagerState()
             val coroutineScope = rememberCoroutineScope()
             val scrollState = rememberScrollState()
 
@@ -341,7 +347,6 @@ private fun RenderSurface(
             ) {
                 RenderScreen(
                     baseUser,
-                    pagerState,
                     tabRowModifier,
                     pagerModifier,
                     threadsViewModel,
@@ -364,7 +369,6 @@ private fun RenderSurface(
 @OptIn(ExperimentalFoundationApi::class)
 private fun RenderScreen(
     baseUser: User,
-    pagerState: PagerState,
     tabRowModifier: Modifier,
     pagerModifier: Modifier,
     threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
@@ -378,7 +382,9 @@ private fun RenderScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Column() {
+    val pagerState = rememberPagerState { 9 }
+
+    Column {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
         ScrollableTabRow(
             backgroundColor = MaterialTheme.colors.background,
@@ -389,7 +395,6 @@ private fun RenderScreen(
             CreateAndRenderTabs(baseUser, pagerState)
         }
         HorizontalPager(
-            pageCount = 9,
             state = pagerState,
             modifier = pagerModifier
         ) { page ->
@@ -445,7 +450,7 @@ private fun CreateAndRenderTabs(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val tabs = listOf<@Composable() (() -> Unit)?>(
+    val tabs = listOf<@Composable (() -> Unit)?>(
         { Text(text = stringResource(R.string.notes)) },
         { Text(text = stringResource(R.string.replies)) },
         { FollowTabHeader(baseUser) },
@@ -482,7 +487,7 @@ private fun RelaysTabHeader(baseUser: User) {
 @Composable
 private fun ReportsTabHeader(baseUser: User) {
     val userState by baseUser.live().reports.observeAsState()
-    var userReports by remember { mutableStateOf(0) }
+    var userReports by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -499,11 +504,11 @@ private fun ReportsTabHeader(baseUser: User) {
 
 @Composable
 private fun FollowedTagsTabHeader(baseUser: User) {
-    var usertags by remember { mutableStateOf(0) }
+    var usertags by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = baseUser) {
         launch(Dispatchers.IO) {
-            val contactList = baseUser?.latestContactList
+            val contactList = baseUser.latestContactList
 
             val newTags = (contactList?.verifiedFollowTagSet?.count() ?: 0)
 
@@ -520,7 +525,7 @@ private fun FollowedTagsTabHeader(baseUser: User) {
 private fun BookmarkTabHeader(baseUser: User) {
     val userState by baseUser.live().bookmarks.observeAsState()
 
-    var userBookmarks by remember { mutableStateOf(0) }
+    var userBookmarks by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -617,7 +622,9 @@ private fun ProfileHeader(
                 modifier = Modifier
                     .size(30.dp)
                     .align(Alignment.Center),
-                onClick = { popupExpanded = true },
+                onClick = {
+                    popupExpanded = true
+                },
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
@@ -677,10 +684,7 @@ private fun ProfileHeader(
                         .height(Size35dp)
                         .padding(bottom = 3.dp)
                 ) {
-                    MessageButton(baseUser, nav)
-
-                    // No need for this button anymore
-                    // NPubCopyButton(baseUser)
+                    MessageButton(baseUser, accountViewModel, nav)
 
                     ProfileActions(baseUser, accountViewModel)
                 }
@@ -715,11 +719,8 @@ private fun ProfileActions(
 
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
         if (isHidden) {
-            val scope = rememberCoroutineScope()
             ShowUserButton {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.showUser(baseUser.pubkeyHex)
-                }
+                accountViewModel.showUser(baseUser.pubkeyHex)
             }
         } else {
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
@@ -746,14 +747,20 @@ private fun DisplayFollowUnfollowButton(
     if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollow(baseUser)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -765,14 +772,20 @@ private fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                    if (accountViewModel.loggedInWithExternalSigner()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.account.follow(baseUser)
+                        }
+                    } else {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
@@ -783,14 +796,20 @@ private fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                    if (accountViewModel.loggedInWithExternalSigner()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.account.follow(baseUser)
+                        }
+                    } else {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
@@ -803,12 +822,32 @@ private fun DisplayFollowUnfollowButton(
 }
 
 @Composable
-private fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
+fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
     val isHidden by accountViewModel.account.liveHiddenUsers.map {
         it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
     }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     content(isHidden)
+}
+
+fun getIdentityClaimIcon(identity: IdentityClaim): Int {
+    return when (identity) {
+        is TwitterIdentity -> R.drawable.twitter
+        is TelegramIdentity -> R.drawable.telegram
+        is MastodonIdentity -> R.drawable.mastodon
+        is GitHubIdentity -> R.drawable.github
+        else -> R.drawable.github
+    }
+}
+
+fun getIdentityClaimDescription(identity: IdentityClaim): Int {
+    return when (identity) {
+        is TwitterIdentity -> R.string.twitter
+        is TelegramIdentity -> R.string.telegram
+        is MastodonIdentity -> R.string.mastodon
+        is GitHubIdentity -> R.string.github
+        else -> R.drawable.github
+    }
 }
 
 @Composable
@@ -900,9 +939,9 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    DisplayBadges(baseUser, nav)
+    DisplayBadges(baseUser, accountViewModel, nav)
 
-    DisplayNip05ProfileStatus(user)
+    DisplayNip05ProfileStatus(user, accountViewModel)
 
     val website = user.info?.website
     if (!website.isNullOrEmpty()) {
@@ -916,7 +955,17 @@ private fun DrawAdditionalInfo(
 
             ClickableText(
                 text = AnnotatedString(website.removePrefix("https://")),
-                onClick = { website.let { runCatching { uri.openUri(it) } } },
+                onClick = {
+                    website.let {
+                        runCatching {
+                            if (it.contains("://")) {
+                                uri.openUri(it)
+                            } else {
+                                uri.openUri("http://$it")
+                            }
+                        }
+                    }
+                },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
@@ -933,8 +982,8 @@ private fun DrawAdditionalInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
-                    painter = painterResource(id = identity.toIcon()),
-                    contentDescription = stringResource(identity.toDescriptor()),
+                    painter = painterResource(id = getIdentityClaimIcon(identity)),
+                    contentDescription = stringResource(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp)
                 )
 
@@ -962,7 +1011,7 @@ private fun DrawAdditionalInfo(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
-                tags = remember { ImmutableListOfLists(emptyList()) },
+                tags = EmptyTagList,
                 backgroundColor = background,
                 accountViewModel = accountViewModel,
                 nav = nav
@@ -1015,7 +1064,7 @@ fun DisplayLNAddress(
                                     scope.launch {
                                         Toast.makeText(
                                             context,
-                                            "Payment Successful", // Turn this into a UI animation
+                                            context.getString(R.string.payment_successful), // Turn this into a UI animation
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
@@ -1025,16 +1074,25 @@ fun DisplayLNAddress(
                                             context,
                                             response.error?.message
                                                 ?: response.error?.code?.toString()
-                                                ?: "Error parsing error message",
+                                                ?: context.getString(R.string.error_parsing_error_message),
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
                                 }
                             }
                         } else {
-                            runCatching {
+                            try {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 ContextCompat.startActivity(context, intent, null)
+                            } catch (e: Exception) {
+                                scope.launch {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.lightning_wallets_not_found),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             }
                         }
                     },
@@ -1065,11 +1123,11 @@ private fun DisplayAppRecommendations(
     ) { state ->
         when (state) {
             is FeedState.Loaded -> {
-                Column() {
+                Column {
                     Text(stringResource(id = R.string.recommended_apps))
 
                     FlowRow(
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.Center,
                         modifier = Modifier.padding(vertical = 5.dp)
                     ) {
                         state.feed.value.forEach { app ->
@@ -1088,7 +1146,7 @@ private fun DisplayAppRecommendations(
 private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
     val appState by baseApp.live().metadata.observeAsState()
 
-    var appLogo by remember { mutableStateOf<String?>(null) }
+    var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = appState) {
         launch(Dispatchers.Default) {
@@ -1125,6 +1183,7 @@ private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
 @Composable
 private fun DisplayBadges(
     baseUser: User,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     LoadAddressableNote(
@@ -1133,17 +1192,26 @@ private fun DisplayBadges(
             baseUser.pubkeyHex,
             BadgeProfilesEvent.standardDTAg,
             null
-        )
-    ) {
-        if (it != null) {
-            val badgeList by it.live().metadata.map {
-                (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
-            }.distinctUntilChanged().observeAsState()
-
-            badgeList?.let { list ->
-                RenderBadgeList(list, nav)
-            }
+        ),
+        accountViewModel
+    ) { note ->
+        if (note != null) {
+            WatchAndRenderBadgeList(note, nav)
         }
+    }
+}
+
+@Composable
+private fun WatchAndRenderBadgeList(
+    note: AddressableNote,
+    nav: (String) -> Unit
+) {
+    val badgeList by note.live().metadata.map {
+        (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
+    }.distinctUntilChanged().observeAsState()
+
+    badgeList?.let { list ->
+        RenderBadgeList(list, nav)
     }
 }
 
@@ -1154,7 +1222,7 @@ private fun RenderBadgeList(
     nav: (String) -> Unit
 ) {
     FlowRow(
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp)
     ) {
         list.forEach { badgeAwardEvent ->
@@ -1166,7 +1234,7 @@ private fun RenderBadgeList(
 @Composable
 private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit) {
     var baseNote by remember {
-        mutableStateOf<Note?>(LocalCache.getNoteIfExists(badgeAwardEventHex))
+        mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex))
     }
 
     LaunchedEffect(key1 = badgeAwardEventHex) {
@@ -1411,7 +1479,7 @@ fun TabFollows(baseUser: User, feedViewModel: UserFeedViewModel, accountViewMode
     WatchFollowChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
@@ -1422,7 +1490,7 @@ fun TabFollowers(baseUser: User, feedViewModel: UserFeedViewModel, accountViewMo
     WatchFollowerChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
         }
     }
@@ -1457,7 +1525,7 @@ fun TabReceivedZaps(baseUser: User, zapFeedViewModel: NostrUserProfileZapsFeedVi
     WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
         }
     }
@@ -1480,7 +1548,7 @@ fun TabReports(baseUser: User, feedViewModel: NostrUserProfileReportFeedViewMode
     WatchReportsAndUpdateFeed(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column() {
+        Column {
             RefresheableFeedView(
                 feedViewModel,
                 null,
@@ -1510,6 +1578,13 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> U
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(user) {
+        feedViewModel.subscribeTo(user)
+        onDispose {
+            feedViewModel.unsubscribeTo(user)
+        }
+    }
+
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Profile Relay Start")
@@ -1539,12 +1614,20 @@ fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> U
 }
 
 @Composable
-private fun MessageButton(user: User, nav: (String) -> Unit) {
+private fun MessageButton(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { nav("Room/${user.pubkeyHex}") },
+        onClick = {
+            scope.launch(Dispatchers.IO) {
+                val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
+                accountViewModel.account.userProfile().createChatroom(withKey)
+                nav("Room/${withKey.hashCode()}")
+            }
+        },
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(
@@ -1644,79 +1727,59 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
         onDismissRequest = onDismiss
     ) {
         val clipboardManager = LocalClipboardManager.current
-        val accountState by accountViewModel.accountLiveData.observeAsState()
-        val account = accountState?.account!!
-        val blockList by accountViewModel.account.getBlockListNote().live().metadata.observeAsState()
-
-        val scope = rememberCoroutineScope()
 
         DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
             Text(stringResource(R.string.copy_user_id))
         }
 
-        if (account.userProfile() != user) {
+        if (accountViewModel.userProfile() != user) {
             Divider()
-            if (account.isHidden(user)) {
-                DropdownMenuItem(onClick = {
-                    scope.launch(Dispatchers.IO) {
+            if (accountViewModel.account.isHidden(user)) {
+                DropdownMenuItem(
+                    onClick = {
                         accountViewModel.show(user)
                         onDismiss()
                     }
-                }) {
+                ) {
                     Text(stringResource(R.string.unblock_user))
                 }
             } else {
-                DropdownMenuItem(onClick = {
-                    scope.launch(Dispatchers.IO) {
+                DropdownMenuItem(
+                    onClick = {
                         accountViewModel.hide(user)
                         onDismiss()
                     }
-                }) {
+                ) {
                     Text(stringResource(id = R.string.block_hide_user))
                 }
             }
             Divider()
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.SPAM)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.SPAM)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_spam_scam))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_hateful_speech))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_impersonation))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
                 onDismiss()
             }) {
                 Text(stringResource(R.string.report_nudity_porn))
             }
             DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
-                    accountViewModel.hide(user)
-                }
+                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
                 onDismiss()
             }) {
                 Text(stringResource(id = R.string.report_illegal_behaviour))

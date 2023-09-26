@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.ChatroomKey
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -118,7 +120,7 @@ fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () ->
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         searchBarViewModel.clear()
                         NostrSearchEventOrUserDataSource.clear()
                         onClose()
@@ -192,7 +194,7 @@ private fun RenderSearch(
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Join Start")
@@ -300,6 +302,7 @@ private fun RenderSearchResults(
     if (searchBarViewModel.isSearching) {
         val users by searchBarViewModel.searchResultsUsers.collectAsState()
         val channels by searchBarViewModel.searchResultsChannels.collectAsState()
+        val scope = rememberCoroutineScope()
 
         Row(
             modifier = Modifier
@@ -320,7 +323,12 @@ private fun RenderSearchResults(
                     key = { _, item -> "u" + item.pubkeyHex }
                 ) { _, item ->
                     UserComposeForChat(item, accountViewModel) {
-                        nav("Room/${item.pubkeyHex}")
+                        scope.launch(Dispatchers.IO) {
+                            val withKey = ChatroomKey(persistentSetOf(item.pubkeyHex))
+                            accountViewModel.userProfile().createChatroom(withKey)
+                            nav("Room/${withKey.hashCode()}")
+                        }
+
                         searchBarViewModel.clear()
                     }
                 }

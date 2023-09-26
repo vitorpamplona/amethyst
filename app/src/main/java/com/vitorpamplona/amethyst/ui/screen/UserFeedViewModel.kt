@@ -18,7 +18,6 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,8 +63,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             refreshSuspended()
         }
     }
@@ -87,8 +85,7 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     }
 
     private fun updateFeed(notes: ImmutableList<User>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { UserFeedState.Empty }
@@ -104,10 +101,12 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
     private val bundler = BundledUpdate(250, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
+        viewModelScope.launch(Dispatchers.IO) {
+            bundler.invalidate(ignoreIfDoing) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+            }
         }
     }
 
@@ -119,12 +118,15 @@ open class UserFeedViewModel(val dataSource: FeedFilter<User>) : ViewModel(), In
             checkNotInMainThread()
 
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 invalidateData()
             }
         }
     }
 
     override fun onCleared() {
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

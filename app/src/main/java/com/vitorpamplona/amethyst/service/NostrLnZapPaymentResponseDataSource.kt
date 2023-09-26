@@ -1,12 +1,12 @@
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.service.model.LnZapPaymentResponseEvent
-import com.vitorpamplona.amethyst.service.model.RelayAuthEvent
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.events.RelayAuthEvent
 
 class NostrLnZapPaymentResponseDataSource(
     private val fromServiceHex: String,
@@ -44,7 +44,7 @@ class NostrLnZapPaymentResponseDataSource(
     override fun auth(relay: Relay, challenge: String) {
         super.auth(relay, challenge)
 
-        val event = RelayAuthEvent.create(relay.url, challenge, authSigningKey)
+        val event = RelayAuthEvent.create(relay.url, challenge, "", authSigningKey)
         Client.send(
             event,
             relay.url

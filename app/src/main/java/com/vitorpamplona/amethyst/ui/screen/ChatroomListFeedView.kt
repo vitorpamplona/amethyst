@@ -16,9 +16,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.note.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.events.ChatroomKeyable
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -84,16 +84,20 @@ private fun FeedLoaded(
     LaunchedEffect(key1 = markAsRead.value) {
         if (markAsRead.value) {
             for (note in state.feed.value) {
-                note.event?.let {
+                note.event?.let { noteEvent ->
                     val channelHex = note.channelHex()
                     val route = if (channelHex != null) {
                         "Channel/$channelHex"
+                    } else if (note.event is ChatroomKeyable) {
+                        val withKey = (note.event as ChatroomKeyable).chatroomKey(accountViewModel.userProfile().pubkeyHex)
+                        "Room/${withKey.hashCode()}"
                     } else {
-                        val roomUser = (note.event as? PrivateDmEvent)?.talkingWith(accountViewModel.account.userProfile().pubkeyHex)
-                        "Room/$roomUser"
+                        null
                     }
 
-                    accountViewModel.account.markAsRead(route, it.createdAt())
+                    route?.let {
+                        accountViewModel.account.markAsRead(route, noteEvent.createdAt())
+                    }
                 }
             }
             markAsRead.value = false

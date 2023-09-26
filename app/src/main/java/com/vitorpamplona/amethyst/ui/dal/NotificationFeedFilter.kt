@@ -2,10 +2,10 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.*
 
 class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -39,7 +39,8 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
                 it.event !is LnZapRequestEvent &&
                 it.event !is BadgeDefinitionEvent &&
                 it.event !is BadgeProfilesEvent &&
-                it.author !== loggedInUser &&
+                it.event !is GiftWrapEvent &&
+                (it.event is LnZapEvent || it.author !== loggedInUser) &&
                 (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
                 it.event?.isTaggedUser(loggedInUserHex) ?: false &&
                 (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&

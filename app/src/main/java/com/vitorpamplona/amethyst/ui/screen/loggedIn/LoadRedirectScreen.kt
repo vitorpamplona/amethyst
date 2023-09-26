@@ -22,14 +22,17 @@ import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.ChannelCreateEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun LoadRedirectScreen(eventId: String?, navController: NavController) {
+fun LoadRedirectScreen(eventId: String?, accountViewModel: AccountViewModel, navController: NavController) {
     if (eventId == null) return
 
     var noteBase by remember { mutableStateOf<Note?>(null) }
@@ -60,34 +63,48 @@ fun LoadRedirectScreen(eventId: String?, navController: NavController) {
     noteBase?.let {
         LoadRedirectScreen(
             baseNote = it,
+            accountViewModel = accountViewModel,
             nav = nav
         )
     }
 }
 
 @Composable
-fun LoadRedirectScreen(baseNote: Note, nav: (String) -> Unit) {
+fun LoadRedirectScreen(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(key1 = noteState) {
-        scope.launch {
-            val note = noteState?.note
-            val event = note?.event
-            val channelHex = note?.channelHex()
+        val note = noteState?.note ?: return@LaunchedEffect
+        var event = note.event
+        val channelHex = note.channelHex()
 
-            if (event == null) {
-                // stay here, loading
-            } else if (event is ChannelCreateEvent) {
-                nav("Channel/${note.idHex}")
-            } else if (event is PrivateDmEvent) {
-                nav("Room/${note.author?.pubkeyHex}")
-            } else if (channelHex != null) {
-                nav("Channel/$channelHex")
-            } else {
-                nav("Note/${note.idHex}")
+        if (event is GiftWrapEvent) {
+            event = accountViewModel.unwrap(event)
+        }
+
+        if (event is SealedGossipEvent) {
+            event = accountViewModel.unseal(event)
+        }
+
+        if (event == null) {
+            // stay here, loading
+        } else if (event is ChannelCreateEvent) {
+            nav("Channel/${note.idHex}")
+        } else if (event is ChatroomKeyable) {
+            note.author?.let {
+                val withKey = (event as ChatroomKeyable)
+                    .chatroomKey(accountViewModel.userProfile().pubkeyHex)
+
+                withContext(Dispatchers.IO) {
+                    accountViewModel.userProfile().createChatroom(withKey)
+                }
+
+                nav("Room/${withKey.hashCode()}")
             }
+        } else if (channelHex != null) {
+            nav("Channel/$channelHex")
+        } else {
+            nav("Note/${note.idHex}")
         }
     }
 

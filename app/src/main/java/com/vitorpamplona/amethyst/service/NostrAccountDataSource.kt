@@ -1,24 +1,34 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.model.*
-import com.vitorpamplona.amethyst.service.model.BadgeAwardEvent
-import com.vitorpamplona.amethyst.service.model.BadgeProfilesEvent
-import com.vitorpamplona.amethyst.service.model.BookmarkListEvent
-import com.vitorpamplona.amethyst.service.model.ChannelMessageEvent
-import com.vitorpamplona.amethyst.service.model.ContactListEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.MetadataEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.ReportEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.BadgeAwardEvent
+import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.BookmarkListEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.ReactionEvent
+import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.StatusEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
@@ -43,6 +53,17 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 kinds = listOf(MetadataEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
                 limit = 1
+            )
+        )
+    }
+
+    fun createAccountRelayListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter = JsonFilter(
+                kinds = listOf(AdvertisedRelayListEvent.kind, StatusEvent.kind),
+                authors = listOf(account.userProfile().pubkeyHex),
+                limit = 5
             )
         )
     }
@@ -111,8 +132,72 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     )
 
+    fun createGiftWrapsToMeFilter() = TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter = JsonFilter(
+            kinds = listOf(GiftWrapEvent.kind),
+            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+        )
+    )
+
     val accountChannel = requestNewChannel { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
+    }
+
+    override fun consume(event: Event, relay: Relay) {
+        checkNotInMainThread()
+
+        if (LocalCache.justVerify(event)) {
+            if (event is GiftWrapEvent) {
+                val privateKey = account.keyPair.privKey
+                if (privateKey != null) {
+                    event.cachedGift(privateKey)?.let {
+                        this.consume(it, relay)
+                    }
+                } else if (account.loginWithExternalSigner) {
+                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        ExternalSignerUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGift(account.keyPair.pubKey, cached)?.let {
+                        this.consume(it, relay)
+                    }
+                }
+            }
+
+            if (event is SealedGossipEvent) {
+                val privateKey = account.keyPair.privKey
+                if (privateKey != null) {
+                    event.cachedGossip(privateKey)?.let {
+                        LocalCache.justConsume(it, relay)
+                    }
+                } else if (account.loginWithExternalSigner) {
+                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
+                    if (cached == null) {
+                        ExternalSignerUtils.decrypt(
+                            event.content,
+                            event.pubKey,
+                            event.id,
+                            SignerType.NIP44_DECRYPT
+                        )
+                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
+                    }
+                    event.cachedGossip(account.keyPair.pubKey, cached)?.let {
+                        LocalCache.justConsume(it, relay)
+                    }
+                }
+
+                // Don't store sealed gossips to avoid rebroadcasting by mistake.
+            } else {
+                LocalCache.justConsume(event, relay)
+            }
+        }
     }
 
     override fun updateChannelFilters() {
@@ -120,7 +205,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         accountChannel.typedFilters = listOf(
             createAccountMetadataFilter(),
             createAccountContactListFilter(),
+            createAccountRelayListFilter(),
             createNotificationFilter(),
+            createGiftWrapsToMeFilter(),
             createAccountReportsFilter(),
             createAccountAcceptedAwardsFilter(),
             createAccountBookmarkListFilter(),
@@ -133,7 +220,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
         if (this::account.isInitialized) {
             val event = account.createAuthEvent(relay, challenge)
-
             if (event != null) {
                 Client.send(
                     event,

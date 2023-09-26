@@ -35,16 +35,10 @@ import com.patrykandpatrick.vico.core.entry.composed.plus
 import com.patrykandpatrick.vico.core.entry.entryOf
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.HexKey
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.service.model.ReactionEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -53,10 +47,18 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.ReactionEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.time.Instant
@@ -109,26 +111,58 @@ fun UserReactionsRow(
 
 @Composable
 private fun UserZapModel(model: UserReactionsViewModel) {
-    val zaps by model.zaps.collectAsState()
-    UserZapReaction(showAmountAxis(zaps[model.today()]))
+    Icon(
+        imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(R.string.zaps),
+        modifier = Size24Modifier,
+        tint = BitcoinOrange
+    )
+
+    Spacer(modifier = Modifier.width(8.dp))
+
+    UserZapReaction(model)
 }
 
 @Composable
 private fun UserReactionModel(model: UserReactionsViewModel) {
-    val reactions by model.reactions.collectAsState()
-    UserLikeReaction(reactions[model.today()])
+    Icon(
+        painter = painterResource(R.drawable.ic_liked),
+        null,
+        modifier = Size20Modifier,
+        tint = Color.Unspecified
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+
+    UserLikeReaction(model)
 }
 
 @Composable
 private fun UserBoostModel(model: UserReactionsViewModel) {
-    val boosts by model.boosts.collectAsState()
-    UserBoostReaction(boosts[model.today()])
+    Icon(
+        painter = painterResource(R.drawable.ic_retweeted),
+        null,
+        modifier = Size24Modifier,
+        tint = Color.Unspecified
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+
+    UserBoostReaction(model)
 }
 
 @Composable
 private fun UserReplyModel(model: UserReactionsViewModel) {
-    val replies by model.replies.collectAsState()
-    UserReplyReaction(replies[model.today()])
+    Icon(
+        painter = painterResource(R.drawable.ic_comment),
+        null,
+        modifier = Size20Modifier,
+        tint = RoyalBlue
+    )
+
+    Spacer(modifier = StdHorzSpacer)
+
+    UserReplyReaction(model)
 }
 
 @Stable
@@ -153,6 +187,11 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
     private var takenIntoAccount = setOf<HexKey>()
     private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
+
+    val todaysReplyCount = _replies.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysBoostCount = _boosts.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysReactionCount = _reactions.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }.distinctUntilChanged()
 
     fun formatDate(createAt: Long): String {
         return sdf.format(
@@ -191,7 +230,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         takenIntoAccount.add(noteEvent.id())
                     }
                 } else if (noteEvent is LnZapEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                    if (noteEvent.isTaggedUser(currentUser)) { // the user might be sending his own receipts noteEvent.pubKey != currentUser
                         val netDate = formatDate(noteEvent.createdAt)
                         zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id())
@@ -245,7 +284,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                         hasNewElements = true
                     }
                 } else if (noteEvent is LnZapEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                    if (noteEvent.isTaggedUser(currentUser)) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
                         val netDate = formatDate(noteEvent.createdAt)
                         zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id())
@@ -326,6 +365,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
     override fun onCleared() {
         collectorJob?.cancel()
+        bundlerInsert.cancel()
         super.onCleared()
     }
 
@@ -338,18 +378,9 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
 @Composable
 fun UserReplyReaction(
-    replyCount: Int?
+    model: UserReactionsViewModel
 ) {
-    val showCounts = remember(replyCount) { showCount(replyCount) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_comment),
-        null,
-        modifier = Size20Modifier,
-        tint = RoyalBlue
-    )
-
-    Spacer(modifier = StdHorzSpacer)
+    val showCounts by model.todaysReplyCount.collectAsState("")
 
     Text(
         showCounts,
@@ -360,21 +391,12 @@ fun UserReplyReaction(
 
 @Composable
 fun UserBoostReaction(
-    boostCount: Int?
+    model: UserReactionsViewModel
 ) {
-    val showCounts = remember(boostCount) { showCount(boostCount) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_retweeted),
-        null,
-        modifier = Size24Modifier,
-        tint = Color.Unspecified
-    )
-
-    Spacer(modifier = StdHorzSpacer)
+    val boosts by model.todaysBoostCount.collectAsState("")
 
     Text(
-        showCounts,
+        boosts,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -382,21 +404,12 @@ fun UserBoostReaction(
 
 @Composable
 fun UserLikeReaction(
-    likeCount: Int?
+    model: UserReactionsViewModel
 ) {
-    val showCounts = remember(likeCount) { showCount(likeCount) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_liked),
-        null,
-        modifier = Size20Modifier,
-        tint = Color.Unspecified
-    )
-
-    Spacer(modifier = StdHorzSpacer)
+    val reactions by model.todaysReactionCount.collectAsState("")
 
     Text(
-        text = showCounts,
+        text = reactions,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     )
@@ -404,17 +417,9 @@ fun UserLikeReaction(
 
 @Composable
 fun UserZapReaction(
-    amount: String
+    model: UserReactionsViewModel
 ) {
-    Icon(
-        imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.zaps),
-        modifier = Size24Modifier,
-        tint = BitcoinOrange
-    )
-
-    Spacer(modifier = Modifier.width(8.dp))
-
+    val amount by model.todaysZapAmount.collectAsState("")
     Text(
         amount,
         fontWeight = FontWeight.Bold,

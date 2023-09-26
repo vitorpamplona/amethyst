@@ -11,8 +11,8 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
+import com.vitorpamplona.quartz.encoders.decodePublicKey
+import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlin.math.roundToInt
 
 data class RangesChanges(val original: TextRange, val modified: TextRange)
@@ -43,7 +43,8 @@ fun buildAnnotatedStringWithUrlHighlighting(text: AnnotatedString, color: Color)
 
                             val endIndex = startIndex + keyB32.length
 
-                            val key = decodePublicKey(keyB32.removePrefix("@"))
+                            val key =
+                                decodePublicKey(keyB32.removePrefix("@"))
                             val user = LocalCache.getOrCreateUser(key.toHexKey())
 
                             val newWord = "@${user.toBestDisplayName()}"
@@ -58,37 +59,37 @@ fun buildAnnotatedStringWithUrlHighlighting(text: AnnotatedString, color: Color)
                                 )
                             )
                             newWord + restOfWord
+                        } else if (Patterns.WEB_URL.matcher(word).matches()) {
+                            val startIndex = builderBefore.toString().length
+                            val endIndex = startIndex + word.length
+
+                            val startNew = builderAfter.toString().length
+                            val endNew = startNew + word.length
+
+                            substitutions.add(
+                                RangesChanges(
+                                    TextRange(startIndex, endIndex),
+                                    TextRange(startNew, endNew)
+                                )
+                            )
+
+                            builderBefore.append("$word ")
+                            builderAfter.append("$word ")
+                            word
                         } else {
-                            builderBefore.append(word + " ")
-                            builderAfter.append(word + " ")
+                            builderBefore.append("$word ")
+                            builderAfter.append("$word ")
                             word
                         }
                     } catch (e: Exception) {
                         // if it can't parse the key, don't try to change.
-                        builderBefore.append(word + " ")
-                        builderAfter.append(word + " ")
+                        builderBefore.append("$word ")
+                        builderAfter.append("$word ")
                         word
                     }
                 }.joinToString(" ")
             }.joinToString("\n")
         )
-
-        val newText = toAnnotatedString()
-
-        newText.split("\\s+".toRegex()).filter { word ->
-            Patterns.WEB_URL.matcher(word).matches()
-        }.forEach {
-            val startIndex = text.indexOf(it)
-            val endIndex = startIndex + it.length
-            addStyle(
-                style = SpanStyle(
-                    color = color,
-                    textDecoration = TextDecoration.None
-                ),
-                start = startIndex,
-                end = endIndex
-            )
-        }
 
         substitutions.forEach {
             addStyle(

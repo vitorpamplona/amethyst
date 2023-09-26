@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,7 +42,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -85,18 +83,14 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.amethyst.service.model.Participant
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
-import com.vitorpamplona.amethyst.ui.actions.ServersAvailable
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -111,12 +105,12 @@ import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.routeFor
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
@@ -127,12 +121,18 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldLeadingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -149,7 +149,7 @@ fun ChannelScreen(
 ) {
     if (channelId == null) return
 
-    LoadChannel(channelId) {
+    LoadChannel(channelId, accountViewModel) {
         PrepareChannelViewModels(
             baseChannel = it,
             accountViewModel = accountViewModel,
@@ -169,6 +169,7 @@ fun PrepareChannelViewModels(baseChannel: Channel, accountViewModel: AccountView
     )
 
     val channelScreenModel: NewPostViewModel = viewModel()
+    channelScreenModel.accountViewModel = accountViewModel
     channelScreenModel.account = accountViewModel.account
 
     ChannelScreen(
@@ -195,9 +196,6 @@ fun ChannelScreen(
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
-        NostrChannelDataSource.start()
-        feedViewModel.invalidateData()
-
         launch(Dispatchers.IO) {
             newPostModel.imageUploadingError.collect { error ->
                 withContext(Dispatchers.Main) {
@@ -208,11 +206,22 @@ fun ChannelScreen(
     }
 
     DisposableEffect(accountViewModel) {
+        NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
+        NostrChannelDataSource.start()
+        feedViewModel.invalidateData(true)
+
+        onDispose {
+            NostrChannelDataSource.clear()
+            NostrChannelDataSource.stop()
+        }
+    }
+
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Channel Start")
                 NostrChannelDataSource.start()
-                feedViewModel.invalidateData()
+                feedViewModel.invalidateData(true)
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Channel Stop")
@@ -229,14 +238,6 @@ fun ChannelScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        ChannelHeader(
-            baseChannel = channel,
-            showVideo = true,
-            showBottomDiviser = true,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
         Column(
@@ -247,6 +248,9 @@ fun ChannelScreen(
                     .weight(1f, true)
             }
         ) {
+            if (channel is LiveActivitiesChannel) {
+                ShowVideoStreaming(channel, accountViewModel)
+            }
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
@@ -275,7 +279,8 @@ fun ChannelScreen(
                     message = newPostModel.message.text,
                     mentions = listOfNotNull(replyTo.value?.author),
                     replyTos = listOfNotNull(replyTo.value),
-                    channelHex = channel.idHex
+                    channelHex = channel.idHex,
+                    dao = accountViewModel
                 )
                 tagger.run()
                 if (channel is PublicChatChannel) {
@@ -538,7 +543,7 @@ fun ChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadChannel(channelHex) {
+    LoadChannel(channelHex, accountViewModel) {
         ChannelHeader(
             it,
             showVideo,
@@ -571,6 +576,7 @@ fun ChannelHeader(
         val expanded = remember { mutableStateOf(false) }
 
         Column(
+            verticalArrangement = Arrangement.Center,
             modifier = modifier.clickable {
                 if (sendToChannel) {
                     nav(routeFor(baseChannel))
@@ -579,10 +585,15 @@ fun ChannelHeader(
                 }
             }
         ) {
-            ShortChannelHeader(baseChannel, expanded, accountViewModel, nav, showFlag)
+            ShortChannelHeader(
+                baseChannel = baseChannel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                showFlag = showFlag
+            )
 
             if (expanded.value) {
-                LongChannelHeader(baseChannel, accountViewModel, nav)
+                LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
             }
         }
 
@@ -595,7 +606,7 @@ fun ChannelHeader(
 }
 
 @Composable
-private fun ShowVideoStreaming(
+fun ShowVideoStreaming(
     baseChannel: LiveActivitiesChannel,
     accountViewModel: AccountViewModel
 ) {
@@ -625,7 +636,7 @@ private fun ShowVideoStreaming(
                 }
 
                 url?.let {
-                    CheckIfUrlIsOnline(url) {
+                    CheckIfUrlIsOnline(url, accountViewModel) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = remember { Modifier.heightIn(max = 300.dp) }
@@ -642,6 +653,7 @@ private fun ShowVideoStreaming(
 
                             ZoomableContentView(
                                 content = zoomableUrlVideo,
+                                roundedCorner = false,
                                 accountViewModel = accountViewModel
                             )
                         }
@@ -653,10 +665,10 @@ private fun ShowVideoStreaming(
 }
 
 @Composable
-private fun ShortChannelHeader(
+fun ShortChannelHeader(
     baseChannel: Channel,
-    expanded: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    fontWeight: FontWeight = FontWeight.Bold,
     nav: (String) -> Unit,
     showFlag: Boolean
 ) {
@@ -670,7 +682,7 @@ private fun ShortChannelHeader(
             channel.creator?.let {
                 UserPicture(
                     user = it,
-                    size = Size35dp,
+                    size = Size34dp,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )
@@ -682,11 +694,7 @@ private fun ShortChannelHeader(
                     model = it,
                     contentDescription = stringResource(R.string.profile_image),
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .width(Size35dp)
-                        .height(Size35dp)
-                        .clip(shape = CircleShape)
+                    modifier = HeaderPictureModifier
                 )
             }
         }
@@ -701,26 +709,10 @@ private fun ShortChannelHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = remember(channelState) { channel.toBestDisplayName() },
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = fontWeight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            val summary = remember(channelState) {
-                channel.summary()?.ifBlank { null }
-            }
-
-            if (summary != null && !expanded.value) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = summary,
-                        color = MaterialTheme.colors.placeholderText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 12.sp
-                    )
-                }
             }
         }
 
@@ -741,8 +733,9 @@ private fun ShortChannelHeader(
 }
 
 @Composable
-private fun LongChannelHeader(
+fun LongChannelHeader(
     baseChannel: Channel,
+    lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -752,18 +745,14 @@ private fun LongChannelHeader(
     } ?: return
 
     Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp)
+        lineModifier
     ) {
         val summary = remember(channelState) {
             channel.summary()?.ifBlank { null }
         }
 
         Column(
-            Modifier
-                .weight(1f)
-                .padding(start = 10.dp)
+            Modifier.weight(1f)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val defaultBackground = MaterialTheme.colors.background
@@ -773,9 +762,9 @@ private fun LongChannelHeader(
 
                 val tags = remember(channelState) {
                     if (baseChannel is LiveActivitiesChannel) {
-                        baseChannel.info?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+                        baseChannel.info?.tags()?.toImmutableListOfLists() ?: EmptyTagList
                     } else {
-                        ImmutableListOfLists()
+                        EmptyTagList
                     }
                 }
 
@@ -790,7 +779,9 @@ private fun LongChannelHeader(
             }
 
             if (baseChannel is LiveActivitiesChannel) {
-                val hashtags = remember(baseChannel.info) { baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                val hashtags = remember(baseChannel.info) {
+                    baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
+                }
                 DisplayUncitedHashtags(hashtags, summary ?: "", nav)
             }
         }
@@ -805,28 +796,37 @@ private fun LongChannelHeader(
         }
     }
 
-    Spacer(DoubleVertSpacer)
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LoadNote(baseNoteHex = channel.idHex) {
-            it?.let {
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
+        loadingNote?.let { note ->
+            Row(
+                lineModifier,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = stringResource(id = R.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.width(55.dp)
+                    modifier = Modifier.width(75.dp)
                 )
                 Spacer(DoubleHorzSpacer)
-                NoteAuthorPicture(it, nav, accountViewModel, Size25dp)
+                NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
                 Spacer(DoubleHorzSpacer)
-                NoteUsernameDisplay(it, remember { Modifier.weight(1f) })
-                TimeAgo(it)
-                MoreOptionsButton(it, accountViewModel)
+                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+            }
+
+            Row(
+                lineModifier,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(id = R.string.created_at),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(75.dp)
+                )
+                Spacer(DoubleHorzSpacer)
+                NormalTimeAgo(note, remember { Modifier.weight(1f) })
+                MoreOptionsButton(note, accountViewModel)
             }
         }
     }
@@ -852,9 +852,7 @@ private fun LongChannelHeader(
 
         participantUsers.forEach {
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 10.dp, top = 10.dp)
+                lineModifier
                     .clickable {
                         nav("User/${it.second.pubkeyHex}")
                     },
@@ -878,19 +876,37 @@ private fun LongChannelHeader(
 }
 
 @Composable
+fun NormalTimeAgo(baseNote: Note, modifier: Modifier) {
+    val nowStr = stringResource(id = R.string.now)
+
+    val time by remember(baseNote) {
+        derivedStateOf {
+            timeAgoShort(baseNote.createdAt() ?: 0, nowStr)
+        }
+    }
+
+    Text(
+        text = time,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+    )
+}
+
+@Composable
 private fun ShortChannelActionOptions(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    LoadNote(baseNoteHex = channel.idHex) {
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
         it?.let {
             var popupExpanded by remember { mutableStateOf(false) }
 
             Spacer(modifier = StdHorzSpacer)
             LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
             Spacer(modifier = StdHorzSpacer)
         }
     }
@@ -965,7 +981,7 @@ private fun LiveChannelActionOptions(
 
         LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
         Spacer(modifier = StdHorzSpacer)
-        ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel)
+        ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
     }
 }
 
@@ -975,6 +991,7 @@ fun LiveFlag() {
         text = stringResource(id = R.string.live_stream_live_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
         modifier = remember {
             Modifier
                 .clip(SmallBorder)

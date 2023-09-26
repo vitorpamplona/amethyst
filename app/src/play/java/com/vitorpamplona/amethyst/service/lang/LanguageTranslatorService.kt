@@ -26,7 +26,7 @@ data class ResultOrError(
 object LanguageTranslatorService {
     var executorService = Executors.newScheduledThreadPool(5)
 
-    private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.52f).build()
+    private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.6f).build()
     private val languageIdentification = LanguageIdentification.getClient(options)
     val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)

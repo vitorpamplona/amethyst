@@ -4,8 +4,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.TimeUtils
-import com.vitorpamplona.amethyst.service.model.*
+import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -37,7 +37,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
         return collection
             .asSequence()
-            .filter { it.event is FileHeaderEvent || it.event is FileStorageHeaderEvent }
+            .filter { (it.event is FileHeaderEvent && (it.event as FileHeaderEvent).hasUrl()) || it.event is FileStorageHeaderEvent }
             .filter { isGlobal || it.author?.pubkeyHex in followingKeySet || (it.event?.isTaggedHashes(followingTagSet) ?: false) || (it.event?.isTaggedGeoHashes(followingGeohashSet) ?: false) }
             .filter { isHiddenList || account.isAcceptable(it) }
             .filter { it.createdAt()!! <= now }

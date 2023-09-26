@@ -12,7 +12,6 @@ import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -31,7 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -61,12 +60,17 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
 
     NostrHashtagDataSource.loadHashtag(tag)
 
-    LaunchedEffect(tag) {
+    DisposableEffect(tag) {
         NostrHashtagDataSource.start()
         feedViewModel.invalidateData()
+
+        onDispose {
+            NostrHashtagDataSource.loadHashtag(null)
+            NostrHashtagDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Hashtag Start")
@@ -84,8 +88,6 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            NostrHashtagDataSource.loadHashtag(null)
-            NostrHashtagDataSource.stop()
         }
     }
 
@@ -93,7 +95,6 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            HashtagHeader(tag, accountViewModel)
             RefresheableFeedView(
                 feedViewModel,
                 null,
@@ -105,43 +106,33 @@ fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, account
 }
 
 @Composable
-fun HashtagHeader(tag: String, account: AccountViewModel, onClick: () -> Unit = { }) {
+fun HashtagHeader(tag: String, modifier: Modifier = StdPadding, account: AccountViewModel, onClick: () -> Unit = { }) {
     Column(
-        Modifier.clickable { onClick() }
+        Modifier.fillMaxWidth().clickable { onClick() }
     ) {
-        Column(modifier = HalfPadding) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "#$tag",
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                        )
+        Column(modifier = modifier) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "#$tag",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
 
-                        HashtagActionOptions(tag, account)
-                    }
-                }
+                HashtagActionOptions(tag, account)
             }
         }
 
         Divider(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
             thickness = 0.25.dp
         )
     }
 }
 
 @Composable
-private fun HashtagActionOptions(
+fun HashtagActionOptions(
     tag: String,
     accountViewModel: AccountViewModel
 ) {
@@ -158,14 +149,20 @@ private fun HashtagActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.unfollowHashtag(tag)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {
@@ -176,14 +173,20 @@ private fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.followHashtag(tag)
+                    }
+                } else {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 }
             } else {
                 scope.launch(Dispatchers.IO) {

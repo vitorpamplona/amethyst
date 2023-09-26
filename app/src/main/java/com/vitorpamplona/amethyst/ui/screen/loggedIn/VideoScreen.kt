@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -41,39 +43,39 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.model.FileHeaderEvent
-import com.vitorpamplona.amethyst.service.model.FileStorageHeaderEvent
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteComposeReportState
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
-import com.vitorpamplona.amethyst.ui.note.RenderReportState
+import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.routeFor
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -87,7 +89,7 @@ fun VideoScreen(
 
     WatchAccountForVideoScreen(videoFeedView = videoFeedView, accountViewModel = accountViewModel)
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Video Start")
@@ -125,7 +127,6 @@ fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountVi
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SaveableFeedState(
     videoFeedView: NostrVideoFeedViewModel,
@@ -133,15 +134,7 @@ private fun SaveableFeedState(
     nav: (String) -> Unit,
     scrollStateKey: String? = null
 ) {
-    val pagerState = if (scrollStateKey != null) {
-        rememberForeverPagerState(scrollStateKey)
-    } else {
-        remember { PagerState() }
-    }
-
-    WatchScrollToTop(videoFeedView, pagerState)
-
-    RenderPage(videoFeedView, accountViewModel, pagerState, nav)
+    RenderPage(videoFeedView, accountViewModel, scrollStateKey, nav)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -165,7 +158,7 @@ public fun WatchScrollToTop(
 fun RenderPage(
     videoFeedView: NostrVideoFeedViewModel,
     accountViewModel: AccountViewModel,
-    pagerState: PagerState,
+    pagerStateKey: String?,
     nav: (String) -> Unit
 ) {
     val feedState by videoFeedView.feedContent.collectAsState()
@@ -186,12 +179,7 @@ fun RenderPage(
                     }
 
                     is FeedState.Loaded -> {
-                        SlidingCarousel(
-                            state.feed,
-                            pagerState,
-                            accountViewModel,
-                            nav
-                        )
+                        LoadedState(state, pagerStateKey, videoFeedView, accountViewModel, nav)
                     }
 
                     is FeedState.Loading -> {
@@ -200,6 +188,33 @@ fun RenderPage(
                 }
             }
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun LoadedState(
+    state: FeedState.Loaded,
+    pagerStateKey: String?,
+    videoFeedView: NostrVideoFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val pagerState = if (pagerStateKey != null) {
+        rememberForeverPagerState(pagerStateKey) { state.feed.value.size }
+    } else {
+        rememberPagerState { state.feed.value.size }
+    }
+
+    WatchScrollToTop(videoFeedView, pagerState)
+
+    RefresheableView(viewModel = videoFeedView) {
+        SlidingCarousel(
+            state.feed,
+            pagerState,
+            accountViewModel,
+            nav
+        )
     }
 }
 
@@ -212,10 +227,9 @@ fun SlidingCarousel(
     nav: (String) -> Unit
 ) {
     VerticalPager(
-        pageCount = feed.value.size,
         state = pagerState,
         beyondBoundsPageCount = 1,
-        modifier = Modifier.fillMaxSize(1f),
+        modifier = Modifier.fillMaxSize(),
         key = { index ->
             feed.value.getOrNull(index)?.idHex ?: "$index"
         }
@@ -232,21 +246,16 @@ fun LoadedVideoCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var state by remember {
+    var state by remember(note) {
         mutableStateOf(
-            NoteComposeReportState(
-                isAcceptable = true,
-                canPreview = true,
-                relevantReports = persistentSetOf()
-            )
+            AccountViewModel.NoteComposeReportState()
         )
     }
 
     val scope = rememberCoroutineScope()
 
-    WatchForReports(note, accountViewModel) { newIsAcceptable, newCanPreview, newRelevantReports ->
-        if (newIsAcceptable != state.isAcceptable || newCanPreview != state.canPreview) {
-            val newState = NoteComposeReportState(newIsAcceptable, newCanPreview, newRelevantReports)
+    WatchForReports(note, accountViewModel) { newState ->
+        if (state != newState) {
             scope.launch(Dispatchers.Main) {
                 state = newState
             }
@@ -265,7 +274,7 @@ fun LoadedVideoCompose(
 
 @Composable
 fun RenderReportState(
-    state: NoteComposeReportState,
+    state: AccountViewModel.NoteComposeReportState,
     note: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
@@ -274,11 +283,12 @@ fun RenderReportState(
 
     Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
         if (showHiddenNote) {
-            Column(remember { Modifier.fillMaxSize(1f) }, verticalArrangement = Arrangement.Center) {
+            Column(remember { Modifier.fillMaxSize() }, verticalArrangement = Arrangement.Center) {
                 HiddenNote(
                     state.relevantReports,
+                    state.isHiddenAuthor,
                     accountViewModel,
-                    Modifier,
+                    Modifier.fillMaxWidth(),
                     false,
                     nav,
                     onClick = { showReportedNote = true }
@@ -304,9 +314,9 @@ private fun RenderVideoOrPictureNote(
         Row(remember { Modifier.weight(1f) }, verticalAlignment = Alignment.CenterVertically) {
             val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {
-                FileHeaderDisplay(note, accountViewModel)
+                FileHeaderDisplay(note, false, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
-                FileStorageHeaderDisplay(note, accountViewModel)
+                FileStorageHeaderDisplay(note, false, accountViewModel)
             }
         }
     }
@@ -358,7 +368,9 @@ private fun RenderAuthorInformation(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ObserveDisplayNip05Status(
                     remember { note.author!! },
-                    remember { Modifier.weight(1f) }
+                    remember { Modifier.weight(1f) },
+                    accountViewModel,
+                    nav = nav
                 )
             }
             Row(
@@ -403,14 +415,11 @@ private fun VideoUserOptionAction(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteRelaysState by baseNote.live().relays.observeAsState()
-    val noteRelays = remember(noteRelaysState) {
-        noteRelaysState?.note?.relays ?: emptySet()
-    }
+    val noteRelays by baseNote.live().relayInfo.observeAsState()
 
     FlowRow() {
-        noteRelays.forEach { dirtyUrl ->
-            RenderRelay(dirtyUrl, accountViewModel, nav)
+        noteRelays?.forEach { relayInfo ->
+            RenderRelay(relayInfo, accountViewModel, nav)
         }
     }
 }
@@ -426,25 +435,27 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
+        NewPostView(onClose = { wantsToReplyTo = null }, baseReplyTo = wantsToReplyTo, quote = null, accountViewModel = accountViewModel, nav = nav)
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
+        NewPostView(onClose = { wantsToQuote = null }, baseReplyTo = null, quote = wantsToQuote, accountViewModel = accountViewModel, nav = nav)
     }
 
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
-        /*
-        ReplyReaction(baseNote, accountViewModel, iconSize = 40.dp) {
-            wantsToReplyTo = baseNote
+        ReplyReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
+            routeFor(
+                baseNote,
+                accountViewModel.userProfile()
+            )?.let { nav(it) }
         }
-        BoostReaction(baseNote, accountViewModel, iconSize = 40.dp) {
+        BoostReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
-        }*/
+        }
         LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
-        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp)
+        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp, nav = nav)
         ViewCountReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colors.onBackgroundColorFilter)
     }
 }

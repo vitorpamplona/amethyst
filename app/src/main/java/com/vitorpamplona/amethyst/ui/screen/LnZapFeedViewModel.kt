@@ -14,7 +14,6 @@ import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,8 +35,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : View
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        val scope = CoroutineScope(Job() + Dispatchers.Default)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             refreshSuspended()
         }
     }
@@ -58,8 +56,7 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : View
     }
 
     private fun updateFeed(notes: ImmutableList<ZapReqResponse>) {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             val currentState = _feedContent.value
             if (notes.isEmpty()) {
                 _feedContent.update { LnZapFeedState.Empty }
@@ -90,12 +87,15 @@ open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : View
             checkNotInMainThread()
 
             LocalCache.live.newEventBundles.collect { newNotes ->
+                checkNotInMainThread()
+
                 invalidateData()
             }
         }
     }
 
     override fun onCleared() {
+        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

@@ -43,10 +43,14 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -71,9 +75,7 @@ fun NoteAuthorPicture(
     modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null
 ) {
-    val author by baseNote.live().metadata.map {
-        it.note.author
-    }.distinctUntilChanged().observeAsState(baseNote.author)
+    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
 
     Crossfade(targetState = author) {
         if (it == null) {
@@ -104,19 +106,43 @@ fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
 
 @Composable
 fun UserPicture(
+    userHex: String,
+    size: Dp,
+    pictureModifier: Modifier = remember { Modifier },
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    LoadUser(baseUserHex = userHex, accountViewModel) {
+        if (it != null) {
+            UserPicture(
+                user = it,
+                size = size,
+                pictureModifier = pictureModifier,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
+        } else {
+            DisplayBlankAuthor(
+                size,
+                pictureModifier
+            )
+        }
+    }
+}
+
+@Composable
+fun UserPicture(
     user: User,
     size: Dp,
     pictureModifier: Modifier = remember { Modifier },
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val route by remember {
+    val route by remember(user) {
         derivedStateOf {
             "User/${user.pubkeyHex}"
         }
     }
-
-    val scope = rememberCoroutineScope()
 
     ClickableUserPicture(
         baseUser = user,
@@ -124,9 +150,7 @@ fun UserPicture(
         accountViewModel = accountViewModel,
         modifier = pictureModifier,
         onClick = {
-            scope.launch {
-                nav(route)
-            }
+            nav(route)
         }
     )
 }
@@ -176,18 +200,79 @@ fun ClickableUserPicture(
 }
 
 @Composable
-fun NonClickableUserPicture(
-    baseUser: User,
+fun NonClickableUserPictures(
+    users: ImmutableSet<HexKey>,
     size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier }
+    accountViewModel: AccountViewModel
 ) {
     val myBoxModifier = remember {
         Modifier.size(size)
     }
 
     Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-        BaseUserPicture(baseUser, size, accountViewModel, modifier)
+        val userList = remember(users) {
+            users.toList()
+        }
+
+        when (userList.size) {
+            0 -> {}
+            1 -> LoadUser(baseUserHex = userList[0], accountViewModel) {
+                it?.let {
+                    BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier)
+                }
+            }
+            2 -> {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.5f), accountViewModel, outerModifier = Modifier.align(Alignment.CenterStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.5f), accountViewModel, outerModifier = Modifier.align(Alignment.CenterEnd))
+                    }
+                }
+            }
+            3 -> {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.TopCenter))
+                    }
+                }
+                LoadUser(baseUserHex = userList[2], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(1.8f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomEnd))
+                    }
+                }
+            }
+            else -> {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.TopStart))
+                    }
+                }
+                LoadUser(baseUserHex = userList[2], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.BottomEnd))
+                    }
+                }
+                LoadUser(baseUserHex = userList[3], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(it, size.div(2f), accountViewModel, outerModifier = Modifier.align(Alignment.TopEnd))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -196,14 +281,11 @@ fun BaseUserPicture(
     baseUser: User,
     size: Dp,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier }
+    innerModifier: Modifier = remember { Modifier },
+    outerModifier: Modifier = remember { Modifier.size(size) }
 ) {
-    val myBoxModifier = remember {
-        Modifier.size(size)
-    }
-
-    Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-        InnerBaseUserPicture(baseUser, size, accountViewModel, modifier)
+    Box(outerModifier, contentAlignment = Alignment.TopEnd) {
+        InnerBaseUserPicture(baseUser, size, accountViewModel, innerModifier)
     }
 }
 
@@ -214,9 +296,7 @@ fun InnerBaseUserPicture(
     accountViewModel: AccountViewModel,
     modifier: Modifier
 ) {
-    val userProfile by baseUser.live().metadata.map {
-        it.user.profilePicture()
-    }.distinctUntilChanged().observeAsState(baseUser.profilePicture())
+    val userProfile by baseUser.live().profilePictureChanges.observeAsState(baseUser.profilePicture())
 
     PictureAndFollowingMark(
         userHex = baseUser.pubkeyHex,
@@ -331,11 +411,15 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
         val scope = rememberCoroutineScope()
 
         if (!state.isFollowingAuthor) {
-            DropdownMenuItem(onClick = {
-                accountViewModel.follow(
-                    note.author ?: return@DropdownMenuItem
-                ); onDismiss()
-            }) {
+            DropdownMenuItem(
+                onClick = {
+                    val author = note.author ?: return@DropdownMenuItem
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.follow(author)
+                        onDismiss()
+                    }
+                }
+            ) {
                 Text(stringResource(R.string.follow))
             }
             Divider()
@@ -386,36 +470,104 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             Text(stringResource(R.string.quick_action_share))
         }
         Divider()
-        if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePrivateBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.remove_from_private_bookmarks))
-            }
-        } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPrivateBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.add_to_private_bookmarks))
-            }
-        }
-        if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.removePublicBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.remove_from_public_bookmarks))
-            }
-        } else {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.addPublicBookmark(note); onDismiss() } }) {
-                Text(stringResource(R.string.add_to_public_bookmarks))
-            }
-        }
-        Divider()
         DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
             Text(stringResource(R.string.broadcast))
         }
         Divider()
-        if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
-                Text(stringResource(R.string.request_deletion))
+        if (state.isPrivateBookmarkNote) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            ExternalSignerUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
+                        } else {
+                            accountViewModel.removePrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.remove_from_private_bookmarks))
             }
         } else {
-            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
-                Text(stringResource(R.string.block_report))
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            ExternalSignerUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
+                        } else {
+                            accountViewModel.addPrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.add_to_private_bookmarks))
+            }
+        }
+        if (state.isPublicBookmarkNote) {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            ExternalSignerUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.removePublicBookmark(
+                                note,
+                                bookmarks?.decryptedContent ?: ""
+                            )
+                        } else {
+                            accountViewModel.removePublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.remove_from_public_bookmarks))
+            }
+        } else {
+            DropdownMenuItem(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        if (accountViewModel.loggedInWithExternalSigner()) {
+                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
+                            ExternalSignerUtils.decrypt(
+                                bookmarks?.content ?: "",
+                                accountViewModel.account.keyPair.pubKey.toHexKey(),
+                                bookmarks?.id ?: ""
+                            )
+                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
+                            accountViewModel.addPublicBookmark(
+                                note,
+                                bookmarks?.decryptedContent ?: ""
+                            )
+                        } else {
+                            accountViewModel.addPublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.add_to_public_bookmarks))
             }
         }
         Divider()
@@ -434,6 +586,16 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                 Text(stringResource(R.string.content_warning_see_warnings))
             }
         }
+        Divider()
+        if (state.isLoggedUser) {
+            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
+                Text(stringResource(R.string.request_deletion))
+            }
+        } else {
+            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
+                Text(stringResource(R.string.block_report))
+            }
+        }
     }
 
     if (reportDialogShowing) {
@@ -448,9 +610,9 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
 fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewModel, onNew: (DropDownParams) -> Unit) {
     val followState by accountViewModel.userProfile().live().follows.observeAsState()
     val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val showSensitiveContent by accountViewModel.showSensitiveContentChanges.observeAsState(accountViewModel.account.showSensitiveContent)
 
-    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = accountState) {
+    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
         launch(Dispatchers.IO) {
             val newState = DropDownParams(
                 isFollowingAuthor = accountViewModel.isFollowing(note.author),
@@ -458,7 +620,7 @@ fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewMod
                 isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitive() ?: false,
-                showSensitiveContent = accountState?.account?.showSensitiveContent
+                showSensitiveContent = showSensitiveContent
             )
 
             launch(Dispatchers.Main) {

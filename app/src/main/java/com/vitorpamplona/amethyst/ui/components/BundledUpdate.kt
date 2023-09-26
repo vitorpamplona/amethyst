@@ -5,8 +5,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,6 +22,8 @@ class BundledUpdate(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
+    val scope = CoroutineScope(dispatcher + SupervisorJob())
+
     private var onlyOneInBlock = AtomicBoolean()
     private var invalidatesAgain = false
 
@@ -32,8 +35,7 @@ class BundledUpdate(
             return
         }
 
-        val scope = CoroutineScope(Job() + dispatcher)
-        scope.launch {
+        scope.launch(dispatcher) {
             try {
                 onUpdate()
                 delay(delay)
@@ -48,6 +50,10 @@ class BundledUpdate(
             }
         }
     }
+
+    fun cancel() {
+        scope.cancel()
+    }
 }
 
 /**
@@ -58,6 +64,8 @@ class BundledInsert<T>(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
+    val scope = CoroutineScope(dispatcher + SupervisorJob())
+
     private var onlyOneInBlock = AtomicBoolean()
     private var queue = LinkedBlockingQueue<T>()
 
@@ -69,8 +77,7 @@ class BundledInsert<T>(
             return
         }
 
-        val scope = CoroutineScope(Job() + dispatcher)
-        scope.launch(Dispatchers.IO) {
+        scope.launch(dispatcher) {
             try {
                 val mySet = mutableSetOf<T>()
                 queue.drainTo(mySet)
@@ -87,5 +94,9 @@ class BundledInsert<T>(
                 }
             }
         }
+    }
+
+    fun cancel() {
+        scope.cancel()
     }
 }

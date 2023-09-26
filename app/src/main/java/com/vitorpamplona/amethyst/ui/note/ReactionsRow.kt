@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -40,6 +40,7 @@ import androidx.compose.material.ProgressIndicatorDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -57,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -76,18 +78,17 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
-import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
@@ -105,6 +106,8 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineScope
@@ -112,8 +115,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormat
 import kotlin.math.roundToInt
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
 @Composable
@@ -131,16 +134,16 @@ fun ReactionsRow(
 
     InnerReactionRow(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel, nav)
 
+    Spacer(modifier = HalfDoubleVertSpacer)
+
     LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
 
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
+        Spacer(modifier = HalfDoubleVertSpacer)
     }
-
-    Spacer(modifier = HalfDoubleVertSpacer)
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun InnerReactionRow(
     baseNote: Note,
@@ -210,7 +213,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel)
+                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -241,14 +244,13 @@ private fun LoadAndDisplayZapraiser(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel
 ) {
-    val zapraiserAmount by remember {
+    val zapraiserAmount by remember(baseNote) {
         derivedStateOf {
             baseNote.event?.zapraiserAmount() ?: 0
         }
     }
 
     if (zapraiserAmount > 0) {
-        Spacer(modifier = Height4dpModifier)
         Box(
             modifier = remember {
                 ReactionRowZapraiserSize
@@ -261,42 +263,26 @@ private fun LoadAndDisplayZapraiser(
     }
 }
 
+@Immutable
+data class ZapraiserStatus(val progress: Float, val left: String)
+
 @Composable
 fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, accountViewModel: AccountViewModel) {
     val zapsState by baseNote.live().zaps.observeAsState()
 
-    var zapraiserProgress by remember { mutableStateOf(0F) }
-    var zapraiserLeft by remember { mutableStateOf("$zapraiserAmount") }
+    var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            zapsState?.note?.let {
-                val newZapAmount = accountViewModel.calculateZapAmount(it)
-                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
-
-                if (percentage > 1) {
-                    percentage = 1f
-                }
-
-                if (Math.abs(zapraiserProgress - percentage) > 0.001) {
-                    val newZapraiserProgress = percentage
-                    val newZapraiserLeft = if (percentage > 0.99) {
-                        "0"
-                    } else {
-                        showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
-                    }
-                    if (zapraiserLeft != newZapraiserLeft) {
-                        zapraiserLeft = newZapraiserLeft
-                    }
-                    if (zapraiserProgress != newZapraiserProgress) {
-                        zapraiserProgress = newZapraiserProgress
-                    }
+        zapsState?.note?.let {
+            accountViewModel.calculateZapraiser(baseNote) { newStatus ->
+                if (zapraiserStatus != newStatus) {
+                    zapraiserStatus = newStatus
                 }
             }
         }
     }
 
-    val color = if (zapraiserProgress > 0.99) {
+    val color = if (zapraiserStatus.progress > 0.99) {
         DarkerGreen
     } else {
         MaterialTheme.colors.mediumImportanceLink
@@ -307,7 +293,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
             .fillMaxWidth()
             .height(if (details) 24.dp else 4.dp),
         color = color,
-        progress = zapraiserProgress
+        progress = zapraiserStatus.progress
     )
 
     if (details) {
@@ -315,14 +301,14 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
             contentAlignment = Center,
             modifier = TinyBorders
         ) {
-            val totalPercentage by remember(zapraiserProgress) {
+            val totalPercentage by remember(zapraiserStatus) {
                 derivedStateOf {
-                    "${(zapraiserProgress * 100).roundToInt()}%"
+                    "${(zapraiserStatus.progress * 100).roundToInt()}%"
                 }
             }
 
             Text(
-                text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserLeft),
+                text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
                 color = MaterialTheme.colors.placeholderText,
                 fontSize = Font14SP,
@@ -334,15 +320,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
 
 @Composable
 private fun WatchReactionsZapsBoostsAndDisplayIfExists(baseNote: Note, content: @Composable () -> Unit) {
-    val hasReactions by baseNote.live().zaps.combineWith(
-        liveData1 = baseNote.live().boosts,
-        liveData2 = baseNote.live().reactions,
-        block = { zapsState, boostsState, reactionsState ->
-            zapsState?.note?.zaps?.isNotEmpty() == true ||
-                boostsState?.note?.boosts?.isNotEmpty() == true ||
-                reactionsState?.note?.reactions?.isNotEmpty() == true
-        }
-    ).observeAsState(
+    val hasReactions by baseNote.live().hasReactions.observeAsState(
         baseNote.zaps.isNotEmpty() ||
             baseNote.boosts.isNotEmpty() ||
             baseNote.reactions.isNotEmpty()
@@ -411,62 +389,93 @@ private fun ReactionDetailGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-    val boostsState by baseNote.live().boosts.observeAsState()
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
     val defaultBackgroundColor = MaterialTheme.colors.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    val hasReactions by remember(zapsState, boostsState, reactionsState) {
-        derivedStateOf {
-            baseNote.zaps.isNotEmpty() ||
-                baseNote.boosts.isNotEmpty() ||
-                baseNote.reactions.isNotEmpty()
-        }
-    }
+    val hasReactions by baseNote.live().hasReactions.observeAsState(
+        baseNote.zaps.isNotEmpty() || baseNote.boosts.isNotEmpty() || baseNote.reactions.isNotEmpty()
+    )
 
     if (hasReactions) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(start = 10.dp, top = 5.dp)) {
             Column() {
-                val zapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.mapNotNull { it.value?.let { zapEvent -> CombinedZap(it.key, zapEvent) } }.toImmutableList() } }
-                val boostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.toImmutableList() } }
-                val likeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableMap() } }
-
-                val hasZapEvents by remember(zapsState) { derivedStateOf { baseNote.zaps.isNotEmpty() } }
-                val hasBoostEvents by remember(boostsState) { derivedStateOf { baseNote.boosts.isNotEmpty() } }
-                val hasLikeEvents by remember(reactionsState) { derivedStateOf { baseNote.reactions.isNotEmpty() } }
-
-                if (hasZapEvents) {
-                    RenderZapGallery(
-                        zapEvents,
-                        backgroundColor,
-                        nav,
-                        accountViewModel
-                    )
-                }
-
-                if (hasBoostEvents) {
-                    RenderBoostGallery(
-                        boostEvents,
-                        nav,
-                        accountViewModel
-                    )
-                }
-
-                if (hasLikeEvents) {
-                    likeEvents.forEach {
-                        val reactions = remember(it.value) { it.value.toImmutableList() }
-                        RenderLikeGallery(
-                            it.key,
-                            reactions,
-                            nav,
-                            accountViewModel
-                        )
-                    }
-                }
+                WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
             }
         }
+    }
+}
+
+@Composable
+private fun WatchBoostsAndRenderGallery(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val boostsEvents by baseNote.live().boostList.observeAsState()
+
+    boostsEvents?.let {
+        if (it.isNotEmpty()) {
+            RenderBoostGallery(
+                it,
+                nav,
+                accountViewModel
+            )
+        }
+    }
+}
+
+@Composable
+private fun WatchReactionsAndRenderGallery(
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val reactionsState by baseNote.live().reactions.observeAsState()
+    val reactionEvents by remember(reactionsState) {
+        derivedStateOf { baseNote.reactions.toImmutableMap() }
+    }
+
+    if (reactionEvents.isNotEmpty()) {
+        reactionEvents.forEach {
+            val reactions = remember(it.value) { it.value.toImmutableList() }
+            RenderLikeGallery(
+                it.key,
+                reactions,
+                nav,
+                accountViewModel
+            )
+        }
+    }
+}
+
+@Composable
+private fun WatchZapAndRenderGallery(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val zapsState by baseNote.live().zaps.observeAsState()
+
+    var zapEvents by remember(zapsState) {
+        mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+    }
+
+    LaunchedEffect(key1 = zapsState) {
+        accountViewModel.decryptAmountMessageInGroup(baseNote) {
+            zapEvents = it
+        }
+    }
+
+    if (zapEvents.isNotEmpty()) {
+        RenderZapGallery(
+            zapEvents,
+            backgroundColor,
+            nav,
+            accountViewModel
+        )
     }
 }
 
@@ -482,7 +491,13 @@ private fun BoostWithDialog(
     }
 
     if (wantsToQuote != null) {
-        NewPostView({ wantsToQuote = null }, null, wantsToQuote, accountViewModel, nav)
+        NewPostView(
+            onClose = { wantsToQuote = null },
+            baseReplyTo = null,
+            quote = wantsToQuote,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
     }
 
     BoostReaction(baseNote, grayTint, accountViewModel) {
@@ -502,7 +517,13 @@ private fun ReplyReactionWithDialog(
     }
 
     if (wantsToReplyTo != null) {
-        NewPostView({ wantsToReplyTo = null }, wantsToReplyTo, null, accountViewModel, nav)
+        NewPostView(
+            onClose = { wantsToReplyTo = null },
+            baseReplyTo = wantsToReplyTo,
+            quote = null,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
     }
 
     ReplyReaction(baseNote, grayTint, accountViewModel) {
@@ -530,12 +551,16 @@ fun ReplyReaction(
             if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_be_able_to_reply),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    onPress()
+                } else {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_reply),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -550,9 +575,7 @@ fun ReplyReaction(
 
 @Composable
 fun ReplyCounter(baseNote: Note, textColor: Color) {
-    val repliesState by baseNote.live().replies.map {
-        it.note.replies.size
-    }.observeAsState(baseNote.replies.size)
+    val repliesState by baseNote.live().replyCount.observeAsState(baseNote.replies.size)
 
     SlidingAnimationCount(repliesState, textColor)
 }
@@ -567,14 +590,14 @@ private fun SlidingAnimationCount(baseCount: MutableState<Int>, textColor: Color
 private fun SlidingAnimationCount(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
         targetState = baseCount,
-        transitionSpec = AnimatedContentScope<Int>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec
     ) { count ->
         TextCount(count, textColor)
     }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentScope<S>.transitionSpec(): ContentTransform {
+private fun <S> AnimatedContentTransitionScope<S>.transitionSpec(): ContentTransform {
     return slideAnimation
 }
 
@@ -601,7 +624,7 @@ private fun TextCount(count: Int, textColor: Color) {
 private fun SlidingAnimationAmount(amount: MutableState<String>, textColor: Color) {
     AnimatedContent(
         targetState = amount.value,
-        transitionSpec = AnimatedContentScope<String>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec
     ) { count ->
         Text(
             text = count,
@@ -641,31 +664,47 @@ fun BoostReaction(
                     wantsToBoost = true
                 }
             } else {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    if (accountViewModel.hasBoosted(baseNote)) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.deleteBoostsTo(baseNote)
+                        }
+                    } else {
+                        wantsToBoost = true
+                    }
+                } else {
+                    scope.launch {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
     ) {
         BoostIcon(baseNote, iconSize, grayTint, accountViewModel)
-    }
 
-    if (wantsToBoost) {
-        BoostTypeChoicePopup(
-            baseNote,
-            accountViewModel,
-            onDismiss = {
-                wantsToBoost = false
-            },
-            onQuote = {
-                wantsToBoost = false
-                onQuotePress()
-            }
-        )
+        if (wantsToBoost) {
+            BoostTypeChoicePopup(
+                baseNote,
+                iconSize,
+                accountViewModel,
+                onDismiss = {
+                    wantsToBoost = false
+                },
+                onQuote = {
+                    wantsToBoost = false
+                    onQuotePress()
+                },
+                onRepost = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.boost(baseNote)
+                    }
+                }
+            )
+        }
     }
 
     BoostText(baseNote, grayTint)
@@ -686,9 +725,7 @@ fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountV
 
 @Composable
 fun BoostText(baseNote: Note, grayTint: Color) {
-    val boostState by baseNote.live().boosts.map {
-        it.note.boosts.size
-    }.distinctUntilChanged().observeAsState(baseNote.boosts.size)
+    val boostState by baseNote.live().boostCount.observeAsState(baseNote.boosts.size)
 
     SlidingAnimationCount(boostState, grayTint)
 }
@@ -728,6 +765,20 @@ fun LikeReaction(
                     context,
                     onMultipleChoices = {
                         wantsToReact = true
+                    },
+                    onWantsToSignReaction = {
+                        if (accountViewModel.account.reactionChoices.size == 1) {
+                            scope.launch(Dispatchers.IO) {
+                                val reaction = accountViewModel.account.reactionChoices.first()
+                                if (accountViewModel.hasReactedTo(baseNote, reaction)) {
+                                    accountViewModel.deleteReactionTo(baseNote, reaction)
+                                } else {
+                                    accountViewModel.reactTo(baseNote, reaction)
+                                }
+                            }
+                        } else if (accountViewModel.account.reactionChoices.size > 1) {
+                            wantsToReact = true
+                        }
                     }
                 )
             },
@@ -752,6 +803,7 @@ fun LikeReaction(
     if (wantsToReact) {
         ReactionChoicePopup(
             baseNote,
+            iconSize,
             accountViewModel,
             onDismiss = {
                 wantsToReact = false
@@ -801,10 +853,7 @@ private fun WatchReactionTypeForNote(baseNote: Note, accountViewModel: AccountVi
     val reactionsState by baseNote.live().reactions.observeAsState()
 
     LaunchedEffect(key1 = reactionsState) {
-        launch(Dispatchers.Default) {
-            val reactionNote = reactionsState?.note?.getReactionBy(accountViewModel.userProfile())
-            onNewReactionType(reactionNote)
-        }
+        accountViewModel.loadReactionTo(reactionsState?.note, onNewReactionType)
     }
 }
 
@@ -839,32 +888,9 @@ private fun RenderReactionType(
 
 @Composable
 fun LikeText(baseNote: Note, grayTint: Color) {
-    val reactionsCount = remember(baseNote) {
-        mutableStateOf(baseNote.reactions.size)
-    }
+    val reactionCount by baseNote.live().reactionCount.observeAsState(0)
 
-    val scope = rememberCoroutineScope()
-
-    WatchReactionCountForNote(baseNote) { newReactionsCount ->
-        if (reactionsCount.value != newReactionsCount) {
-            scope.launch(Dispatchers.Main) {
-                reactionsCount.value = newReactionsCount
-            }
-        }
-    }
-
-    SlidingAnimationCount(reactionsCount, grayTint)
-}
-
-@Composable
-private fun WatchReactionCountForNote(baseNote: Note, onNewReactionCount: (Int) -> Unit) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
-    LaunchedEffect(key1 = reactionsState) {
-        launch(Dispatchers.Default) {
-            onNewReactionCount(reactionsState?.note?.countReactions() ?: 0)
-        }
-    }
+    SlidingAnimationCount(reactionCount, grayTint)
 }
 
 private fun likeClick(
@@ -872,7 +898,8 @@ private fun likeClick(
     accountViewModel: AccountViewModel,
     scope: CoroutineScope,
     context: Context,
-    onMultipleChoices: () -> Unit
+    onMultipleChoices: () -> Unit,
+    onWantsToSignReaction: () -> Unit
 ) {
     if (accountViewModel.account.reactionChoices.isEmpty()) {
         scope.launch {
@@ -885,14 +912,18 @@ private fun likeClick(
                 .show()
         }
     } else if (!accountViewModel.isWriteable()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.login_with_a_private_key_to_like_posts),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
+        if (accountViewModel.loggedInWithExternalSigner()) {
+            onWantsToSignReaction()
+        } else {
+            scope.launch {
+                Toast
+                    .makeText(
+                        context,
+                        context.getString(R.string.login_with_a_private_key_to_like_posts),
+                        Toast.LENGTH_SHORT
+                    )
+                    .show()
+            }
         }
     } else if (accountViewModel.account.reactionChoices.size == 1) {
         scope.launch(Dispatchers.IO) {
@@ -915,11 +946,18 @@ fun ZapReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = 20.dp,
-    animationSize: Dp = 14.dp
+    animationSize: Dp = 14.dp,
+    nav: (String) -> Unit
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var wantsToPay by remember(baseNote) {
+        mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
+            persistentListOf()
+        )
+    }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -945,6 +983,15 @@ fun ZapReaction(
                         },
                         onMultipleChoices = {
                             wantsToZap = true
+                        },
+                        onError = {
+                            scope.launch {
+                                zappingProgress = 0f
+                                showErrorMessageDialog = it
+                            }
+                        },
+                        onPayViaIntent = {
+                            wantsToPay = it
                         }
                     )
                 },
@@ -971,23 +1018,80 @@ fun ZapReaction(
                 onError = {
                     scope.launch {
                         zappingProgress = 0f
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                        showErrorMessageDialog = it
                     }
                 },
                 onProgress = {
                     scope.launch(Dispatchers.Main) {
                         zappingProgress = it
                     }
+                },
+                onPayViaIntent = {
+                    wantsToPay = it
                 }
             )
         }
 
+        if (showErrorMessageDialog != null) {
+            ErrorMessageDialog(
+                title = stringResource(id = R.string.error_dialog_zap_error),
+                textContent = showErrorMessageDialog ?: "",
+                onClickStartMessage = {
+                    baseNote.author?.let {
+                        scope.launch(Dispatchers.IO) {
+                            val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
+                            nav(route)
+                        }
+                    }
+                },
+                onDismiss = { showErrorMessageDialog = null }
+            )
+        }
+
         if (wantsToChangeZapAmount) {
-            UpdateZapAmountDialog({ wantsToChangeZapAmount = false }, accountViewModel = accountViewModel)
+            UpdateZapAmountDialog(
+                onClose = { wantsToChangeZapAmount = false },
+                accountViewModel = accountViewModel
+            )
+        }
+
+        if (wantsToPay.isNotEmpty()) {
+            PayViaIntentDialog(
+                payingInvoices = wantsToPay,
+                accountViewModel = accountViewModel,
+                onClose = {
+                    wantsToPay = persistentListOf()
+                },
+                onError = {
+                    wantsToPay = persistentListOf()
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                }
+            )
         }
 
         if (wantsToSetCustomZap) {
-            ZapCustomDialog({ wantsToSetCustomZap = false }, accountViewModel, baseNote)
+            ZapCustomDialog(
+                onClose = { wantsToSetCustomZap = false },
+                onError = {
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                },
+                onProgress = {
+                    scope.launch(Dispatchers.Main) {
+                        zappingProgress = it
+                    }
+                },
+                onPayViaIntent = {
+                    wantsToPay = it
+                },
+                accountViewModel = accountViewModel,
+                baseNote = baseNote
+            )
         }
 
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
@@ -1020,7 +1124,9 @@ private fun zapClick(
     scope: CoroutineScope,
     context: Context,
     onZappingProgress: (Float) -> Unit,
-    onMultipleChoices: () -> Unit
+    onMultipleChoices: () -> Unit,
+    onError: (String) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
         scope.launch {
@@ -1032,7 +1138,7 @@ private fun zapClick(
                 )
                 .show()
         }
-    } else if (!accountViewModel.isWriteable()) {
+    } else if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
         scope.launch {
             Toast
                 .makeText(
@@ -1043,29 +1149,21 @@ private fun zapClick(
                 .show()
         }
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
-        scope.launch(Dispatchers.IO) {
-            accountViewModel.zap(
-                baseNote,
-                accountViewModel.account.zapAmountChoices.first() * 1000,
-                null,
-                "",
-                context,
-                onError = {
-                    scope.launch {
-                        onZappingProgress(0f)
-                        Toast
-                            .makeText(context, it, Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                },
-                onProgress = {
-                    scope.launch(Dispatchers.Main) {
-                        onZappingProgress(it)
-                    }
-                },
-                zapType = accountViewModel.account.defaultZapType
-            )
-        }
+        accountViewModel.zap(
+            baseNote,
+            accountViewModel.account.zapAmountChoices.first() * 1000,
+            null,
+            "",
+            context,
+            onError = onError,
+            onProgress = {
+                scope.launch(Dispatchers.Main) {
+                    onZappingProgress(it)
+                }
+            },
+            zapType = accountViewModel.account.defaultZapType,
+            onPayViaIntent = onPayViaIntent
+        )
     } else if (accountViewModel.account.zapAmountChoices.size > 1) {
         onMultipleChoices()
     }
@@ -1106,9 +1204,7 @@ private fun WatchZapsForNote(baseNote: Note, accountViewModel: AccountViewModel,
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            onWasZapped(accountViewModel.calculateIfNoteWasZappedByAccount(baseNote))
-        }
+        accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, onWasZapped)
     }
 }
 
@@ -1138,9 +1234,7 @@ fun WatchZapAmountsForNote(baseNote: Note, accountViewModel: AccountViewModel, o
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            onZapAmount(showAmount(accountViewModel.calculateZapAmount(baseNote)))
-        }
+        accountViewModel.calculateZapAmount(baseNote, onZapAmount)
     }
 }
 
@@ -1184,10 +1278,14 @@ private fun DrawViewCount(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit) {
+private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel: AccountViewModel, onDismiss: () -> Unit, onQuote: () -> Unit, onRepost: () -> Unit) {
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow {
@@ -1195,8 +1293,13 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.boost(baseNote)
+                    if (accountViewModel.isWriteable()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.boost(baseNote)
+                            onDismiss()
+                        }
+                    } else {
+                        onRepost()
                         onDismiss()
                     }
                 },
@@ -1228,6 +1331,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, accountViewModel: AccountViewMo
 @Composable
 fun ReactionChoicePopup(
     baseNote: Note,
+    iconSize: Dp,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit
@@ -1239,9 +1343,13 @@ fun ReactionChoicePopup(
         baseNote.reactedBy(account.userProfile()).toSet()
     }
 
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
@@ -1269,18 +1377,14 @@ private fun ActionableReactionButton(
     onChangeAmount: () -> Unit,
     toRemove: Set<String>
 ) {
-    val scope = rememberCoroutineScope()
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.reactToOrDelete(
-                    baseNote,
-                    reactionType
-                )
-                onDismiss()
-            }
+            accountViewModel.reactToOrDelete(
+                baseNote,
+                reactionType
+            )
+            onDismiss()
         },
         shape = ButtonBorder,
         colors = ButtonDefaults
@@ -1291,13 +1395,11 @@ private fun ActionableReactionButton(
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.reactToOrDelete(
-                            baseNote,
-                            reactionType
-                        )
-                        onDismiss()
-                    }
+                    accountViewModel.reactToOrDelete(
+                        baseNote,
+                        reactionType
+                    )
+                    onDismiss()
                 },
                 onLongClick = {
                     onChangeAmount()
@@ -1370,14 +1472,14 @@ fun ZapAmountChoicePopup(
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (text: String) -> Unit,
-    onProgress: (percent: Float) -> Unit
+    onProgress: (percent: Float) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
-
+    val scope = rememberCoroutineScope()
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
     val zapMessage = ""
-    val scope = rememberCoroutineScope()
 
     Popup(
         alignment = Alignment.BottomCenter,
@@ -1389,19 +1491,18 @@ fun ZapAmountChoicePopup(
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                amountInSats * 1000,
-                                null,
-                                zapMessage,
-                                context,
-                                onError,
-                                onProgress,
-                                account.defaultZapType
-                            )
-                            onDismiss()
-                        }
+                        accountViewModel.zap(
+                            baseNote,
+                            amountInSats * 1000,
+                            null,
+                            zapMessage,
+                            context,
+                            onError,
+                            onProgress,
+                            onPayViaIntent,
+                            account.defaultZapType
+                        )
+                        onDismiss()
                     },
                     shape = ButtonBorder,
                     colors = ButtonDefaults
@@ -1415,19 +1516,18 @@ fun ZapAmountChoicePopup(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.zap(
-                                        baseNote,
-                                        amountInSats * 1000,
-                                        null,
-                                        zapMessage,
-                                        context,
-                                        onError,
-                                        onProgress,
-                                        account.defaultZapType
-                                    )
-                                    onDismiss()
-                                }
+                                accountViewModel.zap(
+                                    baseNote,
+                                    amountInSats * 1000,
+                                    null,
+                                    zapMessage,
+                                    context,
+                                    onError,
+                                    onProgress,
+                                    onPayViaIntent,
+                                    account.defaultZapType
+                                )
+                                onDismiss()
                             },
                             onLongClick = {
                                 onChangeAmount()
@@ -1456,14 +1556,19 @@ val OneGiga = BigDecimal(1000000000)
 val OneMega = BigDecimal(1000000)
 val OneKilo = BigDecimal(1000)
 
+var dfG: DecimalFormat = DecimalFormat("#.0G")
+var dfM: DecimalFormat = DecimalFormat("#.0M")
+var dfK: DecimalFormat = DecimalFormat("#.0k")
+var dfN: DecimalFormat = DecimalFormat("#")
+
 fun showAmount(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> "%.1fG".format(amount.div(OneGiga).setScale(1, RoundingMode.HALF_UP))
-        amount >= OneMega -> "%.1fM".format(amount.div(OneMega).setScale(1, RoundingMode.HALF_UP))
-        amount >= OneKilo -> "%.1fk".format(amount.div(OneKilo).setScale(1, RoundingMode.HALF_UP))
-        else -> "%.0f".format(amount)
+        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(1, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(1, RoundingMode.HALF_UP))
+        amount >= OneKilo -> dfK.format(amount.div(OneKilo).setScale(1, RoundingMode.HALF_UP))
+        else -> dfN.format(amount)
     }
 }

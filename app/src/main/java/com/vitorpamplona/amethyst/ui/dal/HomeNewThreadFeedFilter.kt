@@ -4,16 +4,17 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.TimeUtils
-import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
-import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.HighlightEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PeopleListEvent
-import com.vitorpamplona.amethyst.service.model.PollNoteEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
+import com.vitorpamplona.quartz.events.AudioTrackEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -25,18 +26,19 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     override fun feed(): List<Note> {
-        val notes = innerApplyFilter(LocalCache.notes.values)
-        val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
+        val notes = innerApplyFilter(LocalCache.notes.values, true)
+        val longFormNotes = innerApplyFilter(LocalCache.addressables.values, false)
 
         return sort(notes + longFormNotes)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
+        return innerApplyFilter(collection, false)
     }
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+    private fun innerApplyFilter(collection: Collection<Note>, ignoreAddressables: Boolean): Set<Note> {
         val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
+        val gRelays = account.activeGlobalRelays()
         val isHiddenList = showHiddenKey()
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
@@ -51,8 +53,10 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             .asSequence()
             .filter { it ->
                 val noteEvent = it.event
-                (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent) &&
-                    (isGlobal || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
+                val isGlobalRelay = it.relays.any { gRelays.contains(it) }
+                (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent || noteEvent is AudioHeaderEvent) &&
+                    (!ignoreAddressables || noteEvent.kind() < 10000) &&
+                    ((isGlobal && isGlobalRelay) || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
                     ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&

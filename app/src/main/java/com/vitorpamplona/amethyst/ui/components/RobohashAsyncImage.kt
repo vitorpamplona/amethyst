@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -64,19 +65,30 @@ fun RobohashFallbackAsyncImage(
         model = Robohash.imageRequest(context, robot)
     )
 
-    AsyncImage(
-        model = model,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        placeholder = painter,
-        fallback = painter,
-        error = painter,
-        alignment = alignment,
-        contentScale = contentScale,
-        alpha = alpha,
-        colorFilter = colorFilter,
-        filterQuality = filterQuality
-    )
+    if (model != null) {
+        AsyncImage(
+            model = model,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            placeholder = painter,
+            fallback = painter,
+            error = painter,
+            alignment = alignment,
+            contentScale = contentScale,
+            alpha = alpha,
+            colorFilter = colorFilter,
+            filterQuality = filterQuality
+        )
+    } else {
+        Image(
+            painter = painter,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            alignment = alignment,
+            contentScale = contentScale,
+            colorFilter = colorFilter
+        )
+    }
 }
 
 @Composable

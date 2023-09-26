@@ -26,7 +26,7 @@ open class NewMediaModel : ViewModel() {
     var mediaType by mutableStateOf<String?>(null)
 
     var selectedServer by mutableStateOf<ServersAvailable?>(null)
-    var description by mutableStateOf("")
+    var alt by mutableStateOf("")
     var sensitiveContent by mutableStateOf(false)
 
     // Images and Videos
@@ -79,7 +79,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Loading"
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, description, sensitiveContent, relayList = relayList)
+                            createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList)
                         }
                             ?: run {
                                 viewModelScope.launch {
@@ -92,24 +92,32 @@ open class NewMediaModel : ViewModel() {
                     } else {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Uploading"
-                        ImageUploader.uploadImage(
-                            uri = fileUri,
-                            contentType = contentType,
-                            size = size,
-                            server = serverToUse,
-                            contentResolver = contentResolver,
-                            onSuccess = { imageUrl, mimeType ->
-                                createNIP94Record(imageUrl, mimeType, description, sensitiveContent, relayList = relayList)
-                            },
-                            onError = {
-                                isUploadingImage = false
-                                uploadingPercentage.value = 0.00f
-                                uploadingDescription.value = null
-                                viewModelScope.launch {
-                                    imageUploadingError.emit("Failed to upload the image / video")
+                        viewModelScope.launch(Dispatchers.IO) {
+                            ImageUploader.uploadImage(
+                                uri = fileUri,
+                                contentType = contentType,
+                                size = size,
+                                server = serverToUse,
+                                contentResolver = contentResolver,
+                                onSuccess = { imageUrl, mimeType ->
+                                    createNIP94Record(
+                                        imageUrl,
+                                        mimeType,
+                                        alt,
+                                        sensitiveContent,
+                                        relayList = relayList
+                                    )
+                                },
+                                onError = {
+                                    isUploadingImage = false
+                                    uploadingPercentage.value = 0.00f
+                                    uploadingDescription.value = null
+                                    viewModelScope.launch {
+                                        imageUploadingError.emit("Failed to upload the image / video")
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 },
                 onError = {
@@ -131,7 +139,7 @@ open class NewMediaModel : ViewModel() {
         uploadingDescription.value = null
         uploadingPercentage.value = 0.0f
 
-        description = ""
+        alt = ""
         selectedServer = account?.defaultFileServer
     }
 
@@ -139,7 +147,7 @@ open class NewMediaModel : ViewModel() {
         return !isUploadingImage && galleryUri != null && selectedServer != null
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    fun createNIP94Record(imageUrl: String, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         uploadingPercentage.value = 0.40f
         viewModelScope.launch(Dispatchers.IO) {
             uploadingDescription.value = "Server Processing"
@@ -158,7 +166,7 @@ open class NewMediaModel : ViewModel() {
                     imageData,
                     imageUrl,
                     mimeType,
-                    description,
+                    alt,
                     sensitiveContent,
                     onReady = {
                         uploadingPercentage.value = 0.90f
@@ -192,7 +200,7 @@ open class NewMediaModel : ViewModel() {
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, description: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    fun createNIP95Record(bytes: ByteArray, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
         uploadingPercentage.value = 0.30f
         uploadingDescription.value = "Hashing"
 
@@ -201,7 +209,7 @@ open class NewMediaModel : ViewModel() {
                 bytes,
                 "",
                 mimeType,
-                description,
+                alt,
                 sensitiveContent,
                 onReady = {
                     uploadingDescription.value = "Signing"

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -23,21 +22,26 @@ fun ThreadScreen(noteId: String?, accountViewModel: AccountViewModel, nav: (Stri
 
     val feedViewModel: NostrThreadFeedViewModel = viewModel(
         key = noteId + "NostrThreadFeedViewModel",
-        factory = NostrThreadFeedViewModel.Factory(noteId)
+        factory = NostrThreadFeedViewModel.Factory(accountViewModel.account, noteId)
     )
 
-    LaunchedEffect(noteId) {
-        NostrThreadDataSource.loadThread(noteId)
-        feedViewModel.invalidateData()
+    NostrThreadDataSource.loadThread(noteId)
+
+    DisposableEffect(noteId) {
+        feedViewModel.invalidateData(true)
+        onDispose {
+            NostrThreadDataSource.loadThread(null)
+            NostrThreadDataSource.stop()
+        }
     }
 
-    DisposableEffect(accountViewModel) {
+    DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 println("Thread Start")
                 NostrThreadDataSource.loadThread(noteId)
                 NostrThreadDataSource.start()
-                feedViewModel.invalidateData()
+                feedViewModel.invalidateData(true)
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
                 println("Thread Stop")

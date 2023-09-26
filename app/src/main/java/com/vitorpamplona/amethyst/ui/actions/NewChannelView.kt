@@ -7,14 +7,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -28,8 +29,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, channel: PublicChatChannel? = null) {
@@ -44,7 +43,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
     ) {
         Surface() {
             Column(
-                modifier = Modifier.padding(10.dp)
+                modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())
             ) {
                 Row(
                     modifier = Modifier
@@ -52,19 +51,15 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.clear()
                         onClose()
                     })
 
-                    val scope = rememberCoroutineScope()
-
                     PostButton(
                         onPost = {
-                            scope.launch(Dispatchers.IO) {
-                                postViewModel.create()
-                                onClose()
-                            }
+                            postViewModel.create()
+                            onClose()
                         },
                         postViewModel.channelName.value.text.isNotBlank()
                     )

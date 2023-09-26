@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">Наведите на QR код</string>
     <string name="show_qr">Показать QR</string>
@@ -21,7 +22,8 @@
     <string name="copy_user_pubkey">Скопировать ключ пользователя</string>
     <string name="copy_note_id">Скопировать ID записи</string>
     <string name="broadcast">Разослать</string>
-    <string name="block_hide_user">Заблокировать и скрыть пользователя</string>
+    <string name="request_deletion">Запросить удаление</string>
+    <string name="block_hide_user"><![CDATA[Заблокировать и скрыть пользователя]]></string>
     <string name="report_spam_scam">Сообщить о спаме / мошенничестве</string>
     <string name="report_impersonation">Сообщить о выдаче себя за другое лицо</string>
     <string name="report_explicit_content">Сообщить об откровенном содержании</string>
@@ -34,7 +36,6 @@
     <string name="zaps">Запы</string>
     <string name="view_count">Просмотры</string>
     <string name="boost">Продвинуть</string>
-    <string name="boosted">boosted</string>
     <string name="quote">Цитировать</string>
     <string name="new_amount_in_sats">Новая сумма в sat</string>
     <string name="add">Добавить</string>
@@ -71,11 +72,13 @@
     <string name="failed_to_upload_the_image">Не удалось загрузить фото</string>
     <string name="relay_address">Адрес релея</string>
     <string name="posts">Записи</string>
+    <string name="bytes">Байт</string>
     <string name="errors">Ошибки</string>
     <string name="home_feed">Домашняя лента</string>
     <string name="private_message_feed">Лента личных сообщений</string>
     <string name="public_chat_feed">Лента чатов</string>
     <string name="global_feed">Глобальная лента</string>
+    <string name="search_feed">Поиск</string>
     <string name="add_a_relay">Добавить релей</string>
     <string name="display_name">Отображаемое имя</string>
     <string name="my_display_name">Моё отображаемое имя</string>
@@ -117,6 +120,7 @@
     <string name="send_a_direct_message">Отправить сообщение</string>
     <string name="edits_the_user_s_metadata">Редактирует метаданные пользователя</string>
     <string name="follow">Подписаться</string>
+    <string name="follow_back">Подписаться в ответ</string>
     <string name="unblock">Разблокировать</string>
     <string name="copy_user_id">Скопировать ID пользователя</string>
     <string name="unblock_user">Разблокировать пользователя</string>
@@ -147,7 +151,7 @@
     <string name="leave">Выйти</string>
     <string name="unfollow">Отписаться</string>
     <string name="channel_created">Канал создан</string>
-    <string name="channel_information_changed_to">Информация о канале изменена на</string>
+    <string name="channel_information_changed_to">"Информация о канале изменена на"</string>
     <string name="public_chat">Публичный чат</string>
     <string name="posts_received">записей получено</string>
     <string name="remove">Удалить</string>
@@ -167,13 +171,11 @@
     <string name="report_hateful_speech">Сообщить об оскорблениях</string>
     <string name="report_nudity_porn">Сообщить о наготе / порно</string>
     <string name="others">других</string>
-    <string name="search_feed">Поиск</string>
     <string name="mark_all_known_as_read">Отметить все известные прочитанными</string>
     <string name="mark_all_new_as_read">Отметить все новые прочитанными</string>
     <string name="mark_all_as_read">Отметить всё прочитанным</string>
     <string name="backup_keys">Резервное копирование</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
-        ## Резервное копирование и советы по безопасности
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Резервное копирование и советы по безопасности
         \n\nВаш аккаунт защищен приватным ключом. Этот ключ – длинная случайная строка с приставкой **nsec1**. Любой, кто владеет вашим приватным ключом, может писать от вашего имени.
         \n\n- **Никогда** не вставляйте ваш приватный ключ на сайтах или в приложениях, которым вы не доверяете.
         \n- Разработчики Amethyst **никогда** не спросят ваш приватный ключ.
@@ -191,6 +193,15 @@
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">ID (npub) автора скопирован</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">ID записи (note1) скопирован</string>
     <string name="select_text_dialog_top">Выделить текст</string>
+    <string name="private_conversation_notification">"&lt;Не удалось расшифровать сообщение&gt;\n\nВас упомянули в приватном/зашифрованном чате между %1$s и %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">Добавить аккаунт</string>
+    <string name="drawer_accounts">Аккаунты</string>
+    <string name="account_switch_select_account">Выбор аккаунта</string>
+    <string name="account_switch_add_account_btn">Добавить аккаунт</string>
+    <string name="account_switch_active_account">Текущий аккаунт</string>
+    <string name="account_switch_has_private_key">С приватным ключом</string>
+    <string name="account_switch_pubkey_only">Только чтение, без приватного ключа</string>
+    <string name="back">Назад</string>
     <string name="quick_action_select">Выделить</string>
     <string name="quick_action_share_browser_link">Поделиться ссылкой</string>
     <string name="quick_action_share">Поделиться</string>
@@ -202,29 +213,19 @@
     <string name="quick_action_follow">@string/follow</string>
     <string name="quick_action_request_deletion_alert_title">Запросить удаление</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst попросит релеи, к которым вы сейчас подключены, удалить эту запись. Однако нет гарантии, что запись будет навсегда удалена этими релеями, либо другими, уже сохранившими её.</string>
-    <string name="quick_action_delete_button">Удалить</string>
-    <string name="quick_action_dont_show_again_button">Больше не показывать</string>
-    <string name="account_switch_add_account_dialog_title">Добавить аккаунт</string>
-    <string name="drawer_accounts">Аккаунты</string>
-    <string name="account_switch_select_account">Выбор аккаунта</string>
-    <string name="account_switch_add_account_btn">Добавить аккаунт</string>
-    <string name="account_switch_active_account">Текущий аккаунт</string>
-    <string name="account_switch_has_private_key">С приватным ключом</string>
-    <string name="account_switch_pubkey_only">Только чтение, без приватного ключа</string>
-    <string name="back">Назад</string>
-    <string name="request_deletion">Запросить удаление</string>
-    <string name="block_only">Заблокировать</string>
     <string name="quick_action_block_dialog_btn">@string/block_only</string>
     <string name="quick_action_delete_dialog_btn">Удалить</string>
     <string name="quick_action_block">@string/block_only</string>
     <string name="quick_action_report">Пожаловаться</string>
+    <string name="quick_action_delete_button">Удалить</string>
+    <string name="quick_action_dont_show_again_button">Больше не показывать</string>
     <string name="report_dialog_spam">@string/spam</string>
     <string name="report_dialog_profanity">@string/profanity_hateful_speech</string>
     <string name="report_dialog_impersonation">@string/impersonation</string>
     <string name="report_dialog_nudity">@string/nudity</string>
     <string name="report_dialog_illegal">@string/illegal_behavior</string>
     <string name="report_dialog_blocking_a_user">Заблокировать и скрыть пользователя для вас. Ваши записи останутся видны тем, кого вы заблокировали. Заблокированные пользователи перечислены на экране Фильтры безопасности</string>
-    <string name="report_dialog_block_hide_user_btn">@string/block_hide_user</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[@string/block_hide_user]]></string>
     <string name="report_dialog_report_btn">Пожаловаться</string>
     <string name="report_dialog_reminder_public">Все жалобы будут видны публично</string>
     <string name="report_dialog_additional_reason_placeholder">По желанию предоставьте дополнительную информацию</string>
@@ -232,10 +233,8 @@
     <string name="report_dialog_select_reason_label">Причина</string>
     <string name="report_dialog_select_reason_placeholder">Выберите причину…</string>
     <string name="report_dialog_post_report_btn">Отправить жалобу</string>
-    <string name="private_conversation_notification">"&lt;Не удалось расшифровать сообщение&gt;\n\nВас упомянули в приватном/зашифрованном чате между %1$s и %2$s."</string>
     <string name="report_dialog_title">Заблокировать и пожаловаться</string>
-    <string name="bytes">Байт</string>
-    <string name="follow_back">Подписаться в ответ</string>
+    <string name="block_only">Заблокировать</string>
     <string name="bookmarks">Закладки</string>
     <string name="private_bookmarks">Личные закладки</string>
     <string name="public_bookmarks">Публичные закладки</string>
@@ -261,13 +260,12 @@
     <string name="poll_zap_value_min">Минимальный зап</string>
     <string name="poll_zap_value_max">Максимальный зап</string>
     <string name="poll_consensus_threshold">Консенсус</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Закрытие после</string>
     <string name="poll_closing_time_days">дней</string>
     <string name="poll_is_closed">Опрос закрыт</string>
     <string name="poll_zap_amount">Сумма запа</string>
     <string name="one_vote_per_user_on_atomic_votes">В этом опросе можно голосовать только один раз</string>
-    <string name="looking_for_event">Поиск события %1$s</string>
+    <string name="looking_for_event">"Поиск события %1$s"</string>
     <string name="custom_zaps_add_a_message">Добавить публичное сообщение</string>
     <string name="custom_zaps_add_a_message_private">Добавить личное сообщение</string>
     <string name="custom_zaps_add_a_message_nonzap">Добавить примечание к инвойсу</string>
@@ -298,22 +296,22 @@
     <string name="upload_server_imgur_explainer">Imgur может изменять файл</string>
     <string name="upload_server_nostrimg">nostrimg.com – доверенный</string>
     <string name="upload_server_nostrimg_explainer">NostrImg может изменять файл</string>
-    <string name="upload_server_imgur_nip94">Верифицируемый Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Проверка на изменение файла Imgur. Новый NIP: может не работать в других клиентах</string>
-    <string name="upload_server_nostrimg_nip94">Верифицируемый NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Проверка на изменение файла NostrImg. Новый NIP: может не работать в других клиентах</string>
-    <string name="upload_server_relays_nip95">Ваши релеи (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">Файл хранится на ваших релеях. Новый NIP: может не работать в других клиентах</string>
-    <string name="follow_list_kind3follows">Все подписки</string>
-    <string name="follow_list_global">Глобально</string>
     <string name="upload_server_nostrbuild">nostr.build – доверенный</string>
     <string name="upload_server_nostrbuild_explainer">Nostr.build может изменять файл</string>
     <string name="upload_server_nostrfilesdev">nostrfiles.dev – доверенный</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev может изменять файл</string>
+    <string name="upload_server_imgur_nip94">Верифицируемый Imgur (NIP-94)</string>
+    <string name="upload_server_imgur_nip94_explainer">Проверка на изменение файла Imgur. Новый NIP: может не работать в других клиентах</string>
+    <string name="upload_server_nostrimg_nip94">Верифицируемый NostrImg (NIP-94)</string>
+    <string name="upload_server_nostrimg_nip94_explainer">Проверка на изменение файла NostrImg. Новый NIP: может не работать в других клиентах</string>
     <string name="upload_server_nostrbuild_nip94">Верифицируемый Nostr.build (NIP-94)</string>
     <string name="upload_server_nostrbuild_nip94_explainer">Проверка на изменение файла Nostr.build. Новый NIP: может не работать в других клиентах</string>
     <string name="upload_server_nostrfilesdev_nip94">Верифицируемый Nostrfiles.dev (NIP-94)</string>
     <string name="upload_server_nostrfilesdev_nip94_explainer">Проверка на изменение файла nostrfiles.dev. Новый NIP: может не работать в других клиентах</string>
+    <string name="upload_server_relays_nip95">Ваши релеи (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Файл хранится на ваших релеях. Новый NIP: может не работать в других клиентах</string>
+    <string name="follow_list_kind3follows">Все подписки</string>
+    <string name="follow_list_global">Глобально</string>
     <string name="app_notification_dms_channel_name">Личные сообщения</string>
     <string name="app_notification_dms_channel_description">Уведомления о входящих сообщениях</string>
     <string name="app_notification_zaps_channel_name">Запы</string>

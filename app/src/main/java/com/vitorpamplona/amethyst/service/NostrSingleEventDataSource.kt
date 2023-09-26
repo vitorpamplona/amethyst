@@ -2,17 +2,17 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.*
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.*
 
 object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()
     private var addressesToWatch = setOf<Note>()
 
-    private fun createTagToAddressFilter(): List<TypedFilter>? {
+    private fun createReactionsToWatchInAddressFilter(): List<TypedFilter>? {
         val addressesToWatch = eventsToWatch.filter { it.address() != null } + addressesToWatch
 
         if (addressesToWatch.isEmpty()) {
@@ -25,12 +25,15 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                     types = COMMON_FEED_TYPES,
                     filter = JsonFilter(
                         kinds = listOf(
-                            TextNoteEvent.kind, LongTextNoteEvent.kind,
-                            ReactionEvent.kind, RepostEvent.kind, GenericRepostEvent.kind, ReportEvent.kind,
-                            LnZapEvent.kind, LnZapRequestEvent.kind,
-                            BadgeAwardEvent.kind, BadgeDefinitionEvent.kind, BadgeProfilesEvent.kind,
-                            PollNoteEvent.kind, AudioTrackEvent.kind, PinListEvent.kind,
-                            PeopleListEvent.kind, BookmarkListEvent.kind
+                            TextNoteEvent.kind,
+                            ReactionEvent.kind,
+                            RepostEvent.kind,
+                            GenericRepostEvent.kind,
+                            ReportEvent.kind,
+                            LnZapEvent.kind,
+                            PollNoteEvent.kind,
+                            CommunityPostApprovalEvent.kind,
+                            LiveActivitiesChatMessageEvent.kind
                         ),
                         tags = mapOf("a" to listOf(aTag.toTag())),
                         since = it.lastReactionsDownloadTime,
@@ -55,7 +58,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         types = COMMON_FEED_TYPES,
                         filter = JsonFilter(
                             kinds = listOf(aTag.kind),
-                            authors = listOf(aTag.pubKeyHex)
+                            authors = listOf(aTag.pubKeyHex),
+                            limit = 1000 // Max amount of "replies" to download on a specific event.
                         )
                     )
                 } else {
@@ -64,7 +68,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         filter = JsonFilter(
                             kinds = listOf(aTag.kind),
                             tags = mapOf("d" to listOf(aTag.dTag)),
-                            authors = listOf(aTag.pubKeyHex)
+                            authors = listOf(aTag.pubKeyHex),
+                            limit = 1000 // Max amount of "replies" to download on a specific event.
                         )
                     )
                 }
@@ -85,17 +90,12 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                 filter = JsonFilter(
                     kinds = listOf(
                         TextNoteEvent.kind,
-                        LongTextNoteEvent.kind,
                         ReactionEvent.kind,
                         RepostEvent.kind,
                         GenericRepostEvent.kind,
                         ReportEvent.kind,
                         LnZapEvent.kind,
-                        LnZapRequestEvent.kind,
-                        PollNoteEvent.kind,
-                        HighlightEvent.kind,
-                        AudioTrackEvent.kind,
-                        PinListEvent.kind
+                        PollNoteEvent.kind
                     ),
                     tags = mapOf("e" to listOf(it.idHex)),
                     since = it.lastReactionsDownloadTime,
@@ -134,6 +134,9 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     }
 
     val singleEventChannel = requestNewChannel { time, relayUrl ->
+        // Ignores EOSE if it is in the middle of a filter change.
+        if (changingFilters.get()) return@requestNewChannel
+
         checkNotInMainThread()
 
         eventsToWatch.forEach {
@@ -154,7 +157,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         val reactions = createRepliesAndReactionsFilter()
         val missing = createLoadEventsIfNotLoadedFilter()
         val addresses = createAddressFilter()
-        val addressReactions = createTagToAddressFilter()
+        val addressReactions = createReactionsToWatchInAddressFilter()
 
         singleEventChannel.typedFilters = listOfNotNull(missing, addresses, reactions, addressReactions).flatten().ifEmpty { null }
     }

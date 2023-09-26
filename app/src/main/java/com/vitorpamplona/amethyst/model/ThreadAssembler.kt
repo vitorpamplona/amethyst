@@ -1,9 +1,8 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import kotlin.time.ExperimentalTime
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import kotlin.time.measureTimedValue
 
 class ThreadAssembler {
@@ -16,9 +15,14 @@ class ThreadAssembler {
         testedNotes.add(note)
 
         val markedAsRoot = note.event?.tags()?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }?.getOrNull(1)
-        if (markedAsRoot != null) return LocalCache.checkGetOrCreateNote(markedAsRoot)
+        if (markedAsRoot != null) {
+            // Check to ssee if there is an error in the tag and the root has replies
+            if (LocalCache.getNoteIfExists(markedAsRoot)?.replyTo?.isEmpty() == true) {
+                return LocalCache.checkGetOrCreateNote(markedAsRoot)
+            }
+        }
 
-        val hasNoReplyTo = note.replyTo?.firstOrNull { it.replyTo?.isEmpty() == true }
+        val hasNoReplyTo = note.replyTo?.reversed()?.firstOrNull { it.replyTo?.isEmpty() == true }
         if (hasNoReplyTo != null) return hasNoReplyTo
 
         // recursive
@@ -37,7 +41,6 @@ class ThreadAssembler {
         return null
     }
 
-    @OptIn(ExperimentalTime::class)
     fun findThreadFor(noteId: String): Set<Note> {
         checkNotInMainThread()
 

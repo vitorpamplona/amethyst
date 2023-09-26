@@ -50,7 +50,7 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
 
         Column(Modifier.fillMaxHeight()) {
             Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
-                val pagerState = rememberPagerState()
+                val pagerState = rememberPagerState() { 2 }
                 val coroutineScope = rememberCoroutineScope()
 
                 TabRow(
@@ -73,7 +73,7 @@ fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit
                         }
                     )
                 }
-                HorizontalPager(pageCount = 2, state = pagerState) { page ->
+                HorizontalPager(state = pagerState) { page ->
                     when (page) {
                         0 -> RefresheableFeedView(
                             privateFeedViewModel,

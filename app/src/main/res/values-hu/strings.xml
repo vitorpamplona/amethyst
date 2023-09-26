@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">Mutass a QR kódra</string>
     <string name="show_qr">QR kód megjelenítése</string>
     <string name="profile_image">Profil kép</string>
@@ -23,6 +23,7 @@
     <string name="copy_note_id">A bejegyzés azonosítójának másolása</string>
     <string name="broadcast">Közvetít</string>
     <string name="request_deletion">Törlés Kérése</string>
+    <string name="block_report">Tiltás és Jelentés</string>
     <string name="block_hide_user"><![CDATA[Tiltás és Felhasználó elrejtése]]></string>
     <string name="report_spam_scam">Spam / Csalás bejelentés</string>
     <string name="report_impersonation">Megszemélyesítés bejelentés</string>
@@ -33,6 +34,8 @@
     <string name="login_with_a_private_key_to_like_posts">Jelentkezzen be privát kulccsal a bejegyzések kedveléséhez</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nincs Zap összeg beállítva. Nyomja meg hosszan a változtatáshoz</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Jelentkezzen be privát kulccsal, hogy Zaps-t küldhessen</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Jelentkezz be a privát kulccsal, hogy követni tudd</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Jelentkezz be a privát kulccsal, hogy őt kikövesd</string>
     <string name="zaps">Zap-ek</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megosztás</string>
@@ -44,6 +47,8 @@
     <string name="and">" és "</string>
     <string name="in_channel">"csatornában "</string>
     <string name="profile_banner">Profil Banner</string>
+    <string name="payment_successful">Sikeres fizetés</string>
+    <string name="error_parsing_error_message">Hiba a hibaüzenet elemzésekor</string>
     <string name="following">" Követek"</string>
     <string name="followers">" Követők"</string>
     <string name="profile">Profil</string>
@@ -162,6 +167,7 @@
     <string name="translations_show_in_lang_first">Először %1$s nyelven</string>
     <string name="translations_always_translate_to_lang">Mindig fordítsa le %1$s-ra</string>
     <string name="translations_never_translate_from_lang">Soha ne fordíts %1$s-ról</string>
+    <string name="nip_05">Nostr Cím</string>
     <string name="never">soha</string>
     <string name="now">most</string>
     <string name="h">ó</string>
@@ -176,8 +182,7 @@
     <string name="mark_all_new_as_read">Az összes új megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
     <string name="backup_keys">Biztonsági Kulcsok</string>
-    <string name="account_backup_tips_md">
-        ## Kulcs- és biztonsági mentési tippek
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Kulcs- és biztonsági mentési tippek
         \n\nFiókját titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-el kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
         \n\n- **Ne** helyezze el titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik.
         \n- Az Amethyst fejlesztők a titkos kulcsodat **soha** nem fogják elkérni.
@@ -192,17 +197,9 @@
     <string name="new_badge_award_notif">Új Jelvényt kapott</string>
     <string name="award_granted_to">Kitüntetésben részesült</string>
     <string name="copied_note_text_to_clipboard">Bejegyzés vágólapra helyezve</string>
-    <string name="copied_user_id_to_clipboard">A szerző @npub-ja vágólapra helyezve</string>
-    <string name="copied_note_id_to_clipboard">A bejegyzés azonosítója (@note1) vágólapra helyezve</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">A szerző @npub-ja vágólapra helyezve</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">A bejegyzés azonosítója (@note1) vágólapra helyezve</string>
     <string name="select_text_dialog_top">Szöveg Kijelölése</string>
-    <string name="github" translatable="false">Github Gist w/ Proof</string>
-    <string name="telegram" translatable="false">Telegram</string>
-    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
-    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
-    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
-    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
-    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
-    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
     <string name="private_conversation_notification">"&lt;Nem sikerült a privát üzenetet visszafejteni&gt;\n\nTéged egy privát/titkosított beszélgetésben %1$s és %2$s idéztek."</string>
     <string name="account_switch_add_account_dialog_title">Új Fiók Hozzáadása</string>
     <string name="drawer_accounts">Fiókok</string>
@@ -245,7 +242,6 @@
     <string name="report_dialog_post_report_btn">Jelentés Elküldése</string>
     <string name="report_dialog_title">Tiltás és Jelentés</string>
     <string name="block_only">Tiltás</string>
-
     <string name="bookmarks">Könyvjelzők</string>
     <string name="private_bookmarks">Privát Könyvjelzők</string>
     <string name="public_bookmarks">Publikus Könyvjelzők</string>
@@ -253,7 +249,6 @@
     <string name="add_to_public_bookmarks">Hozzáadás a Publikus Könyvjelzőimhez</string>
     <string name="remove_from_private_bookmarks">Törlés a Privát Könyvjelzőimből</string>
     <string name="remove_from_public_bookmarks">Törlés a Publikus Könyvjelzőimből</string>
-
     <string name="wallet_connect_service">Wallet Connect Szolgáltatás</string>
     <string name="wallet_connect_service_explainer">Engedélyezed a Nostr Secret-et, hogy az alkalmazás elhagyása nélkül Zap-ot küldjön. Tartsa a titkot biztonságban, és ha lehetséges, privát csomópontot használjon</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Publikus Kulcs</string>
@@ -261,7 +256,6 @@
     <string name="wallet_connect_service_secret">Wallet Connect Titok</string>
     <string name="wallet_connect_service_show_secret">Titkos Kulcs Megjelenítése</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex privát kulcs</string>
-
     <string name="pledge_amount_in_sats">Hozzájárulás összege sats-ban</string>
     <string name="post_poll">Szavazás Létrehozása</string>
     <string name="poll_heading_required">Szükséges mezők:</string>
@@ -270,8 +264,8 @@
     <string name="poll_option_index">Szavazás %s megoszlása</string>
     <string name="poll_option_description">Szavazás opcióinak leírása</string>
     <string name="poll_heading_optional">Kiegészítő mezők:</string>
-    <string name="poll_zap_value_min">Zap minimum</string>
-    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_zap_value_min">Minimum Zap</string>
+    <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Konszenzus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
@@ -279,77 +273,65 @@
     <string name="poll_is_closed">A szavazásra nem lehet már új szavazatot leadni</string>
     <string name="poll_zap_amount">Zap összege</string>
     <string name="one_vote_per_user_on_atomic_votes">Az ilyen típusú szavazásokon felhasználónként csak egy szavazat engedélyezett</string>
-
-
     <string name="looking_for_event">"%1$s esemény keresése"</string>
-
     <string name="custom_zaps_add_a_message">Nyilvános üzenet hozzáadása</string>
     <string name="custom_zaps_add_a_message_private">Adj hozzá egy privát üzenetet</string>
     <string name="custom_zaps_add_a_message_nonzap">A számlához adj hozzá egy üzenetet</string>
     <string name="custom_zaps_add_a_message_example">Köszönöm a kemény munkát!</string>
-
     <string name="lightning_create_and_add_invoice">Létrehoz és Hozzáad</string>
     <string name="poll_author_no_vote">A szavazás létrehozója sajátjára nem szavazhat.</string>
-    <string name="poll_hashtag" translatable="false">#zappoll</string>
-
-
     <string name="hash_verification_passed">A kép a bejegyzés óta ugyanaz</string>
     <string name="hash_verification_failed">A kép megváltozott. Lehet, hogy a szerző nem látta a változást</string>
-
     <string name="content_description_add_image">Kép Hozzáadása</string>
     <string name="content_description_add_video">Videó Hozzáadása</string>
     <string name="content_description_add_document">Dokumentum Hozzáadása</string>
     <string name="add_content">Létrehoz és Hozzáad</string>
     <string name="content_description">A tartalom leírása</string>
     <string name="content_description_example">Naplementekor egy kék csónak egy fehér homokos tengerparton</string>
-
     <string name="zap_type">Zap Típusa</string>
     <string name="zap_type_explainer">Zap típus minden opcióhoz</string>
-
     <string name="zap_type_public">Publikus</string>
     <string name="zap_type_public_explainer">Mindenki láthatja a tranzakciót és az üzenetet</string>
-
     <string name="zap_type_private">Privát</string>
     <string name="zap_type_private_explainer">A küldő és a fogadó láthatja egymást és az üzenetet is elolvashatja</string>
-
     <string name="zap_type_anonymous">Névtelen</string>
     <string name="zap_type_anonymous_explainer">A címzett és a nyilvánosság nem tudja ki küldte a fizetést</string>
-
     <string name="zap_type_nonzap">Nem Zap</string>
     <string name="zap_type_nonzap_explainer">Nostr-ban nyoma sincs, csak a Lightning-ben</string>
-
     <string name="file_server">Fájl Szerver</string>
     <string name="zap_forward_lnAddress">LnCím vagy @Felhasználó</string>
-
     <string name="upload_server_imgur">imgur.com - kevésbé biztonságos</string>
     <string name="upload_server_imgur_explainer">Feltöltés az Imgur-ba. Az Imgur a képet/videót bármikor megváltoztathatja</string>
-
     <string name="upload_server_nostrimg">nostrimg.com - kevésbé biztonságos</string>
     <string name="upload_server_nostrimg_explainer">Feltöltés a NostrImg-be. A NostrImg a képet bármikor megváltoztathatja</string>
-
+    <string name="upload_server_nostrbuild">nostr.build - megbízható</string>
+    <string name="upload_server_nostrbuild_explainer">A Nostr.build a fájlt módosíthatja</string>
+    <string name="upload_server_nostrfilesdev">nostrfiles.dev - megbízható</string>
+    <string name="upload_server_nostrfilesdev_explainer">A Nostrfiles.dev a fájlt módosíthatja</string>
+    <string name="upload_server_nostrcheckme">nostrcheck.me - megbízható</string>
+    <string name="upload_server_nostrcheckme_explainer">a Nostrcheck.me a fájlt módosíthatja</string>
     <string name="upload_server_imgur_nip94">Ellenőrizhető Imgur (NIP-94)</string>
     <string name="upload_server_imgur_nip94_explainer">Megvéd attól, hogy az Imgur a képet/videót a közzététel után megváltoztassa</string>
-
     <string name="upload_server_nostrimg_nip94">Ellenőrizhető NostrImg (NIP-94)</string>
     <string name="upload_server_nostrimg_nip94_explainer">Megvéd attól, hogy az NostrImg a képet a közzététel után megváltoztassa</string>
-
+    <string name="upload_server_nostrbuild_nip94">Ellenőrizhető Nostr.build (NIP-94)</string>
+    <string name="upload_server_nostrbuild_nip94_explainer">Ellenőrzi, hogy a Nostr.build a fájlt módosította-e. Új NIP: előfordulhat, hogy más kliensek nem jelenítik meg</string>
+    <string name="upload_server_nostrfilesdev_nip94">Ellenőrizhető Nostrfiles.dev (NIP-94)</string>
+    <string name="upload_server_nostrfilesdev_nip94_explainer">Ellenőrzi, hogy a Nostrfiles.dev a fájlt módosította-e. Új NIP: előfordulhat, hogy más kliensek nem jelenítik meg</string>
+    <string name="upload_server_nostrcheckme_nip94">Ellenőrizhető Nostrcheck.me (NIP-94)</string>
+    <string name="upload_server_nostrcheckme_nip94_explainer">Ellenőrzi, hogy a Nostrcheck.me a fájlt módosította-e. Új NIP: előfordulhat, hogy más kliensek nem jelenítik meg</string>
     <string name="upload_server_relays_nip95">Saját csomópontjaid (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">A fájlokat a csomópontokra töltik fel és ott tárolják. Rögzített URL-től mentesek (harmadik féltől való függőség). Győződj meg róla, hogy legalább egy NIP-95 csomópont a csomópontlistában szerepel</string>
-
     <string name="connect_via_tor_short">Tor/Orbot beállítása</string>
     <string name="connect_via_tor">Csatlakozás a saját Orbot beállításod alapján</string>
-
     <string name="do_you_really_want_to_disable_tor_title">Lecsatlakozás a saját Orbot/Tor hálózatról?</string>
     <string name="do_you_really_want_to_disable_tor_text">Az adataid azonnal a hagyományos hálózaton lesz továbbítva</string>
     <string name="yes">Igen</string>
     <string name="no">Nem</string>
-
-
     <string name="follow_list_selection">Követek Lista</string>
     <string name="follow_list_kind3follows">Mindenki akit követek</string>
     <string name="follow_list_global">Globális</string>
-    <string name="connect_through_your_orbot_setup_markdown">
-        ## Kapcsolódj a TOR-on keresztül az Orbot segítségével
+    <string name="connect_through_your_orbot_setup_markdown">        ## Kapcsolódj a TOR-on keresztül az Orbot segítségével
         \n\n1. Telepítsd az [Orbot-ot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Indítsd el az Orbot-ot
         \n3. Az Orbot-ban ellenőrizd a Socks portokat. Az alapbeállítás 9050
@@ -361,52 +343,37 @@
     <string name="invalid_port_number">Érvénytelen Port szám</string>
     <string name="use_orbot">Használd az Orbot-ot</string>
     <string name="disconnect_from_your_orbot_setup">TOR/Orbot Lekapcsolása</string>
-
-    <string name="app_notification_channel_id" translatable="false">DefaultChannelID</string>
-    <string name="app_notification_private_message" translatable="false">New notification arrived</string>
-
-    <string name="app_notification_dms_channel_id" translatable="false">PrivateMessagesID</string>
     <string name="app_notification_dms_channel_name">Privát üzenetek</string>
     <string name="app_notification_dms_channel_description">Értesítést küld, amikor privát üzeneted érkezik</string>
-
-    <string name="app_notification_zaps_channel_id" translatable="false">ZapsID</string>
     <string name="app_notification_zaps_channel_name">Zap-et kaptál</string>
     <string name="app_notification_zaps_channel_description">Értesítést küld, amikor valaki neked Zap-et küldött</string>
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">%1$s -tól</string>
     <string name="app_notification_zaps_channel_message_for">%1$s -ért</string>
-
     <string name="reply_notify">Értesítés: </string>
-
     <string name="channel_list_join_conversation">Csatlakozz a beszélgetéshez</string>
     <string name="channel_list_user_or_group_id">Felhasználó vagy Csoport azonosító</string>
     <string name="channel_list_user_or_group_id_demo">npub, nevent vagy hex</string>
     <string name="channel_list_create_channel">Létrehoz</string>
     <string name="channel_list_join_channel">Csatlakozás</string>
-
     <string name="today">Ma</string>
-
     <string name="content_warning">Tartalomra vonatkozó figyelmeztetés</string>
     <string name="content_warning_explanation">Ez a bejegyzés érzékeny tartalmat tartalmaz, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
     <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
     <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
     <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
-
     <string name="recommended_apps">Ajánlottak: </string>
     <string name="filter_spam_from_strangers">Idegenektől SPAM szűrése</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen ha a bejegyzések azok által akiket követek jelentve vannak</string>
-
     <string name="new_reaction_symbol">Új reakció szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nincs reakció típus kiválasztva. Nyomd Hosszan a változtatáshoz</string>
-
     <string name="zapraiser">ZapGyűjtés</string>
     <string name="zapraiser_explainer">Add meg a cél sats mennyiséget, amit ezzel a posztal el szeretnél érni. Azok a kliensek amik kompatibilisek, egy folyamatjelző csíkot fognak megjeleníteni, hogy adakozásra ösztönözzenek</string>
     <string name="zapraiser_target_amount_in_sats">Cél mennyiség sats-ban</string>
-
     <string name="sats_to_complete">A ZapGyűjtés %1$s-nál. %2$s sats kell a célig</string>
     <string name="read_from_relay">Olvassás a csomópontból</string>
     <string name="write_to_relay">Írás a csomópontra</string>
-    <string name="an_error_ocurred_trying_to_get_relay_information">Hiba történt a csomópont információ szerzés közben a %1$s -tól</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">Hiba történt a közvetítő információinak lekérése közben a %1$s -ról</string>
     <string name="owner">Tulajdonos</string>
     <string name="version">Verzió</string>
     <string name="software">Szoftver</string>
@@ -431,32 +398,29 @@
     <string name="payment">Fizetés</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Beváltás</string>
-
+    <string name="no_lightning_address_set">Nincs Lightning Cím beállítva</string>
+    <string name="copied_token_to_clipboard">Token a vágólapra másolva</string>
     <string name="live_stream_live_tag">ÉLŐ</string>
-    <string name="live_stream_offline_tag">OFFLINE</string>
+    <string name="live_stream_offline_tag">NINCS ADÁS</string>
     <string name="live_stream_ended_tag">VÉGE</string>
     <string name="live_stream_planned_tag">ÜTEMEZETT</string>
-
     <string name="live_stream_is_offline">Az élő közvetítés offline</string>
     <string name="live_stream_has_ended">Az élő közvetítésnek vége</string>
     <string name="are_you_sure_you_want_to_log_out">A Kijelentkezés minden helyben tárolt információt töröl. Bizonyosodj meg róla, hogy a privát kulcsod le van mentve, ezzel elkerülve a fiókod elvesztését. Folytatni akarod?</string>
     <string name="followed_tags">Követettek cimkéi</string>
-
     <string name="relay_setup">Csomópontok</string>
-
     <string name="discover_live">Élő</string>
     <string name="discover_community">Közösség</string>
     <string name="discover_chat">Társalgók</string>
     <string name="community_approved_posts">Elfogadott Bejegyzések</string>
-
     <string name="groups_no_descriptor">Ennek a csoportnak nincsen leírása vagy szabályzata. A módosítás miatt, a tulajdonossal egyeztess.</string>
     <string name="community_no_descriptor">Ennek a csoportnak nincsen leírása. A módosítás miatt, a tulajdonossal egyeztess.</string>
-
     <string name="add_sensitive_content_label">Érzékeny tartalom</string>
     <string name="add_sensitive_content_description">Megjelenítés előtt egy érzékeny tartalom figyelmeztetés jelenik meg.</string>
     <string name="settings">Beállítások</string>
     <string name="connectivity_type_always">Mindig</string>
     <string name="connectivity_type_wifi_only">Csak WIFI</string>
+    <string name="connectivity_type_never">Soha</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
@@ -466,15 +430,80 @@
     <string name="automatically_load_images_gifs">Képek/GIF-ek automatikus betöltése</string>
     <string name="automatically_play_videos">Videók automatikus betöltése</string>
     <string name="automatically_show_url_preview">Az URL előnézetének automatikus megjelenítése</string>
+    <string name="automatically_hide_nav_bars">Magával ragadó görgetés</string>
+    <string name="automatically_hide_nav_bars_description">Navigációs sáv görgetés közbeni elrejtése</string>
     <string name="load_image">Kép Betöltése</string>
-
     <string name="spamming_users">Spammerek</string>
-
     <string name="muted_button">Lenémítva. Kattínts a feloldásért</string>
     <string name="mute_button">Hang bekapcsolva. Kattints a némításért</string>
     <string name="search_button">Helyi és távoli adatok keresése</string>
-
     <string name="nip05_verified">A Nostr cím ellenőrzésre került</string>
     <string name="nip05_failed">A Nostr cím ellenőrzése sikeretelen</string>
     <string name="nip05_checking">A Nostr cím ellenőrzése</string>
+    <string name="select_deselect_all">Mind kijelölése/kijelölés visszavonása</string>
+    <string name="default_relays">Alapértelmezett</string>
+    <string name="select_a_relay_to_continue">A folytatáshoz válassz egy csomópontot</string>
+    <string name="zap_forward_title">Zap-ek továbbítása:</string>
+    <string name="zap_forward_explainer">A funkciót támogató kliensek a Zap-eket az Ön tárcája helyett, az alábbi LN-címre vagy felhasználói profilra továbbítják</string>
+    <string name="geohash_title">A Hely megjelenítése mint </string>
+    <string name="geohash_explainer">A bejegyzéshez az Ön tartózkodási helyének Geohash-ét hozzáadja. A közönség tudni fogja, hogy az aktuális helytől 5 km-en (3 mérföldön) belül van</string>
+    <string name="add_sensitive_content_explainer">A kényes tartalom miatt, azon megjelenítése előtt figyelmeztetést ad. Ez ideális minden Felnőtt tartalomhoz vagy olyan tartalomhoz, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
+    <string name="new_feature_nip24_might_not_be_available_title">Új funkció</string>
+    <string name="new_feature_nip24_might_not_be_available_description">Az Amethystnek ennek a módnak az aktiválásához NIP-24 üzenetet kell küldenie (GiftWrapped, Zárolt direkt és csoportos üzeneteket). A NIP-24 új, és a legtöbb kliens még nem implementálta. Győződj meg arról, hogy a fogadó fél kompatibilis klienst használ.</string>
+    <string name="new_feature_nip24_activate">Aktiválás</string>
+    <string name="messages_create_public_chat">Publikus</string>
+    <string name="messages_new_message">Privát</string>
+    <string name="messages_new_message_to">Címzett</string>
+    <string name="messages_new_message_subject">Téma</string>
+    <string name="messages_new_message_subject_caption">A beszélgetés témája</string>
+    <string name="messages_new_message_to_caption">"\@Felhasználó1, @Felhasználó2, @UFelhasználó3"</string>
+    <string name="messages_group_descriptor">A csoport tagjai</string>
+    <string name="messages_new_subject_message">Magyarázat a csoport tagjainak</string>
+    <string name="messages_new_subject_message_placeholder">Az új célok érdekében, a név megváltoztatása.</string>
+    <string name="paste_from_clipboard">Beszúrás vágólapról</string>
+    <string name="language_description">Az applikáció felülete</string>
+    <string name="theme_description">Sötét, Világos vagy Rendszer által használt téma</string>
+    <string name="automatically_load_images_gifs_description">Képek és GIF-ek automatikus betöltése</string>
+    <string name="automatically_play_videos_description">A videók és a GIF-ek automatikus lejátszása</string>
+    <string name="automatically_show_url_preview_description">URL előnézetek megjelenítése</string>
+    <string name="load_image_description">Mikor kell a képeket betölteni</string>
+    <string name="copy_url_to_clipboard">Az URL vágólapra másolása</string>
+    <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
+    <string name="created_at">Létrehozva</string>
+    <string name="rules">Szabályok</string>
+    <string name="login_with_external_signer">Bejelentkezés Amber-el</string>
+    <string name="status_update">Állapotod megjelenítése</string>
+    <string name="lightning_wallets_not_found">Hiba a hibaüzenet elemzésekor</string>
+    <string name="poll_zap_value_min_max_explainer">A szavazatokat a Zap-ek összegével súlyozzuk. Beállíthatsz egy minimális összeget, hogy a kéretlen leveleket elkerüld, és egy maximális összeget annak elkerülésére, hogy a szavazás feletti irányítást a nagy Zapperek vegyék át. Mindkét mezőben ugyanazt az összeget használd, hogy minden szavazat azonos értéket kapjon. Bármilyen összeg elfogadásához, hagyjd üresen.</string>
+    <string name="error_dialog_zap_error">Zap küldése nem sikerült</string>
+    <string name="error_dialog_talk_to_user">Üzenet a Felhasználónak</string>
+    <string name="error_dialog_button_ok">Ok</string>
+    <string name="relay_information_document_error_assemble_url">Nem sikerült elérni %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">Nem sikerült elérni %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Nem sikerült az eredmény elemzése a %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s hiba a következő kóddal %2$s</string>
+    <string name="active_for">Aktív: </string>
+    <string name="active_for_home">Főoldal</string>
+    <string name="active_for_msg">PÜk</string>
+    <string name="active_for_chats">Chat</string>
+    <string name="active_for_global">Globális</string>
+    <string name="active_for_search">Keresés</string>
+    <string name="zap_split_title">Zap-ek megosztása és továbbítása</string>
+    <string name="zap_split_explainer">A támogató kliensek a zapokat, az itt hozzáadott felhasználóknak helyetted felosztják és továbbítják</string>
+    <string name="zap_split_serarch_and_add_user">Felhasználó keresése és hozzáadása</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Felhasználónév vagy megjelenítendő név</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A %1$s felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
+    <string name="zap_split_weight">Százalék</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Zap-ek megosztása</string>
+    <string name="forwarding_zaps_to">Zap-ek továbbítása</string>
+    <string name="lightning_wallets_not_found2">Lightning tárca nem található</string>
+    <string name="paid">Fizetve</string>
+    <string name="wallet_number">Tárca: %1$s</string>
+    <string name="error_opening_external_signer">Hiba az aláíró alkalmazás megnyitásakor</string>
+    <string name="sign_request_rejected">Aláírási kérés elutasítva</string>
+    <string name="no_wallet_found_with_error">Nem található tárca a Lighning számla kifizetésére (Hiba: %1$s). Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
+    <string name="no_wallet_found">Nem található tárca a Lighning számla kifizetésére. Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
+    <string name="hidden_words">Elrejtett Szavak</string>
+    <string name="hide_new_word_label">Új szó vagy mondat elrejtése</string>
 </resources>

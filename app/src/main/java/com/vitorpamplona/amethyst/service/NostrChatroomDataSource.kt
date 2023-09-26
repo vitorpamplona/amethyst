@@ -1,32 +1,36 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
+import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 
 object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
     lateinit var account: Account
-    var withUser: User? = null
+    private var withRoom: ChatroomKey? = null
 
-    fun loadMessagesBetween(accountIn: Account, user: User) {
-        account = accountIn
-        withUser = user
+    private val latestEOSEs = EOSEAccount()
+
+    fun loadMessagesBetween(accountIn: Account, withRoom: ChatroomKey) {
+        this.account = accountIn
+        this.withRoom = withRoom
         resetFilters()
     }
 
     fun createMessagesToMeFilter(): TypedFilter? {
-        val myPeer = withUser
+        val myPeer = withRoom
 
         return if (myPeer != null) {
             TypedFilter(
                 types = setOf(FeedType.PRIVATE_DMS),
                 filter = JsonFilter(
                     kinds = listOf(PrivateDmEvent.kind),
-                    authors = listOf(myPeer.pubkeyHex),
-                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex))
+                    authors = myPeer.users.map { it },
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(withRoom.hashCode().toString())?.relayList
                 )
             )
         } else {
@@ -35,7 +39,7 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
     }
 
     fun createMessagesFromMeFilter(): TypedFilter? {
-        val myPeer = withUser
+        val myPeer = withRoom
 
         return if (myPeer != null) {
             TypedFilter(
@@ -43,7 +47,8 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
                 filter = JsonFilter(
                     kinds = listOf(PrivateDmEvent.kind),
                     authors = listOf(account.userProfile().pubkeyHex),
-                    tags = mapOf("p" to listOf(myPeer.pubkeyHex))
+                    tags = mapOf("p" to myPeer.users.map { it }),
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(withRoom.hashCode().toString())?.relayList
                 )
             )
         } else {
@@ -51,9 +56,14 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
         }
     }
 
-    val inandoutChannel = requestNewChannel()
+    val inandoutChannel = requestNewChannel { time, relayUrl ->
+        latestEOSEs.addOrUpdate(account.userProfile(), withRoom.hashCode().toString(), relayUrl, time)
+    }
 
     override fun updateChannelFilters() {
-        inandoutChannel.typedFilters = listOfNotNull(createMessagesToMeFilter(), createMessagesFromMeFilter()).ifEmpty { null }
+        inandoutChannel.typedFilters = listOfNotNull(
+            createMessagesToMeFilter(),
+            createMessagesFromMeFilter()
+        ).ifEmpty { null }
     }
 }

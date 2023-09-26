@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -73,7 +74,7 @@ fun RefresheableView(
     }
 
     Box(modifier) {
-        Column {
+        Column(Modifier.fillMaxSize()) {
             content()
         }
 
@@ -257,9 +258,7 @@ fun FeedError(errorMessage: String, onRefresh: () -> Unit) {
 @Composable
 fun FeedEmpty(onRefresh: () -> Unit) {
     Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
+        Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

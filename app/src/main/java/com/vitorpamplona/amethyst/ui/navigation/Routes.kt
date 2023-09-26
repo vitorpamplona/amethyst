@@ -16,13 +16,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.PrivateDmEvent
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveNowFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -120,7 +120,16 @@ sealed class Route(
     )
 
     object Room : Route(
-        route = "Room/{id}",
+        route = "Room/{id}?message={message}",
+        icon = R.drawable.ic_moments,
+        arguments = listOf(
+            navArgument("id") { type = NavType.StringType },
+            navArgument("message") { type = NavType.StringType; nullable = true; defaultValue = null }
+        ).toImmutableList()
+    )
+
+    object RoomByAuthor : Route(
+        route = "RoomByAuthor/{id}",
         icon = R.drawable.ic_moments,
         arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList()
     )
@@ -141,6 +150,14 @@ sealed class Route(
         route = "Settings",
         icon = R.drawable.ic_settings
     )
+
+    companion object {
+        val InvertedLayouts = setOf(
+            Channel.route,
+            Room.route,
+            RoomByAuthor.route
+        )
+    }
 }
 
 // **
@@ -271,9 +288,9 @@ object MessagesLatestItem : LatestItem() {
         if (it == null) return false
 
         val currentUser = account.userProfile().pubkeyHex
-        val room = (it.event as? PrivateDmEvent)?.talkingWith(currentUser)
+        val room = (it.event as? ChatroomKeyable)?.chatroomKey(currentUser)
         return if (room != null) {
-            val lastRead = account.loadLastRead("Room/$room")
+            val lastRead = account.loadLastRead("Room/${room.hashCode()}")
             (it.createdAt() ?: 0) > lastRead
         } else {
             false

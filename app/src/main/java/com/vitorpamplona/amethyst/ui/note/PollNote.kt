@@ -24,9 +24,7 @@ import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
-import com.vitorpamplona.amethyst.ui.actions.ImmutableListOfLists
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -35,6 +33,12 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
@@ -98,9 +102,7 @@ private fun WatchZapsAndUpdateTallies(
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        launch(Dispatchers.Default) {
-            pollViewModel.refreshTallies()
-        }
+        pollViewModel.refreshTallies()
     }
 }
 
@@ -115,7 +117,7 @@ private fun OptionNote(
     nav: (String) -> Unit
 ) {
     val tags = remember(baseNote) {
-        baseNote.event?.tags()?.toImmutableListOfLists() ?: ImmutableListOfLists()
+        baseNote.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList
     }
 
     Row(
@@ -132,8 +134,7 @@ private fun OptionNote(
             ZapVote(
                 baseNote,
                 poolOption,
-                accountViewModel,
-                pollViewModel,
+                pollViewModel = pollViewModel,
                 nonClickablePrepend = {
                     RenderOptionAfterVote(
                         poolOption.descriptor,
@@ -147,18 +148,21 @@ private fun OptionNote(
                     )
                 },
                 clickablePrepend = {
-                }
+                },
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         } else {
             ZapVote(
                 baseNote,
                 poolOption,
-                accountViewModel,
-                pollViewModel,
+                pollViewModel = pollViewModel,
                 nonClickablePrepend = {},
                 clickablePrepend = {
                     RenderOptionBeforeVote(poolOption.descriptor, canPreview, tags, backgroundColor, accountViewModel, nav)
-                }
+                },
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
     }
@@ -269,11 +273,12 @@ private fun RenderOptionBeforeVote(
 fun ZapVote(
     baseNote: Note,
     poolOption: PollOption,
-    accountViewModel: AccountViewModel,
-    pollViewModel: PollNoteViewModel,
     modifier: Modifier = Modifier,
+    pollViewModel: PollNoteViewModel,
     nonClickablePrepend: @Composable () -> Unit,
-    clickablePrepend: @Composable () -> Unit
+    clickablePrepend: @Composable () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val isLoggedUser by remember {
         derivedStateOf {
@@ -282,7 +287,14 @@ fun ZapVote(
     }
 
     var wantsToZap by remember { mutableStateOf(false) }
+    var wantsToPay by remember {
+        mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
+            persistentListOf()
+        )
+    }
+
     var zappingProgress by remember { mutableStateOf(0f) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -296,7 +308,7 @@ fun ZapVote(
             // interactionSource = remember { MutableInteractionSource() },
             // indication = rememberRipple(bounded = false, radius = 24.dp),
             onClick = {
-                if (!accountViewModel.isWriteable()) {
+                if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
                     scope.launch {
                         Toast
                             .makeText(
@@ -341,29 +353,29 @@ fun ZapVote(
                 } else if (accountViewModel.account.zapAmountChoices.size == 1 &&
                     pollViewModel.isValidInputVoteAmount(accountViewModel.account.zapAmountChoices.first())
                 ) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.zap(
-                            baseNote,
-                            accountViewModel.account.zapAmountChoices.first() * 1000,
-                            poolOption.option,
-                            "",
-                            context,
-                            onError = {
-                                scope.launch {
-                                    zappingProgress = 0f
-                                    Toast
-                                        .makeText(context, it, Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                            },
-                            onProgress = {
-                                scope.launch(Dispatchers.Main) {
-                                    zappingProgress = it
-                                }
-                            },
-                            zapType = accountViewModel.account.defaultZapType
-                        )
-                    }
+                    accountViewModel.zap(
+                        baseNote,
+                        accountViewModel.account.zapAmountChoices.first() * 1000,
+                        poolOption.option,
+                        "",
+                        context,
+                        onError = {
+                            scope.launch {
+                                zappingProgress = 0f
+                                Toast
+                                    .makeText(context, it, Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        },
+                        onProgress = {
+                            scope.launch(Dispatchers.Main) {
+                                zappingProgress = it
+                            }
+                        },
+                        onPayViaIntent = {
+                        },
+                        zapType = accountViewModel.account.defaultZapType
+                    )
                 } else {
                     wantsToZap = true
                 }
@@ -386,14 +398,47 @@ fun ZapVote(
                 onError = {
                     scope.launch {
                         zappingProgress = 0f
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                        showErrorMessageDialog = it
                     }
                 },
                 onProgress = {
                     scope.launch(Dispatchers.Main) {
                         zappingProgress = it
                     }
+                },
+                onPayViaIntent = {
+                    wantsToPay = it
                 }
+            )
+        }
+
+        if (wantsToPay.isNotEmpty()) {
+            PayViaIntentDialog(
+                payingInvoices = wantsToPay,
+                accountViewModel = accountViewModel,
+                onClose = {
+                    wantsToPay = persistentListOf()
+                },
+                onError = {
+                    wantsToPay = persistentListOf()
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                }
+            )
+        }
+
+        if (showErrorMessageDialog != null) {
+            ErrorMessageDialog(
+                title = stringResource(id = R.string.error_dialog_zap_error),
+                textContent = showErrorMessageDialog ?: "",
+                onClickStartMessage = {
+                    baseNote.author?.let {
+                        nav(routeToMessage(it, showErrorMessageDialog, accountViewModel))
+                    }
+                },
+                onDismiss = { showErrorMessageDialog = null }
             )
         }
 
@@ -450,7 +495,8 @@ fun FilteredZapAmountChoicePopup(
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (text: String) -> Unit,
-    onProgress: (percent: Float) -> Unit
+    onProgress: (percent: Float) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -462,7 +508,6 @@ fun FilteredZapAmountChoicePopup(
     }
 
     val zapMessage = ""
-    val scope = rememberCoroutineScope()
 
     val sortedOptions = remember(accountState) {
         pollViewModel.createZapOptionsThatMatchThePollingParameters()
@@ -482,19 +527,18 @@ fun FilteredZapAmountChoicePopup(
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.zap(
-                                baseNote,
-                                amountInSats * 1000,
-                                pollOption,
-                                zapMessage,
-                                context,
-                                onError,
-                                onProgress,
-                                defaultZapType
-                            )
-                            onDismiss()
-                        }
+                        accountViewModel.zap(
+                            baseNote,
+                            amountInSats * 1000,
+                            pollOption,
+                            zapMessage,
+                            context,
+                            onError,
+                            onProgress,
+                            onPayViaIntent,
+                            defaultZapType
+                        )
+                        onDismiss()
                     },
                     shape = ButtonBorder,
                     colors = ButtonDefaults
@@ -508,19 +552,18 @@ fun FilteredZapAmountChoicePopup(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.combinedClickable(
                             onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.zap(
-                                        baseNote,
-                                        amountInSats * 1000,
-                                        pollOption,
-                                        zapMessage,
-                                        context,
-                                        onError,
-                                        onProgress,
-                                        defaultZapType
-                                    )
-                                    onDismiss()
-                                }
+                                accountViewModel.zap(
+                                    baseNote,
+                                    amountInSats * 1000,
+                                    pollOption,
+                                    zapMessage,
+                                    context,
+                                    onError,
+                                    onProgress,
+                                    onPayViaIntent,
+                                    defaultZapType
+                                )
+                                onDismiss()
                             },
                             onLongClick = {
                                 onChangeAmount()

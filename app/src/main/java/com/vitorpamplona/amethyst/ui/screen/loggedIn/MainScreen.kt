@@ -1,45 +1,54 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.*
-import androidx.compose.material.DrawerValue
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ModalBottomSheetLayout
-import androidx.compose.material.ModalBottomSheetValue
-import androidx.compose.material.Scaffold
-import androidx.compose.material.rememberDrawerState
-import androidx.compose.material.rememberModalBottomSheetState
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
 import com.vitorpamplona.amethyst.ui.navigation.*
-import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
-import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
-import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.Route.Companion.InvertedLayouts
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -54,14 +63,14 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
-    themeViewModel: ThemeViewModel,
-    navController: NavHostController
+    themeViewModel: ThemeViewModel
 ) {
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
@@ -71,7 +80,16 @@ fun MainScreen(
         skipHalfExpanded = true
     )
 
+    val navController = rememberNavController()
     val navState = navController.currentBackStackEntryAsState()
+
+    val orientation = LocalConfiguration.current.orientation
+    val currentDrawerState = scaffoldState.drawerState.currentValue
+    LaunchedEffect(key1 = orientation) {
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE && currentDrawerState == DrawerValue.Closed) {
+            scaffoldState.drawerState.close()
+        }
+    }
 
     val nav = remember(navController) {
         { route: String ->
@@ -80,6 +98,13 @@ fun MainScreen(
                     navController.navigate(route)
                 }
             }
+            Unit
+        }
+    }
+
+    val navPopBack = remember(navController) {
+        {
+            navController.popBackStack()
             Unit
         }
     }
@@ -176,6 +201,39 @@ fun MainScreen(
         }
     }
 
+    val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
+    val bottomBarOffsetHeightPx = remember { mutableStateOf(0f) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val newOffset = bottomBarOffsetHeightPx.value + available.y
+
+                if (accountViewModel.account.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+                    bottomBarOffsetHeightPx.value = if (navState.value?.destination?.route !in InvertedLayouts) {
+                        newOffset.coerceIn(-bottomBarHeightPx, 0f)
+                    } else {
+                        newOffset.coerceIn(0f, bottomBarHeightPx)
+                    }
+                } else {
+                    if (abs(bottomBarOffsetHeightPx.value) > 0.1) {
+                        bottomBarOffsetHeightPx.value = 0f
+                    }
+                }
+
+                return Offset.Zero
+            }
+        }
+    }
+
+    val shouldShow = remember {
+        derivedStateOf {
+            abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
+        }
+    }
+
+    WatchNavStateToUpdateBarVisibility(navState, bottomBarOffsetHeightPx)
+
     ModalBottomSheetLayout(
         sheetState = sheetState,
         sheetContent = {
@@ -185,12 +243,40 @@ fun MainScreen(
         Scaffold(
             modifier = Modifier
                 .background(MaterialTheme.colors.primaryVariant)
-                .statusBarsPadding(),
+                .statusBarsPadding()
+                .nestedScroll(nestedScrollConnection),
             bottomBar = {
-                AppBottomBar(accountViewModel, navState, navBottomRow)
+                AnimatedContent(
+                    targetState = shouldShow.value,
+                    transitionSpec = {
+                        slideInVertically { height -> height } togetherWith
+                            slideOutVertically { height -> height }
+                    }
+                ) { isVisible ->
+                    if (isVisible) {
+                        AppBottomBar(accountViewModel, navState, navBottomRow)
+                    }
+                }
             },
             topBar = {
-                AppTopBar(followLists, navState, scaffoldState, accountViewModel, nav = nav)
+                AnimatedContent(
+                    targetState = shouldShow.value,
+                    transitionSpec = {
+                        slideInVertically { height -> 0 } togetherWith
+                            slideOutVertically { height -> 0 }
+                    }
+                ) { isVisible ->
+                    if (isVisible) {
+                        AppTopBar(
+                            followLists,
+                            navState,
+                            scaffoldState,
+                            accountViewModel,
+                            nav = nav,
+                            navPopBack
+                        )
+                    }
+                }
             },
             drawerContent = {
                 DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
@@ -199,11 +285,27 @@ fun MainScreen(
                 }
             },
             floatingActionButton = {
-                FloatingButtons(navState, accountViewModel, accountStateViewModel, nav)
+                Crossfade(
+                    targetState = shouldShow.value,
+                    animationSpec = tween(durationMillis = 100)
+                ) { state ->
+                    if (state) {
+                        FloatingButtons(
+                            navState,
+                            accountViewModel,
+                            accountStateViewModel,
+                            nav,
+                            navBottomRow
+                        )
+                    }
+                }
             },
             scaffoldState = scaffoldState
         ) {
-            Column(modifier = Modifier.padding(bottom = it.calculateBottomPadding())) {
+            Column(
+                modifier = Modifier
+                    .padding(bottom = it.calculateBottomPadding())
+            ) {
                 AppNavigation(
                     homeFeedViewModel = homeFeedViewModel,
                     repliesFeedViewModel = repliesFeedViewModel,
@@ -225,24 +327,49 @@ fun MainScreen(
 }
 
 @Composable
+fun WatchNavStateToUpdateBarVisibility(navState: State<NavBackStackEntry?>, bottomBarOffsetHeightPx: MutableState<Float>) {
+    LaunchedEffect(key1 = navState.value) {
+        bottomBarOffsetHeightPx.value = 0f
+    }
+
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifeCycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                bottomBarOffsetHeightPx.value = 0f
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+@Composable
 fun FloatingButtons(
     navEntryState: State<NavBackStackEntry?>,
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    navScrollToTop: (Route, Boolean) -> Unit
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
+    val context = LocalContext.current
 
     Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {
             is AccountState.LoggedInViewOnly -> {
-                // Does nothing.
+                if (accountViewModel.loggedInWithExternalSigner()) {
+                    WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
+                }
             }
             is AccountState.LoggedOff -> {
                 // Does nothing.
             }
             is AccountState.LoggedIn -> {
-                WritePermissionButtons(navEntryState, accountViewModel, nav)
+                WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
             }
         }
     }
@@ -252,7 +379,8 @@ fun FloatingButtons(
 private fun WritePermissionButtons(
     navEntryState: State<NavBackStackEntry?>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    nav: (String) -> Unit,
+    navScrollToTop: (Route, Boolean) -> Unit
 ) {
     val currentRoute by remember(navEntryState.value) {
         derivedStateOf {
@@ -263,7 +391,7 @@ private fun WritePermissionButtons(
     when (currentRoute) {
         Route.Home.base -> NewNoteButton(accountViewModel, nav)
         Route.Message.base -> ChannelFabColumn(accountViewModel, nav)
-        Route.Video.base -> NewImageButton(accountViewModel, nav)
+        Route.Video.base -> NewImageButton(accountViewModel, nav, navScrollToTop)
         Route.Community.base -> {
             val communityId by remember(navEntryState.value) {
                 derivedStateOf {

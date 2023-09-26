@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,9 +35,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val baseNote = remember { messageSetCard.note }
-
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val loggedIn = remember(accountState) { accountState?.account?.userProfile() } ?: return
 
     val popupExpanded = remember { mutableStateOf(false) }
     val enablePopup = remember {
@@ -50,7 +48,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
     val newItemColor = MaterialTheme.colors.newItemBackgroundColor
 
     LaunchedEffect(key1 = messageSetCard) {
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             val isNew = messageSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
 
             accountViewModel.account.markAsRead(routeForLastRead, messageSetCard.createdAt())
@@ -80,7 +78,7 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                     scope.launch {
                         routeFor(
                             baseNote,
-                            loggedIn
+                            accountViewModel.userProfile()
                         )?.let { nav(it) }
                     }
                 },
@@ -122,5 +120,9 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
                 NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
             }
         }
+
+        Divider(
+            thickness = DividerThickness
+        )
     }
 }

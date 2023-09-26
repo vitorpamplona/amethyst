@@ -10,11 +10,10 @@ import androidx.lifecycle.viewModelScope
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.model.GitHubIdentity
-import com.vitorpamplona.amethyst.service.model.MastodonIdentity
-import com.vitorpamplona.amethyst.service.model.TwitterIdentity
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
-import id.zelory.compressor.Compressor.compress
+import com.vitorpamplona.quartz.events.GitHubIdentity
+import com.vitorpamplona.quartz.events.MastodonIdentity
+import com.vitorpamplona.quartz.events.TwitterIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -24,7 +23,7 @@ import java.io.StringWriter
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var account: Account
 
-    val userName = mutableStateOf("")
+    // val userName = mutableStateOf("")
     val displayName = mutableStateOf("")
     val about = mutableStateOf("")
 
@@ -48,7 +47,7 @@ class NewUserMetadataViewModel : ViewModel() {
         this.account = account
 
         account.userProfile().let {
-            userName.value = it.bestUsername() ?: ""
+            // userName.value = it.bestUsername() ?: ""
             displayName.value = it.bestDisplayName() ?: ""
             about.value = it.info?.about ?: ""
             picture.value = it.info?.picture ?: ""
@@ -83,8 +82,8 @@ class NewUserMetadataViewModel : ViewModel() {
         } else {
             ObjectMapper().createObjectNode()
         }
-        currentJson.put("name", userName.value.trim())
-        currentJson.put("username", userName.value.trim())
+        // currentJson.put("username", userName.value.trim())
+        currentJson.put("name", displayName.value.trim())
         currentJson.put("display_name", displayName.value.trim())
         currentJson.put("displayName", displayName.value.trim())
         currentJson.put("picture", picture.value.trim())
@@ -125,12 +124,11 @@ class NewUserMetadataViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
         }
-
         clear()
     }
 
     fun clear() {
-        userName.value = ""
+        // userName.value = ""
         displayName.value = ""
         about.value = ""
         picture.value = ""
@@ -184,23 +182,25 @@ class NewUserMetadataViewModel : ViewModel() {
             contentResolver.getType(galleryUri),
             context.applicationContext,
             onReady = { fileUri, contentType, size ->
-                ImageUploader.uploadImage(
-                    uri = fileUri,
-                    contentType = contentType,
-                    size = size,
-                    server = account.defaultFileServer,
-                    contentResolver = contentResolver,
-                    onSuccess = { imageUrl, mimeType ->
-                        onUploading(false)
-                        onUploaded(imageUrl)
-                    },
-                    onError = {
-                        onUploading(false)
-                        viewModelScope.launch {
-                            imageUploadingError.emit("Failed to upload the image / video")
+                viewModelScope.launch(Dispatchers.IO) {
+                    ImageUploader.uploadImage(
+                        uri = fileUri,
+                        contentType = contentType,
+                        size = size,
+                        server = account.defaultFileServer,
+                        contentResolver = contentResolver,
+                        onSuccess = { imageUrl, mimeType ->
+                            onUploading(false)
+                            onUploaded(imageUrl)
+                        },
+                        onError = {
+                            onUploading(false)
+                            viewModelScope.launch {
+                                imageUploadingError.emit("Failed to upload the image / video")
+                            }
                         }
-                    }
-                )
+                    )
+                }
             },
             onError = {
                 onUploading(false)

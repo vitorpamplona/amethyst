@@ -16,9 +16,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.JoinUserOrChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
+import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 
 @Composable
 fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -26,7 +27,7 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
         mutableStateOf(false)
     }
 
-    var wantsToJoinChannelOrUser by remember {
+    var wantsToSendNewMessage by remember {
         mutableStateOf(false)
     }
 
@@ -38,23 +39,25 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
         NewChannelView({ wantsToCreateChannel = false }, accountViewModel = accountViewModel)
     }
 
-    if (wantsToJoinChannelOrUser) {
-        JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, accountViewModel = accountViewModel, nav = nav)
+    if (wantsToSendNewMessage) {
+        NewPostView({ wantsToSendNewMessage = false }, enableMessageInterface = true, accountViewModel = accountViewModel, nav = nav)
+        // JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, accountViewModel = accountViewModel, nav = nav)
     }
 
     Column() {
         if (isOpen) {
             OutlinedButton(
-                onClick = { wantsToJoinChannelOrUser = true; isOpen = false },
+                onClick = { wantsToSendNewMessage = true; isOpen = false },
                 modifier = Modifier.size(55.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
                 contentPadding = PaddingValues(bottom = 3.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.channel_list_join_channel),
+                    text = stringResource(R.string.messages_new_message),
                     color = Color.White,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontSize = Font12SP
                 )
             }
 
@@ -68,9 +71,10 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
                 contentPadding = PaddingValues(bottom = 3.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.channel_list_create_channel),
+                    text = stringResource(R.string.messages_create_public_chat),
                     color = Color.White,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontSize = Font12SP
                 )
             }
 
@@ -86,7 +90,7 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
-                contentDescription = stringResource(R.string.new_channel),
+                contentDescription = stringResource(R.string.messages_create_public_chat),
                 modifier = Modifier.size(26.dp),
                 tint = Color.White
             )

@@ -2,22 +2,23 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UserState
-import com.vitorpamplona.amethyst.service.model.AudioTrackEvent
-import com.vitorpamplona.amethyst.service.model.ClassifiedsEvent
-import com.vitorpamplona.amethyst.service.model.CommunityPostApprovalEvent
-import com.vitorpamplona.amethyst.service.model.GenericRepostEvent
-import com.vitorpamplona.amethyst.service.model.HighlightEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.amethyst.service.model.LiveActivitiesEvent
-import com.vitorpamplona.amethyst.service.model.LongTextNoteEvent
-import com.vitorpamplona.amethyst.service.model.PinListEvent
-import com.vitorpamplona.amethyst.service.model.PollNoteEvent
-import com.vitorpamplona.amethyst.service.model.RepostEvent
-import com.vitorpamplona.amethyst.service.model.TextNoteEvent
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
+import com.vitorpamplona.quartz.events.AudioTrackEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.PinListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -54,12 +55,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
 
     fun createFollowAccountsFilter(): TypedFilter {
         val follows = account.selectedUsersFollowList(account.defaultHomeFollowList)
-
-        val followKeys = follows?.map {
-            it.substring(0, 6)
-        }
-
-        val followSet = followKeys?.plus(account.userProfile().pubkeyHex.substring(0, 6))
+        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
 
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
@@ -73,6 +69,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     PollNoteEvent.kind,
                     HighlightEvent.kind,
                     AudioTrackEvent.kind,
+                    AudioHeaderEvent.kind,
                     PinListEvent.kind,
                     LiveActivitiesChatMessageEvent.kind,
                     LiveActivitiesEvent.kind
@@ -92,7 +89,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioHeaderEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 tags = mapOf(
                     "t" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
@@ -112,7 +109,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter = JsonFilter(
-                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
+                kinds = listOf(TextNoteEvent.kind, LongTextNoteEvent.kind, ClassifiedsEvent.kind, HighlightEvent.kind, AudioHeaderEvent.kind, AudioTrackEvent.kind, PinListEvent.kind),
                 tags = mapOf(
                     "g" to hashToLoad.map {
                         listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
@@ -137,6 +134,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     LongTextNoteEvent.kind,
                     ClassifiedsEvent.kind,
                     HighlightEvent.kind,
+                    AudioHeaderEvent.kind,
                     AudioTrackEvent.kind,
                     PinListEvent.kind,
                     CommunityPostApprovalEvent.kind

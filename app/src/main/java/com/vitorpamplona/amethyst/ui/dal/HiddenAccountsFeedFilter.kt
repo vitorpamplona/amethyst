@@ -14,9 +14,46 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
     }
 
     override fun feed(): List<User> {
-        return account.getBlockList()
+        val blockList = account.getBlockList()
+        val decryptedContent = blockList?.decryptedContent ?: ""
+        if (account.loginWithExternalSigner) {
+            if (decryptedContent.isEmpty()) return emptyList()
+
+            return blockList
+                ?.publicAndPrivateUsers(decryptedContent)
+                ?.map { LocalCache.getOrCreateUser(it) }
+                ?: emptyList()
+        }
+
+        return blockList
             ?.publicAndPrivateUsers(account.keyPair.privKey)
             ?.map { LocalCache.getOrCreateUser(it) }
+            ?: emptyList()
+    }
+}
+
+class HiddenWordsFeedFilter(val account: Account) : FeedFilter<String>() {
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex
+    }
+
+    override fun showHiddenKey(): Boolean {
+        return true
+    }
+
+    override fun feed(): List<String> {
+        val blockList = account.getBlockList()
+        val decryptedContent = blockList?.decryptedContent ?: ""
+        if (account.loginWithExternalSigner) {
+            if (decryptedContent.isEmpty()) return emptyList()
+
+            return blockList
+                ?.publicAndPrivateWords(decryptedContent)?.toList()
+                ?: emptyList()
+        }
+
+        return blockList
+            ?.publicAndPrivateWords(account.keyPair.privKey)?.toList()
             ?: emptyList()
     }
 }

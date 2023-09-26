@@ -1,9 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
+import com.vitorpamplona.quartz.events.Event
 
 class JsonFilter(
     val ids: List<String>? = null,
@@ -15,51 +12,64 @@ class JsonFilter(
     val limit: Int? = null,
     val search: String? = null
 ) {
+
     fun toJson(forRelay: String? = null): String {
-        val jsonObject = JsonObject()
-        ids?.run {
-            jsonObject.add("ids", JsonArray().apply { ids.forEach { add(it) } })
-        }
-        authors?.run {
-            jsonObject.add("authors", JsonArray().apply { authors.forEach { add(it) } })
-        }
-        kinds?.run {
-            jsonObject.add("kinds", JsonArray().apply { kinds.forEach { add(it) } })
-        }
-        tags?.run {
-            entries.forEach { kv ->
-                jsonObject.add("#${kv.key}", JsonArray().apply { kv.value.forEach { add(it) } })
+        val factory = Event.mapper.nodeFactory
+        val filter = factory.objectNode().apply {
+            ids?.run {
+                put(
+                    "ids",
+                    factory.arrayNode(ids.size).apply {
+                        ids.forEach { add(it) }
+                    }
+                )
             }
-        }
-        since?.run {
-            if (!isEmpty()) {
-                if (forRelay != null) {
-                    val relaySince = get(forRelay)
-                    if (relaySince != null) {
-                        jsonObject.addProperty("since", relaySince.time)
+            authors?.run {
+                put(
+                    "authors",
+                    factory.arrayNode(authors.size).apply {
+                        authors.forEach { add(it) }
                     }
-                } else {
-                    val jsonObjectSince = JsonObject()
-                    entries.forEach { sincePairs ->
-                        jsonObjectSince.addProperty(sincePairs.key, "${sincePairs.value}")
+                )
+            }
+            kinds?.run {
+                put(
+                    "kinds",
+                    factory.arrayNode(kinds.size).apply {
+                        kinds.forEach { add(it) }
                     }
-                    jsonObject.add("since", jsonObjectSince)
+                )
+            }
+            tags?.run {
+                entries.forEach { kv ->
+                    put(
+                        "#${kv.key}",
+                        factory.arrayNode(kv.value.size).apply {
+                            kv.value.forEach { add(it) }
+                        }
+                    )
                 }
             }
+            since?.run {
+                if (!isEmpty()) {
+                    if (forRelay != null) {
+                        val relaySince = get(forRelay)
+                        if (relaySince != null) {
+                            put("since", relaySince.time)
+                        }
+                    } else {
+                        val jsonObjectSince = factory.objectNode()
+                        entries.forEach { sincePairs ->
+                            jsonObjectSince.put(sincePairs.key, "${sincePairs.value}")
+                        }
+                        put("since", jsonObjectSince)
+                    }
+                }
+            }
+            until?.run { put("until", until) }
+            limit?.run { put("limit", limit) }
+            search?.run { put("search", search) }
         }
-        until?.run {
-            jsonObject.addProperty("until", until)
-        }
-        limit?.run {
-            jsonObject.addProperty("limit", limit)
-        }
-        search?.run {
-            jsonObject.addProperty("search", search)
-        }
-        return gson.toJson(jsonObject)
-    }
-
-    companion object {
-        val gson: Gson = GsonBuilder().create()
+        return Event.mapper.writeValueAsString(filter)
     }
 }

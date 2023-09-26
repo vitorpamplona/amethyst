@@ -67,18 +67,20 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.service.model.LnZapEvent
+import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.decodePublicKey
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -196,7 +198,11 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, accountViewModel: AccountViewModel) {
+fun UpdateZapAmountDialog(
+    onClose: () -> Unit,
+    nip47uri: String? = null,
+    accountViewModel: AccountViewModel
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -214,10 +220,9 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
         Triple(LnZapEvent.ZapType.NONZAP, stringResource(id = R.string.zap_type_nonzap), stringResource(id = R.string.zap_type_nonzap_explainer))
     )
 
-    val zapOptions = remember { zapTypes.map { it.second }.toImmutableList() }
-    val zapOptionExplainers = remember { zapTypes.map { it.third }.toImmutableList() }
+    val zapOptions = remember { zapTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(accountViewModel, nip47uri) {
         postViewModel.load()
         if (nip47uri != null) {
             try {
@@ -249,7 +254,7 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CloseButton(onCancel = {
+                    CloseButton(onPress = {
                         postViewModel.cancel()
                         onClose()
                     })
@@ -356,7 +361,6 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                                 placeholder = zapTypes.filter { it.first == accountViewModel.defaultZapType() }
                                     .first().second,
                                 options = zapOptions,
-                                explainers = zapOptionExplainers,
                                 onSelect = {
                                     postViewModel.selectedZapType = zapTypes[it].first
                                 },
@@ -382,7 +386,21 @@ fun UpdateZapAmountDialog(onClose: () -> Unit, nip47uri: String? = null, account
                                 Modifier.weight(1f)
                             )
 
+                            /* TODO: Find a way to open this in the PWA
                             IconButton(onClick = {
+                                onClose()
+                                runCatching { uri.openUri("https://app.mutinywallet.com/settings/connections?callbackUri=nostr+walletconnect&name=Amethyst") }
+                            }) {
+                                Icon(
+                                    painter = painterResource(R.mipmap.mutiny),
+                                    null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified
+                                )
+                            }*/
+
+                            IconButton(onClick = {
+                                onClose()
                                 runCatching { uri.openUri("https://nwc.getalby.com/apps/new?c=Amethyst") }
                             }) {
                                 Icon(

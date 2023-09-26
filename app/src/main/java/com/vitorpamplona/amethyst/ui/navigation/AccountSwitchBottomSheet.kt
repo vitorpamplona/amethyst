@@ -21,7 +21,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.runtime.Composable
@@ -47,16 +46,17 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.decodePublicKey
-import com.vitorpamplona.amethyst.model.toHexKey
-import com.vitorpamplona.amethyst.ui.actions.toImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
+import com.vitorpamplona.quartz.encoders.decodePublicKey
+import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -108,11 +108,7 @@ fun AccountSwitchBottomSheet(
                         title = { Text(text = stringResource(R.string.account_switch_add_account_dialog_title)) },
                         navigationIcon = {
                             IconButton(onClick = { popupExpanded = false }) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowBack,
-                                    contentDescription = stringResource(R.string.back),
-                                    tint = MaterialTheme.colors.onSurface
-                                )
+                                ArrowBackIcon()
                             }
                         },
                         backgroundColor = Color.Transparent,
@@ -130,13 +126,23 @@ fun DisplayAccount(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel
 ) {
-    var baseUser by remember { mutableStateOf<User?>(LocalCache.getUserIfExists(decodePublicKey(acc.npub).toHexKey())) }
+    var baseUser by remember {
+        mutableStateOf<User?>(
+            LocalCache.getUserIfExists(
+                decodePublicKey(
+                    acc.npub
+                ).toHexKey()
+            )
+        )
+    }
 
     if (baseUser == null) {
         LaunchedEffect(key1 = acc.npub) {
             launch(Dispatchers.IO) {
                 baseUser = try {
-                    LocalCache.getOrCreateUser(decodePublicKey(acc.npub).toHexKey())
+                    LocalCache.getOrCreateUser(
+                        decodePublicKey(acc.npub).toHexKey()
+                    )
                 } catch (e: Exception) {
                     null
                 }
