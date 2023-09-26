@@ -291,8 +291,8 @@ fun GetVideoController(
     DisposableEffect(key1 = videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
-        scope.launch(Dispatchers.IO) {
-            if (controller.value == null) {
+        if (controller.value == null) {
+            scope.launch(Dispatchers.IO) {
                 PlaybackClientController.prepareController(
                     uid,
                     videoUri,
@@ -338,21 +338,21 @@ fun GetVideoController(
                         }
                     }
                 }
-            } else {
-                controller.value?.let {
-                    if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                        if (it.isPlaying) {
-                            // There is a video playing, start this one on mute.
-                            it.volume = 0f
-                        } else {
-                            // There is no other video playing. Use the default mute state to
-                            // decide if sound is on or not.
-                            it.volume = if (defaultToStart) 0f else 1f
-                        }
-
-                        it.setMediaItem(mediaItem.value)
-                        it.prepare()
+            }
+        } else {
+            controller.value?.let {
+                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                    if (it.isPlaying) {
+                        // There is a video playing, start this one on mute.
+                        it.volume = 0f
+                    } else {
+                        // There is no other video playing. Use the default mute state to
+                        // decide if sound is on or not.
+                        it.volume = if (defaultToStart) 0f else 1f
                     }
+
+                    it.setMediaItem(mediaItem.value)
+                    it.prepare()
                 }
             }
         }
