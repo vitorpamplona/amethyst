@@ -12,6 +12,7 @@
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
     <string name="group_picture">Obrázek skupiny</string>
     <string name="explicit_content">Explicitní obsah</string>
+    <string name="spam">Spam</string>
     <string name="impersonation">Zneužívání identity</string>
     <string name="illegal_behavior">Nezákonné jednání</string>
     <string name="unknown">Neznámý</string>
@@ -169,6 +170,9 @@
     <string name="nip_05">Nostr Adresa</string>
     <string name="never">nikdy</string>
     <string name="now">nyní</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
     <string name="nudity">Nahota</string>
     <string name="profanity_hateful_speech">Neslušnost / Nenávistná řeč</string>
     <string name="report_hateful_speech">Nahlásit nenávistnou řeč</string>
@@ -263,6 +267,7 @@
     <string name="poll_zap_value_min">Minimální zaps</string>
     <string name="poll_zap_value_max">Maximální zaps</string>
     <string name="poll_consensus_threshold">Konsensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Uzavřít po</string>
     <string name="poll_closing_time_days">dnech</string>
     <string name="poll_is_closed">Hlasování je uzavřeno pro nové hlasy</string>
@@ -334,6 +339,7 @@
         \n5. Nastavte port Socks v této obrazovce
         \n6. Stiskněte tlačítko Aktivovat Tor
     </string>
+    <string name="orbot_socks_port">Port Orbot Socks</string>
     <string name="invalid_port_number">Neplatné číslo portu</string>
     <string name="use_orbot">Použít Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Odpojit Tor/Orbot</string>
@@ -341,6 +347,7 @@
     <string name="app_notification_dms_channel_description">Upozorní vás, když dorazí soukromá zpráva</string>
     <string name="app_notification_zaps_channel_name">Přijaté zapsy</string>
     <string name="app_notification_zaps_channel_description">Upozorní vás, když vás někdo zapsne</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">pro %1$s</string>
     <string name="reply_notify">Upozornit: </string>
@@ -369,6 +376,7 @@
     <string name="an_error_occurred_trying_to_get_relay_information">Při pokusu o získání informací z Relay se vyskytla chyba z %1$s</string>
     <string name="owner">Vlastník</string>
     <string name="version">Verze</string>
+    <string name="software">Programové vybavení</string>
     <string name="contact">Kontakt</string>
     <string name="supports">Podporované NIPs</string>
     <string name="admission_fees">Vstupné</string>
@@ -388,10 +396,12 @@
     <string name="minimum_pow">Minimální PoW</string>
     <string name="auth">Ověření</string>
     <string name="payment">Platba</string>
+    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Vyměnit</string>
     <string name="no_lightning_address_set">Není nastavena žádná Lightning adresa</string>
     <string name="copied_token_to_clipboard">Token zkopírován do schránky</string>
     <string name="live_stream_live_tag">ŽIVĚ</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">UKONČENO</string>
     <string name="live_stream_planned_tag">PLÁNOVÁNO</string>
     <string name="live_stream_is_offline">Živé vysílání je offline</string>
@@ -467,6 +477,7 @@
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_zap_error">Nelze odeslat zap</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
+    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Nepodařilo se zpracovat výsledek z %1$s: %2$s</string>
@@ -483,6 +494,7 @@
     <string name="zap_split_serarch_and_add_user_placeholder">Uživatelské jméno nebo zobrazované jméno</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel %1$s nemá nastavenou bleskovou adresu pro přijímání satoshi</string>
     <string name="zap_split_weight">Procenta</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Rozdělování Zapů s</string>
     <string name="forwarding_zaps_to">Přeposílání Zapů na</string>
     <string name="lightning_wallets_not_found2">Bleskové peněženky nenalezený</string>
