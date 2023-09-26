@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.database
 
-import com.vitorpamplona.amethyst.service.model.Event
-import com.vitorpamplona.amethyst.service.model.EventFactory
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventFactory
 
 class EventMapping(val eventDao: EventDao) {
     fun insert(event: Event) {
@@ -51,8 +51,7 @@ fun EventWithTags.toEvent(): Event {
         sig = event.sig,
         tags = tags.map {
             it.toTags()
-        },
-        lenient = true
+        }
     )
 }
 
