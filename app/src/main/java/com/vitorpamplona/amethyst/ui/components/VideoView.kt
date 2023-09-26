@@ -299,6 +299,8 @@ fun GetVideoController(
                     nostrUriCallback,
                     context
                 ) {
+                    // REQUIRED TO BE RUN IN THE MAIN THREAD
+
                     // checks again because of race conditions.
                     if (controller.value == null) { // still prone to race conditions.
                         controller.value = it
@@ -382,6 +384,8 @@ fun GetVideoController(
                             nostrUriCallback,
                             context
                         ) {
+                            // REQUIRED TO BE RUN IN THE MAIN THREAD
+
                             // checks again to make sure no other thread has created a controller.
                             if (controller.value == null) {
                                 controller.value = it
