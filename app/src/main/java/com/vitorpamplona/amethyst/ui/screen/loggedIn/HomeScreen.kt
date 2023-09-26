@@ -122,7 +122,7 @@ private fun HomePages(
         }
     }
 
-    HorizontalPager(state = pagerState) { page ->
+    HorizontalPager(state = pagerState, userScrollEnabled = false) { page ->
         RefresheableFeedView(
             viewModel = tabs[page].viewModel,
             routeForLastRead = tabs[page].routeForLastRead,

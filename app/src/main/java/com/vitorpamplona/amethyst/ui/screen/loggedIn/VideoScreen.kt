@@ -229,7 +229,7 @@ fun SlidingCarousel(
     VerticalPager(
         state = pagerState,
         beyondBoundsPageCount = 1,
-        modifier = Modifier.fillMaxSize(1f),
+        modifier = Modifier.fillMaxSize(),
         key = { index ->
             feed.value.getOrNull(index)?.idHex ?: "$index"
         }
@@ -246,7 +246,7 @@ fun LoadedVideoCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var state by remember {
+    var state by remember(note) {
         mutableStateOf(
             AccountViewModel.NoteComposeReportState()
         )

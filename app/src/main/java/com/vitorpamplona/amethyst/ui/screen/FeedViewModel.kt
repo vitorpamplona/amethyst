@@ -63,6 +63,7 @@ class NostrChatroomFeedViewModel(val user: ChatroomKey, val account: Account) : 
     }
 }
 
+@Stable
 class NostrVideoFeedViewModel(val account: Account) : FeedViewModel(VideoFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrVideoFeedViewModel : ViewModel> create(modelClass: Class<NostrVideoFeedViewModel>): NostrVideoFeedViewModel {

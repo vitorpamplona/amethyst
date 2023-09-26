@@ -430,6 +430,8 @@
     <string name="automatically_load_images_gifs">Prévisualisation des images</string>
     <string name="automatically_play_videos">Lecture vidéo</string>
     <string name="automatically_show_url_preview">Prévisualisation des URLs</string>
+    <string name="automatically_hide_nav_bars">Défilement immersif</string>
+    <string name="automatically_hide_nav_bars_description">Masquer les barres de navigation lors du défilement</string>
     <string name="load_image">Charger l\'image</string>
     <string name="spamming_users">Spammeurs</string>
     <string name="muted_button">Silencieux. Cliquer pour réactiver le son</string>
@@ -458,6 +460,7 @@
     <string name="messages_group_descriptor">Membres de ce groupe</string>
     <string name="messages_new_subject_message">Explication aux membres</string>
     <string name="messages_new_subject_message_placeholder">Changement de nom pour les nouveaux objectifs.</string>
+    <string name="paste_from_clipboard">Coller depuis le presse-papiers</string>
     <string name="language_description">Pour l\'interface de l\'App</string>
     <string name="theme_description">Sombre, Clair ou thème Système</string>
     <string name="automatically_load_images_gifs_description">Charger automatiquement les images et les GIFs</string>
@@ -468,6 +471,7 @@
     <string name="copy_the_note_id_to_the_clipboard">Copier l\'ID de la note dans le presse-papiers</string>
     <string name="created_at">Créé le</string>
     <string name="rules">Règles</string>
+    <string name="login_with_external_signer">Se connecter avec Amber</string>
     <string name="status_update">Mettez à jour votre statut</string>
     <string name="lightning_wallets_not_found">Erreur d\'analyse du message d\'erreur</string>
     <string name="poll_zap_value_min_max_explainer">Les votes sont pondérés par le montant du zap. Vous pouvez définir un montant minimum pour éviter les spammeurs et un montant maximum pour éviter qu\'un grand nombre de zappeurs ne prenne le contrôle du sondage. Utilisez le même montant dans les deux champs pour vous assurer que chaque vote a la même valeur. Laissez le champ vide pour accepter n\'importe quel montant.</string>
@@ -496,4 +500,10 @@
     <string name="lightning_wallets_not_found2">Portefeuilles Lightning introuvables</string>
     <string name="paid">Payé</string>
     <string name="wallet_number">Portefeuille %1$s</string>
+    <string name="error_opening_external_signer">Erreur lors de l\'ouverture de l\'application de signature</string>
+    <string name="sign_request_rejected">Demande de signature rejetée</string>
+    <string name="no_wallet_found_with_error">Aucun portefeuille trouvé pour payer une facture lightning (Erreur : %1$s). Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
+    <string name="no_wallet_found">Aucun portefeuille trouvé pour payer une facture lightning. Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
+    <string name="hidden_words">Mots Masqués</string>
+    <string name="hide_new_word_label">Masquer un nouveau mot ou une phrase</string>
 </resources>

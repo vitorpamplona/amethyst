@@ -32,7 +32,6 @@ import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.material.MaterialRichText
 import com.vitorpamplona.amethyst.model.HashtagIcon
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
@@ -57,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -404,7 +404,7 @@ private fun ObserveNIP19Event(
     if (baseNote == null) {
         LaunchedEffect(key1 = it.hex) {
             if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                accountViewModel.checkGetOrCreateNote(it.hex)?.let { note ->
+                accountViewModel.checkGetOrCreateNote(it.hex) { note ->
                     launch(Dispatchers.Main) { baseNote = note }
                 }
             }
@@ -461,30 +461,14 @@ private fun ObserveUser(user: User, onRefresh: () -> Unit) {
     }
 }
 
-@Immutable
-data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
-
 @Composable
 fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Color>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
 
     if (loadedLink == null) {
         LaunchedEffect(key1 = word) {
-            launch(Dispatchers.IO) {
-                Nip19.uriToRoute(word)?.let {
-                    var returningNote: Note? = null
-                    if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
-                        LocalCache.checkGetOrCreateNote(it.hex)?.let { note ->
-                            returningNote = note
-                        }
-                    }
-
-                    val newLink = LoadedBechLink(returningNote, it)
-
-                    launch(Dispatchers.Main) {
-                        loadedLink = newLink
-                    }
-                }
+            accountViewModel.parseNIP19(word) {
+                loadedLink = it
             }
         }
     }
@@ -504,7 +488,7 @@ fun BechLink(word: String, canPreview: Boolean, backgroundColor: MutableState<Co
             ClickableRoute(loadedLink?.nip19!!, accountViewModel, nav)
         }
     } else {
-        val text = remember {
+        val text = remember(word) {
             if (word.length > 16) {
                 word.replaceRange(8, word.length - 8, ":")
             } else {

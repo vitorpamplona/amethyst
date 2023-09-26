@@ -23,7 +23,7 @@ import java.io.StringWriter
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var account: Account
 
-    val userName = mutableStateOf("")
+    // val userName = mutableStateOf("")
     val displayName = mutableStateOf("")
     val about = mutableStateOf("")
 
@@ -47,7 +47,7 @@ class NewUserMetadataViewModel : ViewModel() {
         this.account = account
 
         account.userProfile().let {
-            userName.value = it.bestUsername() ?: ""
+            // userName.value = it.bestUsername() ?: ""
             displayName.value = it.bestDisplayName() ?: ""
             about.value = it.info?.about ?: ""
             picture.value = it.info?.picture ?: ""
@@ -82,8 +82,8 @@ class NewUserMetadataViewModel : ViewModel() {
         } else {
             ObjectMapper().createObjectNode()
         }
-        currentJson.put("name", userName.value.trim())
-        currentJson.put("username", userName.value.trim())
+        // currentJson.put("username", userName.value.trim())
+        currentJson.put("name", displayName.value.trim())
         currentJson.put("display_name", displayName.value.trim())
         currentJson.put("displayName", displayName.value.trim())
         currentJson.put("picture", picture.value.trim())
@@ -128,7 +128,7 @@ class NewUserMetadataViewModel : ViewModel() {
     }
 
     fun clear() {
-        userName.value = ""
+        // userName.value = ""
         displayName.value = ""
         about.value = ""
         picture.value = ""
