@@ -56,9 +56,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -258,6 +260,7 @@ fun ServerConfigHeader() {
 @Composable
 fun ServerConfigPreview() {
     ServerConfigClickableLine(
+        loadProfilePicture = true,
         item = RelaySetupInfo(
             url = "nostr.mom",
             read = true,
@@ -310,7 +313,16 @@ fun ServerConfig(
         )
     }
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     ServerConfigClickableLine(
+        loadProfilePicture = automaticallyShowProfilePicture,
         item = item,
         onToggleDownload = onToggleDownload,
         onToggleUpload = onToggleUpload,
@@ -351,6 +363,7 @@ fun ServerConfig(
 
 @Composable
 fun ServerConfigClickableLine(
+    loadProfilePicture: Boolean,
     item: RelaySetupInfo,
     onToggleDownload: (RelaySetupInfo) -> Unit,
     onToggleUpload: (RelaySetupInfo) -> Unit,
@@ -368,7 +381,7 @@ fun ServerConfigClickableLine(
             modifier = Modifier.padding(vertical = 5.dp)
         ) {
             Column(Modifier.clickable(onClick = onClick)) {
-                RenderRelayIcon(iconUrl = item.briefInfo.favIcon, Size55dp)
+                RenderRelayIcon(iconUrl = item.briefInfo.favIcon, loadProfilePicture, Size55dp)
             }
 
             Spacer(modifier = HalfHorzPadding)

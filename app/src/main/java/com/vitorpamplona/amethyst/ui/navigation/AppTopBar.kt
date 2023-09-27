@@ -62,6 +62,7 @@ import coil.Coil
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -515,6 +517,14 @@ private fun LoggedInUserPictureDrawer(
 
     val pubkeyHex = remember { accountViewModel.userProfile().pubkeyHex }
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     IconButton(
         onClick = onClick
     ) {
@@ -523,7 +533,8 @@ private fun LoggedInUserPictureDrawer(
             model = profilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = HeaderPictureModifier,
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            loadProfilePicture = automaticallyShowProfilePicture
         )
     }
 }

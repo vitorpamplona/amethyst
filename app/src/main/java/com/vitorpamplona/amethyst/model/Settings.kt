@@ -9,7 +9,8 @@ class Settings(
     var automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
     var automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
     var automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS
+    var automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
+    var automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS
 )
 
 enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val reourceId: Int) {

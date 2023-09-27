@@ -47,8 +47,10 @@ import androidx.lifecycle.map
 import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -185,6 +187,14 @@ private fun ChannelRoomCompose(
 
     val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
             hasNewMessages.value = newHasNewMessages
@@ -200,6 +210,7 @@ private fun ChannelRoomCompose(
         channelLastTime = remember(note) { note.createdAt() },
         channelLastContent = remember(note) { "$authorName: $description" },
         hasNewMessages = hasNewMessages,
+        loadProfilePicture = automaticallyShowProfilePicture,
         onClick = { nav(route) }
     )
 }
@@ -443,6 +454,7 @@ fun ChannelName(
     channelLastTime: Long?,
     channelLastContent: String?,
     hasNewMessages: MutableState<Boolean>,
+    loadProfilePicture: Boolean,
     onClick: () -> Unit
 ) {
     ChannelName(
@@ -456,7 +468,8 @@ fun ChannelName(
                         .width(Size55dp)
                         .height(Size55dp)
                         .clip(shape = CircleShape)
-                }
+                },
+                loadProfilePicture = loadProfilePicture
             )
         },
         channelTitle,

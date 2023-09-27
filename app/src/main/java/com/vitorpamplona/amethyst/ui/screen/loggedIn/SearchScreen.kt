@@ -49,11 +49,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ChannelName
@@ -343,6 +345,14 @@ private fun DisplaySearchResults(
         mutableStateOf(false)
     }
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = PaddingValues(
@@ -383,6 +393,7 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = hasNewMessages,
+                loadProfilePicture = automaticallyShowProfilePicture,
                 onClick = { nav("Channel/${item.idHex}") }
             )
         }

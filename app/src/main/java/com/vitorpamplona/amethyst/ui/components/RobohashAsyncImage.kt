@@ -58,14 +58,15 @@ fun RobohashFallbackAsyncImage(
     contentScale: ContentScale = ContentScale.Fit,
     alpha: Float = DefaultAlpha,
     colorFilter: ColorFilter? = null,
-    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    loadProfilePicture: Boolean
 ) {
     val context = LocalContext.current
     val painter = rememberAsyncImagePainter(
         model = Robohash.imageRequest(context, robot)
     )
 
-    if (model != null) {
+    if (model != null && loadProfilePicture) {
         AsyncImage(
             model = model,
             contentDescription = contentDescription,
@@ -101,7 +102,8 @@ fun RobohashAsyncImageProxy(
     contentScale: ContentScale = ContentScale.Fit,
     alpha: Float = DefaultAlpha,
     colorFilter: ColorFilter? = null,
-    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    loadProfilePicture: Boolean
 ) {
     RobohashFallbackAsyncImage(
         robot = robot,
@@ -112,6 +114,7 @@ fun RobohashAsyncImageProxy(
         contentScale = contentScale,
         alpha = alpha,
         colorFilter = colorFilter,
-        filterQuality = filterQuality
+        filterQuality = filterQuality,
+        loadProfilePicture = loadProfilePicture
     )
 }

@@ -43,8 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -400,10 +402,19 @@ private fun MessageBubbleLines(
     bubbleSize: MutableState<Int>,
     availableBubbleSize: MutableState<Int>
 ) {
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     if (drawAuthorInfo) {
         DrawAuthorInfo(
             baseNote,
             alignment,
+            automaticallyShowProfilePicture,
             nav
         )
     } else {
@@ -712,6 +723,7 @@ private fun RenderCreateChannelNote(note: Note) {
 private fun DrawAuthorInfo(
     baseNote: Note,
     alignment: Arrangement.Horizontal,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit
 ) {
     Row(
@@ -719,26 +731,28 @@ private fun DrawAuthorInfo(
         horizontalArrangement = alignment,
         modifier = Modifier.padding(top = 5.dp)
     ) {
-        DisplayAndWatchNoteAuthor(baseNote, nav)
+        DisplayAndWatchNoteAuthor(baseNote, loadProfilePicture, nav)
     }
 }
 
 @Composable
 private fun DisplayAndWatchNoteAuthor(
     baseNote: Note,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit
 ) {
     val author = remember {
         baseNote.author
     }
     author?.let {
-        WatchAndDisplayUser(it, nav)
+        WatchAndDisplayUser(it, loadProfilePicture, nav)
     }
 }
 
 @Composable
 private fun WatchAndDisplayUser(
     author: User,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit
 ) {
     val pubkeyHex = remember { author.pubkeyHex }
@@ -764,7 +778,7 @@ private fun WatchAndDisplayUser(
         }
     }
 
-    UserIcon(pubkeyHex, userProfilePicture, nav, route)
+    UserIcon(pubkeyHex, userProfilePicture, loadProfilePicture, nav, route)
 
     userDisplayName?.let {
         DisplayMessageUsername(it, userTags, route, nav)
@@ -775,6 +789,7 @@ private fun WatchAndDisplayUser(
 private fun UserIcon(
     pubkeyHex: String,
     userProfilePicture: String?,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit,
     route: String
 ) {
@@ -782,6 +797,7 @@ private fun UserIcon(
         robot = pubkeyHex,
         model = userProfilePicture,
         contentDescription = stringResource(id = R.string.profile_image),
+        loadProfilePicture = loadProfilePicture,
         modifier = remember {
             Modifier
                 .width(Size25dp)

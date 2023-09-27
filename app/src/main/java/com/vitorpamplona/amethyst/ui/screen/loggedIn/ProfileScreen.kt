@@ -55,10 +55,12 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
@@ -864,6 +866,14 @@ private fun DrawAdditionalInfo(
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     (user.bestDisplayName() ?: user.bestUsername())?.let {
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
             CreateTextWithEmoji(
@@ -918,6 +928,7 @@ private fun DrawAdditionalInfo(
         if (dialogOpen) {
             ShowQRDialog(
                 user,
+                automaticallyShowProfilePicture,
                 onScan = {
                     dialogOpen = false
                     nav(it)
@@ -1186,6 +1197,14 @@ private fun DisplayBadges(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     LoadAddressableNote(
         aTag = ATag(
             BadgeProfilesEvent.kind,
@@ -1196,7 +1215,7 @@ private fun DisplayBadges(
         accountViewModel
     ) { note ->
         if (note != null) {
-            WatchAndRenderBadgeList(note, nav)
+            WatchAndRenderBadgeList(note, automaticallyShowProfilePicture, nav)
         }
     }
 }
@@ -1204,6 +1223,7 @@ private fun DisplayBadges(
 @Composable
 private fun WatchAndRenderBadgeList(
     note: AddressableNote,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit
 ) {
     val badgeList by note.live().metadata.map {
@@ -1211,7 +1231,7 @@ private fun WatchAndRenderBadgeList(
     }.distinctUntilChanged().observeAsState()
 
     badgeList?.let { list ->
-        RenderBadgeList(list, nav)
+        RenderBadgeList(list, loadProfilePicture, nav)
     }
 }
 
@@ -1219,6 +1239,7 @@ private fun WatchAndRenderBadgeList(
 @OptIn(ExperimentalLayoutApi::class)
 private fun RenderBadgeList(
     list: ImmutableList<String>,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit
 ) {
     FlowRow(
@@ -1226,13 +1247,13 @@ private fun RenderBadgeList(
         modifier = Modifier.padding(vertical = 5.dp)
     ) {
         list.forEach { badgeAwardEvent ->
-            LoadAndRenderBadge(badgeAwardEvent, nav)
+            LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, nav)
         }
     }
 }
 
 @Composable
-private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit) {
+private fun LoadAndRenderBadge(badgeAwardEventHex: String, loadProfilePicture: Boolean, nav: (String) -> Unit) {
     var baseNote by remember {
         mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex))
     }
@@ -1246,13 +1267,14 @@ private fun LoadAndRenderBadge(badgeAwardEventHex: String, nav: (String) -> Unit
     }
 
     baseNote?.let {
-        ObserveAndRenderBadge(it, nav)
+        ObserveAndRenderBadge(it, loadProfilePicture, nav)
     }
 }
 
 @Composable
 private fun ObserveAndRenderBadge(
     it: Note,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit
 ) {
     val badgeAwardState by it.live().metadata.observeAsState()
@@ -1263,18 +1285,19 @@ private fun ObserveAndRenderBadge(
     }
 
     baseBadgeDefinition?.let {
-        BadgeThumb(it, nav, Size35dp)
+        BadgeThumb(it, loadProfilePicture, nav, Size35dp)
     }
 }
 
 @Composable
 fun BadgeThumb(
     note: Note,
+    loadProfilePicture: Boolean,
     nav: (String) -> Unit,
     size: Dp,
     pictureModifier: Modifier = Modifier
 ) {
-    BadgeThumb(note, size, pictureModifier) {
+    BadgeThumb(note, loadProfilePicture, size, pictureModifier) {
         nav("Note/${note.idHex}")
     }
 }
@@ -1282,6 +1305,7 @@ fun BadgeThumb(
 @Composable
 fun BadgeThumb(
     baseNote: Note,
+    loadProfilePicture: Boolean,
     size: Dp,
     pictureModifier: Modifier = Modifier,
     onClick: ((String) -> Unit)? = null
@@ -1293,13 +1317,14 @@ fun BadgeThumb(
                 .height(size)
         }
     ) {
-        WatchAndRenderBadgeImage(baseNote, size, pictureModifier, onClick)
+        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, size, pictureModifier, onClick)
     }
 }
 
 @Composable
 private fun WatchAndRenderBadgeImage(
     baseNote: Note,
+    loadProfilePicture: Boolean,
     size: Dp,
     pictureModifier: Modifier,
     onClick: ((String) -> Unit)?
@@ -1344,8 +1369,8 @@ private fun WatchAndRenderBadgeImage(
                             this
                         }
                     }
-            }
-
+            },
+            loadProfilePicture = loadProfilePicture
         )
     }
 }

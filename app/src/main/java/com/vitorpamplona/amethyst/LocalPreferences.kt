@@ -80,6 +80,7 @@ private object PrefKeys {
     const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
     const val AUTOMATICALLY_HIDE_NAV_BARS = "automatically_hide_nav_bars"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
+    const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
 }
 
 object LocalPreferences {
@@ -280,6 +281,12 @@ object LocalPreferences {
             } else {
                 putBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, account.settings.automaticallyHideNavigationBars.prefCode!!)
             }
+
+            if (account.settings.automaticallyShowProfilePictures.prefCode == null) {
+                remove(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)
+            } else {
+                putBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, account.settings.automaticallyShowProfilePictures.prefCode!!)
+            }
             putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
         }.apply()
     }
@@ -429,6 +436,12 @@ object LocalPreferences {
                     parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
                 } else {
                     BooleanType.ALWAYS
+                }
+
+                settings.automaticallyShowProfilePictures = if (contains(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)) {
+                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, false))
+                } else {
+                    ConnectivityType.ALWAYS
                 }
 
                 settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")
