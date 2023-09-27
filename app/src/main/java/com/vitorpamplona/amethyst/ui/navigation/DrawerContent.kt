@@ -70,8 +70,10 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -100,6 +102,14 @@ fun DrawerContent(
     sheetState: ModalBottomSheetState,
     accountViewModel: AccountViewModel
 ) {
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.background
@@ -129,7 +139,7 @@ fun DrawerContent(
                 accountViewModel
             )
 
-            BottomContent(accountViewModel.account.userProfile(), scaffoldState, nav)
+            BottomContent(accountViewModel.account.userProfile(), scaffoldState, automaticallyShowProfilePicture, nav)
         }
     }
 }
@@ -154,6 +164,14 @@ fun ProfileContent(
     val bestDisplayName = remember(accountUserState) { accountUserState?.user?.bestDisplayName() }
     val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
+
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
 
     Box {
         if (profileBanner != null) {
@@ -192,7 +210,8 @@ fun ProfileContent(
                         coroutineScope.launch {
                             scaffoldState.drawerState.close()
                         }
-                    })
+                    }),
+                loadProfilePicture = automaticallyShowProfilePicture
             )
 
             if (bestDisplayName != null) {
@@ -754,7 +773,7 @@ fun IconRowRelays(accountViewModel: AccountViewModel, onClick: () -> Unit) {
 }
 
 @Composable
-fun BottomContent(user: User, scaffoldState: ScaffoldState, nav: (String) -> Unit) {
+fun BottomContent(user: User, scaffoldState: ScaffoldState, loadProfilePicture: Boolean, nav: (String) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     // store the dialog open or close state
@@ -816,6 +835,7 @@ fun BottomContent(user: User, scaffoldState: ScaffoldState, nav: (String) -> Uni
     if (dialogOpen) {
         ShowQRDialog(
             user,
+            loadProfilePicture = loadProfilePicture,
             onScan = {
                 dialogOpen = false
                 coroutineScope.launch {

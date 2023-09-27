@@ -44,8 +44,10 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -136,6 +138,14 @@ fun DisplayAccount(
         )
     }
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     if (baseUser == null) {
         LaunchedEffect(key1 = acc.npub) {
             launch(Dispatchers.IO) {
@@ -173,7 +183,7 @@ fun DisplayAccount(
                             .width(55.dp)
                             .padding(0.dp)
                     ) {
-                        AccountPicture(it)
+                        AccountPicture(it, automaticallyShowProfilePicture)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -208,7 +218,7 @@ private fun ActiveMarker(acc: AccountInfo, accountViewModel: AccountViewModel) {
 }
 
 @Composable
-private fun AccountPicture(user: User) {
+private fun AccountPicture(user: User, loadProfilePicture: Boolean) {
     val profilePicture by user.live().metadata.map {
         it.user.profilePicture()
     }.observeAsState()
@@ -217,7 +227,8 @@ private fun AccountPicture(user: User) {
         robot = remember(user) { user.pubkeyHex },
         model = profilePicture,
         contentDescription = stringResource(R.string.profile_image),
-        modifier = AccountPictureModifier
+        modifier = AccountPictureModifier,
+        loadProfilePicture = loadProfilePicture
     )
 }
 

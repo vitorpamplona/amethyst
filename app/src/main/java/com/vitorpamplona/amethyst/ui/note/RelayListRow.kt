@@ -33,10 +33,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -126,6 +128,14 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
     val interactionSource = remember { MutableInteractionSource() }
     val ripple = rememberRipple(bounded = false, radius = Size15dp)
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     val clickableModifier = remember(relay) {
         Modifier
             .padding(1.dp)
@@ -166,12 +176,12 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
     Box(
         modifier = clickableModifier
     ) {
-        RenderRelayIcon(relay.favIcon)
+        RenderRelayIcon(relay.favIcon, automaticallyShowProfilePicture)
     }
 }
 
 @Composable
-fun RenderRelayIcon(iconUrl: String, size: Dp = Size13dp) {
+fun RenderRelayIcon(iconUrl: String, loadProfilePicture: Boolean, size: Dp = Size13dp) {
     val backgroundColor = MaterialTheme.colors.background
 
     val iconModifier = remember {
@@ -186,6 +196,7 @@ fun RenderRelayIcon(iconUrl: String, size: Dp = Size13dp) {
         model = iconUrl,
         contentDescription = stringResource(id = R.string.relay_icon),
         colorFilter = RelayIconFilter,
-        modifier = iconModifier
+        modifier = iconModifier,
+        loadProfilePicture = loadProfilePicture
     )
 }

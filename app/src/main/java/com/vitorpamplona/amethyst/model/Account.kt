@@ -185,6 +185,14 @@ class Account(
         saveable.invalidateData()
     }
 
+    fun updateAutomaticallyShowProfilePicture(
+        automaticallyShowProfilePicture: ConnectivityType
+    ) {
+        settings.automaticallyShowProfilePictures = automaticallyShowProfilePicture
+        live.invalidateData()
+        saveable.invalidateData()
+    }
+
     fun updateAutomaticallyHideHavBars(
         automaticallyHideHavBars: BooleanType
     ) {
