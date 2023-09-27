@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.Context
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -206,34 +207,36 @@ fun VideoViewInner(
         )
     }
 
-    val mediaItem = remember(videoUri) {
-        MediaItem.Builder()
-            .setMediaId(videoUri)
-            .setUri(videoUri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setArtist(authorName?.ifBlank { null })
-                    .setTitle(title?.ifBlank { null } ?: videoUri)
-                    .setArtworkUri(
-                        try {
-                            if (artworkUri != null) {
-                                Uri.parse(artworkUri)
-                            } else {
-                                null
-                            }
-                        } catch (e: Exception) {
-                            null
-                        }
-                    )
-                    .build()
-            )
-            .build()
-    }
-
     if (!automaticallyStartPlayback.value) {
         ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
     } else {
         VideoPlayerActiveMutex(videoUri) { activeOnScreen ->
+            val mediaItem = remember(videoUri) {
+                mutableStateOf(
+                    MediaItem.Builder()
+                        .setMediaId(videoUri)
+                        .setUri(videoUri)
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setArtist(authorName?.ifBlank { null })
+                                .setTitle(title?.ifBlank { null } ?: videoUri)
+                                .setArtworkUri(
+                                    try {
+                                        if (artworkUri != null) {
+                                            Uri.parse(artworkUri)
+                                        } else {
+                                            null
+                                        }
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                )
+                                .build()
+                        )
+                        .build()
+                )
+            }
+
             GetVideoController(
                 mediaItem = mediaItem,
                 videoUri = videoUri,
@@ -258,7 +261,7 @@ fun VideoViewInner(
 @Composable
 @OptIn(UnstableApi::class)
 fun GetVideoController(
-    mediaItem: MediaItem,
+    mediaItem: MutableState<MediaItem>,
     videoUri: String,
     defaultToStart: Boolean = false,
     nostrUriCallback: String? = null,
@@ -288,14 +291,16 @@ fun GetVideoController(
     DisposableEffect(key1 = videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
-        scope.launch(Dispatchers.IO) {
-            if (controller.value == null) {
+        if (controller.value == null) {
+            scope.launch(Dispatchers.IO) {
                 PlaybackClientController.prepareController(
                     uid,
                     videoUri,
                     nostrUriCallback,
                     context
                 ) {
+                    // REQUIRED TO BE RUN IN THE MAIN THREAD
+
                     // checks again because of race conditions.
                     if (controller.value == null) { // still prone to race conditions.
                         controller.value = it
@@ -311,7 +316,7 @@ fun GetVideoController(
                             }
                         }
 
-                        controller.value?.setMediaItem(mediaItem)
+                        controller.value?.setMediaItem(mediaItem.value)
                         controller.value?.prepare()
                     } else if (controller.value != it) {
                         // discards the new controller because there is an existing one
@@ -329,27 +334,27 @@ fun GetVideoController(
                                     it.volume = if (defaultToStart) 0f else 1f
                                 }
 
-                                it.setMediaItem(mediaItem)
+                                it.setMediaItem(mediaItem.value)
                                 it.prepare()
                             }
                         }
                     }
                 }
-            } else {
-                controller.value?.let {
-                    if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                        if (it.isPlaying) {
-                            // There is a video playing, start this one on mute.
-                            it.volume = 0f
-                        } else {
-                            // There is no other video playing. Use the default mute state to
-                            // decide if sound is on or not.
-                            it.volume = if (defaultToStart) 0f else 1f
-                        }
-
-                        it.setMediaItem(mediaItem)
-                        it.prepare()
+            }
+        } else {
+            controller.value?.let {
+                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                    if (it.isPlaying) {
+                        // There is a video playing, start this one on mute.
+                        it.volume = 0f
+                    } else {
+                        // There is no other video playing. Use the default mute state to
+                        // decide if sound is on or not.
+                        it.volume = if (defaultToStart) 0f else 1f
                     }
+
+                    it.setMediaItem(mediaItem.value)
+                    it.prepare()
                 }
             }
         }
@@ -379,6 +384,8 @@ fun GetVideoController(
                             nostrUriCallback,
                             context
                         ) {
+                            // REQUIRED TO BE RUN IN THE MAIN THREAD
+
                             // checks again to make sure no other thread has created a controller.
                             if (controller.value == null) {
                                 controller.value = it
@@ -394,7 +401,7 @@ fun GetVideoController(
                                     }
                                 }
 
-                                controller.value?.setMediaItem(mediaItem)
+                                controller.value?.setMediaItem(mediaItem.value)
                                 controller.value?.prepare()
                             } else if (controller.value != it) {
                                 // discards the new controller because there is an existing one
@@ -460,7 +467,7 @@ fun VideoPlayerActiveMutex(videoUri: String, inner: @Composable (MutableState<Bo
         }
     }
 
-    Box(
+    val myModifier = remember(videoUri) {
         Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 70.dp)
@@ -489,7 +496,9 @@ fun VideoPlayerActiveMutex(videoUri: String, inner: @Composable (MutableState<Bo
                     }
                 }
             }
-    ) {
+    }
+
+    Box(modifier = myModifier) {
         inner(active)
     }
 }
@@ -511,8 +520,6 @@ private fun RenderVideoPlayer(
     activeOnScreen: MutableState<Boolean>,
     onDialog: ((Boolean) -> Unit)?
 ) {
-    val context = LocalContext.current
-
     ControlWhenPlayerIsActive(controller, keepPlaying, automaticallyStartPlayback, activeOnScreen)
 
     val controllerVisible = remember(controller) {
@@ -520,9 +527,11 @@ private fun RenderVideoPlayer(
     }
 
     BoxWithConstraints() {
-        AndroidView(
-            modifier = if (roundedCorner) {
-                MaterialTheme.colors.imageModifier
+        val borders = MaterialTheme.colors.imageModifier
+
+        val myModifier = remember {
+            if (roundedCorner) {
+                borders
                     .defaultMinSize(minHeight = 100.dp)
                     .align(Alignment.Center)
             } else {
@@ -530,8 +539,11 @@ private fun RenderVideoPlayer(
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 100.dp)
                     .align(Alignment.Center)
-            },
-            factory = {
+            }
+        }
+
+        val factory = remember(controller) {
+            { context: Context ->
                 PlayerView(context).apply {
                     player = controller
                     layoutParams = FrameLayout.LayoutParams(
@@ -556,10 +568,15 @@ private fun RenderVideoPlayer(
                     )
                 }
             }
+        }
+
+        AndroidView(
+            modifier = myModifier,
+            factory = factory
         )
 
         waveform?.let {
-            Waveform(it, controller, Modifier.align(Alignment.Center))
+            Waveform(it, controller, remember { Modifier.align(Alignment.Center) })
         }
 
         val startingMuteState = remember(controller) {
@@ -580,7 +597,7 @@ private fun RenderVideoPlayer(
             controller.volume = if (mute) 0f else 1f
         }
 
-        KeepPlayingButton(keepPlaying, controllerVisible, Modifier.align(Alignment.TopEnd)) { newKeepPlaying: Boolean ->
+        KeepPlayingButton(keepPlaying, controllerVisible, remember { Modifier.align(Alignment.TopEnd) }) { newKeepPlaying: Boolean ->
             // If something else is playing and the user marks this video to keep playing, stops the other one.
             if (newKeepPlaying) {
                 if (keepPlayingMutex != null && keepPlayingMutex != controller) {

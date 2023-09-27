@@ -726,6 +726,19 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
+    fun loadAndMarkAsRead(routeForLastRead: String, baseNoteCreatedAt: Long?, onIsNew: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val lastTime = account.loadLastRead(routeForLastRead)
+
+            if (baseNoteCreatedAt != null) {
+                account.markAsRead(routeForLastRead, baseNoteCreatedAt)
+                onIsNew(baseNoteCreatedAt > lastTime)
+            } else {
+                onIsNew(false)
+            }
+        }
+    }
+
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
             return AccountViewModel(account) as AccountViewModel

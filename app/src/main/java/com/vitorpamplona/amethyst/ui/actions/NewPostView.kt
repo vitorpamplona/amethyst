@@ -214,7 +214,10 @@ fun NewPostView(
                             PostButton(
                                 onPost = {
                                     postViewModel.sendPost(relayList = relayList)
-                                    onClose()
+                                    scope.launch {
+                                        delay(100)
+                                        onClose()
+                                    }
                                 },
                                 isActive = postViewModel.canPost()
                             )
@@ -224,7 +227,10 @@ fun NewPostView(
                         Spacer(modifier = StdHorzSpacer)
                         CloseButton(onPress = {
                             postViewModel.cancel()
-                            onClose()
+                            scope.launch {
+                                delay(100)
+                                onClose()
+                            }
                         })
                     },
                     backgroundColor = MaterialTheme.colors.surface,
@@ -1220,9 +1226,7 @@ private fun MarkAsSensitive(
 @Composable
 fun CloseButton(onPress: () -> Unit) {
     Button(
-        onClick = {
-            onPress()
-        },
+        onClick = onPress,
         shape = ButtonBorder,
         colors = ButtonDefaults
             .buttonColors(

@@ -12,7 +12,7 @@ import java.io.File
 
 @UnstableApi object VideoCache {
 
-    var exoPlayerCacheSize: Long = 90 * 1024 * 1024 // 90MB
+    var exoPlayerCacheSize: Long = 150 * 1024 * 1024 // 90MB
 
     var leastRecentlyUsedCacheEvictor = LeastRecentlyUsedCacheEvictor(exoPlayerCacheSize)
 
