@@ -98,6 +98,12 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
     }
 
+    fun updateAutomaticallyShowProfilePicture(
+        automaticallyShowProfilePicture: ConnectivityType
+    ) {
+        account.updateAutomaticallyShowProfilePicture(automaticallyShowProfilePicture)
+    }
+
     fun updateAutomaticallyHideNavBars(
         automaticallyHideHavBars: BooleanType
     ) {

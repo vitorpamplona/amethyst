@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 
 @Composable
-fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
+fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Unit, onClose: () -> Unit) {
     var presenting by remember { mutableStateOf(true) }
 
     Dialog(
@@ -82,7 +82,8 @@ fun ShowQRDialog(user: User, onScan: (String) -> Unit, onClose: () -> Unit) {
                                         .height(100.dp)
                                         .clip(shape = CircleShape)
                                         .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                                        .background(MaterialTheme.colors.background)
+                                        .background(MaterialTheme.colors.background),
+                                    loadProfilePicture = loadProfilePicture
                                 )
                             }
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {

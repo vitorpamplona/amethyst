@@ -133,6 +133,7 @@ fun SettingsScreen(
     val videoIndex = settings.automaticallyStartPlayback.screenCode
     val linkIndex = settings.automaticallyShowUrlPreview.screenCode
     val hideNavBarsIndex = settings.automaticallyHideNavigationBars.screenCode
+    val profilePictureIndex = settings.automaticallyShowProfilePictures.screenCode
 
     val themeIndex = themeViewModel.theme.value ?: 0
 
@@ -224,6 +225,20 @@ fun SettingsScreen(
 
             scope.launch(Dispatchers.IO) {
                 accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
+                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
+            }
+        }
+
+        SettingsRow(
+            R.string.automatically_show_profile_picture,
+            R.string.automatically_show_profile_picture_description,
+            selectedItens,
+            profilePictureIndex
+        ) {
+            val automaticallyShowProfilePicture = parseConnectivityType(it)
+
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.updateAutomaticallyShowProfilePicture(automaticallyShowProfilePicture)
                 LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
             }
         }
