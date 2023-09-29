@@ -1,8 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
@@ -20,6 +18,8 @@ import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -61,7 +61,7 @@ fun ArrowBackIcon() {
     Icon(
         imageVector = Icons.Default.ArrowBack,
         contentDescription = stringResource(R.string.back),
-        tint = MaterialTheme.colors.grayText
+        tint = MaterialTheme.colorScheme.grayText
     )
 }
 
@@ -71,7 +71,7 @@ fun MessageIcon(modifier: Modifier) {
         painter = painterResource(R.drawable.ic_dm),
         null,
         modifier = modifier,
-        tint = MaterialTheme.colors.primary
+        tint = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -81,7 +81,7 @@ fun DownloadForOfflineIcon(iconSize: Dp) {
         imageVector = Icons.Default.DownloadForOffline,
         null,
         modifier = remember(iconSize) { Modifier.size(iconSize) },
-        tint = MaterialTheme.colors.primary
+        tint = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -181,7 +181,7 @@ fun ExpandLessIcon(modifier: Modifier) {
         imageVector = Icons.Default.ExpandLess,
         null,
         modifier = modifier,
-        tint = MaterialTheme.colors.subtleButton
+        tint = MaterialTheme.colorScheme.subtleButton
     )
 }
 
@@ -191,7 +191,7 @@ fun ExpandMoreIcon(modifier: Modifier) {
         imageVector = Icons.Default.ExpandMore,
         null,
         modifier = modifier,
-        tint = MaterialTheme.colors.subtleButton
+        tint = MaterialTheme.colorScheme.subtleButton
     )
 }
 
@@ -226,7 +226,7 @@ fun PollIcon() {
         painter = painterResource(R.drawable.ic_poll),
         null,
         modifier = Size20Modifier,
-        tint = MaterialTheme.colors.onBackground
+        tint = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -236,7 +236,7 @@ fun RegularPostIcon() {
         painter = painterResource(R.drawable.ic_lists),
         null,
         modifier = Size20Modifier,
-        tint = MaterialTheme.colors.onBackground
+        tint = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -246,7 +246,7 @@ fun CancelIcon() {
         imageVector = Icons.Default.Cancel,
         null,
         modifier = Size30Modifier,
-        tint = MaterialTheme.colors.placeholderText
+        tint = MaterialTheme.colorScheme.placeholderText
     )
 }
 
@@ -255,8 +255,7 @@ fun CloseIcon() {
     Icon(
         painter = painterResource(id = R.drawable.ic_close),
         contentDescription = stringResource(id = R.string.cancel),
-        modifier = Size20Modifier,
-        tint = Color.White
+        modifier = Size20Modifier
     )
 }
 
@@ -265,7 +264,7 @@ fun MutedIcon() {
     Icon(
         imageVector = Icons.Default.VolumeOff,
         contentDescription = stringResource(id = R.string.muted_button),
-        tint = MaterialTheme.colors.onBackground,
+        tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier
     )
 }
@@ -275,7 +274,7 @@ fun MuteIcon() {
     Icon(
         imageVector = Icons.Default.VolumeUp,
         contentDescription = stringResource(id = R.string.mute_button),
-        tint = MaterialTheme.colors.onBackground,
+        tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier
     )
 }
@@ -354,7 +353,7 @@ fun VerticalDotsIcon() {
         imageVector = Icons.Default.MoreVert,
         null,
         modifier = Size18Modifier,
-        tint = MaterialTheme.colors.placeholderText
+        tint = MaterialTheme.colorScheme.placeholderText
     )
 }
 

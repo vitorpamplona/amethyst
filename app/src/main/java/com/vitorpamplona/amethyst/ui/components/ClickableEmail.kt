@@ -4,8 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -19,7 +19,7 @@ fun ClickableEmail(email: String) {
     ClickableText(
         text = remember { AnnotatedString(stripped) },
         onClick = { runCatching { context.sendMail(stripped) } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
     )
 }
 

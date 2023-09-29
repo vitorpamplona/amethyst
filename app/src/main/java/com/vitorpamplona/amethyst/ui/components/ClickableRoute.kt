@@ -7,11 +7,10 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -307,8 +306,8 @@ fun CreateClickableText(
     nav: (String) -> Unit
 ) {
     val currentStyle = LocalTextStyle.current
-    val primaryColor = MaterialTheme.colors.primary
-    val onBackgroundColor = MaterialTheme.colors.onBackground
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
     val clickablePartStyle = remember(primaryColor, overrideColor) {
         currentStyle.copy(color = overrideColor ?: primaryColor, fontWeight = fontWeight).toSpanStyle()
@@ -368,7 +367,7 @@ fun CreateTextWithEmoji(
 
     val textColor = color.takeOrElse {
         LocalTextStyle.current.color.takeOrElse {
-            LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+            LocalContentColor.current
         }
     }
 
@@ -424,7 +423,7 @@ fun CreateTextWithEmoji(
 
     val textColor = color.takeOrElse {
         LocalTextStyle.current.color.takeOrElse {
-            LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+            LocalContentColor.current
         }
     }
 
@@ -537,14 +536,14 @@ fun CreateClickableTextWithEmoji(
         ClickableInLineIconRenderer(
             emojiLists!!.part1,
             maxLines,
-            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.primary, fontWeight = fontWeight).toSpanStyle()
+            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colorScheme.primary, fontWeight = fontWeight).toSpanStyle()
         ) {
             nav(route)
         }
 
         InLineIconRenderer(
             emojiLists!!.part2,
-            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colors.onBackground, fontWeight = fontWeight).toSpanStyle(),
+            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colorScheme.onBackground, fontWeight = fontWeight).toSpanStyle(),
             maxLines = maxLines
         )
     }

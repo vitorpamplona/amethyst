@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,13 +20,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -212,7 +213,7 @@ fun UpdateReactionTypeDialog(
                                 placeholder = {
                                     Text(
                                         text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -225,7 +226,7 @@ fun UpdateReactionTypeDialog(
                                 onClick = { postViewModel.addChoice() },
                                 shape = ButtonBorder,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = MaterialTheme.colors.primary
+                                    containerColor = MaterialTheme.colorScheme.primary
                                 )
                             ) {
                                 Text(text = stringResource(R.string.add), color = Color.White)
@@ -254,11 +255,12 @@ private fun RenderReactionOption(
         modifier = Modifier.padding(horizontal = 3.dp),
         shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.primary
+            containerColor = MaterialTheme.colorScheme.primary
         ),
         onClick = {
             postViewModel.removeChoice(reactionType)
-        }
+        },
+        contentPadding = PaddingValues(horizontal = 5.dp)
     ) {
         if (reactionType.startsWith(":")) {
             val noStartColon = reactionType.removePrefix(":")
@@ -331,7 +333,7 @@ private fun EmojiSelector(accountViewModel: AccountViewModel, nav: (String) -> U
 
 @Composable
 fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: ((EmojiUrl) -> Unit)? = null) {
-    val color = MaterialTheme.colors.background
+    val color = MaterialTheme.colorScheme.background
     val bgColor = remember { mutableStateOf(color) }
 
     val listState = rememberLazyListState()

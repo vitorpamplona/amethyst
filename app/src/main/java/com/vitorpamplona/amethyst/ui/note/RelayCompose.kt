@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -73,7 +73,7 @@ fun RelayCompose(
 
                 Text(
                     "${relay.counter} ${stringResource(R.string.posts_received)}",
-                    color = MaterialTheme.colors.placeholderText,
+                    color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -117,10 +117,9 @@ fun AddRelayButton(onClick: () -> Unit) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(id = R.string.add), color = Color.White)
@@ -133,10 +132,9 @@ fun RemoveRelayButton(onClick: () -> Unit) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.remove), color = Color.White)

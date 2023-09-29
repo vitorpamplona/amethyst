@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,18 +30,17 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -53,7 +53,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -86,15 +85,14 @@ import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
@@ -212,7 +210,7 @@ fun ZoomableContentView(
     }
 
     var mainImageModifier = if (roundedCorner) {
-        MaterialTheme.colors.imageModifier
+        MaterialTheme.colorScheme.imageModifier
     } else {
         Modifier.fillMaxWidth()
     }
@@ -553,7 +551,7 @@ private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
     val myId = "inlineContent"
     val emptytext = buildAnnotatedString {
         withStyle(
-            LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+            LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary).toSpanStyle()
         ) {
             append("")
             appendInlineContent(myId, "[icon]")
@@ -637,7 +635,7 @@ fun ZoomableImageDialog(
             decorFitsSystemWindows = false
         )
     ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val pagerState: PagerState = rememberPagerState() { allImages.size }
 
@@ -671,6 +669,7 @@ fun ZoomableImageDialog(
                     if (myContent is ZoomableUrlContent) {
                         Row() {
                             CopyToClipboard(content = myContent)
+                            Spacer(modifier = StdHorzSpacer)
                             SaveToGallery(url = myContent.url)
                         }
                     } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
@@ -691,17 +690,11 @@ private fun CopyToClipboard(
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
 
-    Button(
+    OutlinedButton(
         modifier = Modifier.padding(horizontal = Size5dp),
-        onClick = { popupExpanded.value = true },
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.placeholderText
-            )
+        onClick = { popupExpanded.value = true }
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.Share,
             modifier = Size20Modifier,
             contentDescription = stringResource(R.string.copy_url_to_clipboard)
@@ -725,20 +718,35 @@ private fun ShareImageAction(
         val clipboardManager = LocalClipboardManager.current
 
         if (content is ZoomableUrlContent) {
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(content.url)); onDismiss() }) {
-                Text(stringResource(R.string.copy_url_to_clipboard))
-            }
-            if (content.uri != null) {
-                DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(content.uri)); onDismiss() }) {
-                    Text(stringResource(R.string.copy_the_note_id_to_the_clipboard))
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.copy_url_to_clipboard))
+                },
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(content.url)); onDismiss()
                 }
+            )
+            if (content.uri != null) {
+                DropdownMenuItem(
+                    text = {
+                        Text(stringResource(R.string.copy_the_note_id_to_the_clipboard))
+                    },
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(content.uri)); onDismiss()
+                    }
+                )
             }
         }
 
         if (content is ZoomablePreloadedContent) {
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(content.uri)); onDismiss() }) {
-                Text(stringResource(R.string.copy_the_note_id_to_the_clipboard))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.copy_the_note_id_to_the_clipboard))
+                },
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(content.uri)); onDismiss()
+                }
+            )
         }
     }
 }

@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,9 +91,9 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
 
     val scope = rememberCoroutineScope()
 
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
     LaunchedEffect(key1 = multiSetCard) {
         launch(Dispatchers.IO) {
@@ -441,7 +441,7 @@ fun CrossfadeToDisplayAmount(amount: String) {
         modifier = amountBoxModifier,
         contentAlignment = Alignment.BottomCenter
     ) {
-        val backgroundColor = MaterialTheme.colors.overPictureBackground
+        val backgroundColor = MaterialTheme.colorScheme.overPictureBackground
         Box(
             modifier = remember {
                 Modifier
@@ -453,7 +453,7 @@ fun CrossfadeToDisplayAmount(amount: String) {
             Text(
                 text = amount,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.bitcoinColor,
+                color = MaterialTheme.colorScheme.bitcoinColor,
                 fontSize = commentTextSize,
                 modifier = bottomPadding1dp
             )
@@ -541,7 +541,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             robot = author.pubkeyHex,
             model = baseUserPicture,
             contentDescription = stringResource(id = R.string.profile_image),
-            modifier = MaterialTheme.colors.profile35dpModifier,
+            modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = automaticallyShowProfilePicture
         )

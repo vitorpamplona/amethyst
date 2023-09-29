@@ -27,18 +27,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -288,7 +288,7 @@ fun UpdateZapAmountDialog(
                                             modifier = Modifier.padding(horizontal = 3.dp),
                                             shape = ButtonBorder,
                                             colors = ButtonDefaults.buttonColors(
-                                                backgroundColor = MaterialTheme.colors.primary
+                                                containerColor = MaterialTheme.colorScheme.primary
                                             ),
                                             onClick = {
                                                 postViewModel.removeAmount(amountInSats)
@@ -330,7 +330,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = "100, 1000, 5000",
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -343,7 +343,7 @@ fun UpdateZapAmountDialog(
                                 onClick = { postViewModel.addAmount() },
                                 shape = ButtonBorder,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = MaterialTheme.colors.primary
+                                    containerColor = MaterialTheme.colorScheme.primary
                                 )
                             ) {
                                 Text(text = stringResource(R.string.add), color = Color.White)
@@ -418,7 +418,7 @@ fun UpdateZapAmountDialog(
                                     painter = painterResource(R.drawable.ic_qrcode),
                                     null,
                                     modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colors.primary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -432,7 +432,7 @@ fun UpdateZapAmountDialog(
                             Text(
                                 stringResource(id = R.string.wallet_connect_service_explainer),
                                 Modifier.weight(1f),
-                                color = MaterialTheme.colors.placeholderText,
+                                color = MaterialTheme.colorScheme.placeholderText,
                                 fontSize = Font14SP
                             )
                         }
@@ -471,7 +471,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = "npub, hex",
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -493,7 +493,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = "wss://relay.server.com",
-                                        color = MaterialTheme.colors.placeholderText,
+                                        color = MaterialTheme.colorScheme.placeholderText,
                                         maxLines = 1
                                     )
                                 },
@@ -537,7 +537,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.wallet_connect_service_secret_placeholder),
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 trailingIcon = {

@@ -2,9 +2,9 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -36,13 +36,13 @@ fun NewPollOption(pollViewModel: NewPostViewModel, optionIndex: Int) {
             label = {
                 Text(
                     text = stringResource(R.string.poll_option_index).format(optionIndex + 1),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             placeholder = {
                 Text(
                     text = stringResource(R.string.poll_option_description),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             keyboardOptions = KeyboardOptions.Default.copy(

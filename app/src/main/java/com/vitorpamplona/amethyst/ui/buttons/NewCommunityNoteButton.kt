@@ -1,12 +1,10 @@
 package com.vitorpamplona.amethyst.ui.buttons
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +19,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun NewCommunityNoteButton(communityIdHex: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -41,12 +40,11 @@ fun NewCommunityNoteButton(note: Note, accountViewModel: AccountViewModel, nav: 
         NewPostView({ wantsToPost = false }, note, accountViewModel = accountViewModel, nav = nav)
     }
 
-    OutlinedButton(
+    FloatingActionButton(
         onClick = { wantsToPost = true },
-        modifier = Modifier.size(55.dp),
+        modifier = Size55Modifier,
         shape = CircleShape,
-        colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-        contentPadding = PaddingValues(0.dp)
+        containerColor = MaterialTheme.colorScheme.primary
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_compose),

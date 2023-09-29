@@ -7,11 +7,11 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,7 +108,7 @@ fun HiddenNote(
                     shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
+                            contentColor = MaterialTheme.colorScheme.primary
                         ),
                     contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
                 ) {

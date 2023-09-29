@@ -13,10 +13,10 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -186,7 +186,7 @@ fun LoginPage(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.nsec_npub_hex_private_key),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
                 },
                 trailingIcon = {
@@ -219,7 +219,7 @@ fun LoginPage(
                             painter = painterResource(R.drawable.ic_qrcode),
                             null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colors.primary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
@@ -237,8 +237,8 @@ fun LoginPage(
             if (errorMessage.isNotBlank()) {
                 Text(
                     text = errorMessage,
-                    color = MaterialTheme.colors.error,
-                    style = MaterialTheme.typography.caption
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
@@ -252,10 +252,10 @@ fun LoginPage(
                     )
 
                     val regularText =
-                        SpanStyle(color = MaterialTheme.colors.onBackground)
+                        SpanStyle(color = MaterialTheme.colorScheme.onBackground)
 
                     val clickableTextStyle =
-                        SpanStyle(color = MaterialTheme.colors.primary)
+                        SpanStyle(color = MaterialTheme.colorScheme.primary)
 
                     val annotatedTermsString = buildAnnotatedString {
                         withStyle(regularText) {
@@ -284,8 +284,8 @@ fun LoginPage(
                 if (termsAcceptanceIsRequired.isNotBlank()) {
                     Text(
                         text = termsAcceptanceIsRequired,
-                        color = MaterialTheme.colors.error,
-                        style = MaterialTheme.typography.caption
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -341,10 +341,12 @@ fun LoginPage(
                     },
                     shape = RoundedCornerShape(Size35dp),
                     modifier = Modifier
-                        .fillMaxWidth()
                         .height(50.dp)
                 ) {
-                    Text(text = stringResource(R.string.login))
+                    Text(
+                        text = stringResource(R.string.login),
+                        modifier = Modifier.padding(horizontal = 40.dp)
+                    )
                 }
             }
 
@@ -386,10 +388,12 @@ fun LoginPage(
                         },
                         shape = RoundedCornerShape(Size35dp),
                         modifier = Modifier
-                            .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text(text = stringResource(R.string.login_with_external_signer))
+                        Text(
+                            text = stringResource(R.string.login_with_external_signer),
+                            modifier = Modifier.padding(horizontal = 40.dp)
+                        )
                     }
                 }
             }
@@ -412,7 +416,7 @@ fun LoginPage(
             style = TextStyle(
                 fontSize = Font14SP,
                 textDecoration = TextDecoration.Underline,
-                color = MaterialTheme.colors.primary,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
         )

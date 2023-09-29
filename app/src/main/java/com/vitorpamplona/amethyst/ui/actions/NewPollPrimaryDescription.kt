@@ -3,7 +3,7 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -33,13 +33,13 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
         isInputValid = false
     }
 
-    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
-        focusedBorderColor = MaterialTheme.colors.error,
+    val colorInValid = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.error,
         unfocusedBorderColor = Color.Red
     )
-    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
-        focusedBorderColor = MaterialTheme.colors.primary,
-        unfocusedBorderColor = MaterialTheme.colors.placeholderText
+    val colorValid = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText
     )
 
     OutlinedTextField(
@@ -50,7 +50,7 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
         label = {
             Text(
                 text = stringResource(R.string.poll_primary_description),
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         },
         keyboardOptions = KeyboardOptions.Default.copy(
@@ -68,11 +68,11 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
         placeholder = {
             Text(
                 text = stringResource(R.string.poll_primary_description),
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         },
         colors = if (isInputValid) colorValid else colorInValid,
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
     )
 }

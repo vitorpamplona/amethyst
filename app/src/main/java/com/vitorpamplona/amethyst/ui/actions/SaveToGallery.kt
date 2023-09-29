@@ -3,12 +3,10 @@ package com.vitorpamplona.amethyst.ui.actions
 import android.Manifest
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Text
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -66,21 +64,16 @@ fun SaveToGallery(url: String) {
         }
     }
 
-    Button(
+    OutlinedButton(
         onClick = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || writeStoragePermissionState.status.isGranted) {
                 saveImage()
             } else {
                 writeStoragePermissionState.launchPermissionRequest()
             }
-        },
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = Color.Gray
-            )
+        }
     ) {
-        Text(text = stringResource(id = R.string.save), color = Color.White)
+        Text(text = stringResource(id = R.string.save))
     }
 }
 
@@ -126,7 +119,7 @@ fun SaveToGallery(localFile: File, mimeType: String?) {
         }
     }
 
-    Button(
+    OutlinedButton(
         onClick = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || writeStoragePermissionState.status.isGranted) {
                 saveImage()
@@ -134,12 +127,8 @@ fun SaveToGallery(localFile: File, mimeType: String?) {
                 writeStoragePermissionState.launchPermissionRequest()
             }
         },
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = Color.Gray
-            )
+        shape = ButtonBorder
     ) {
-        Text(text = stringResource(id = R.string.save), color = Color.White)
+        Text(text = stringResource(id = R.string.save))
     }
 }

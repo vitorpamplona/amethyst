@@ -11,9 +11,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -144,7 +144,7 @@ fun LoadingAnimation(
             ),
         progress = 1f,
         strokeWidth = 1.dp,
-        color = MaterialTheme.colors.background // Set background color
+        color = MaterialTheme.colorScheme.background // Set background color
     )
 }
 

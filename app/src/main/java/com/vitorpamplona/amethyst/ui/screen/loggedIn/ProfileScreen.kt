@@ -13,12 +13,12 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -41,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -99,7 +101,6 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.IdentityClaim
@@ -111,7 +112,6 @@ import com.vitorpamplona.quartz.events.TelegramIdentity
 import com.vitorpamplona.quartz.events.TwitterIdentity
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -299,7 +299,7 @@ private fun RenderSurface(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colors.background
+        color = MaterialTheme.colorScheme.background
     ) {
         var columnSize by remember { mutableStateOf(IntSize.Zero) }
         var tabsSize by remember { mutableStateOf(IntSize.Zero) }
@@ -389,10 +389,14 @@ private fun RenderScreen(
     Column {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
         ScrollableTabRow(
-            backgroundColor = MaterialTheme.colors.background,
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 8.dp,
-            modifier = tabRowModifier
+            modifier = tabRowModifier,
+            divider = {
+                Divider(thickness = DividerThickness)
+            }
         ) {
             CreateAndRenderTabs(baseUser, pagerState)
         }
@@ -630,12 +634,12 @@ private fun ProfileHeader(
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
-                        backgroundColor = MaterialTheme.colors.background
+                        containerColor = MaterialTheme.colorScheme.background
                     ),
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
-                    tint = MaterialTheme.colors.placeholderText,
+                    tint = MaterialTheme.colorScheme.placeholderText,
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = stringResource(R.string.more_options)
                 )
@@ -662,7 +666,7 @@ private fun ProfileHeader(
                     size = 100.dp,
                     modifier = Modifier.border(
                         3.dp,
-                        MaterialTheme.colors.background,
+                        MaterialTheme.colorScheme.background,
                         CircleShape
                     ),
                     onClick = {
@@ -874,7 +878,7 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    (user.bestDisplayName() ?: user.bestUsername())?.let {
+    user.toBestDisplayName().let {
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
             CreateTextWithEmoji(
                 text = it,
@@ -885,26 +889,11 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    if (user.bestDisplayName() != null) {
-        user.bestUsername()?.let {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp)
-            ) {
-                CreateTextWithEmoji(
-                    text = "@$it",
-                    tags = tags,
-                    color = MaterialTheme.colors.placeholderText
-                )
-            }
-        }
-    }
-
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = user.pubkeyDisplayHex(),
             modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-            color = MaterialTheme.colors.placeholderText
+            color = MaterialTheme.colorScheme.placeholderText
         )
 
         IconButton(
@@ -917,7 +906,7 @@ private fun DrawAdditionalInfo(
                 imageVector = Icons.Default.ContentCopy,
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.placeholderText
+                tint = MaterialTheme.colorScheme.placeholderText
             )
         }
 
@@ -945,7 +934,7 @@ private fun DrawAdditionalInfo(
                 painter = painterResource(R.drawable.ic_qrcode),
                 null,
                 modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colors.placeholderText
+                tint = MaterialTheme.colorScheme.placeholderText
             )
         }
     }
@@ -958,7 +947,7 @@ private fun DrawAdditionalInfo(
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                tint = MaterialTheme.colors.placeholderText,
+                tint = MaterialTheme.colorScheme.placeholderText,
                 imageVector = Icons.Default.Link,
                 contentDescription = stringResource(R.string.website),
                 modifier = Modifier.size(16.dp)
@@ -977,7 +966,7 @@ private fun DrawAdditionalInfo(
                         }
                     }
                 },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
             )
         }
@@ -1001,7 +990,7 @@ private fun DrawAdditionalInfo(
                 ClickableText(
                     text = AnnotatedString(identity.identity),
                     onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
                         .weight(1f)
@@ -1014,7 +1003,7 @@ private fun DrawAdditionalInfo(
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
         ) {
-            val defaultBackground = MaterialTheme.colors.background
+            val defaultBackground = MaterialTheme.colorScheme.background
             val background = remember {
                 mutableStateOf(defaultBackground)
             }
@@ -1050,7 +1039,7 @@ fun DisplayLNAddress(
             ClickableText(
                 text = AnnotatedString(lud16),
                 onClick = { zapExpanded = !zapExpanded },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
                     .weight(1f)
@@ -1338,7 +1327,7 @@ private fun WatchAndRenderBadgeImage(
         }
     }
 
-    val bgColor = MaterialTheme.colors.background
+    val bgColor = MaterialTheme.colorScheme.background
 
     if (image == null) {
         RobohashAsyncImage(
@@ -1648,16 +1637,16 @@ private fun MessageButton(user: User, accountViewModel: AccountViewModel, nav: (
             .width(50.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
-                accountViewModel.account.userProfile().createChatroom(withKey)
-                nav("Room/${withKey.hashCode()}")
+                accountViewModel.createChatRoomFor(user) {
+                    nav("Room/$it")
+                }
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.placeholderText
-            )
+        contentPadding = PaddingValues(0.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.placeholderText
+        )
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_dm),
@@ -1678,16 +1667,27 @@ private fun EditButton(account: Account) {
         NewUserMetadataView({ wantsToEdit = false }, account)
     }
 
+    InnerEditButton { wantsToEdit = true }
+}
+
+@Preview
+@Composable
+private fun InnerEditButtonPreview() {
+    InnerEditButton {}
+}
+
+@Composable
+private fun InnerEditButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier
             .padding(horizontal = 3.dp)
             .width(50.dp),
-        onClick = { wantsToEdit = true },
+        onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            )
+        contentPadding = PaddingValues(0.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
     ) {
         Icon(
             tint = Color.White,
@@ -1703,10 +1703,9 @@ fun UnfollowButton(onClick: () -> Unit) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.unfollow), color = Color.White)
@@ -1719,10 +1718,9 @@ fun FollowButton(text: Int = R.string.follow, onClick: () -> Unit) {
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
@@ -1735,10 +1733,9 @@ fun ShowUserButton(onClick: () -> Unit) {
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.unblock), color = Color.White)
@@ -1753,62 +1750,82 @@ fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () ->
     ) {
         val clipboardManager = LocalClipboardManager.current
 
-        DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }) {
-            Text(stringResource(R.string.copy_user_id))
-        }
+        DropdownMenuItem(
+            text = {
+                Text(stringResource(R.string.copy_user_id))
+            },
+            onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }
+        )
 
         if (accountViewModel.userProfile() != user) {
             Divider()
             if (accountViewModel.account.isHidden(user)) {
                 DropdownMenuItem(
+                    text = {
+                        Text(stringResource(R.string.unblock_user))
+                    },
                     onClick = {
                         accountViewModel.show(user)
                         onDismiss()
                     }
-                ) {
-                    Text(stringResource(R.string.unblock_user))
-                }
+                )
             } else {
                 DropdownMenuItem(
+                    text = {
+                        Text(stringResource(id = R.string.block_hide_user))
+                    },
                     onClick = {
                         accountViewModel.hide(user)
                         onDismiss()
                     }
-                ) {
-                    Text(stringResource(id = R.string.block_hide_user))
-                }
+                )
             }
             Divider()
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.SPAM)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.report_spam_scam))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_hateful_speech))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.report_impersonation))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.report_nudity_porn))
-            }
-            DropdownMenuItem(onClick = {
-                accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.report_illegal_behaviour))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(id = R.string.report_spam_scam))
+                },
+                onClick = {
+                    accountViewModel.report(user, ReportEvent.ReportType.SPAM)
+                    onDismiss()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.report_hateful_speech))
+                },
+                onClick = {
+                    accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
+                    onDismiss()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(id = R.string.report_impersonation))
+                },
+                onClick = {
+                    accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
+                    onDismiss()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.report_nudity_porn))
+                },
+                onClick = {
+                    accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
+                    onDismiss()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(id = R.string.report_illegal_behaviour))
+                },
+                onClick = {
+                    accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
+                    onDismiss()
+                }
+            )
         }
     }
 }

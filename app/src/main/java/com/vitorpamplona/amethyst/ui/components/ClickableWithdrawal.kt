@@ -5,9 +5,9 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -66,6 +66,6 @@ fun ClickableWithdrawal(withdrawalString: String) {
                 }
             }
         },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
     )
 }

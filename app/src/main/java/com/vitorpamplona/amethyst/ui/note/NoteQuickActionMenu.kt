@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -15,16 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonColors
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Card
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Block
@@ -35,6 +26,17 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -177,15 +180,15 @@ private fun RenderMainPopup(
     showReportDialog: MutableState<Boolean>
 ) {
     val context = LocalContext.current
-    val primaryLight = lightenColor(MaterialTheme.colors.primary, 0.1f)
+    val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
     val cardShape = RoundedCornerShape(5.dp)
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
 
-    val backgroundColor = if (MaterialTheme.colors.isLight) {
-        MaterialTheme.colors.primary
+    val backgroundColor = if (MaterialTheme.colorScheme.isLight) {
+        MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colors.secondaryButtonBackground
+        MaterialTheme.colorScheme.secondaryButtonBackground
     }
 
     val showToast = { stringResource: Int ->
@@ -205,7 +208,7 @@ private fun RenderMainPopup(
         Card(
             modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
             shape = cardShape,
-            backgroundColor = backgroundColor
+            colors = CardDefaults.cardColors(containerColor = backgroundColor)
         ) {
             Column(modifier = Modifier.width(IntrinsicSize.Min)) {
                 Row(modifier = Modifier.height(IntrinsicSize.Min)) {
@@ -413,7 +416,7 @@ private fun BlockAlertDialog(note: Note, accountViewModel: AccountViewModel, onD
         buttonIcon = Icons.Default.Block,
         buttonText = stringResource(R.string.quick_action_block_dialog_btn),
         buttonColors = ButtonDefaults.buttonColors(
-            backgroundColor = WarningColor,
+            containerColor = WarningColor,
             contentColor = Color.White
         ),
         onClickDoOnce = {
@@ -503,7 +506,7 @@ fun QuickActionAlertDialog(
         text = {
             Text(textContent)
         },
-        buttons = {
+        confirmButton = {
             Row(
                 modifier = Modifier
                     .padding(all = 8.dp)
@@ -513,7 +516,7 @@ fun QuickActionAlertDialog(
                 TextButton(onClick = onClickDontShowAgain) {
                     Text(stringResource(R.string.quick_action_dont_show_again_button))
                 }
-                Button(onClick = onClickDoOnce, colors = buttonColors) {
+                Button(onClick = onClickDoOnce, colors = buttonColors, contentPadding = PaddingValues(horizontal = 16.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {

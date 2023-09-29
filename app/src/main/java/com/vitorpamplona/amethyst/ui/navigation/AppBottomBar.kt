@@ -11,12 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.BottomNavigation
-import androidx.compose.material.BottomNavigationItem
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +41,7 @@ import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -104,12 +104,10 @@ private fun RenderBottomMenu(
 ) {
     Column(modifier = BottomTopHeight) {
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
-        BottomNavigation(
-            modifier = Modifier,
-            elevation = 0.dp,
-            backgroundColor = MaterialTheme.colors.background
+        NavigationBar(
+            tonalElevation = 0.dp
         ) {
             bottomNavigationItems.forEach { item ->
                 HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
@@ -133,8 +131,6 @@ private fun RowScope.HasNewItemsIcon(
         }
     }
 
-    val scope = rememberCoroutineScope()
-
     val size = remember {
         if ("Home" == route.base) 25.dp else 23.dp
     }
@@ -150,9 +146,7 @@ private fun RowScope.HasNewItemsIcon(
         hasNewItems = hasNewItems,
         navEntryState = navEntryState
     ) { selected ->
-        scope.launch {
-            nav(route, selected)
-        }
+        nav(route, selected)
     }
 }
 
@@ -210,7 +204,7 @@ private fun RowScope.NavigationIcon(
     hasNewItems: Boolean,
     onClick: (Boolean) -> Unit
 ) {
-    BottomNavigationItem(
+    NavigationBarItem(
         icon = {
             NotifiableIcon(
                 icon,
@@ -232,7 +226,7 @@ private fun NotifiableIcon(icon: Int, size: Dp, iconSize: Dp, selected: Boolean,
             painter = painterResource(id = icon),
             contentDescription = null,
             modifier = remember { Modifier.size(iconSize) },
-            tint = if (selected) MaterialTheme.colors.primary else Color.Unspecified
+            tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified
         )
 
         if (hasNewItems) {
@@ -250,7 +244,7 @@ private fun NotifiableIcon(icon: Int, size: Dp, iconSize: Dp, selected: Boolean,
                             .width(10.dp)
                             .height(10.dp)
                             .clip(shape = CircleShape)
-                    }.background(MaterialTheme.colors.primary),
+                    }.background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.TopEnd
                 ) {
                     Text(

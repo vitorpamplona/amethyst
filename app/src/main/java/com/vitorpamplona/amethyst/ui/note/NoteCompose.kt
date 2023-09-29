@@ -28,19 +28,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.darkColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.lightColors
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -624,7 +624,7 @@ fun LongCommunityHeader(
             Modifier.weight(1f)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val defaultBackground = MaterialTheme.colors.background
+                val defaultBackground = MaterialTheme.colorScheme.background
                 val background = remember {
                     mutableStateOf(defaultBackground)
                 }
@@ -783,9 +783,9 @@ private fun ShortCommunityActionOptions(
     nav: (String) -> Unit
 ) {
     Spacer(modifier = StdHorzSpacer)
-    LikeReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+    LikeReaction(baseNote = note, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
     Spacer(modifier = StdHorzSpacer)
-    ZapReaction(baseNote = note, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+    ZapReaction(baseNote = note, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
 
     WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
         if (!isFollowing) {
@@ -835,8 +835,8 @@ private fun CheckNewAndRenderNote(
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
-    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
@@ -1112,7 +1112,7 @@ fun DisplayZapSplits(noteEvent: EventInterface, accountViewModel: AccountViewMod
                     ClickableText(
                         text = AnnotatedString(it.lnAddressOrPubKeyHex),
                         onClick = { },
-                        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+                        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
                     )
                 } else {
                     UserPicture(userHex = it.lnAddressOrPubKeyHex, size = 25.dp, accountViewModel = accountViewModel, nav = nav)
@@ -1334,7 +1334,7 @@ fun RenderTextEvent(
         if (makeItShort && isAuthorTheLoggedUser) {
             Text(
                 text = eventContent,
-                color = MaterialTheme.colors.placeholderText,
+                color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -1378,7 +1378,7 @@ fun RenderPoll(
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
             text = eventContent,
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -1494,12 +1494,12 @@ fun RenderAppDefinition(
                                 modifier = Modifier
                                     .border(
                                         3.dp,
-                                        MaterialTheme.colors.background,
+                                        MaterialTheme.colorScheme.background,
                                         CircleShape
                                     )
                                     .clip(shape = CircleShape)
                                     .fillMaxSize()
-                                    .background(MaterialTheme.colors.background)
+                                    .background(MaterialTheme.colorScheme.background)
                                     .combinedClickable(
                                         onClick = { zoomImageDialogOpen = true },
                                         onLongClick = {
@@ -1543,12 +1543,12 @@ fun RenderAppDefinition(
                 val website = remember(it) { it.website }
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        LinkIcon(Size16Modifier, MaterialTheme.colors.placeholderText)
+                        LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
 
                         ClickableText(
                             text = AnnotatedString(website.removePrefix("https://")),
                             onClick = { website.let { runCatching { uri.openUri(it) } } },
-                            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
                         )
                     }
@@ -1559,7 +1559,7 @@ fun RenderAppDefinition(
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
                     ) {
                         val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
-                        val bgColor = MaterialTheme.colors.background
+                        val bgColor = MaterialTheme.colorScheme.background
                         val backgroundColor = remember {
                             mutableStateOf(bgColor)
                         }
@@ -1637,7 +1637,7 @@ private fun RenderPrivateMessage(
             if (makeItShort && isAuthorTheLoggedUser) {
                 Text(
                     text = eventContent!!,
-                    color = MaterialTheme.colors.placeholderText,
+                    color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -2034,7 +2034,7 @@ fun RenderPostApproval(
         note.replyTo?.forEach {
             NoteCompose(
                 it,
-                modifier = MaterialTheme.colors.replyModifier,
+                modifier = MaterialTheme.colorScheme.replyModifier,
                 unPackReply = false,
                 makeItShort = true,
                 isQuotedNote = true,
@@ -2239,10 +2239,9 @@ fun RemoveButton(onClick: () -> Unit) {
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.remove), color = Color.White)
@@ -2264,10 +2263,9 @@ fun AddButton(
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
+        ),
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
@@ -2311,7 +2309,7 @@ fun RenderPinListEvent(
         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
             pinsToShow.forEach { pin ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
-                    PinIcon(modifier = Size15Modifier, tint = MaterialTheme.colors.onBackground.copy(0.32f))
+                    PinIcon(modifier = Size15Modifier, tint = MaterialTheme.colorScheme.onBackground.copy(0.32f))
 
                     Spacer(modifier = Modifier.width(5.dp))
 
@@ -2434,7 +2432,7 @@ private fun RenderReport(
                 .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
-                    MaterialTheme.colors.subtleBorder,
+                    MaterialTheme.colorScheme.subtleBorder,
                     QuoteBorder
                 ),
             unPackReply = false,
@@ -2478,7 +2476,7 @@ private fun ReplyRow(
             showVideo = false,
             showBottomDiviser = false,
             sendToChannel = true,
-            modifier = MaterialTheme.colors.replyModifier.padding(10.dp),
+            modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
             accountViewModel = accountViewModel,
             nav = nav
         )
@@ -2511,7 +2509,7 @@ private fun ReplyNoteComposition(
     val replyBackgroundColor = remember {
         mutableStateOf(backgroundColor.value)
     }
-    val defaultReplyBackground = MaterialTheme.colors.replyBackground
+    val defaultReplyBackground = MaterialTheme.colorScheme.replyBackground
 
     LaunchedEffect(key1 = backgroundColor.value, key2 = defaultReplyBackground) {
         launch(Dispatchers.Default) {
@@ -2526,7 +2524,7 @@ private fun ReplyNoteComposition(
     NoteCompose(
         baseNote = replyingDirectlyTo,
         isQuotedNote = true,
-        modifier = MaterialTheme.colors.replyModifier,
+        modifier = MaterialTheme.colorScheme.replyModifier,
         unPackReply = false,
         makeItShort = true,
         parentBackgroundColor = replyBackgroundColor,
@@ -2613,7 +2611,7 @@ fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
             text = AnnotatedString(cityName),
             onClick = { nav("Geohash/$geohash") },
             style = LocalTextStyle.current.copy(
-                color = MaterialTheme.colors.primary.copy(
+                color = MaterialTheme.colorScheme.primary.copy(
                     alpha = 0.52f
                 ),
                 fontSize = Font14SP,
@@ -2644,7 +2642,7 @@ fun FirstUserInfoRow(
             }
         }
 
-        val textColor = if (isRepost) MaterialTheme.colors.grayText else Color.Unspecified
+        val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
@@ -2673,7 +2671,7 @@ private fun BoostedMark() {
     Text(
         stringResource(id = R.string.boosted),
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         modifier = HalfStartPadding
     )
@@ -2716,7 +2714,7 @@ fun TimeAgo(time: Long) {
 
     Text(
         text = timeStr,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1
     )
 }
@@ -2824,7 +2822,7 @@ private fun ChannelNotePicture(baseChannel: Channel, loadProfilePicture: Boolean
         it.channel.profilePicture()
     }.distinctUntilChanged().observeAsState()
 
-    val backgroundColor = MaterialTheme.colors.background
+    val backgroundColor = MaterialTheme.colorScheme.background
 
     val modifier = remember {
         Modifier
@@ -2868,7 +2866,7 @@ private fun RepostNoteAuthorPicture(
         }
 
         Box(Size18Modifier.align(Alignment.BottomStart).padding(1.dp)) {
-            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colors.placeholderText)
+            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colorScheme.placeholderText)
         }
 
         Box(Size35Modifier.align(Alignment.BottomEnd)) {
@@ -2971,7 +2969,7 @@ private fun LoadAndDisplayPost(postAddress: ATag, accountViewModel: AccountViewM
                             nav(it)
                         }
                     },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
                 )
             }
         }
@@ -3073,7 +3071,7 @@ private fun DisplayTagList(firstTag: String, nav: (String) -> Unit) {
         text = displayTag,
         onClick = { nav(route) },
         style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colors.primary.copy(
+            color = MaterialTheme.colorScheme.primary.copy(
                 alpha = 0.52f
             )
         ),
@@ -3094,7 +3092,7 @@ private fun DisplayCommunity(note: Note, nav: (String) -> Unit) {
         text = displayTag,
         onClick = { nav(route) },
         style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colors.primary.copy(
+            color = MaterialTheme.colorScheme.primary.copy(
                 alpha = 0.52f
             )
         ),
@@ -3136,7 +3134,7 @@ fun DisplayUncitedHashtags(
                     text = remember { AnnotatedString("#$hashtag ") },
                     onClick = { nav("Hashtag/$hashtag") },
                     style = LocalTextStyle.current.copy(
-                        color = MaterialTheme.colors.primary.copy(
+                        color = MaterialTheme.colorScheme.primary.copy(
                             alpha = 0.52f
                         )
                     )
@@ -3156,7 +3154,7 @@ fun DisplayPoW(
 
     Text(
         powStr,
-        color = MaterialTheme.colors.lessImportantLink,
+        color = MaterialTheme.colorScheme.lessImportantLink,
         fontSize = Font14SP,
         fontWeight = FontWeight.Bold,
         maxLines = 1
@@ -3184,7 +3182,7 @@ fun DisplayReward(
                 text = AnnotatedString("#bounty"),
                 onClick = { nav("Hashtag/bounty") },
                 style = LocalTextStyle.current.copy(
-                    color = MaterialTheme.colors.primary.copy(
+                    color = MaterialTheme.colorScheme.primary.copy(
                         alpha = 0.52f
                     )
                 )
@@ -3240,19 +3238,19 @@ private fun RenderPledgeAmount(
     if (hasPledge) {
         ZappedIcon(modifier = Size20Modifier)
     } else {
-        ZapIcon(modifier = Size20Modifier, MaterialTheme.colors.placeholderText)
+        ZapIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText)
     }
 
     Text(
         text = reward,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1
     )
 }
 
 @Composable
 fun BadgeDisplay(baseNote: Note) {
-    val background = MaterialTheme.colors.background
+    val background = MaterialTheme.colorScheme.background
     val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
 
     val image = remember { badgeData.thumb()?.ifBlank { null } ?: badgeData.image() }
@@ -3268,9 +3266,9 @@ fun BadgeDisplay(baseNote: Note) {
                 val backgroundColor = it.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
                 val colorFromImage = Color(backgroundColor)
                 val textBackground = if (colorFromImage.luminance() > 0.5) {
-                    lightColors().onBackground
+                    lightColorScheme().onBackground
                 } else {
-                    darkColors().onBackground
+                    darkColorScheme().onBackground
                 }
 
                 launch(Dispatchers.Main) {
@@ -3286,7 +3284,7 @@ fun BadgeDisplay(baseNote: Note) {
             .clip(shape = CutCornerShape(20, 20, 20, 20))
             .border(
                 5.dp,
-                MaterialTheme.colors.mediumImportanceLink,
+                MaterialTheme.colorScheme.mediumImportanceLink,
                 CutCornerShape(20)
             )
             .background(backgroundFromImage.first)
@@ -3329,7 +3327,7 @@ private fun RenderBadge(
         name?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.body1,
+                style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3341,7 +3339,7 @@ private fun RenderBadge(
         description?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.caption,
+                style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3512,7 +3510,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
                     it.first.role?.let {
                         Text(
                             text = it.capitalize(Locale.ROOT),
-                            color = MaterialTheme.colors.placeholderText,
+                            color = MaterialTheme.colorScheme.placeholderText,
                             maxLines = 1
                         )
                     }
@@ -3553,7 +3551,7 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
     val waveform = remember { noteEvent.wavefrom()?.toImmutableList()?.ifEmpty { null } }
     val content = remember { noteEvent.content().ifBlank { null } }
 
-    val defaultBackground = MaterialTheme.colors.background
+    val defaultBackground = MaterialTheme.colorScheme.background
     val background = remember { mutableStateOf(defaultBackground) }
     val tags = remember(noteEvent) { noteEvent?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
@@ -3708,7 +3706,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
             it.first.role?.let {
                 Text(
                     text = it.capitalize(Locale.ROOT),
-                    color = MaterialTheme.colors.placeholderText,
+                    color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1
                 )
             }
@@ -3740,7 +3738,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                 ) {
                     Text(
                         text = stringResource(id = R.string.live_stream_is_offline),
-                        color = MaterialTheme.colors.onBackground,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -3754,7 +3752,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
             ) {
                 Text(
                     text = stringResource(id = R.string.live_stream_has_ended),
-                    color = MaterialTheme.colors.onBackground,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -3774,7 +3772,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.subtleBorder,
+                MaterialTheme.colorScheme.subtleBorder,
                 QuoteBorder
             )
     ) {
@@ -3804,7 +3802,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             title?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.body1,
+                    style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 10.dp, end = 10.dp, top = 10.dp)
@@ -3814,7 +3812,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
             summary?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.caption,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
@@ -3840,7 +3838,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.subtleBorder,
+                MaterialTheme.colorScheme.subtleBorder,
                 QuoteBorder
             )
     ) {
@@ -3863,7 +3861,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                 title?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.body1,
+                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
@@ -3883,7 +3881,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                     Text(
                         text = priceTag,
                         maxLines = 1,
-                        color = MaterialTheme.colors.primary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = remember {
                             Modifier
@@ -3900,7 +3898,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                     summary?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.caption,
+                            style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
                                 .weight(1f),
                             color = Color.Gray,
@@ -3912,7 +3910,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                     location?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.caption,
+                            style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

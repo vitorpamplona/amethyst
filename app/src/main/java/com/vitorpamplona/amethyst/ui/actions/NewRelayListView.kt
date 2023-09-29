@@ -14,16 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -34,6 +24,18 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -83,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.theme.warningColor
 import kotlinx.coroutines.launch
 import java.lang.Math.round
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, relayToAdd: String = "", nav: (String) -> Unit) {
     val postViewModel: NewRelayListViewModel = viewModel()
@@ -137,8 +140,9 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                             onClose()
                         })
                     },
-                    backgroundColor = MaterialTheme.colors.surface,
-                    elevation = 0.dp
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             }
         ) { pad ->
@@ -212,7 +216,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = Font14SP,
                         modifier = Modifier.weight(1.2f),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -222,7 +226,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = Font14SP,
                         modifier = Modifier.weight(1.2f),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -232,7 +236,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = Font14SP,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(5.dp))
@@ -242,7 +246,7 @@ fun ServerConfigHeader() {
                         maxLines = 1,
                         fontSize = Font14SP,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
 
                     Spacer(modifier = Modifier.size(2.dp))
@@ -454,9 +458,9 @@ private fun RenderStatusRow(
                 }
             ),
         tint = if (item.read) {
-            MaterialTheme.colors.allGoodColor
+            MaterialTheme.colorScheme.allGoodColor
         } else {
-            MaterialTheme.colors.onSurface.copy(
+            MaterialTheme.colorScheme.onSurface.copy(
                 alpha = 0.32f
             )
         }
@@ -467,7 +471,7 @@ private fun RenderStatusRow(
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
-        color = MaterialTheme.colors.placeholderText
+        color = MaterialTheme.colorScheme.placeholderText
     )
 
     Icon(
@@ -490,9 +494,9 @@ private fun RenderStatusRow(
                 }
             ),
         tint = if (item.write) {
-            MaterialTheme.colors.allGoodColor
+            MaterialTheme.colorScheme.allGoodColor
         } else {
-            MaterialTheme.colors.onSurface.copy(
+            MaterialTheme.colorScheme.onSurface.copy(
                 alpha = 0.32f
             )
         }
@@ -503,7 +507,7 @@ private fun RenderStatusRow(
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
-        color = MaterialTheme.colors.placeholderText
+        color = MaterialTheme.colorScheme.placeholderText
     )
 
     Icon(
@@ -525,7 +529,7 @@ private fun RenderStatusRow(
                     }
                 }
             ),
-        tint = if (item.errorCount > 0) MaterialTheme.colors.warningColor else MaterialTheme.colors.allGoodColor
+        tint = if (item.errorCount > 0) MaterialTheme.colorScheme.warningColor else MaterialTheme.colorScheme.allGoodColor
     )
 
     Text(
@@ -533,7 +537,7 @@ private fun RenderStatusRow(
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
-        color = MaterialTheme.colors.placeholderText
+        color = MaterialTheme.colorScheme.placeholderText
     )
 
     Icon(
@@ -555,7 +559,7 @@ private fun RenderStatusRow(
                     }
                 }
             ),
-        tint = if (item.spamCount > 0) MaterialTheme.colors.warningColor else MaterialTheme.colors.allGoodColor
+        tint = if (item.spamCount > 0) MaterialTheme.colorScheme.warningColor else MaterialTheme.colorScheme.allGoodColor
     )
 
     Text(
@@ -563,7 +567,7 @@ private fun RenderStatusRow(
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
-        color = MaterialTheme.colors.placeholderText
+        color = MaterialTheme.colorScheme.placeholderText
     )
 }
 
@@ -584,7 +588,7 @@ private fun RenderActiveToggles(
         text = stringResource(id = R.string.active_for),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         modifier = Modifier.padding(start = 2.dp, end = 5.dp),
         fontSize = 14.sp
     )
@@ -614,9 +618,9 @@ private fun RenderActiveToggles(
                     }
                 ),
             tint = if (item.feedTypes.contains(FeedType.FOLLOWS)) {
-                MaterialTheme.colors.allGoodColor
+                MaterialTheme.colorScheme.allGoodColor
             } else {
-                MaterialTheme.colors.onSurface.copy(
+                MaterialTheme.colorScheme.onSurface.copy(
                     alpha = 0.32f
                 )
             }
@@ -647,9 +651,9 @@ private fun RenderActiveToggles(
                     }
                 ),
             tint = if (item.feedTypes.contains(FeedType.PRIVATE_DMS)) {
-                MaterialTheme.colors.allGoodColor
+                MaterialTheme.colorScheme.allGoodColor
             } else {
-                MaterialTheme.colors.onSurface.copy(
+                MaterialTheme.colorScheme.onSurface.copy(
                     alpha = 0.32f
                 )
             }
@@ -680,9 +684,9 @@ private fun RenderActiveToggles(
                     }
                 ),
             tint = if (item.feedTypes.contains(FeedType.PUBLIC_CHATS)) {
-                MaterialTheme.colors.allGoodColor
+                MaterialTheme.colorScheme.allGoodColor
             } else {
-                MaterialTheme.colors.onSurface.copy(
+                MaterialTheme.colorScheme.onSurface.copy(
                     alpha = 0.32f
                 )
             }
@@ -713,9 +717,9 @@ private fun RenderActiveToggles(
                     }
                 ),
             tint = if (item.feedTypes.contains(FeedType.GLOBAL)) {
-                MaterialTheme.colors.allGoodColor
+                MaterialTheme.colorScheme.allGoodColor
             } else {
-                MaterialTheme.colors.onSurface.copy(
+                MaterialTheme.colorScheme.onSurface.copy(
                     alpha = 0.32f
                 )
             }
@@ -747,9 +751,9 @@ private fun RenderActiveToggles(
                     }
                 ),
             tint = if (item.feedTypes.contains(FeedType.SEARCH)) {
-                MaterialTheme.colors.allGoodColor
+                MaterialTheme.colorScheme.allGoodColor
             } else {
-                MaterialTheme.colors.onSurface.copy(
+                MaterialTheme.colorScheme.onSurface.copy(
                     alpha = 0.32f
                 )
             }
@@ -780,7 +784,7 @@ private fun FirstLine(
                     modifier = Modifier
                         .padding(start = 5.dp, top = 1.dp)
                         .size(14.dp),
-                    tint = MaterialTheme.colors.allGoodColor
+                    tint = MaterialTheme.colorScheme.allGoodColor
                 )
             }
         }
@@ -816,7 +820,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
             placeholder = {
                 Text(
                     text = "server.com",
-                    color = MaterialTheme.colors.placeholderText,
+                    color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1
                 )
             },
@@ -830,7 +834,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                 modifier = Modifier
                     .size(Size35dp)
                     .padding(horizontal = 5.dp),
-                tint = if (read) MaterialTheme.colors.allGoodColor else MaterialTheme.colors.placeholderText
+                tint = if (read) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.placeholderText
             )
         }
 
@@ -841,7 +845,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
                 modifier = Modifier
                     .size(Size35dp)
                     .padding(horizontal = 5.dp),
-                tint = if (write) MaterialTheme.colors.allGoodColor else MaterialTheme.colors.placeholderText
+                tint = if (write) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.placeholderText
             )
         }
 
@@ -859,7 +863,7 @@ fun EditableServerConfig(relayToAdd: String, onNewRelay: (RelaySetupInfo) -> Uni
             shape = ButtonBorder,
             colors = ButtonDefaults
                 .buttonColors(
-                    backgroundColor = if (url.isNotBlank()) MaterialTheme.colors.primary else MaterialTheme.colors.placeholderText
+                    containerColor = if (url.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.placeholderText
                 )
         ) {
             Text(text = stringResource(id = R.string.add), color = Color.White)

@@ -13,15 +13,15 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Checkbox
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.ScrollableTabRow
-import androidx.compose.material.Tab
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.StringFeedView
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -145,10 +146,14 @@ fun HiddenUsersScreen(
             }
 
             ScrollableTabRow(
-                backgroundColor = MaterialTheme.colors.background,
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
                 edgePadding = 8.dp,
                 selectedTabIndex = pagerState.currentPage,
-                modifier = TabRowHeight
+                modifier = TabRowHeight,
+                divider = {
+                    Divider(thickness = DividerThickness)
+                }
             ) {
                 Tab(
                     selected = pagerState.currentPage == 0,
@@ -222,7 +227,7 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
             placeholder = {
                 Text(
                     text = stringResource(R.string.hide_new_word_label),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             keyboardOptions = KeyboardOptions.Default.copy(
@@ -366,10 +371,9 @@ fun HideWordButton(onClick: () -> Unit) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.block_only), color = Color.White)
@@ -382,10 +386,9 @@ fun ShowWordButton(text: Int = R.string.unblock, onClick: () -> Unit) {
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)

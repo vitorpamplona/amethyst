@@ -1,9 +1,9 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,13 +30,13 @@ fun NewPollRecipientsField(pollViewModel: NewPostViewModel, account: Account) {
         label = {
             Text(
                 text = stringResource(R.string.poll_zap_recipients),
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         },
         placeholder = {
             Text(
                 text = stringResource(R.string.poll_zap_recipients),
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         }
 

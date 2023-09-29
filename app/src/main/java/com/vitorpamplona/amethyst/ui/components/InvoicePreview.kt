@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +74,7 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
             .clip(shape = QuoteBorder)
-            .border(1.dp, MaterialTheme.colors.subtleBorder, QuoteBorder)
+            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
@@ -136,7 +136,7 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
                 },
                 shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.primary
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(text = stringResource(R.string.pay), color = Color.White, fontSize = 20.sp)

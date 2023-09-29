@@ -3,18 +3,23 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.*
+import androidx.compose.material3.*
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,13 +31,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -65,7 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     accountViewModel: AccountViewModel,
@@ -73,21 +79,32 @@ fun MainScreen(
     themeViewModel: ThemeViewModel
 ) {
     val scope = rememberCoroutineScope()
-    val scaffoldState = rememberScaffoldState(rememberDrawerState(DrawerValue.Closed))
+    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val sheetState = rememberModalBottomSheetState(
-        initialValue = ModalBottomSheetValue.Hidden,
-        confirmValueChange = { it != ModalBottomSheetValue.HalfExpanded },
-        skipHalfExpanded = true
+        skipPartiallyExpanded = true,
+        confirmValueChange = { it != SheetValue.PartiallyExpanded }
     )
+
+    val openSheetFunction = remember {
+        {
+            scope.launch {
+                openBottomSheet = true
+                sheetState.show()
+            }
+            Unit
+        }
+    }
 
     val navController = rememberNavController()
     val navState = navController.currentBackStackEntryAsState()
 
     val orientation = LocalConfiguration.current.orientation
-    val currentDrawerState = scaffoldState.drawerState.currentValue
+    val currentDrawerState = drawerState.currentValue
     LaunchedEffect(key1 = orientation) {
         if (orientation == Configuration.ORIENTATION_LANDSCAPE && currentDrawerState == DrawerValue.Closed) {
-            scaffoldState.drawerState.close()
+            drawerState.close()
         }
     }
 
@@ -167,42 +184,50 @@ fun MainScreen(
 
     val navBottomRow = remember(navController) {
         { route: Route, selected: Boolean ->
-            if (!selected) {
-                navController.navigate(route.base) {
-                    popUpTo(Route.Home.route)
-                    launchSingleTop = true
-                }
-            } else {
-                // deals with scroll to top here to avoid passing as parameter
-                // and having to deal with all recompositions with scroll to top true
-                when (route.base) {
-                    Route.Home.base -> {
-                        homeFeedViewModel.sendToTop()
-                        repliesFeedViewModel.sendToTop()
+            scope.launch {
+                if (!selected) {
+                    navController.navigate(route.base) {
+                        popUpTo(Route.Home.route)
+                        launchSingleTop = true
                     }
-                    Route.Video.base -> {
-                        videoFeedViewModel.sendToTop()
-                    }
-                    Route.Discover.base -> {
-                        discoveryLiveFeedViewModel.sendToTop()
-                        discoveryCommunityFeedViewModel.sendToTop()
-                        discoveryChatFeedViewModel.sendToTop()
-                    }
-                    Route.Notification.base -> {
-                        notifFeedViewModel.invalidateDataAndSendToTop()
-                    }
-                }
+                } else {
+                    // deals with scroll to top here to avoid passing as parameter
+                    // and having to deal with all recompositions with scroll to top true
+                    when (route.base) {
+                        Route.Home.base -> {
+                            homeFeedViewModel.sendToTop()
+                            repliesFeedViewModel.sendToTop()
+                        }
 
-                navController.navigate(route.route) {
-                    popUpTo(route.route)
-                    launchSingleTop = true
+                        Route.Video.base -> {
+                            videoFeedViewModel.sendToTop()
+                        }
+
+                        Route.Discover.base -> {
+                            discoveryLiveFeedViewModel.sendToTop()
+                            discoveryCommunityFeedViewModel.sendToTop()
+                            discoveryChatFeedViewModel.sendToTop()
+                        }
+
+                        Route.Notification.base -> {
+                            notifFeedViewModel.invalidateDataAndSendToTop()
+                        }
+                    }
+
+                    navController.navigate(route.route) {
+                        popUpTo(route.route)
+                        launchSingleTop = true
+                    }
                 }
             }
+
+            Unit
         }
     }
 
     val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
     val bottomBarOffsetHeightPx = remember { mutableStateOf(0f) }
+    val shouldShow = remember { mutableStateOf(true) }
 
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -221,107 +246,112 @@ fun MainScreen(
                     }
                 }
 
+                shouldShow.value = abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
+
                 return Offset.Zero
             }
         }
     }
 
-    val shouldShow = remember {
-        derivedStateOf {
-            abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
-        }
-    }
-
     WatchNavStateToUpdateBarVisibility(navState, bottomBarOffsetHeightPx)
 
-    ModalBottomSheetLayout(
-        sheetState = sheetState,
-        sheetContent = {
-            AccountSwitchBottomSheet(accountViewModel = accountViewModel, accountStateViewModel = accountStateViewModel)
-        }
-    ) {
-        Scaffold(
-            modifier = Modifier
-                .background(MaterialTheme.colors.primaryVariant)
-                .statusBarsPadding()
-                .nestedScroll(nestedScrollConnection),
-            bottomBar = {
-                AnimatedContent(
-                    targetState = shouldShow.value,
-                    transitionSpec = {
-                        slideInVertically { height -> height } togetherWith
-                            slideOutVertically { height -> height }
-                    }
-                ) { isVisible ->
-                    if (isVisible) {
-                        AppBottomBar(accountViewModel, navState, navBottomRow)
-                    }
-                }
-            },
-            topBar = {
-                AnimatedContent(
-                    targetState = shouldShow.value,
-                    transitionSpec = {
-                        slideInVertically { height -> 0 } togetherWith
-                            slideOutVertically { height -> 0 }
-                    }
-                ) { isVisible ->
-                    if (isVisible) {
-                        AppTopBar(
-                            followLists,
-                            navState,
-                            scaffoldState,
-                            accountViewModel,
-                            nav = nav,
-                            navPopBack
-                        )
-                    }
-                }
-            },
-            drawerContent = {
-                DrawerContent(nav, scaffoldState, sheetState, accountViewModel)
-                BackHandler(enabled = scaffoldState.drawerState.isOpen) {
-                    scope.launch { scaffoldState.drawerState.close() }
-                }
-            },
-            floatingActionButton = {
-                Crossfade(
-                    targetState = shouldShow.value,
-                    animationSpec = tween(durationMillis = 100)
-                ) { state ->
-                    if (state) {
-                        FloatingButtons(
-                            navState,
-                            accountViewModel,
-                            accountStateViewModel,
-                            nav,
-                            navBottomRow
-                        )
-                    }
-                }
-            },
-            scaffoldState = scaffoldState
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(bottom = it.calculateBottomPadding())
-            ) {
-                AppNavigation(
-                    homeFeedViewModel = homeFeedViewModel,
-                    repliesFeedViewModel = repliesFeedViewModel,
-                    knownFeedViewModel = knownFeedViewModel,
-                    newFeedViewModel = newFeedViewModel,
-                    videoFeedViewModel = videoFeedViewModel,
-                    discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-                    discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-                    discoveryChatFeedViewModel = discoveryChatFeedViewModel,
-                    notifFeedViewModel = notifFeedViewModel,
-                    userReactionsStatsModel = userReactionsStatsModel,
-                    navController = navController,
-                    accountViewModel = accountViewModel,
-                    themeViewModel = themeViewModel
-                )
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            DrawerContent(nav, drawerState, openSheetFunction, accountViewModel)
+            BackHandler(enabled = drawerState.isOpen) {
+                scope.launch { drawerState.close() }
             }
+        },
+        content = {
+            Scaffold(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.secondary)
+                    .statusBarsPadding()
+                    .nestedScroll(nestedScrollConnection),
+                bottomBar = {
+                    AnimatedContent(
+                        targetState = shouldShow.value,
+                        transitionSpec = {
+                            slideInVertically { height -> height } togetherWith
+                                slideOutVertically { height -> height }
+                        }
+                    ) { isVisible ->
+                        if (isVisible) {
+                            AppBottomBar(accountViewModel, navState, navBottomRow)
+                        }
+                    }
+                },
+                topBar = {
+                    AnimatedContent(
+                        targetState = shouldShow.value,
+                        transitionSpec = {
+                            slideInVertically { height -> 0 } togetherWith
+                                slideOutVertically { height -> 0 }
+                        }
+                    ) { isVisible ->
+                        if (isVisible) {
+                            AppTopBar(
+                                followLists,
+                                navState,
+                                drawerState,
+                                accountViewModel,
+                                nav = nav,
+                                navPopBack
+                            )
+                        }
+                    }
+                },
+                floatingActionButton = {
+                    FloatingButtons(
+                        navState,
+                        accountViewModel,
+                        accountStateViewModel,
+                        nav,
+                        navBottomRow
+                    )
+                }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(
+                            top = it.calculateTopPadding(),
+                            bottom = it.calculateBottomPadding()
+                        )
+                ) {
+                    AppNavigation(
+                        homeFeedViewModel = homeFeedViewModel,
+                        repliesFeedViewModel = repliesFeedViewModel,
+                        knownFeedViewModel = knownFeedViewModel,
+                        newFeedViewModel = newFeedViewModel,
+                        videoFeedViewModel = videoFeedViewModel,
+                        discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                        discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                        discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+                        notifFeedViewModel = notifFeedViewModel,
+                        userReactionsStatsModel = userReactionsStatsModel,
+                        navController = navController,
+                        accountViewModel = accountViewModel,
+                        themeViewModel = themeViewModel
+                    )
+                }
+            }
+        }
+    )
+
+    // Sheet content
+    if (openBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        openBottomSheet = false
+                    }
+                }
+            },
+            sheetState = sheetState
+        ) {
+            AccountSwitchBottomSheet(accountViewModel = accountViewModel, accountStateViewModel = accountStateViewModel)
         }
     }
 }
@@ -356,21 +386,18 @@ fun FloatingButtons(
     navScrollToTop: (Route, Boolean) -> Unit
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsState()
-    val context = LocalContext.current
 
-    Crossfade(targetState = accountState, animationSpec = tween(durationMillis = 100)) { state ->
-        when (state) {
-            is AccountState.LoggedInViewOnly -> {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
-                }
-            }
-            is AccountState.LoggedOff -> {
-                // Does nothing.
-            }
-            is AccountState.LoggedIn -> {
+    when (accountState) {
+        is AccountState.LoggedInViewOnly -> {
+            if (accountViewModel.loggedInWithExternalSigner()) {
                 WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
             }
+        }
+        is AccountState.LoggedOff -> {
+            // Does nothing.
+        }
+        is AccountState.LoggedIn -> {
+            WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
         }
     }
 }

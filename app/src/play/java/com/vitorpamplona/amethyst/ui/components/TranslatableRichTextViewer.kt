@@ -4,15 +4,15 @@ import android.content.res.Resources
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -139,7 +139,7 @@ private fun TranslationMessage(
             .padding(top = 5.dp)
     ) {
         val clickableTextStyle =
-            SpanStyle(color = MaterialTheme.colors.lessImportantLink)
+            SpanStyle(color = MaterialTheme.colorScheme.lessImportantLink)
 
         val annotatedTranslationString = buildAnnotatedString {
             withStyle(clickableTextStyle) {
@@ -165,7 +165,7 @@ private fun TranslationMessage(
         ClickableText(
             text = annotatedTranslationString,
             style = LocalTextStyle.current.copy(
-                color = MaterialTheme.colors.onSurface.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(
                     alpha = 0.32f
                 )
             ),
@@ -187,113 +187,125 @@ private fun TranslationMessage(
             expanded = langSettingsPopupExpanded,
             onDismissRequest = { langSettingsPopupExpanded = false }
         ) {
-            DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.dontTranslateFrom(source)
-                    langSettingsPopupExpanded = false
-                }
-            }) {
-                if (source in accountViewModel.account.dontTranslateFrom) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Spacer(modifier = Modifier.size(24.dp))
-                }
+            DropdownMenuItem(
+                text = {
+                    if (source in accountViewModel.account.dontTranslateFrom) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.size(24.dp))
+                    }
 
-                Spacer(modifier = Modifier.size(10.dp))
+                    Spacer(modifier = Modifier.size(10.dp))
 
-                Text(
-                    stringResource(
-                        R.string.translations_never_translate_from_lang,
-                        Locale(source).displayName
+                    Text(
+                        stringResource(
+                            R.string.translations_never_translate_from_lang,
+                            Locale(source).displayName
+                        )
                     )
-                )
-            }
+                },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.dontTranslateFrom(source)
+                        langSettingsPopupExpanded = false
+                    }
+                }
+            )
             Divider()
-            DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.prefer(source, target, source)
-                    langSettingsPopupExpanded = false
-                }
-            }) {
-                if (accountViewModel.account.preferenceBetween(source, target) == source) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Spacer(modifier = Modifier.size(24.dp))
-                }
+            DropdownMenuItem(
+                text = {
+                    if (accountViewModel.account.preferenceBetween(source, target) == source) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.size(24.dp))
+                    }
 
-                Spacer(modifier = Modifier.size(10.dp))
+                    Spacer(modifier = Modifier.size(10.dp))
 
-                Text(
-                    stringResource(
-                        R.string.translations_show_in_lang_first,
-                        Locale(source).displayName
+                    Text(
+                        stringResource(
+                            R.string.translations_show_in_lang_first,
+                            Locale(source).displayName
+                        )
                     )
-                )
-            }
-            DropdownMenuItem(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.prefer(source, target, target)
-                    langSettingsPopupExpanded = false
+                },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.prefer(source, target, source)
+                        langSettingsPopupExpanded = false
+                    }
                 }
-            }) {
-                if (accountViewModel.account.preferenceBetween(source, target) == target) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
+            )
+            DropdownMenuItem(
+                text = {
+                    if (accountViewModel.account.preferenceBetween(source, target) == target) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.size(24.dp))
+                    }
+
+                    Spacer(modifier = Modifier.size(10.dp))
+
+                    Text(
+                        stringResource(
+                            R.string.translations_show_in_lang_first,
+                            Locale(target).displayName
+                        )
                     )
-                } else {
-                    Spacer(modifier = Modifier.size(24.dp))
+                },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.prefer(source, target, target)
+                        langSettingsPopupExpanded = false
+                    }
                 }
-
-                Spacer(modifier = Modifier.size(10.dp))
-
-                Text(
-                    stringResource(
-                        R.string.translations_show_in_lang_first,
-                        Locale(target).displayName
-                    )
-                )
-            }
+            )
             Divider()
 
             val languageList =
                 ConfigurationCompat.getLocales(Resources.getSystem().configuration)
             for (i in 0 until languageList.size()) {
                 languageList.get(i)?.let { lang ->
-                    DropdownMenuItem(onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.translateTo(lang)
-                            langSettingsPopupExpanded = false
-                        }
-                    }) {
-                        if (lang.language in accountViewModel.account.translateTo) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
+                    DropdownMenuItem(
+                        text = {
+                            if (lang.language in accountViewModel.account.translateTo) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.size(24.dp))
+                            }
 
-                        Spacer(modifier = Modifier.size(10.dp))
+                            Spacer(modifier = Modifier.size(10.dp))
 
-                        Text(
-                            stringResource(
-                                R.string.translations_always_translate_to_lang,
-                                lang.displayName
+                            Text(
+                                stringResource(
+                                    R.string.translations_always_translate_to_lang,
+                                    lang.displayName
+                                )
                             )
-                        )
-                    }
+                        },
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                accountViewModel.translateTo(lang)
+                                langSettingsPopupExpanded = false
+                            }
+                        }
+                    )
                 }
             }
         }

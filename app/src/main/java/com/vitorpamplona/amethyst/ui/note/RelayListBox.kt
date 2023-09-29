@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -88,7 +88,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
                 imageVector = Icons.Default.ExpandMore,
                 null,
                 modifier = ShowMoreRelaysButtonIconModifier,
-                tint = MaterialTheme.colors.placeholderText
+                tint = MaterialTheme.colorScheme.placeholderText
             )
         }
     }

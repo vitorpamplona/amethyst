@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -275,8 +275,8 @@ private fun CheckNewAndRenderChannelCard(
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
-    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
@@ -614,9 +614,9 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 )
 
                 Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -624,7 +624,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 Row() {
                     Text(
                         text = it,
-                        color = MaterialTheme.colors.placeholderText,
+                        color = MaterialTheme.colorScheme.placeholderText,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         fontSize = 14.sp
@@ -728,9 +728,9 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 )
 
                 Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -738,7 +738,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 Row() {
                     Text(
                         text = it,
-                        color = MaterialTheme.colors.placeholderText,
+                        color = MaterialTheme.colorScheme.placeholderText,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         fontSize = 14.sp
@@ -768,7 +768,7 @@ fun Gallery(users: List<User>, accountViewModel: AccountViewModel) {
             Text(
                 text = remember(users) { " + " + (showCount(users.size - 6)).toString() },
                 fontSize = 13.sp,
-                color = MaterialTheme.colors.onSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

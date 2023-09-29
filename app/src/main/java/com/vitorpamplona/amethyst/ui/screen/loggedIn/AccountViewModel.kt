@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -736,6 +737,14 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
             } else {
                 onIsNew(false)
             }
+        }
+    }
+
+    fun createChatRoomFor(user: User, then: (Int) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
+            account.userProfile().createChatroom(withKey)
+            then(withKey.hashCode())
         }
     }
 

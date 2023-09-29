@@ -3,10 +3,10 @@ package com.vitorpamplona.amethyst.ui.note
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -128,7 +128,7 @@ private fun OptionNote(
             val color = if (poolOption.consensusThreadhold) {
                 Color.Green.copy(alpha = 0.32f)
             } else {
-                MaterialTheme.colors.mediumImportanceLink
+                MaterialTheme.colorScheme.mediumImportanceLink
             }
 
             ZapVote(
@@ -252,7 +252,7 @@ private fun RenderOptionBeforeVote(
             .clip(shape = QuoteBorder)
             .border(
                 2.dp,
-                MaterialTheme.colors.primary,
+                MaterialTheme.colorScheme.primary,
                 QuoteBorder
             )
     ) {
@@ -458,7 +458,7 @@ fun ZapVote(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colors.placeholderText
+                    tint = MaterialTheme.colorScheme.placeholderText
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
@@ -479,7 +479,7 @@ fun ZapVote(
         Text(
             text = amountStr,
             fontSize = Font14SP,
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colorScheme.placeholderText,
             modifier = modifier
         )
     }
@@ -543,7 +543,7 @@ fun FilteredZapAmountChoicePopup(
                     shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                 ) {
                     Text(

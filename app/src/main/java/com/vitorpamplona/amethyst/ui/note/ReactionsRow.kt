@@ -29,16 +29,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LinearProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProgressIndicatorDefaults
-import androidx.compose.material.Text
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -172,7 +172,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ReplyReactionWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+                    ReplyReactionWithDialog(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Reply: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -186,7 +186,7 @@ private fun InnerReactionRow(
                 Row(verticalAlignment = CenterVertically) {
                     BoostWithDialog(
                         baseNote,
-                        MaterialTheme.colors.placeholderText,
+                        MaterialTheme.colorScheme.placeholderText,
                         accountViewModel,
                         nav
                     )
@@ -201,7 +201,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+                    LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Likes: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -213,7 +213,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
+                    ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -227,8 +227,8 @@ private fun InnerReactionRow(
                 Row(verticalAlignment = CenterVertically) {
                     ViewCountReaction(
                         note = baseNote,
-                        grayTint = MaterialTheme.colors.placeholderText,
-                        viewCountColorFilter = MaterialTheme.colors.placeholderTextColorFilter
+                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter
                     )
                 }
             }
@@ -285,7 +285,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
     val color = if (zapraiserStatus.progress > 0.99) {
         DarkerGreen
     } else {
-        MaterialTheme.colors.mediumImportanceLink
+        MaterialTheme.colorScheme.mediumImportanceLink
     }
 
     LinearProgressIndicator(
@@ -310,7 +310,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
             Text(
                 text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
-                color = MaterialTheme.colors.placeholderText,
+                color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = Font14SP,
                 maxLines = 1
             )
@@ -389,7 +389,7 @@ private fun ReactionDetailGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
     val hasReactions by baseNote.live().hasReactions.observeAsState(
@@ -1306,7 +1306,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
             ) {
                 Text(stringResource(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
@@ -1318,7 +1318,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
             ) {
                 Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
@@ -1387,10 +1387,9 @@ private fun ActionableReactionButton(
             onDismiss()
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
     ) {
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
@@ -1507,7 +1506,7 @@ fun ZapAmountChoicePopup(
                     shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                 ) {
                     Text(

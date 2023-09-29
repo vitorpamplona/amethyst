@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,7 +75,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     placeholder = {
                         Text(
                             text = stringResource(R.string.my_awesome_group),
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
@@ -94,7 +94,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     placeholder = {
                         Text(
                             text = "http://mygroup.com/logo.jpg",
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     }
                 )
@@ -111,7 +111,7 @@ fun NewChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, chan
                     placeholder = {
                         Text(
                             text = stringResource(R.string.about_us),
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(

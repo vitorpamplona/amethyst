@@ -6,16 +6,14 @@ import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.ProgressIndicatorDefaults
-import androidx.compose.material.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -112,12 +111,11 @@ fun NewImageButton(accountViewModel: AccountViewModel, nav: (String) -> Unit, na
     if (postViewModel.isUploadingImage) {
         ShowProgress(postViewModel)
     } else {
-        OutlinedButton(
+        FloatingActionButton(
             onClick = { wantsToPost = true },
-            modifier = Modifier.size(55.dp),
+            modifier = Size55Modifier,
             shape = CircleShape,
-            colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-            contentPadding = PaddingValues(0.dp)
+            containerColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_compose),
@@ -137,16 +135,15 @@ private fun ShowProgress(postViewModel: NewMediaModel) {
                 targetValue = postViewModel.uploadingPercentage.value,
                 animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
             ).value,
-            modifier = Modifier
-                .size(55.dp)
+            modifier = Size55Modifier
                 .clip(CircleShape)
-                .background(MaterialTheme.colors.background),
+                .background(MaterialTheme.colorScheme.background),
             strokeWidth = 5.dp
         )
         postViewModel.uploadingDescription.value?.let {
             Text(
                 it,
-                color = MaterialTheme.colors.onSurface,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 10.sp,
                 textAlign = TextAlign.Center
             )

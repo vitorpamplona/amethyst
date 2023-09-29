@@ -9,14 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,9 +59,9 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
-        val defaultBackgroundColor = MaterialTheme.colors.background
+        val defaultBackgroundColor = MaterialTheme.colorScheme.background
         val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-        val newItemColor = MaterialTheme.colors.newItemBackgroundColor
+        val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
         LaunchedEffect(key1 = likeSetCard) {
             scope.launch(Dispatchers.IO) {
@@ -117,7 +117,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                             modifier = Modifier
                                 .size(25.dp)
                                 .align(Alignment.TopEnd),
-                            tint = MaterialTheme.colors.primary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -134,7 +134,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colors.placeholderText,
+                            color = MaterialTheme.colorScheme.placeholderText,
                             maxLines = 1
                         )
 
@@ -146,7 +146,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.placeholderText
+                                tint = MaterialTheme.colorScheme.placeholderText
                             )
 
                             NoteDropDownMenu(note, popupExpanded, accountViewModel)

@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Colors
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.darkColors
-import androidx.compose.material.lightColors
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.livedata.observeAsState
@@ -33,22 +33,19 @@ import com.patrykandpatrick.vico.compose.style.ChartStyle
 import com.patrykandpatrick.vico.core.DefaultColors
 import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
 
-private val DarkColorPalette = darkColors(
+private val DarkColorPalette = darkColorScheme(
     primary = Purple200,
-    primaryVariant = Purple700,
     secondary = Teal200,
-    secondaryVariant = Purple200
+    // secondary = Purple700,
+    tertiary = Teal200
 )
 
-private val LightColorPalette = lightColors(
+private val LightColorPalette = lightColorScheme(
     primary = Purple500,
-    primaryVariant = Purple700,
     secondary = Teal200,
-    secondaryVariant = Purple500
+    // secondary = Purple700,
+    tertiary = Teal200
 )
-
-private val BitcoinDark = Color(0xFFF7931A)
-private val BitcoinLight = Color(0xFFB66605)
 
 private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
 private val LightNewItemBackground = LightColorPalette.primary.copy(0.12f)
@@ -237,81 +234,84 @@ val MarkDownStyleOnLight = RichTextDefaults.copy(
     )
 )
 
-val Colors.newItemBackgroundColor: Color
+val ColorScheme.isLight: Boolean
+    get() = primary == Purple500
+
+val ColorScheme.newItemBackgroundColor: Color
     get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
 
-val Colors.replyBackground: Color
+val ColorScheme.replyBackground: Color
     get() = if (isLight) LightReplyItemBackground else DarkReplyItemBackground
 
-val Colors.selectedNote: Color
+val ColorScheme.selectedNote: Color
     get() = if (isLight) LightSelectedNote else DarkSelectedNote
 
-val Colors.secondaryButtonBackground: Color
+val ColorScheme.secondaryButtonBackground: Color
     get() = if (isLight) LightButtonBackground else DarkButtonBackground
 
-val Colors.lessImportantLink: Color
+val ColorScheme.lessImportantLink: Color
     get() = if (isLight) LightLessImportantLink else DarkLessImportantLink
 
-val Colors.zapraiserBackground: Color
+val ColorScheme.zapraiserBackground: Color
     get() = if (isLight) LightZapraiserBackground else DarkZapraiserBackground
 
-val Colors.mediumImportanceLink: Color
+val ColorScheme.mediumImportanceLink: Color
     get() = if (isLight) LightMediumImportantLink else DarkMediumImportantLink
-val Colors.veryImportantLink: Color
+val ColorScheme.veryImportantLink: Color
     get() = if (isLight) LightVeryImportantLink else DarkVeryImportantLink
 
-val Colors.placeholderText: Color
+val ColorScheme.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
 
-val Colors.nip05: Color
+val ColorScheme.nip05: Color
     get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
 
-val Colors.placeholderTextColorFilter: ColorFilter
+val ColorScheme.placeholderTextColorFilter: ColorFilter
     get() = if (isLight) LightPlaceholderTextColorFilter else DarkPlaceholderTextColorFilter
 
-val Colors.onBackgroundColorFilter: ColorFilter
+val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter
 
-val Colors.grayText: Color
+val ColorScheme.grayText: Color
     get() = if (isLight) LightGrayText else DarkGrayText
 
-val Colors.subtleBorder: Color
+val ColorScheme.subtleBorder: Color
     get() = if (isLight) LightSubtleBorder else DarkSubtleBorder
 
-val Colors.subtleButton: Color
+val ColorScheme.subtleButton: Color
     get() = if (isLight) LightSubtleButton else DarkSubtleButton
 
-val Colors.overPictureBackground: Color
+val ColorScheme.overPictureBackground: Color
     get() = if (isLight) LightOverPictureBackground else DarkOverPictureBackground
 
-val Colors.bitcoinColor: Color
+val ColorScheme.bitcoinColor: Color
     get() = if (isLight) BitcoinLight else BitcoinDark
 
-val Colors.warningColor: Color
+val ColorScheme.warningColor: Color
     get() = if (isLight) LightWarningColor else DarkWarningColor
 
-val Colors.allGoodColor: Color
+val ColorScheme.allGoodColor: Color
     get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
 
-val Colors.markdownStyle: RichTextStyle
+val ColorScheme.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 
-val Colors.repostProfileBorder: Modifier
+val ColorScheme.repostProfileBorder: Modifier
     get() = if (isLight) RepostPictureBorderLight else RepostPictureBorderDark
 
-val Colors.imageModifier: Modifier
+val ColorScheme.imageModifier: Modifier
     get() = if (isLight) LightImageModifier else DarkImageModifier
 
-val Colors.profile35dpModifier: Modifier
+val ColorScheme.profile35dpModifier: Modifier
     get() = if (isLight) LightProfile35dpModifier else DarkProfile35dpModifier
 
-val Colors.replyModifier: Modifier
+val ColorScheme.replyModifier: Modifier
     get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier
 
-val Colors.innerPostModifier: Modifier
+val ColorScheme.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
 
-val Colors.chartStyle: ChartStyle
+val ColorScheme.chartStyle: ChartStyle
     get() {
         val defaultColors = if (isLight) DefaultColors.Light else DefaultColors.Dark
         return ChartStyle.fromColors(
@@ -338,7 +338,7 @@ fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Uni
     val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 
     MaterialTheme(
-        colors = colors,
+        colorScheme = colors,
         typography = Typography,
         shapes = Shapes,
         content = content

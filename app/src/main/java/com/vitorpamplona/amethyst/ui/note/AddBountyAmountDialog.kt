@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -138,7 +138,7 @@ fun AddBountyAmountDialog(bounty: Note, accountViewModel: AccountViewModel, onCl
                         placeholder = {
                             Text(
                                 text = "10000, 50000, 5000000",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         singleLine = true

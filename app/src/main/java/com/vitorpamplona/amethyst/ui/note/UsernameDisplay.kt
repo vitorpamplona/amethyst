@@ -5,9 +5,9 @@ import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -52,9 +52,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton:
         }
     }
 
-    val userMetadata by baseUser.live().metadata.map {
-        it.user.info
-    }.observeAsState(baseUser.info)
+    val userMetadata by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
     Crossfade(targetState = userMetadata, modifier = weight) {
         if (it != null) {
@@ -148,7 +146,7 @@ private fun UserAndUsernameDisplay(
         CreateTextWithEmoji(
             text = remember { "@$bestUserName" },
             tags = tags,
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
 
@@ -173,7 +171,7 @@ fun DrawPlayName(name: String) {
 @Composable
 fun DrawPlayNameIcon(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = StdButtonSizeModifier) {
-        PlayIcon(modifier = StdButtonSizeModifier, tint = MaterialTheme.colors.placeholderText)
+        PlayIcon(modifier = StdButtonSizeModifier, tint = MaterialTheme.colorScheme.placeholderText)
     }
 }
 

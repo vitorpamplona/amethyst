@@ -11,14 +11,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -104,7 +104,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                             modifier = Modifier
                                 .size(70.dp)
                                 .align(Alignment.BottomStart),
-                            tint = MaterialTheme.colors.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                         Icon(
                             imageVector = Icons.Rounded.Warning,
@@ -112,7 +112,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                             modifier = Modifier
                                 .size(30.dp)
                                 .align(Alignment.TopEnd),
-                            tint = MaterialTheme.colors.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -141,7 +141,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                         shape = ButtonBorder,
                         colors = ButtonDefaults
                             .buttonColors(
-                                backgroundColor = MaterialTheme.colors.primary
+                                containerColor = MaterialTheme.colorScheme.primary
                             ),
                         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
                     ) {

@@ -8,19 +8,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +48,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
     val reportTypes = listOf(
@@ -73,8 +76,9 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                             ArrowBackIcon()
                         }
                     },
-                    backgroundColor = MaterialTheme.colors.surface,
-                    elevation = 0.dp
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             }
         ) { pad ->
@@ -103,7 +107,7 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                 )
                 SpacerH16()
 
-                Divider(color = MaterialTheme.colors.onSurface, thickness = 0.25.dp)
+                Divider(color = MaterialTheme.colorScheme.onSurface, thickness = 0.25.dp)
 
                 SpacerH16()
                 SectionHeader(text = stringResource(R.string.report_dialog_report_btn))
@@ -157,7 +161,7 @@ private fun SpacerH16() = Spacer(modifier = Modifier.height(16.dp))
 private fun SectionHeader(text: String) = Text(
     text = text,
     fontWeight = FontWeight.Bold,
-    color = MaterialTheme.colors.onSurface,
+    color = MaterialTheme.colorScheme.onSurface,
     fontSize = 18.sp
 )
 
@@ -165,7 +169,7 @@ private fun SectionHeader(text: String) = Text(
 private fun ActionButton(text: String, icon: ImageVector, enabled: Boolean = true, onClick: () -> Unit) = Button(
     onClick = onClick,
     enabled = enabled,
-    colors = ButtonDefaults.buttonColors(backgroundColor = WarningColor),
+    colors = ButtonDefaults.buttonColors(containerColor = WarningColor),
     modifier = Modifier.fillMaxWidth()
 ) {
     Row(

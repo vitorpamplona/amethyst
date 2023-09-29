@@ -22,8 +22,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -527,7 +527,7 @@ private fun RenderVideoPlayer(
     }
 
     BoxWithConstraints() {
-        val borders = MaterialTheme.colors.imageModifier
+        val borders = MaterialTheme.colorScheme.imageModifier
 
         val myModifier = remember {
             if (roundedCorner) {
@@ -797,7 +797,7 @@ private fun MuteButton(
                     .clip(CircleShape)
                     .fillMaxSize(0.6f)
                     .align(Alignment.Center)
-                    .background(MaterialTheme.colors.background)
+                    .background(MaterialTheme.colorScheme.background)
             )
 
             IconButton(
@@ -838,7 +838,7 @@ private fun KeepPlayingButton(
                     .clip(CircleShape)
                     .fillMaxSize(0.6f)
                     .align(Alignment.Center)
-                    .background(MaterialTheme.colors.background)
+                    .background(MaterialTheme.colorScheme.background)
             )
 
             IconButton(
@@ -849,9 +849,9 @@ private fun KeepPlayingButton(
                 modifier = Size50Modifier
             ) {
                 if (keepPlaying.value) {
-                    LyricsIcon(Size22Modifier, MaterialTheme.colors.onBackground)
+                    LyricsIcon(Size22Modifier, MaterialTheme.colorScheme.onBackground)
                 } else {
-                    LyricsOffIcon(Size22Modifier, MaterialTheme.colors.onBackground)
+                    LyricsOffIcon(Size22Modifier, MaterialTheme.colorScheme.onBackground)
                 }
             }
         }

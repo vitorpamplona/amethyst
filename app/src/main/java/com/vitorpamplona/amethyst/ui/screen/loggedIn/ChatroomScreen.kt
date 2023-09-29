@@ -19,19 +19,20 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -329,6 +330,7 @@ fun ChatroomScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivateMessageEditFieldRow(
     channelScreenModel: NewPostViewModel,
@@ -356,10 +358,9 @@ fun PrivateMessageEditFieldRow(
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
-            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
             trailingIcon = {
                 PostButton(
                     onPost = {
@@ -373,7 +374,7 @@ fun PrivateMessageEditFieldRow(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
                     UploadFromGallery(
                         isUploading = channelScreenModel.isUploadingImage,
-                        tint = MaterialTheme.colors.placeholderText,
+                        tint = MaterialTheme.colorScheme.placeholderText,
                         modifier = Modifier
                             .size(30.dp)
                             .padding(start = 2.dp)
@@ -433,7 +434,7 @@ fun PrivateMessageEditFieldRow(
                                 modifier = Modifier
                                     .padding(top = 2.dp)
                                     .size(18.dp),
-                                tint = MaterialTheme.colors.primary
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         } else {
                             Icon(
@@ -442,13 +443,13 @@ fun PrivateMessageEditFieldRow(
                                 modifier = Modifier
                                     .padding(top = 2.dp)
                                     .size(18.dp),
-                                tint = MaterialTheme.colors.placeholderText
+                                tint = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     }
                 }
             },
-            colors = TextFieldDefaults.textFieldColors(
+            colors = TextFieldDefaults.colors(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             )
@@ -598,10 +599,9 @@ private fun EditRoomSubjectButton(room: ChatroomKey, accountViewModel: AccountVi
             .width(50.dp),
         onClick = { wantsToPost = true },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
     ) {
         Icon(
             tint = Color.White,
@@ -672,7 +672,7 @@ fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room
                     placeholder = {
                         Text(
                             text = stringResource(R.string.messages_new_message_subject_caption),
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
@@ -693,7 +693,7 @@ fun NewSubjectView(onClose: () -> Unit, accountViewModel: AccountViewModel, room
                     placeholder = {
                         Text(
                             text = stringResource(R.string.messages_new_subject_message_placeholder),
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(

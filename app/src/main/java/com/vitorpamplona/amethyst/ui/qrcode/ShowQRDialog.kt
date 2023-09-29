@@ -12,11 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +51,7 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colors.background)
+                    .background(MaterialTheme.colorScheme.background)
                     .fillMaxSize()
             ) {
                 Row(
@@ -81,8 +81,8 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
                                         .width(100.dp)
                                         .height(100.dp)
                                         .clip(shape = CircleShape)
-                                        .border(3.dp, MaterialTheme.colors.background, CircleShape)
-                                        .background(MaterialTheme.colors.background),
+                                        .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
+                                        .background(MaterialTheme.colorScheme.background),
                                     loadProfilePicture = loadProfilePicture
                                 )
                             }
@@ -119,7 +119,7 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
                                     .height(50.dp),
                                 colors = ButtonDefaults
                                     .buttonColors(
-                                        backgroundColor = MaterialTheme.colors.primary
+                                        containerColor = MaterialTheme.colorScheme.primary
                                     )
                             ) {
                                 Text(text = stringResource(R.string.scan_qr))

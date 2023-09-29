@@ -17,22 +17,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.AppBarDefaults
-import androidx.compose.material.ContentAlpha
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.ScaffoldState
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.contentColorFor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
@@ -51,7 +47,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -136,7 +131,7 @@ import kotlinx.coroutines.launch
 fun AppTopBar(
     followLists: FollowListViewModel,
     navEntryState: State<NavBackStackEntry?>,
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit
@@ -153,7 +148,7 @@ fun AppTopBar(
         }
     }
 
-    RenderTopRouteBar(currentRoute, id, followLists, scaffoldState, accountViewModel, nav, navPopBack)
+    RenderTopRouteBar(currentRoute, id, followLists, drawerState, accountViewModel, nav, navPopBack)
 }
 
 @Composable
@@ -161,16 +156,16 @@ private fun RenderTopRouteBar(
     currentRoute: String?,
     id: String?,
     followLists: FollowListViewModel,
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit
 ) {
     when (currentRoute) {
-        Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel, nav)
-        Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel, nav)
-        Route.Discover.base -> DiscoveryTopBar(followLists, scaffoldState, accountViewModel, nav)
-        Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel, nav)
+        Route.Home.base -> HomeTopBar(followLists, drawerState, accountViewModel, nav)
+        Route.Video.base -> StoriesTopBar(followLists, drawerState, accountViewModel, nav)
+        Route.Discover.base -> DiscoveryTopBar(followLists, drawerState, accountViewModel, nav)
+        Route.Notification.base -> NotificationTopBar(followLists, drawerState, accountViewModel, nav)
         Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
         else -> {
             if (id != null) {
@@ -181,10 +176,10 @@ private fun RenderTopRouteBar(
                     Route.Community.base -> CommunityTopBar(id, accountViewModel, nav, navPopBack)
                     Route.Hashtag.base -> HashTagTopBar(id, accountViewModel, navPopBack)
                     Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
-                    else -> MainTopBar(scaffoldState, accountViewModel, nav)
+                    else -> MainTopBar(drawerState, accountViewModel, nav)
                 }
             } else {
-                MainTopBar(scaffoldState, accountViewModel, nav)
+                MainTopBar(drawerState, accountViewModel, nav)
             }
         }
     }
@@ -377,8 +372,8 @@ fun NoTopBar() {
 }
 
 @Composable
-fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun StoriesTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.storiesListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
@@ -393,8 +388,8 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
 }
 
 @Composable
-fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun HomeTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.homeListLiveData.observeAsState(KIND3_FOLLOWS)
 
         FollowList(
@@ -413,8 +408,8 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
 }
 
 @Composable
-fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun NotificationTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.notificationListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
@@ -429,8 +424,8 @@ fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: Scaffold
 }
 
 @Composable
-fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun DiscoveryTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.discoveryListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
         FollowList(
@@ -445,24 +440,25 @@ fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldSta
 }
 
 @Composable
-fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) {
+fun MainTopBar(drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) {
         AmethystClickableIcon()
     }
 }
 
-@OptIn(coil.annotation.ExperimentalCoilApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenericMainTopBar(
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     content: @Composable (AccountViewModel) -> Unit
 ) {
     Column(modifier = BottomTopHeight) {
-        MyTopAppBar(
-            elevation = 0.dp,
-            backgroundColor = MaterialTheme.colors.surface,
+        TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
             title = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -485,7 +481,7 @@ fun GenericMainTopBar(
                 val coroutineScope = rememberCoroutineScope()
                 LoggedInUserPictureDrawer(accountViewModel) {
                     coroutineScope.launch {
-                        scaffoldState.drawerState.open()
+                        drawerState.open()
                     }
                 }
             },
@@ -715,7 +711,7 @@ fun SimpleTextSpinner(
                 imageVector = Icons.Default.ExpandMore,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.placeholderText
+                tint = MaterialTheme.colorScheme.placeholderText
             )
         }
         Box(
@@ -756,7 +752,7 @@ fun RenderOption(it: Name) {
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "/g/$it", color = MaterialTheme.colors.onSurface)
+                    Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -765,7 +761,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = it.name(), color = MaterialTheme.colors.onSurface)
+                Text(text = it.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is ResourceName -> {
@@ -773,7 +769,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(id = it.resourceId), color = MaterialTheme.colors.onSurface)
+                Text(text = stringResource(id = it.resourceId), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is PeopleListName -> {
@@ -781,7 +777,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = it.name(), color = MaterialTheme.colors.onSurface)
+                Text(text = it.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is CommunityName -> {
@@ -793,17 +789,17 @@ fun RenderOption(it: Name) {
                     "/n/" + (it.note as? AddressableNote)?.dTag()
                 }.observeAsState()
 
-                Text(text = name ?: "", color = MaterialTheme.colors.onSurface)
+                Text(text = name ?: "", color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
     Column(modifier = BottomTopHeight) {
-        MyTopAppBar(
-            elevation = 0.dp,
+        TopAppBar(
             title = { Text(caption) },
             navigationIcon = {
                 IconButton(
@@ -821,15 +817,12 @@ fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
 
 @Composable
 fun FlexibleTopBarWithBackButton(
-    prefixRow: (@Composable () -> Unit)? = null,
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
     popBack: () -> Unit
 ) {
     Column() {
         MyExtensibleTopAppBar(
-            elevation = 0.dp,
-            prefixRow = prefixRow,
             title = title,
             extendableRow = extendableRow,
             navigationIcon = {
@@ -907,135 +900,53 @@ fun debugState(context: Context) {
     }
 }
 
-@Composable
-fun MyTopAppBar(
-    title: @Composable RowScope.() -> Unit,
-    modifier: Modifier = Modifier,
-    navigationIcon: @Composable (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-    backgroundColor: Color = MaterialTheme.colors.surface,
-    contentColor: Color = contentColorFor(backgroundColor),
-    elevation: Dp = AppBarDefaults.TopAppBarElevation
-) {
-    Surface(
-        contentColor = contentColor,
-        elevation = elevation,
-        modifier = modifier
-    ) {
-        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(AppBarDefaults.ContentPadding),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (navigationIcon == null) {
-                    Spacer(TitleInsetWithoutIcon)
-                } else {
-                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        CompositionLocalProvider(
-                            LocalContentAlpha provides ContentAlpha.high,
-                            content = navigationIcon
-                        )
-                    }
-                }
-
-                Row(
-                    Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ProvideTextStyle(MaterialTheme.typography.h6) {
-                        title()
-                    }
-                }
-
-                CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = actions
-                    )
-                }
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyExtensibleTopAppBar(
-    prefixRow: (@Composable () -> Unit)? = null,
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
     navigationIcon: @Composable (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-    backgroundColor: Color = MaterialTheme.colors.surface,
-    contentColor: Color = contentColorFor(backgroundColor),
-    elevation: Dp = AppBarDefaults.TopAppBarElevation
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     val expanded = remember { mutableStateOf(false) }
 
-    Surface(
-        color = backgroundColor,
-        contentColor = contentColor,
-        elevation = elevation,
-        modifier = modifier.clickable {
+    Column(
+        Modifier.clickable {
             expanded.value = !expanded.value
         }
     ) {
-        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-            Column(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(AppBarDefaults.ContentPadding),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+        Row(modifier = BottomTopHeight) {
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        title()
+                    }
+                },
+                modifier = modifier,
+                navigationIcon = {
                     if (navigationIcon == null) {
                         Spacer(TitleInsetWithoutIcon)
                     } else {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                            CompositionLocalProvider(
-                                LocalContentAlpha provides ContentAlpha.high,
-                                content = navigationIcon
-                            )
+                            navigationIcon()
                         }
                     }
+                },
+                actions = actions
+            )
+        }
 
-                    Row(
-                        Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ProvideTextStyle(MaterialTheme.typography.h6) {
-                            title()
-                        }
-                    }
-
-                    CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-                        Row(
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically,
-                            content = actions
-                        )
-                    }
-                }
-
-                if (expanded.value && extendableRow != null) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            extendableRow()
-                        }
-                    }
-                }
-
-                if (prefixRow != null) {
-                    prefixRow()
+        if (expanded.value && extendableRow != null) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    extendableRow()
                 }
             }
         }
