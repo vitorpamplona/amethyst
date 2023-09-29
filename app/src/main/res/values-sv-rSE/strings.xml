@@ -504,4 +504,6 @@
     <string name="no_wallet_found">Inga plånböcker hittades för att betala en blixtfaktura. Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="hidden_words">Dolda ord</string>
     <string name="hide_new_word_label">Dölj nytt ord eller mening</string>
+    <string name="automatically_show_profile_picture">Profilbild</string>
+    <string name="automatically_show_profile_picture_description">Visa profilbilder</string>
 </resources>

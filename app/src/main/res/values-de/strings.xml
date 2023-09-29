@@ -510,4 +510,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="no_wallet_found">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen. Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
     <string name="hidden_words">Versteckte Wörter</string>
     <string name="hide_new_word_label">Neues Wort oder neuen Satz verstecken</string>
+    <string name="automatically_show_profile_picture">Profilbild</string>
+    <string name="automatically_show_profile_picture_description">Profilbilder anzeigen</string>
 </resources>
