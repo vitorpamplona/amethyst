@@ -506,4 +506,6 @@
     <string name="no_wallet_found">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury. Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="hidden_words">Skrytá slova</string>
     <string name="hide_new_word_label">Skrýt nové slovo nebo větu</string>
+    <string name="automatically_show_profile_picture">Profilový obrázek</string>
+    <string name="automatically_show_profile_picture_description">Zobrazit profilové obrázky</string>
 </resources>
