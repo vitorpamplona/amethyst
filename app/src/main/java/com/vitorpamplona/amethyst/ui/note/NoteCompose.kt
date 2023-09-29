@@ -728,6 +728,14 @@ fun ShortCommunityHeader(baseNote: AddressableNote, fontWeight: FontWeight = Fon
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         noteEvent.image()?.let {
             RobohashAsyncImageProxy(
@@ -735,7 +743,8 @@ fun ShortCommunityHeader(baseNote: AddressableNote, fontWeight: FontWeight = Fon
                 model = it,
                 contentDescription = stringResource(R.string.profile_image),
                 contentScale = ContentScale.Crop,
-                modifier = HeaderPictureModifier
+                modifier = HeaderPictureModifier,
+                loadProfilePicture = automaticallyShowProfilePicture
             )
         }
 
@@ -2770,11 +2779,19 @@ private fun RenderAuthorImages(
 
     val isChannel = baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null
 
+    val automaticallyShowProfilePicture = remember {
+        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+            ConnectivityType.NEVER -> false
+            ConnectivityType.ALWAYS -> true
+        }
+    }
+
     if (isChannel) {
         val baseChannelHex = remember { baseNote.channelHex() }
         if (baseChannelHex != null) {
             LoadChannel(baseChannelHex, accountViewModel) { channel ->
-                ChannelNotePicture(channel)
+                ChannelNotePicture(channel, loadProfilePicture = automaticallyShowProfilePicture)
             }
         }
     }
@@ -2802,7 +2819,7 @@ fun LoadChannel(baseChannelHex: String, accountViewModel: AccountViewModel, cont
 }
 
 @Composable
-private fun ChannelNotePicture(baseChannel: Channel) {
+private fun ChannelNotePicture(baseChannel: Channel, loadProfilePicture: Boolean) {
     val model by baseChannel.live.map {
         it.channel.profilePicture()
     }.distinctUntilChanged().observeAsState()
@@ -2827,7 +2844,8 @@ private fun ChannelNotePicture(baseChannel: Channel) {
             robot = baseChannel.idHex,
             model = model,
             contentDescription = stringResource(R.string.group_picture),
-            modifier = modifier
+            modifier = modifier,
+            loadProfilePicture = loadProfilePicture
         )
     }
 }

@@ -54,10 +54,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.note.ChannelName
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
@@ -303,6 +305,13 @@ private fun RenderSearchResults(
         val users by searchBarViewModel.searchResultsUsers.collectAsState()
         val channels by searchBarViewModel.searchResultsChannels.collectAsState()
         val scope = rememberCoroutineScope()
+        val automaticallyShowProfilePicture = remember {
+            when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
+                ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
+                ConnectivityType.NEVER -> false
+                ConnectivityType.ALWAYS -> true
+            }
+        }
 
         Row(
             modifier = Modifier
@@ -337,7 +346,7 @@ private fun RenderSearchResults(
                     channels,
                     key = { _, item -> "c" + item.idHex }
                 ) { _, item ->
-                    RenderChannel(item) {
+                    RenderChannel(item, automaticallyShowProfilePicture) {
                         nav("Channel/${item.idHex}")
                         searchBarViewModel.clear()
                     }
@@ -350,6 +359,7 @@ private fun RenderSearchResults(
 @Composable
 private fun RenderChannel(
     item: com.vitorpamplona.amethyst.model.Channel,
+    loadProfilePicture: Boolean,
     onClick: () -> Unit
 ) {
     val hasNewMessages = remember {
@@ -368,7 +378,8 @@ private fun RenderChannel(
         channelLastTime = null,
         channelLastContent = item.summary(),
         hasNewMessages,
-        onClick = onClick
+        onClick = onClick,
+        loadProfilePicture = loadProfilePicture
     )
 }
 
