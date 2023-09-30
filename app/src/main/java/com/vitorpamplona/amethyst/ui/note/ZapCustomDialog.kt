@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material3.AlertDialog
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -261,12 +263,14 @@ fun ErrorMessageDialog(
             Text(title)
         },
         text = {
-            Text(textContent)
+            SelectionContainer {
+                Text(textContent)
+            }
         },
         confirmButton = {
             Row(
                 modifier = Modifier
-                    .padding(all = 8.dp)
+                    .padding(vertical = 8.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -275,10 +279,10 @@ fun ErrorMessageDialog(
                         painter = painterResource(R.drawable.ic_dm),
                         contentDescription = null
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(StdHorzSpacer)
                     Text(stringResource(R.string.error_dialog_talk_to_user))
                 }
-                Button(onClick = onDismiss, colors = buttonColors) {
+                Button(onClick = onDismiss, colors = buttonColors, contentPadding = PaddingValues(horizontal = Size16dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -286,7 +290,7 @@ fun ErrorMessageDialog(
                             imageVector = Icons.Outlined.Done,
                             contentDescription = null
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(StdHorzSpacer)
                         Text(stringResource(R.string.error_dialog_button_ok))
                     }
                 }

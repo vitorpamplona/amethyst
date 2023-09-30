@@ -56,7 +56,7 @@ class LightningAddressResolver() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            onError("Could not resolve $url. Check if the server is up and if the lightning address $lnaddress is correct")
+            onError("Could not resolve $url. Check if you are connected, if the server is up and if the lightning address $lnaddress is correct")
         }
     }
 
