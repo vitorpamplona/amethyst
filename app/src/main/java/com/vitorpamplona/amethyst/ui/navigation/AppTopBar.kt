@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
@@ -376,11 +377,9 @@ fun StoriesTopBar(followLists: FollowListViewModel, drawerState: DrawerState, ac
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.storiesListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
-        FollowList(
+        FollowListWithRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = false
+            listName = list
         ) { listName ->
             accountViewModel.account.changeDefaultStoriesFollowList(listName.code)
         }
@@ -392,11 +391,9 @@ fun HomeTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accou
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.homeListLiveData.observeAsState(KIND3_FOLLOWS)
 
-        FollowList(
+        FollowListWithRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = true
+            listName = list
         ) { listName ->
             if (listName.type == CodeNameType.ROUTE) {
                 nav(listName.code)
@@ -412,11 +409,9 @@ fun NotificationTopBar(followLists: FollowListViewModel, drawerState: DrawerStat
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.notificationListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
-        FollowList(
+        FollowListWithoutRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = false
+            listName = list
         ) { listName ->
             accountViewModel.account.changeDefaultNotificationFollowList(listName.code)
         }
@@ -428,11 +423,9 @@ fun DiscoveryTopBar(followLists: FollowListViewModel, drawerState: DrawerState, 
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.discoveryListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
-        FollowList(
+        FollowListWithoutRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = false
+            listName = list
         ) { listName ->
             accountViewModel.account.changeDefaultDiscoveryFollowList(listName.code)
         }
@@ -491,7 +484,7 @@ fun GenericMainTopBar(
                 }
             }
         )
-        Divider(thickness = 0.25.dp)
+        Divider(thickness = DividerThickness)
     }
 }
 
@@ -510,7 +503,6 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit
 ) {
     val profilePicture by accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
-
     val pubkeyHex = remember { accountViewModel.userProfile().pubkeyHex }
 
     val automaticallyShowProfilePicture = remember {
@@ -536,42 +528,35 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(
+fun FollowListWithRoutes(
     followListsModel: FollowListViewModel,
     listName: String,
-    withGlobal: Boolean,
-    withRoutes: Boolean,
     onChange: (CodeName) -> Unit
 ) {
-    val context = LocalContext.current
-
-    val kind3Follow = CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows, context), CodeNameType.HARDCODED)
-    val globalFollow = CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global, context), CodeNameType.HARDCODED)
-
-    val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
-
-    val followLists by followListsModel.peopleLists.collectAsState()
-    val routeList by followListsModel.routes.collectAsState()
-
-    val allLists = remember(followLists) {
-        if (withRoutes) {
-            (defaultOptions + followLists + routeList)
-        } else {
-            (defaultOptions + followLists)
-        }
-    }
-
-    val followNames by remember(followLists) {
-        derivedStateOf {
-            allLists.map { it.name }.toImmutableList()
-        }
-    }
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsState()
 
     SimpleTextSpinner(
-        placeholder = allLists.firstOrNull { it.code == listName }?.name?.name() ?: "Select an Option",
-        options = followNames,
+        placeholderCode = listName,
+        options = allLists,
         onSelect = {
-            onChange(allLists.getOrNull(it) ?: kind3Follow)
+            onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow)
+        }
+    )
+}
+
+@Composable
+fun FollowListWithoutRoutes(
+    followListsModel: FollowListViewModel,
+    listName: String,
+    onChange: (CodeName) -> Unit
+) {
+    val allLists by followListsModel.kind3GlobalPeople.collectAsState()
+
+    SimpleTextSpinner(
+        placeholderCode = listName,
+        options = allLists,
+        onSelect = {
+            onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow)
         }
     )
 }
@@ -582,6 +567,7 @@ enum class CodeNameType {
 
 abstract class Name {
     abstract fun name(): String
+    open fun name(context: Context) = name()
 }
 
 class GeoHashName(val geoHashTag: String) : Name() {
@@ -590,8 +576,9 @@ class GeoHashName(val geoHashTag: String) : Name() {
 class HashtagName(val hashTag: String) : Name() {
     override fun name() = "#$hashTag"
 }
-class ResourceName(val resourceId: Int, val context: Context) : Name() {
-    override fun name() = context.getString(resourceId)
+class ResourceName(val resourceId: Int) : Name() {
+    override fun name() = " $resourceId " // Space to make sure it goes first
+    override fun name(context: Context) = context.getString(resourceId)
 }
 
 class PeopleListName(val note: AddressableNote) : Name() {
@@ -606,11 +593,14 @@ data class CodeName(val code: String, val name: Name, val type: CodeNameType)
 
 @Stable
 class FollowListViewModel(val account: Account) : ViewModel() {
-    private var _peopleLists = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
-    val peopleLists = _peopleLists.asStateFlow()
+    val kind3Follow = CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows), CodeNameType.HARDCODED)
+    val globalFollow = CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global), CodeNameType.HARDCODED)
 
-    private var _routes = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
-    val routes = _routes.asStateFlow()
+    private var _kind3GlobalPeopleRoutes = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
+    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.asStateFlow()
+
+    private var _kind3GlobalPeople = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
+    val kind3GlobalPeople = _kind3GlobalPeople.asStateFlow()
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) {
@@ -632,11 +622,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
             } else {
                 null
             }
-        }.sortedBy { it.name.name() }.toImmutableList()
-
-        if (!equalImmutableLists(_peopleLists.value, newFollowLists)) {
-            _peopleLists.emit(newFollowLists)
-        }
+        }.sortedBy { it.name.name() }
 
         val communities = account.userProfile().cachedFollowingCommunitiesSet().mapNotNull {
             LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
@@ -652,10 +638,18 @@ class FollowListViewModel(val account: Account) : ViewModel() {
             CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
         }
 
-        val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }.toImmutableList()
+        val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }
 
-        if (!equalImmutableLists(_routes.value, routeList)) {
-            _routes.emit(routeList)
+        val kind3GlobalPeopleRouteList = listOf(listOf(kind3Follow, globalFollow), newFollowLists, routeList).flatten().toImmutableList()
+
+        if (!equalImmutableLists(_kind3GlobalPeopleRoutes.value, kind3GlobalPeopleRouteList)) {
+            _kind3GlobalPeopleRoutes.emit(kind3GlobalPeopleRouteList)
+        }
+
+        val kind3GlobalPeopleList = listOf(listOf(kind3Follow, globalFollow), newFollowLists).flatten().toImmutableList()
+
+        if (!equalImmutableLists(_kind3GlobalPeople.value, kind3GlobalPeopleList)) {
+            _kind3GlobalPeople.emit(kind3GlobalPeopleList)
         }
     }
 
@@ -691,14 +685,24 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
 @Composable
 fun SimpleTextSpinner(
-    placeholder: String,
-    options: ImmutableList<Name>,
+    placeholderCode: String,
+    options: ImmutableList<CodeName>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
-    var currentText by remember(placeholder) { mutableStateOf(placeholder) }
+
+    val context = LocalContext.current
+    val selectAnOption = stringResource(
+        id = R.string.select_an_option
+    )
+
+    var currentText by remember {
+        mutableStateOf(
+            options.firstOrNull { it.code == placeholderCode }?.name?.name(context) ?: selectAnOption
+        )
+    }
 
     Box(
         modifier = modifier,
@@ -706,7 +710,7 @@ fun SimpleTextSpinner(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Modifier.size(20.dp))
-            Text(placeholder)
+            Text(currentText)
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
@@ -732,22 +736,22 @@ fun SimpleTextSpinner(
                 options = options,
                 onDismiss = { optionsShowing = false },
                 onSelect = {
-                    currentText = options[it].name()
+                    currentText = options[it].name.name(context)
                     optionsShowing = false
                     onSelect(it)
                 }
             ) {
-                RenderOption(it)
+                RenderOption(it.name)
             }
         }
     }
 }
 
 @Composable
-fun RenderOption(it: Name) {
-    when (it) {
+fun RenderOption(option: Name) {
+    when (option) {
         is GeoHashName -> {
-            LoadCityName(it.geoHashTag) {
+            LoadCityName(option.geoHashTag) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -761,7 +765,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = it.name(), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is ResourceName -> {
@@ -769,7 +773,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(id = it.resourceId), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = stringResource(id = option.resourceId), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is PeopleListName -> {
@@ -777,7 +781,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = it.name(), color = MaterialTheme.colorScheme.onSurface)
+                Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is CommunityName -> {
@@ -785,7 +789,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val name by it.note.live().metadata.map {
+                val name by option.note.live().metadata.map {
                     "/n/" + (it.note as? AddressableNote)?.dTag()
                 }.observeAsState()
 

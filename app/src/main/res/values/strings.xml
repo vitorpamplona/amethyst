@@ -600,4 +600,6 @@
     <string name="hide_new_word_label">Hide new word or sentence</string>
     <string name="automatically_show_profile_picture">Profile Picture</string>
     <string name="automatically_show_profile_picture_description">Show Profile pictures</string>
+
+    <string name="select_an_option">Select an Option</string>
 </resources>
