@@ -595,7 +595,7 @@ class ResourceName(val resourceId: Int, val context: Context) : Name() {
 }
 
 class PeopleListName(val note: AddressableNote) : Name() {
-    override fun name() = note.dTag() ?: ""
+    override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
 }
 class CommunityName(val note: AddressableNote) : Name() {
     override fun name() = "/n/${(note.dTag() ?: "")}"
