@@ -306,6 +306,7 @@ fun PayViaIntentDialog(
 
     if (payingInvoices.size == 1) {
         payViaIntent(payingInvoices.first().invoice, context, onError)
+        onClose()
     } else {
         Dialog(
             onDismissRequest = onClose,
