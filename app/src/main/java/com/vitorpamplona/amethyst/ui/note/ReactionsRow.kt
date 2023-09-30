@@ -1270,7 +1270,7 @@ private fun DrawViewCount(
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build()
         },
-        contentDescription = stringResource(R.string.view_count),
+        contentDescription = context.getString(R.string.view_count),
         modifier = iconModifier,
         colorFilter = viewCountColorFilter
     )
