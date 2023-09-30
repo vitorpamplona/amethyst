@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -30,6 +32,8 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.MarkdownParser
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.bottomNavigationItems
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -38,6 +42,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -54,15 +59,18 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
+import kotlin.time.measureTimedValue
 
 @Stable
 class AccountViewModel(val account: Account) : ViewModel(), Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
-    val accountLastReadLiveData: LiveData<AccountState> = account.liveLastRead.map { it }
+    val accountMarkAsReadUpdates = mutableStateOf(0)
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
@@ -727,16 +735,56 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
-    fun loadAndMarkAsRead(routeForLastRead: String, baseNoteCreatedAt: Long?, onIsNew: (Boolean) -> Unit) {
+    fun refreshMarkAsReadObservers() {
+        updateNotificationDots()
+        accountMarkAsReadUpdates.value++
+    }
+
+    fun loadAndMarkAsRead(routeForLastRead: String, createdAt: Long?, onIsNew: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val lastTime = account.loadLastRead(routeForLastRead)
 
-            if (baseNoteCreatedAt != null) {
-                account.markAsRead(routeForLastRead, baseNoteCreatedAt)
-                onIsNew(baseNoteCreatedAt > lastTime)
+            if (createdAt != null) {
+                if (account.markAsRead(routeForLastRead, createdAt)) {
+                    refreshMarkAsReadObservers()
+                }
+                onIsNew(createdAt > lastTime)
             } else {
                 onIsNew(false)
             }
+        }
+    }
+
+    fun markAllAsRead(notes: ImmutableList<Note>, onDone: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var atLeastOne = false
+
+            for (note in notes) {
+                note.event?.let { noteEvent ->
+                    val channelHex = note.channelHex()
+                    val route = if (channelHex != null) {
+                        "Channel/$channelHex"
+                    } else if (note.event is ChatroomKeyable) {
+                        val withKey =
+                            (note.event as ChatroomKeyable).chatroomKey(userProfile().pubkeyHex)
+                        "Room/${withKey.hashCode()}"
+                    } else {
+                        null
+                    }
+
+                    route?.let {
+                        if (account.markAsRead(route, noteEvent.createdAt())) {
+                            atLeastOne = true
+                        }
+                    }
+                }
+            }
+
+            if (atLeastOne) {
+                refreshMarkAsReadObservers()
+            }
+
+            onDone()
         }
     }
 
@@ -751,6 +799,45 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
             return AccountViewModel(account) as AccountViewModel
+        }
+    }
+
+    private var collectorJob: Job? = null
+    val notificationDots = HasNotificationDot(bottomNavigationItems, account)
+
+    fun updateNotificationDots(newNotes: Set<Note> = emptySet()) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val (value, elapsed) = measureTimedValue {
+                notificationDots.update(newNotes)
+            }
+            Log.d("Rendering Metrics", "Notification Dots Calculation in $elapsed for ${newNotes.size} new notes")
+        }
+    }
+
+    init {
+        Log.d("Init", "AccountViewModel")
+        collectorJob = viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                updateNotificationDots(newNotes)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        collectorJob?.cancel()
+        super.onCleared()
+    }
+}
+
+class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>, val account: Account) {
+    val hasNewItems = bottomNavigationItems.associateWith { MutableStateFlow(false) }
+
+    fun update(newNotes: Set<Note>) {
+        hasNewItems.forEach {
+            val newResult = it.key.hasNewItems(account, newNotes)
+            if (newResult != it.value.value) {
+                it.value.value = newResult
+            }
         }
     }
 }

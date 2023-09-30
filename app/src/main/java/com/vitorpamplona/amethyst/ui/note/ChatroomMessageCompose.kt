@@ -73,8 +73,6 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -260,12 +258,7 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            launch(Dispatchers.IO) {
-                val createdAt = note.createdAt()
-                if (createdAt != null) {
-                    accountViewModel.account.markAsRead(routeForLastRead, createdAt)
-                }
-            }
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt()) { }
         }
     }
 

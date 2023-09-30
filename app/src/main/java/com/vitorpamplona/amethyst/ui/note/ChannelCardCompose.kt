@@ -277,42 +277,36 @@ private fun CheckNewAndRenderChannelCard(
 ) {
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val backgroundColor = remember {
+        mutableStateOf<Color>(
+            parentBackgroundColor?.value ?: defaultBackgroundColor
+        )
+    }
 
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
-        launch(Dispatchers.IO) {
-            routeForLastRead?.let {
-                val lastTime = accountViewModel.account.loadLastRead(it)
-
-                val createdAt = baseNote.createdAt()
-                if (createdAt != null) {
-                    accountViewModel.account.markAsRead(it, createdAt)
-
-                    val isNew = createdAt > lastTime
-
-                    val newBackgroundColor = if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
+        routeForLastRead?.let {
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, baseNote.createdAt()) { isNew ->
+                val newBackgroundColor = if (isNew) {
+                    if (parentBackgroundColor != null) {
+                        newItemColor.compositeOver(parentBackgroundColor.value)
                     } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor
+                        newItemColor.compositeOver(defaultBackgroundColor)
                     }
-
-                    if (newBackgroundColor != backgroundColor.value) {
-                        launch(Dispatchers.Main) {
-                            backgroundColor.value = newBackgroundColor
-                        }
-                    }
+                } else {
+                    parentBackgroundColor?.value ?: defaultBackgroundColor
                 }
-            } ?: run {
-                val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
 
                 if (newBackgroundColor != backgroundColor.value) {
                     launch(Dispatchers.Main) {
                         backgroundColor.value = newBackgroundColor
                     }
+                }
+            }
+        } ?: run {
+            val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
+            if (newBackgroundColor != backgroundColor.value) {
+                launch(Dispatchers.Main) {
+                    backgroundColor.value = newBackgroundColor
                 }
             }
         }

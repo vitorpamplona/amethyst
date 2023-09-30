@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -64,11 +63,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
         val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
         LaunchedEffect(key1 = likeSetCard) {
-            scope.launch(Dispatchers.IO) {
-                val isNew = likeSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
-
-                accountViewModel.account.markAsRead(routeForLastRead, likeSetCard.createdAt())
-
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, likeSetCard.createdAt()) { isNew ->
                 val newBackgroundColor = if (isNew) {
                     newItemColor.compositeOver(defaultBackgroundColor)
                 } else {

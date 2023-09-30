@@ -30,8 +30,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, routeForLastRead: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -40,11 +38,7 @@ fun ZapUserSetCompose(zapSetCard: ZapUserSetCard, isInnerNote: Boolean = false, 
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
     LaunchedEffect(key1 = zapSetCard.createdAt()) {
-        launch(Dispatchers.IO) {
-            val isNew = zapSetCard.createdAt > accountViewModel.account.loadLastRead(routeForLastRead)
-
-            accountViewModel.account.markAsRead(routeForLastRead, zapSetCard.createdAt)
-
+        accountViewModel.loadAndMarkAsRead(routeForLastRead, zapSetCard.createdAt) { isNew ->
             val newBackgroundColor = if (isNew) {
                 newItemColor.compositeOver(defaultBackgroundColor)
             } else {

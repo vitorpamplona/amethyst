@@ -837,7 +837,7 @@ private fun CheckNewAndRenderNote(
 ) {
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val backgroundColor = remember(baseNote) { mutableStateOf<Color>(parentBackgroundColor?.value ?: defaultBackgroundColor) }
 
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
         routeForLastRead?.let {

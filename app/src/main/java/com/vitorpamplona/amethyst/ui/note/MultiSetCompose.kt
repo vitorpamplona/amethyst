@@ -96,11 +96,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
     LaunchedEffect(key1 = multiSetCard) {
-        launch(Dispatchers.IO) {
-            val isNew = multiSetCard.maxCreatedAt > accountViewModel.account.loadLastRead(routeForLastRead)
-
-            accountViewModel.account.markAsRead(routeForLastRead, multiSetCard.maxCreatedAt)
-
+        accountViewModel.loadAndMarkAsRead(routeForLastRead, multiSetCard.maxCreatedAt) { isNew ->
             val newBackgroundColor = if (isNew) {
                 newItemColor.compositeOver(defaultBackgroundColor)
             } else {

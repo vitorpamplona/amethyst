@@ -415,9 +415,7 @@ private fun WatchNotificationChanges(
     accountViewModel: AccountViewModel,
     onNewStatus: (Boolean) -> Unit
 ) {
-    val cacheState by accountViewModel.accountLastReadLiveData.observeAsState()
-
-    LaunchedEffect(key1 = note, cacheState) {
+    LaunchedEffect(key1 = note, accountViewModel.accountMarkAsReadUpdates.value) {
         launch(Dispatchers.IO) {
             note.event?.createdAt()?.let {
                 val lastTime = accountViewModel.account.loadLastRead(route)
