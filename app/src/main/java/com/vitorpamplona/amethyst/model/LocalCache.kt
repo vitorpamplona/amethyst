@@ -348,7 +348,12 @@ object LocalCache {
             val channel = getOrCreateChannel(note.idHex) {
                 LiveActivitiesChannel(note.address)
             } as? LiveActivitiesChannel
-            channel?.updateChannelInfo(author, event, event.createdAt)
+
+            val creator = event.host()?.ifBlank { null }?.let {
+                checkGetOrCreateUser(it)
+            } ?: author
+
+            channel?.updateChannelInfo(creator, event, event.createdAt)
 
             refreshObservers(note)
         }

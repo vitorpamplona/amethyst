@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -504,6 +505,8 @@ fun RenderLiveActivityThumb(
             }
         }
 
+        Spacer(modifier = DoubleVertSpacer)
+
         ChannelHeader(
             channelHex = remember { baseNote.idHex },
             showVideo = false,
@@ -710,7 +713,9 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
         Spacer(modifier = DoubleHorzSpacer)
 
         Column(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight()
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
