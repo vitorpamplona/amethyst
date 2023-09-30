@@ -735,6 +735,12 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
+    fun checkIsOnline(media: String?, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            onDone(OnlineChecker.isOnline(media))
+        }
+    }
+
     fun refreshMarkAsReadObservers() {
         updateNotificationDots()
         accountMarkAsReadUpdates.value++

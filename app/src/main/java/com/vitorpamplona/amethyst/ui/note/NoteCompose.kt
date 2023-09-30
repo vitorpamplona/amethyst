@@ -3639,8 +3639,10 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
     var isOnline by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = media) {
-        launch(Dispatchers.IO) {
-            isOnline = OnlineChecker.isOnline(media)
+        accountViewModel.checkIsOnline(media) { newIsOnline ->
+            if (isOnline != newIsOnline) {
+                isOnline = newIsOnline
+            }
         }
     }
 
