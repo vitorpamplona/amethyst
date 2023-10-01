@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0-100)%</string>
     <string name="poll_closing_time">Sluit na</string>
     <string name="poll_closing_time_days">dagen</string>
-    <string name="poll_is_closed">Poll is gesloten voor nieuwe stemmen</string>
     <string name="poll_zap_amount">Zap bedrag</string>
     <string name="one_vote_per_user_on_atomic_votes">Slechts één stem per gebruiker is toegestaan bij dit type peiling.</string>
     <string name="looking_for_event">"Zoeken naar event %1$s"</string>

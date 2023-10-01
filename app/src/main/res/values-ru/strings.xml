@@ -262,7 +262,6 @@
     <string name="poll_consensus_threshold">Консенсус</string>
     <string name="poll_closing_time">Закрытие после</string>
     <string name="poll_closing_time_days">дней</string>
-    <string name="poll_is_closed">Опрос закрыт</string>
     <string name="poll_zap_amount">Сумма запа</string>
     <string name="one_vote_per_user_on_atomic_votes">В этом опросе можно голосовать только один раз</string>
     <string name="looking_for_event">"Поиск события %1$s"</string>

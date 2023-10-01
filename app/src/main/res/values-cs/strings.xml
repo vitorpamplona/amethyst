@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Uzavřít po</string>
     <string name="poll_closing_time_days">dnech</string>
-    <string name="poll_is_closed">Hlasování je uzavřeno pro nové hlasy</string>
     <string name="poll_zap_amount">Částka zapsu</string>
     <string name="one_vote_per_user_on_atomic_votes">U tohoto typu hlasování je povolen pouze jeden hlas na uživatele</string>
     <string name="looking_for_event">"Hledá se událost %1$s"</string>
