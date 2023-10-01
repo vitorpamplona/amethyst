@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">ปิดหลังจาก</string>
     <string name="poll_closing_time_days">วัน</string>
-    <string name="poll_is_closed">โพลปิดรับการลงคะแนนเพิ่มเติม</string>
     <string name="poll_zap_amount">จำนวน Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">อนุญาตให้โหวตได้เพียงครั้งเดียวต่อผู้ใช้หนึ่งคนสำหรับการสำรวจประเภทนี้</string>
     <string name="looking_for_event">"กำลังมองหา Event %1$s"</string>

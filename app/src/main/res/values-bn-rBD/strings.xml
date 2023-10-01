@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(০–১০০)%</string>
     <string name="poll_closing_time">এই সময় পর বন্ধ করুন</string>
     <string name="poll_closing_time_days">দিনগুলি</string>
-    <string name="poll_is_closed">পোলটি আর নতুন ভোট গ্রহণ করবে না</string>
     <string name="poll_zap_amount">পরিমাণটি জ্যাপ করুন</string>
     <string name="one_vote_per_user_on_atomic_votes">এই জাতীয় পোলে একজন ব্যবহারকারী শুধুমাত্র একটি করেই ভোট দিতে পারবেন</string>
     <string name="looking_for_event">"ইভেন্ট খোঁজা হচ্ছে %1$s"</string>

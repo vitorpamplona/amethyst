@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0-100)%</string>
     <string name="poll_closing_time">Fermi post</string>
     <string name="poll_closing_time_days">tagoj</string>
-    <string name="poll_is_closed">Enketo estas fermita al novaj voĉdonoj</string>
     <string name="poll_zap_amount">Kvanto de zapoj</string>
     <string name="one_vote_per_user_on_atomic_votes">Nur po unu voĉdono por uzanto estas permesita en ĉi tia enketo</string>
     <string name="looking_for_event">"Serĉanta Eventon %1$s"</string>

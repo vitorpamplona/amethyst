@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Funga baada ya</string>
     <string name="poll_closing_time_days">siku</string>
-    <string name="poll_is_closed">Kura imefungwa kwa kura mpya</string>
     <string name="poll_zap_amount">Kiasi cha Zaps</string>
     <string name="one_vote_per_user_on_atomic_votes">Kura moja tu kwa mtumiaji inaruhusiwa kwenye aina hii ya kura</string>
     <string name="looking_for_event">"Inatafuta Tukio %1$s"</string>

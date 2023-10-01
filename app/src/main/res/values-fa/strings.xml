@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">بسته شدن پس از</string>
     <string name="poll_closing_time_days">روز</string>
-    <string name="poll_is_closed">نظر سنجی برای رای جدید بسته است</string>
     <string name="poll_zap_amount">مبلغ زپ</string>
     <string name="one_vote_per_user_on_atomic_votes">فقط یک رای به ازای هر کاربر در این نوع نظرسنجی مجاز است</string>
     <string name="looking_for_event">"جستجوی رویداد %1$s"</string>

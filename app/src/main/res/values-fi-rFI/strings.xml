@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Sulje äänestys</string>
     <string name="poll_closing_time_days">päivän kuluttua</string>
-    <string name="poll_is_closed">Äänestys on suljettu uusilta ääniltä</string>
     <string name="poll_zap_amount">Zap-määrä</string>
     <string name="one_vote_per_user_on_atomic_votes">Vain yksi ääni käyttäjää kohti tällä äänestystyypillä</string>
     <string name="looking_for_event">"Etsitään tapahtumaa %1$s"</string>
