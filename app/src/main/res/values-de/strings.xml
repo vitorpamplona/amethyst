@@ -275,7 +275,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Schließen nach</string>
     <string name="poll_closing_time_days">Tagen</string>
-    <string name="poll_is_closed">Umfrage ist für neue Stimmen geschlossen</string>
     <string name="poll_zap_amount">Zap-Betrag</string>
     <string name="one_vote_per_user_on_atomic_votes">Es ist nur eine Stimme pro Benutzer für diesen Umfragetyp erlaubt</string>
     <string name="looking_for_event">"Veranstaltung suchen"</string>

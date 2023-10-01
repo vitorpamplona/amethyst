@@ -256,7 +256,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">إغلاق بعد</string>
     <string name="poll_closing_time_days">أيام</string>
-    <string name="poll_is_closed">تم إغلاق الاستطلاع لأي تصويت جديد</string>
     <string name="one_vote_per_user_on_atomic_votes">يسمح بصوت واحد فقط لكل مستخدم في هذا النوع من الاستطلاع</string>
     <string name="looking_for_event">"البحث عن الحدث %1$s"</string>
     <string name="custom_zaps_add_a_message">أضف رسالة عامة</string>

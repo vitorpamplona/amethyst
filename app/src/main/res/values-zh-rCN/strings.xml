@@ -269,7 +269,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">后关闭</string>
     <string name="poll_closing_time_days">天</string>
-    <string name="poll_is_closed">投票不再接收新投票</string>
     <string name="poll_zap_amount">打闪金额</string>
     <string name="one_vote_per_user_on_atomic_votes">这种投票只允许每个用户一票</string>
     <string name="looking_for_event">"正在查找事件 %1$s"</string>
