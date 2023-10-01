@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
@@ -34,6 +35,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
 
     val latestEOSEs = EOSEAccount()
+    val hasLoadedTheBasics = mutableMapOf<User, Boolean>()
 
     fun createAccountContactListFilter(): TypedFilter {
         return TypedFilter(
@@ -141,7 +143,11 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     )
 
     val accountChannel = requestNewChannel { time, relayUrl ->
-        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
+        if (hasLoadedTheBasics[account.userProfile()] != null) {
+            latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
+        } else {
+            hasLoadedTheBasics[account.userProfile()] = true
+        }
     }
 
     override fun consume(event: Event, relay: Relay) {
@@ -201,18 +207,28 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     }
 
     override fun updateChannelFilters() {
-        // gets everthing about the user logged in
-        accountChannel.typedFilters = listOf(
-            createAccountMetadataFilter(),
-            createAccountContactListFilter(),
-            createAccountRelayListFilter(),
-            createNotificationFilter(),
-            createGiftWrapsToMeFilter(),
-            createAccountReportsFilter(),
-            createAccountAcceptedAwardsFilter(),
-            createAccountBookmarkListFilter(),
-            createAccountLastPostsListFilter()
-        ).ifEmpty { null }
+        return if (hasLoadedTheBasics[account.userProfile()] != null) {
+            // gets everthing about the user logged in
+            accountChannel.typedFilters = listOf(
+                createAccountMetadataFilter(),
+                createAccountContactListFilter(),
+                createAccountRelayListFilter(),
+                createNotificationFilter(),
+                createGiftWrapsToMeFilter(),
+                createAccountReportsFilter(),
+                createAccountAcceptedAwardsFilter(),
+                createAccountBookmarkListFilter(),
+                createAccountLastPostsListFilter()
+            ).ifEmpty { null }
+        } else {
+            // just the basics.
+            accountChannel.typedFilters = listOf(
+                createAccountMetadataFilter(),
+                createAccountContactListFilter(),
+                createAccountRelayListFilter(),
+                createAccountBookmarkListFilter()
+            ).ifEmpty { null }
+        }
     }
 
     override fun auth(relay: Relay, challenge: String) {

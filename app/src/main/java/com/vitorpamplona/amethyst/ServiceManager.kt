@@ -33,6 +33,10 @@ import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 
 object ServiceManager {
@@ -87,9 +91,12 @@ object ServiceManager {
             // Notification Elements
             NostrHomeDataSource.start()
             NostrAccountDataSource.start()
-            NostrChatroomListDataSource.start()
-            NostrDiscoveryDataSource.start()
-            NostrVideoDataSource.start()
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(2000)
+                NostrChatroomListDataSource.start()
+                NostrDiscoveryDataSource.start()
+                NostrVideoDataSource.start()
+            }
 
             // More Info Data Sources
             NostrSingleEventDataSource.start()
