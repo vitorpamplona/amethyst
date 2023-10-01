@@ -268,7 +268,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Berakhir pada</string>
     <string name="poll_closing_time_days">hari</string>
-    <string name="poll_is_closed">Pemungutan suara ditutup untuk voting baru</string>
     <string name="poll_zap_amount">Jumlah Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">Hanya satu suara per pengguna yang diperbolehkan pada jenis pemungutan suara ini</string>
 
