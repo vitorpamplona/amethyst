@@ -38,7 +38,7 @@ dependencies {
     implementation "androidx.compose.runtime:runtime:$compose_ui_version"
 
     // Bitcoin secp256k1 bindings to Android
-    api 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.10.1'
+    api 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.11.0'
 
     // LibSodium for XChaCha encryption
     implementation "com.goterl:lazysodium-android:5.1.0@aar"
