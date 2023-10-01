@@ -92,7 +92,7 @@ object ServiceManager {
             NostrHomeDataSource.start()
             NostrAccountDataSource.start()
             GlobalScope.launch(Dispatchers.IO) {
-                delay(2000)
+                delay(3000)
                 NostrChatroomListDataSource.start()
                 NostrDiscoveryDataSource.start()
                 NostrVideoDataSource.start()
