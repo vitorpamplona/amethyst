@@ -60,11 +60,21 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
 import kotlin.time.measureTimedValue
+
+@Immutable
+open class ToastMsg()
+
+@Immutable
+class StringToastMsg(val title: String, val msg: String) : ToastMsg()
+
+@Immutable
+class ResourceToastMsg(val titleResId: Int, val resourceId: Int) : ToastMsg()
 
 @Stable
 class AccountViewModel(val account: Account) : ViewModel(), Dao {
@@ -74,6 +84,8 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
+
+    val toasts = MutableSharedFlow<ToastMsg?>()
 
     val discoveryListLiveData = account.live.map {
         it.account.defaultDiscoveryFollowList
@@ -94,6 +106,24 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
     val showSensitiveContentChanges = account.live.map {
         it.account.showSensitiveContent
     }.distinctUntilChanged()
+
+    fun clearToasts() {
+        viewModelScope.launch {
+            toasts.emit(null)
+        }
+    }
+
+    fun toast(title: String, message: String) {
+        viewModelScope.launch {
+            toasts.emit(StringToastMsg(title, message))
+        }
+    }
+
+    fun toast(titleResId: Int, resourceId: Int) {
+        viewModelScope.launch {
+            toasts.emit(ResourceToastMsg(titleResId, resourceId))
+        }
+    }
 
     fun updateAutomaticallyStartPlayback(
         automaticallyStartPlayback: ConnectivityType
@@ -152,6 +182,17 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
+    fun reactToOrDelete(note: Note) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val reaction = account.reactionChoices.first()
+            if (hasReactedTo(note, reaction)) {
+                deleteReactionTo(note, reaction)
+            } else {
+                reactTo(note, reaction)
+            }
+        }
+    }
+
     fun isNoteHidden(note: Note): Boolean {
         val isSensitive = note.event?.isSensitive() ?: false
         return account.isHidden(note.author!!) || (isSensitive && account.showSensitiveContent == false)
@@ -170,7 +211,9 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
     }
 
     fun deleteBoostsTo(note: Note) {
-        account.delete(account.boostsTo(note))
+        viewModelScope.launch(Dispatchers.IO) {
+            account.delete(account.boostsTo(note))
+        }
     }
 
     fun calculateIfNoteWasZappedByAccount(zappedNote: Note, onWasZapped: (Boolean) -> Unit) {
@@ -286,7 +329,7 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         pollOption: Int?,
         message: String,
         context: Context,
-        onError: (String) -> Unit,
+        onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType
@@ -308,7 +351,9 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
     }
 
     fun boost(note: Note) {
-        account.boost(note)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.boost(note)
+        }
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
@@ -388,11 +433,51 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
     }
 
     fun follow(user: User) {
-        account.follow(user)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.follow(user)
+        }
     }
 
     fun unfollow(user: User) {
-        account.unfollow(user)
+        viewModelScope.launch(Dispatchers.IO) {
+            account.unfollow(user)
+        }
+    }
+
+    fun followGeohash(tag: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.followGeohash(tag)
+        }
+    }
+
+    fun unfollowGeohash(tag: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.unfollowGeohash(tag)
+        }
+    }
+
+    fun followHashtag(tag: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.followHashtag(tag)
+        }
+    }
+
+    fun unfollowHashtag(tag: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.unfollowHashtag(tag)
+        }
+    }
+
+    fun showWord(word: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.showWord(word)
+        }
+    }
+
+    fun hideWord(word: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.hideWord(word)
+        }
     }
 
     fun isLoggedUser(user: User?): Boolean {

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -307,9 +304,6 @@ fun MutedWordActionOptions(
     word: String,
     accountViewModel: AccountViewModel
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
     val isMutedWord by accountViewModel.account.liveHiddenUsers.map {
         word in it.hiddenWords
     }.distinctUntilChanged().observeAsState()
@@ -318,48 +312,30 @@ fun MutedWordActionOptions(
         ShowWordButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.showWord(word)
-                    }
+                    accountViewModel.showWord(word)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_show_word
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.showWord(word)
-                }
+                accountViewModel.showWord(word)
             }
         }
     } else {
         HideWordButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.hideWord(word)
-                    }
+                    accountViewModel.hideWord(word)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_hide_word
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.hideWord(word)
-                }
+                accountViewModel.hideWord(word)
             }
         }
     }

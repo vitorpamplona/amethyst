@@ -52,7 +52,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
+fun AccountBackupDialog(accountViewModel: AccountViewModel, onClose: () -> Unit) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -90,7 +90,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(30.dp))
 
-                    NSecCopyButton(account)
+                    NSecCopyButton(accountViewModel)
                 }
             }
         }
@@ -99,7 +99,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
 
 @Composable
 private fun NSecCopyButton(
-    account: Account
+    accountViewModel: AccountViewModel
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -108,7 +108,7 @@ private fun NSecCopyButton(
     val keyguardLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
-                copyNSec(context, scope, account, clipboardManager)
+                copyNSec(context, scope, accountViewModel.account, clipboardManager)
             }
         }
 
@@ -118,11 +118,14 @@ private fun NSecCopyButton(
             authenticate(
                 title = context.getString(R.string.copy_my_secret_key),
                 context = context,
-                scope = scope,
-                keyguardLauncher = keyguardLauncher
-            ) {
-                copyNSec(context, scope, account, clipboardManager)
-            }
+                keyguardLauncher = keyguardLauncher,
+                onApproved = {
+                    copyNSec(context, scope, accountViewModel.account, clipboardManager)
+                },
+                onError = { title, message ->
+                    accountViewModel.toast(title, message)
+                }
+            )
         },
         shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(

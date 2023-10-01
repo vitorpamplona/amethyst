@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,11 +16,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -37,12 +34,9 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.RichTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.launch
 
 @Composable
-fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: MutableState<String>) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, onError: (String) -> Unit, portNumber: MutableState<String>) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -67,13 +61,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                             try {
                                 Integer.parseInt(portNumber.value)
                             } catch (_: Exception) {
-                                scope.launch {
-                                    Toast.makeText(
-                                        context,
-                                        toastMessage,
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
+                                onError(toastMessage)
                                 return@UseOrbotButton
                             }
 

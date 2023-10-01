@@ -6,7 +6,6 @@ import android.content.ContextWrapper
 import android.os.Build
 import android.util.Log
 import android.view.Window
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -49,7 +48,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +76,7 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.SaveToGallery
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -808,7 +807,17 @@ private fun verifyHash(content: ZoomableUrlContent, context: Context): Boolean? 
 @Composable
 private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
     val localContext = LocalContext.current
-    val scope = rememberCoroutineScope()
+
+    val openDialogMsg = remember { mutableStateOf<String?>(null) }
+
+    openDialogMsg.value?.let {
+        InformationDialog(
+            title = localContext.getString(R.string.hash_verification_info_title),
+            textContent = it
+        ) {
+            openDialogMsg.value = null
+        }
+    }
 
     Box(
         modifier
@@ -819,13 +828,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
         if (verifiedHash) {
             IconButton(
                 onClick = {
-                    scope.launch {
-                        Toast.makeText(
-                            localContext,
-                            localContext.getString(R.string.hash_verification_passed),
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                    openDialogMsg.value = localContext.getString(R.string.hash_verification_passed)
                 }
             ) {
                 HashCheckIcon(Size30dp)
@@ -833,13 +836,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean, modifier: Modifier) {
         } else {
             IconButton(
                 onClick = {
-                    scope.launch {
-                        Toast.makeText(
-                            localContext,
-                            localContext.getString(R.string.hash_verification_failed),
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                    openDialogMsg.value = localContext.getString(R.string.hash_verification_failed)
                 }
             ) {
                 HashCheckFailedIcon(Size30dp)

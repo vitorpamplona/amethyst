@@ -311,6 +311,15 @@ fun LoginPage(
                             connectOrbotDialogOpen = false
                             useProxy.value = true
                         },
+                        onError = {
+                            scope.launch {
+                                Toast.makeText(
+                                    context,
+                                    it,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        },
                         proxyPort
                     )
                 }

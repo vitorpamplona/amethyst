@@ -350,15 +350,10 @@ fun ServerConfig(
                         Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
                     }
 
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                msg,
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        context.getString(R.string.unable_to_download_relay_document),
+                        msg
+                    )
                 }
             )
         }

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +49,8 @@ fun InvoiceRequestCard(
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onError: (String, String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -64,7 +64,7 @@ fun InvoiceRequestCard(
                 .fillMaxWidth()
                 .padding(30.dp)
         ) {
-            InvoiceRequest(lud16, toUserPubKeyHex, account, titleText, buttonText, onSuccess, onClose)
+            InvoiceRequest(lud16, toUserPubKeyHex, account, titleText, buttonText, onSuccess, onClose, onError)
         }
     }
 }
@@ -77,7 +77,8 @@ fun InvoiceRequest(
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onError: (String, String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -162,14 +163,10 @@ fun InvoiceRequest(
                     message,
                     zapRequest?.toJson(),
                     onSuccess = onSuccess,
-                    onError = {
-                        scope.launch {
-                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                            onClose()
-                        }
-                    },
+                    onError = onError,
                     onProgress = {
-                    }
+                    },
+                    context = context
                 )
             }
         },

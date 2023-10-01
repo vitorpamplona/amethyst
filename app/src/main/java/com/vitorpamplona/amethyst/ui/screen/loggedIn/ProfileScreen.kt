@@ -1,8 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
@@ -46,7 +43,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.distinctUntilChanged
@@ -62,6 +58,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
+import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
@@ -74,8 +71,11 @@ import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.note.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
@@ -739,9 +739,6 @@ private fun DisplayFollowUnfollowButton(
     baseUser: User,
     accountViewModel: AccountViewModel
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
     val isLoggedInFollowingUser by accountViewModel.account.userProfile().live().follows.map {
         it.user.isFollowing(baseUser)
     }.distinctUntilChanged().observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
@@ -754,24 +751,15 @@ private fun DisplayFollowUnfollowButton(
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.unfollow(baseUser)
-                    }
+                    accountViewModel.unfollow(baseUser)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_unfollow
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollow(baseUser)
-                }
+                accountViewModel.unfollow(baseUser)
             }
         }
     } else {
@@ -779,48 +767,30 @@ private fun DisplayFollowUnfollowButton(
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
                     if (accountViewModel.loggedInWithExternalSigner()) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.account.follow(baseUser)
-                        }
+                        accountViewModel.follow(baseUser)
                     } else {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                        }
+                        accountViewModel.toast(
+                            R.string.read_only_user,
+                            R.string.login_with_a_private_key_to_be_able_to_follow
+                        )
                     }
                 } else {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.follow(baseUser)
-                    }
+                    accountViewModel.follow(baseUser)
                 }
             }
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
                     if (accountViewModel.loggedInWithExternalSigner()) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.account.follow(baseUser)
-                        }
+                        accountViewModel.follow(baseUser)
                     } else {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                        }
+                        accountViewModel.toast(
+                            R.string.read_only_user,
+                            R.string.login_with_a_private_key_to_be_able_to_follow
+                        )
                     }
                 } else {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.follow(baseUser)
-                    }
+                    accountViewModel.follow(baseUser)
                 }
             }
         }
@@ -974,7 +944,7 @@ private fun DrawAdditionalInfo(
 
     val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
     val pubkeyHex = remember { baseUser.pubkeyHex }
-    DisplayLNAddress(lud16, pubkeyHex, accountViewModel.account)
+    DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
 
     val identities = user.info?.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
@@ -1026,11 +996,38 @@ private fun DrawAdditionalInfo(
 fun DisplayLNAddress(
     lud16: String?,
     userHex: String,
-    account: Account
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var zapExpanded by remember { mutableStateOf(false) }
+
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+
+    if (showErrorMessageDialog != null) {
+        ErrorMessageDialog(
+            title = stringResource(id = R.string.error_dialog_zap_error),
+            textContent = showErrorMessageDialog ?: "",
+            onClickStartMessage = {
+                scope.launch(Dispatchers.IO) {
+                    val route = routeToMessage(userHex, showErrorMessageDialog, accountViewModel)
+                    nav(route)
+                }
+            },
+            onDismiss = { showErrorMessageDialog = null }
+        )
+    }
+
+    var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
+    if (showInfoMessageDialog != null) {
+        InformationDialog(
+            title = context.getString(R.string.payment_successful),
+            textContent = showInfoMessageDialog ?: ""
+        ) {
+            showInfoMessageDialog = null
+        }
+    }
 
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1054,50 +1051,31 @@ fun DisplayLNAddress(
                 InvoiceRequestCard(
                     lud16,
                     userHex,
-                    account,
+                    accountViewModel.account,
                     onSuccess = {
                         zapExpanded = false
                         // pay directly
-                        if (account.hasWalletConnectSetup()) {
-                            account.sendZapPaymentRequestFor(it, null) { response ->
+                        if (accountViewModel.account.hasWalletConnectSetup()) {
+                            accountViewModel.account.sendZapPaymentRequestFor(it, null) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
-                                    scope.launch {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.payment_successful), // Turn this into a UI animation
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
+                                    showInfoMessageDialog = context.getString(R.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {
-                                    scope.launch {
-                                        Toast.makeText(
-                                            context,
-                                            response.error?.message
-                                                ?: response.error?.code?.toString()
-                                                ?: context.getString(R.string.error_parsing_error_message),
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
+                                    showErrorMessageDialog = response.error?.message
+                                        ?: response.error?.code?.toString()
+                                        ?: context.getString(R.string.error_parsing_error_message)
                                 }
                             }
                         } else {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$it"))
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                ContextCompat.startActivity(context, intent, null)
-                            } catch (e: Exception) {
-                                scope.launch {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.lightning_wallets_not_found),
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
+                            payViaIntent(it, context) {
+                                showErrorMessageDialog = it
                             }
                         }
                     },
                     onClose = {
                         zapExpanded = false
+                    },
+                    onError = { title, message ->
+                        accountViewModel.toast(title, message)
                     }
                 )
             }

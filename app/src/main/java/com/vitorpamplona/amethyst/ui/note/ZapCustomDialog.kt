@@ -91,7 +91,7 @@ class ZapOptionstViewModel : ViewModel() {
 @Composable
 fun ZapCustomDialog(
     onClose: () -> Unit,
-    onError: (text: String) -> Unit,
+    onError: (title: String, text: String) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     accountViewModel: AccountViewModel,
@@ -254,7 +254,7 @@ fun ErrorMessageDialog(
     title: String,
     textContent: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-    onClickStartMessage: () -> Unit,
+    onClickStartMessage: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -274,13 +274,15 @@ fun ErrorMessageDialog(
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                TextButton(onClick = onClickStartMessage) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_dm),
-                        contentDescription = null
-                    )
-                    Spacer(StdHorzSpacer)
-                    Text(stringResource(R.string.error_dialog_talk_to_user))
+                onClickStartMessage?.let {
+                    TextButton(onClick = onClickStartMessage) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_dm),
+                            contentDescription = null
+                        )
+                        Spacer(StdHorzSpacer)
+                        Text(stringResource(R.string.error_dialog_talk_to_user))
+                    }
                 }
                 Button(onClick = onDismiss, colors = buttonColors, contentPadding = PaddingValues(horizontal = Size16dp)) {
                     Row(

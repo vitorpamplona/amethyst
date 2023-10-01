@@ -380,6 +380,9 @@ fun NewPostView(
                                                 },
                                                 onClose = {
                                                     postViewModel.wantsInvoice = false
+                                                },
+                                                onError = { title, message ->
+                                                    accountViewModel.toast(title, message)
                                                 }
                                             )
                                         }

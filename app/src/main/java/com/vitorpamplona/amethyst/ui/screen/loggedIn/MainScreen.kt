@@ -39,6 +39,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.model.BooleanType
+import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -118,6 +120,8 @@ fun MainScreen(
             Unit
         }
     }
+
+    DisplayErrorMessages(accountViewModel)
 
     val navPopBack = remember(navController) {
         {
@@ -352,6 +356,30 @@ fun MainScreen(
             sheetState = sheetState
         ) {
             AccountSwitchBottomSheet(accountViewModel = accountViewModel, accountStateViewModel = accountStateViewModel)
+        }
+    }
+}
+
+@Composable
+private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
+    val context = LocalContext.current
+    val openDialogMsg = accountViewModel.toasts.collectAsState(initial = null)
+
+    openDialogMsg.value?.let { obj ->
+        when (obj) {
+            is ResourceToastMsg -> InformationDialog(
+                context.getString(obj.titleResId),
+                context.getString(obj.resourceId)
+            ) {
+                accountViewModel.clearToasts()
+            }
+
+            is StringToastMsg -> InformationDialog(
+                obj.title,
+                obj.msg
+            ) {
+                accountViewModel.clearToasts()
+            }
         }
     }
 }

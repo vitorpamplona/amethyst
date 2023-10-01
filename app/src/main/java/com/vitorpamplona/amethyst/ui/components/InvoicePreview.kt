@@ -1,8 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -23,8 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
@@ -67,7 +65,16 @@ fun MayBeInvoicePreview(lnbcWord: String) {
 @Composable
 fun InvoicePreview(lnInvoice: String, amount: String?) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+
+    if (showErrorMessageDialog != null) {
+        ErrorMessageDialog(
+            title = context.getString(R.string.error_dialog_pay_invoice_error),
+            textContent = showErrorMessageDialog ?: "",
+            onDismiss = { showErrorMessageDialog = null }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -120,18 +127,8 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
                     .fillMaxWidth()
                     .padding(vertical = 10.dp),
                 onClick = {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$lnInvoice"))
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(context, intent, null)
-                    } catch (e: Exception) {
-                        scope.launch {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.lightning_wallets_not_found),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+                    payViaIntent(lnInvoice, context) {
+                        showErrorMessageDialog = it
                     }
                 },
                 shape = QuoteBorder,

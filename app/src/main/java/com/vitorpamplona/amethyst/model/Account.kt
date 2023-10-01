@@ -895,7 +895,7 @@ class Account(
         return returningContactList
     }
 
-    fun follow(user: User) {
+    suspend fun follow(user: User) {
         if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -1064,7 +1064,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun unfollow(user: User) {
+    suspend fun unfollow(user: User) {
         if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)

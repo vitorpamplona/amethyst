@@ -5,7 +5,6 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -82,7 +81,6 @@ import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope as rememberCoroutineScope
 
@@ -228,9 +226,16 @@ fun UpdateZapAmountDialog(
             try {
                 postViewModel.updateNIP47(nip47uri)
             } catch (e: IllegalArgumentException) {
-                scope.launch {
-                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT)
-                        .show()
+                if (e.message != null) {
+                    accountViewModel.toast(
+                        context.getString(R.string.error_parsing_nip47_title),
+                        context.getString(R.string.error_parsing_nip47, nip47uri, e.message!!)
+                    )
+                } else {
+                    accountViewModel.toast(
+                        context.getString(R.string.error_parsing_nip47_title),
+                        context.getString(R.string.error_parsing_nip47_no_error, nip47uri)
+                    )
                 }
             }
         }
@@ -444,9 +449,16 @@ fun UpdateZapAmountDialog(
                                     try {
                                         postViewModel.updateNIP47(it)
                                     } catch (e: IllegalArgumentException) {
-                                        scope.launch {
-                                            Toast.makeText(context, e.message, Toast.LENGTH_SHORT)
-                                                .show()
+                                        if (e.message != null) {
+                                            accountViewModel.toast(
+                                                context.getString(R.string.error_parsing_nip47_title),
+                                                context.getString(R.string.error_parsing_nip47, it, e.message!!)
+                                            )
+                                        } else {
+                                            accountViewModel.toast(
+                                                context.getString(R.string.error_parsing_nip47_title),
+                                                context.getString(R.string.error_parsing_nip47_no_error, it)
+                                            )
                                         }
                                     }
                                 }
@@ -505,7 +517,6 @@ fun UpdateZapAmountDialog(
                             mutableStateOf(false)
                         }
 
-                        val scope = rememberCoroutineScope()
                         val context = LocalContext.current
 
                         val keyguardLauncher =
@@ -544,13 +555,16 @@ fun UpdateZapAmountDialog(
                                     IconButton(onClick = {
                                         if (!showPassword) {
                                             authenticate(
-                                                authTitle,
-                                                context,
-                                                scope,
-                                                keyguardLauncher
-                                            ) {
-                                                showPassword = true
-                                            }
+                                                title = authTitle,
+                                                context = context,
+                                                keyguardLauncher = keyguardLauncher,
+                                                onApproved = {
+                                                    showPassword = true
+                                                },
+                                                onError = { title, message ->
+                                                    accountViewModel.toast(title, message)
+                                                }
+                                            )
                                         } else {
                                             showPassword = false
                                         }
@@ -580,9 +594,9 @@ fun UpdateZapAmountDialog(
 fun authenticate(
     title: String,
     context: Context,
-    scope: CoroutineScope,
     keyguardLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
-    onApproved: () -> Unit
+    onApproved: () -> Unit,
+    onError: (String, String) -> Unit
 ) {
     val fragmentContext = context.getFragmentActivity()!!
     val keyguardManager =
@@ -626,26 +640,19 @@ fun authenticate(
                 when (errorCode) {
                     BiometricPrompt.ERROR_NEGATIVE_BUTTON -> keyguardPrompt()
                     BiometricPrompt.ERROR_LOCKOUT -> keyguardPrompt()
-                    else ->
-                        scope.launch {
-                            Toast.makeText(
-                                context,
-                                "${context.getString(R.string.biometric_error)}: $errString",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                    else -> onError(
+                        context.getString(R.string.biometric_authentication_failed),
+                        context.getString(R.string.biometric_authentication_failed_explainer_with_error, errString)
+                    )
                 }
             }
 
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.biometric_authentication_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                onError(
+                    context.getString(R.string.biometric_authentication_failed),
+                    context.getString(R.string.biometric_authentication_failed_explainer)
+                )
             }
 
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {

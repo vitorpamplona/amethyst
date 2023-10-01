@@ -566,7 +566,7 @@ fun ListContent(
         NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
     }
     if (backupDialogOpen) {
-        AccountBackupDialog(accountViewModel.account, onClose = { backupDialogOpen = false })
+        AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
     }
     if (conectOrbotDialogOpen) {
         ConnectOrbotDialog(
@@ -576,6 +576,12 @@ fun ListContent(
                 disconnectTorDialog = false
                 checked = true
                 enableTor(accountViewModel.account, true, proxyPort, context, coroutineScope)
+            },
+            onError = {
+                accountViewModel.toast(
+                    context.getString(R.string.could_not_connect_to_tor),
+                    it
+                )
             },
             proxyPort
         )

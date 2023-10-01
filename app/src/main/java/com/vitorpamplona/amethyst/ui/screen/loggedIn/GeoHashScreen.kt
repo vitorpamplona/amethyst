@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -160,9 +158,6 @@ fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
     val userState by accountViewModel.userProfile().live().follows.observeAsState()
     val isFollowingTag by remember(userState) {
         derivedStateOf {
@@ -174,48 +169,30 @@ fun GeoHashActionOptions(
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.unfollowGeohash(tag)
-                    }
+                    accountViewModel.unfollowGeohash(tag)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_unfollow
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.unfollowGeohash(tag)
-                }
+                accountViewModel.unfollowGeohash(tag)
             }
         }
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.followGeohash(tag)
-                    }
+                    accountViewModel.followGeohash(tag)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_follow
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.account.followGeohash(tag)
-                }
+                accountViewModel.followGeohash(tag)
             }
         }
     }

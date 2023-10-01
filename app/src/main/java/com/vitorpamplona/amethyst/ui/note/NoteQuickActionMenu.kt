@@ -291,20 +291,16 @@ private fun RenderMainPopup(
                             Icons.Default.PersonRemove,
                             stringResource(R.string.quick_action_unfollow)
                         ) {
-                            scope.launch(Dispatchers.IO) {
-                                accountViewModel.unfollow(note.author!!)
-                                onDismiss()
-                            }
+                            accountViewModel.unfollow(note.author!!)
+                            onDismiss()
                         }
                     } else {
                         NoteQuickActionItem(
                             Icons.Default.PersonAdd,
                             stringResource(R.string.quick_action_follow)
                         ) {
-                            scope.launch(Dispatchers.IO) {
-                                accountViewModel.follow(note.author!!)
-                                onDismiss()
-                            }
+                            accountViewModel.follow(note.author!!)
+                            onDismiss()
                         }
                     }
 

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -49,7 +48,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
 
 @Composable
 public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -159,15 +157,10 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
                                 Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
                             }
 
-                            scope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        msg,
-                                        Toast.LENGTH_SHORT
-                                    )
-                                    .show()
-                            }
+                            accountViewModel.toast(
+                                context.getString(R.string.unable_to_download_relay_document),
+                                msg
+                            )
                         }
                     )
                 }

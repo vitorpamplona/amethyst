@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,15 +15,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -34,7 +32,6 @@ import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.launch
 
 data class RelayList(
     val relay: Relay,
@@ -55,7 +52,6 @@ fun RelaySelectionDialog(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     var relays by remember {
@@ -69,6 +65,13 @@ fun RelaySelectionDialog(
             }
         )
     }
+
+    val hasSelectedRelay by remember {
+        derivedStateOf {
+            relays.any { it.isSelected }
+        }
+    }
+
     var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
 
     relayInfo?.let {
@@ -121,21 +124,15 @@ fun RelaySelectionDialog(
                     SaveButton(
                         onPost = {
                             val selectedRelays = relays.filter { it.isSelected }
-                            if (selectedRelays.isEmpty()) {
-                                scope.launch {
-                                    Toast.makeText(context, context.getString(R.string.select_a_relay_to_continue), Toast.LENGTH_SHORT).show()
-                                }
-                                return@SaveButton
-                            }
                             onPost(selectedRelays.map { it.relay })
                             onClose()
                         },
-                        isActive = true
+                        isActive = hasSelectedRelay
                     )
                 }
 
                 RelaySwitch(
-                    text = stringResource(R.string.select_deselect_all),
+                    text = context.getString(R.string.select_deselect_all),
                     checked = selected,
                     onClick = {
                         selected = !selected
@@ -181,15 +178,10 @@ fun RelaySelectionDialog(
                                             Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
                                         }
 
-                                        scope.launch {
-                                            Toast
-                                                .makeText(
-                                                    context,
-                                                    msg,
-                                                    Toast.LENGTH_SHORT
-                                                )
-                                                .show()
-                                        }
+                                        accountViewModel.toast(
+                                            context.getString(R.string.unable_to_download_relay_document),
+                                            msg
+                                        )
                                     }
                                 )
                             }

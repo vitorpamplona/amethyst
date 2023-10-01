@@ -88,7 +88,6 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -162,6 +161,7 @@ import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -1286,14 +1286,18 @@ fun routeFor(note: Note, loggedIn: User): String? {
     return null
 }
 
-fun routeToMessage(user: User, draftMessage: String?, accountViewModel: AccountViewModel): String {
-    val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
+fun routeToMessage(user: HexKey, draftMessage: String?, accountViewModel: AccountViewModel): String {
+    val withKey = ChatroomKey(persistentSetOf(user))
     accountViewModel.account.userProfile().createChatroom(withKey)
     return if (draftMessage != null) {
         "Room/${withKey.hashCode()}?message=$draftMessage"
     } else {
         "Room/${withKey.hashCode()}"
     }
+}
+
+fun routeToMessage(user: User, draftMessage: String?, accountViewModel: AccountViewModel): String {
+    return routeToMessage(user.pubkeyHex, draftMessage, accountViewModel)
 }
 
 fun routeFor(note: Channel): String {

@@ -435,10 +435,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                 },
                 onClick = {
                     val author = note.author ?: return@DropdownMenuItem
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.follow(author)
-                        onDismiss()
-                    }
+                    accountViewModel.follow(author)
+                    onDismiss()
                 }
             )
             Divider()
