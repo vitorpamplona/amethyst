@@ -36,6 +36,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Přihlaste se pomocí soukromého klíče, abyste mohli odesílat Zapy</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Přihlaste se pomocí soukromého klíče, abyste mohli následovat</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Přihlaste se pomocí soukromého klíče, abyste mohli zrušit sledování</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Používáte veřejný klíč a veřejné klíče jsou pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli skrýt slovo nebo větu</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Používáte veřejný klíč a veřejné klíče jsou pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli zobrazit slovo nebo větu</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Počet zobrazení</string>
     <string name="boost">Zvýšení</string>
@@ -191,6 +193,8 @@
     <string name="secret_key_copied_to_clipboard">Tajný klíč (nsec) zkopírován do schránky</string>
     <string name="copy_my_secret_key">Zkopírovat můj tajný klíč</string>
     <string name="biometric_authentication_failed">Autentizace se nezdařila</string>
+    <string name="biometric_authentication_failed_explainer">Biometrické údaje se nepodařilo ověřit vlastníka tohoto telefonu</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrické údaje se nepodařilo ověřit vlastníka tohoto telefonu. Chyba: %1$s</string>
     <string name="biometric_error">Chyba</string>
     <string name="badge_created_by">"Vytvořeno uživatelem %1$s"</string>
     <string name="badge_award_image_for">"Obrázek ocenění od %1$s"</string>
@@ -270,6 +274,8 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Uzavřít po</string>
     <string name="poll_closing_time_days">dnech</string>
+    <string name="poll_unable_to_vote">Nebylo možné hlasovat</string>
+    <string name="poll_is_closed_explainer">Hlasování je uzavřeno pro nové hlasy</string>
     <string name="poll_zap_amount">Částka zapsu</string>
     <string name="one_vote_per_user_on_atomic_votes">U tohoto typu hlasování je povolen pouze jeden hlas na uživatele</string>
     <string name="looking_for_event">"Hledá se událost %1$s"</string>
@@ -279,6 +285,7 @@
     <string name="custom_zaps_add_a_message_example">Děkuji za veškerou práci!</string>
     <string name="lightning_create_and_add_invoice">Vytvořit a přidat</string>
     <string name="poll_author_no_vote">Autoři hlasování nemohou hlasovat ve vlastních hlasováních.</string>
+    <string name="hash_verification_info_title">Co to znamená?</string>
     <string name="hash_verification_passed">Obrázek je stejný jako v původním příspěvku</string>
     <string name="hash_verification_failed">Obrázek se změnil. Autor možná změnu nezaznamenal</string>
     <string name="content_description_add_image">Přidat obrázek</string>
@@ -491,6 +498,7 @@
     <string name="zap_split_explainer">Podporované klienty budou Zapy rozdělovat a přeposílat uživatelům přidaným zde místo vám</string>
     <string name="zap_split_serarch_and_add_user">Hledat a přidat uživatele</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Uživatelské jméno nebo zobrazované jméno</string>
+    <string name="missing_lud16">Chybí nastavení blesku</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel %1$s nemá nastavenou bleskovou adresu pro přijímání satoshi</string>
     <string name="zap_split_weight">Procenta</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -507,4 +515,31 @@
     <string name="hide_new_word_label">Skrýt nové slovo nebo větu</string>
     <string name="automatically_show_profile_picture">Profilový obrázek</string>
     <string name="automatically_show_profile_picture_description">Zobrazit profilové obrázky</string>
+    <string name="select_an_option">Zvolte možnost</string>
+    <string name="error_dialog_pay_invoice_error">Nelze zaplatit fakturu</string>
+    <string name="error_dialog_pay_withdraw_error">Nepodařilo se vybrat</string>
+    <string name="error_parsing_nip47_title">Nepodařilo se nastavit Wallet Connect</string>
+    <string name="error_parsing_nip47">Chyba při analýze připojení NIP-47. Zkontrolujte, zda je to správné u poskytovatele peněženky: %1$s. Chyba: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Chyba při analýze připojení NIP-47. Zkontrolujte, zda je to správné u poskytovatele peněženky: %1$s.</string>
+    <string name="cashu_failed_redemption">Nepodařilo se použít Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint poskytl následující chybovou zprávu: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Tokeny Cashu již byly utraceny.</string>
+    <string name="cashu_sucessful_redemption">Obdrženo Cashu</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats bylo odesláno do vaší peněženky. (Poplatek: %2$s sats)</string>
+    <string name="error_unable_to_fetch_invoice">Nebylo možné načíst fakturu ze serverů příjemce</string>
+    <string name="wallet_connect_pay_invoice_error_error">Poskytovatel připojení vaší peněženky vrátil následující chybu: %1$s</string>
+    <string name="could_not_connect_to_tor">Nepodařilo se připojit k Tor</string>
+    <string name="unable_to_download_relay_document">Stáhnout relé dokument není k dispozici</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nepodařilo se sestavit LNUrl z Lightning adresy \"%1$s\". Zkontrolujte nastavení uživatele</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Služba blesku příjemce v %1$s není k dispozici. Byla vypočtena z adresy blesku \"%2$s\". Chyba: %3$s. Zkontrolujte, zda je server aktivní a zda je adresa blesku správná</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná</string>
+    <string name="could_not_fetch_invoice_from">Nepodařilo se načíst fakturu z %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Chyba při analýze JSON z Lightning adresy. Zkontrolujte uživatelovo bleskové nastavení</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL adresa zpětného volání nebyla nalezena v konfiguraci serveru pro bleskovou adresu uživatele</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Chyba při analýze JSON z načtení faktur v Lightning adrese. Zkontrolujte uživatelské nastavení</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nesprávná částka faktury (%1$s sats) od %2$s. Měla by být %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nepodařilo se vytvořit bleskovou fakturu před odesláním zap. Blesková peněženka příjemce odeslala následující chybu: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nepodařilo se vytvořit bleskovou fakturu před odesláním zap. Prvek pr nebyl nalezen v výsledném JSON.</string>
+    <string name="read_only_user">Uživatel pouze pro čtení</string>
+    <string name="no_reactions_setup">Žádné nastavení reakcí</string>
 </resources>
