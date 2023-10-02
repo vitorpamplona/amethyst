@@ -1115,7 +1115,12 @@ fun DisplayZapSplits(noteEvent: EventInterface, accountViewModel: AccountViewMod
                         style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
                     )
                 } else {
-                    UserPicture(userHex = it.lnAddressOrPubKeyHex, size = 25.dp, accountViewModel = accountViewModel, nav = nav)
+                    UserPicture(
+                        userHex = it.lnAddressOrPubKeyHex,
+                        size = Size25dp,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
                 }
             }
         }

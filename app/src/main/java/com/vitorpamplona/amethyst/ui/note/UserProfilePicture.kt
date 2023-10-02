@@ -1,7 +1,10 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -117,7 +120,7 @@ fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
 fun UserPicture(
     userHex: String,
     size: Dp,
-    pictureModifier: Modifier = remember { Modifier },
+    pictureModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -143,7 +146,7 @@ fun UserPicture(
 fun UserPicture(
     user: User,
     size: Dp,
-    pictureModifier: Modifier = remember { Modifier },
+    pictureModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -170,7 +173,7 @@ fun ClickableUserPicture(
     baseUser: User,
     size: Dp,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = remember { Modifier },
+    modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null,
     onLongClick: ((User) -> Unit)? = null
 ) {
@@ -290,7 +293,7 @@ fun BaseUserPicture(
     baseUser: User,
     size: Dp,
     accountViewModel: AccountViewModel,
-    innerModifier: Modifier = remember { Modifier },
+    innerModifier: Modifier = Modifier,
     outerModifier: Modifier = remember { Modifier.size(size) }
 ) {
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
@@ -348,7 +351,6 @@ fun PictureAndFollowingMark(
         contentScale = ContentScale.Crop,
         loadProfilePicture = automaticallyShowProfilePicture
     )
-
     val myIconSize by remember(size) {
         derivedStateOf {
             size.div(3.5f)
@@ -360,11 +362,13 @@ fun PictureAndFollowingMark(
 @Composable
 fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewModel: AccountViewModel) {
     WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
-        Crossfade(targetState = newFollowingState) { following ->
-            if (following) {
-                Box(contentAlignment = Alignment.TopEnd) {
-                    FollowingIcon(iconSize)
-                }
+        AnimatedVisibility(
+            visible = newFollowingState,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(contentAlignment = Alignment.TopEnd) {
+                FollowingIcon(iconSize)
             }
         }
     }
