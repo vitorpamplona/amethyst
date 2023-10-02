@@ -239,10 +239,14 @@ fun MainScreen(
                 val newOffset = bottomBarOffsetHeightPx.value + available.y
 
                 if (accountViewModel.account.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
-                    bottomBarOffsetHeightPx.value = if (navState.value?.destination?.route !in InvertedLayouts) {
+                    val newBottomBarOffset = if (navState.value?.destination?.route !in InvertedLayouts) {
                         newOffset.coerceIn(-bottomBarHeightPx, 0f)
                     } else {
                         newOffset.coerceIn(0f, bottomBarHeightPx)
+                    }
+
+                    if (newBottomBarOffset != bottomBarOffsetHeightPx.value) {
+                        bottomBarOffsetHeightPx.value = newBottomBarOffset
                     }
                 } else {
                     if (abs(bottomBarOffsetHeightPx.value) > 0.1) {
@@ -250,7 +254,11 @@ fun MainScreen(
                     }
                 }
 
-                shouldShow.value = abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
+                val newShouldShow = abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
+
+                if (shouldShow.value != newShouldShow) {
+                    shouldShow.value = newShouldShow
+                }
 
                 return Offset.Zero
             }
