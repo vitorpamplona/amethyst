@@ -56,6 +56,10 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
         }
     }
 
+    fun clearEOSEs(account: Account) {
+        latestEOSEs.removeDataFor(account.userProfile())
+    }
+
     val inandoutChannel = requestNewChannel { time, relayUrl ->
         latestEOSEs.addOrUpdate(account.userProfile(), withRoom.hashCode().toString(), relayUrl, time)
     }

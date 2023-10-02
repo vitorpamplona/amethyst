@@ -43,4 +43,8 @@ class EOSEAccount(var users: Map<User, EOSEFollowList> = emptyMap()) {
             followList.addOrUpdate(listCode, relayUrl, time)
         }
     }
+
+    fun removeDataFor(user: User) {
+        users = users.minus(user)
+    }
 }

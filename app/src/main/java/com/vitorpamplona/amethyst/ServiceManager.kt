@@ -142,6 +142,8 @@ object ServiceManager {
 
         account?.let {
             LocalCache.pruneOldAndHiddenMessages(it)
+            NostrChatroomDataSource.clearEOSEs(it)
+
             LocalCache.pruneHiddenMessages(it)
             LocalCache.pruneContactLists(accounts)
             LocalCache.pruneRepliesAndReactions(accounts)
