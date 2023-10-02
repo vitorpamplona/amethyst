@@ -36,6 +36,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Login met een privésleutel om Zaps te versturen</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Login met een privésleutel om te volgen</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Login met een privésleutel om te ontvolgen</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Je gebruikt een publieke sleutel en publieke sleutels zijn read-only. Login met een privésleutel om woorden of zinnen te verbergen</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Je gebruikt een publieke sleutel en publieke sleutels zijn read-only. Login met een privésleutel om woorden of zinnen te tonen</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Aantal keer bekeken</string>
     <string name="boost">Boost</string>
@@ -191,6 +193,8 @@
     <string name="secret_key_copied_to_clipboard">Privésleutel (nsec) gekopieerd naar klembord</string>
     <string name="copy_my_secret_key">Kopieer mijn privésleutel</string>
     <string name="biometric_authentication_failed">Authenticatie mislukt</string>
+    <string name="biometric_authentication_failed_explainer">Biometrie kon de eigenaar van deze telefoon niet verifiëren</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrie kon de eigenaar van deze telefoon niet verifiëren. Fout: %1$s</string>
     <string name="biometric_error">Fout</string>
     <string name="badge_created_by">"Gemaakt door %1$s"</string>
     <string name="badge_award_image_for">"Badge award afbeelding voor %1$s"</string>
@@ -270,6 +274,8 @@
     <string name="poll_consensus_threshold_percent">(0-100)%</string>
     <string name="poll_closing_time">Sluit na</string>
     <string name="poll_closing_time_days">dagen</string>
+    <string name="poll_unable_to_vote">Kan niet stemmen</string>
+    <string name="poll_is_closed_explainer">Poll is gesloten voor nieuwe stemmen</string>
     <string name="poll_zap_amount">Zap bedrag</string>
     <string name="one_vote_per_user_on_atomic_votes">Slechts één stem per gebruiker is toegestaan bij dit type peiling.</string>
     <string name="looking_for_event">"Zoeken naar event %1$s"</string>
@@ -279,6 +285,7 @@
     <string name="custom_zaps_add_a_message_example">Bedankt voor al jullie werk!</string>
     <string name="lightning_create_and_add_invoice">Maken en toevoegen</string>
     <string name="poll_author_no_vote">Poll auteurs kunnen niet stemmen in hun eigen poll.</string>
+    <string name="hash_verification_info_title">Wat betekent dit?</string>
     <string name="hash_verification_passed">De afbeelding is onveranderd sinds de post</string>
     <string name="hash_verification_failed">De afbeelding is veranderd. De auteur heeft de wijziging misschien niet gezien</string>
     <string name="content_description_add_image">Afbeelding toevoegen</string>
@@ -491,6 +498,7 @@
     <string name="zap_split_explainer">Ondersteunende clients delen en sturen door naar de gebruikers toegevoegd hier in plaats van de jouwe</string>
     <string name="zap_split_serarch_and_add_user">Zoek en voeg gebruiker toe</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Gebruikersnaam of weergavenaam</string>
+    <string name="missing_lud16">Ontbrekende Lightning configuratie</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker %1$s heeft geen Lightning Adress ingesteld om sats te ontvangen</string>
     <string name="zap_split_weight">Percentage</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -507,4 +515,31 @@
     <string name="hide_new_word_label">Verberg nieuwe woorden of zinnen</string>
     <string name="automatically_show_profile_picture">Profielfoto</string>
     <string name="automatically_show_profile_picture_description">Toon profielfoto\'s</string>
+    <string name="select_an_option">Selecteer een optie</string>
+    <string name="error_dialog_pay_invoice_error">Invoice kon niet worden betaald</string>
+    <string name="error_dialog_pay_withdraw_error">Kan niet opnemen</string>
+    <string name="error_parsing_nip47_title">Kon geen Wallet Connect instellen</string>
+    <string name="error_parsing_nip47">Fout bij het verwerken van de NIP-47 connectie string. Controleer of dit juist is met uw Wallet provider: %1$s. Fout: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Fout bij het verwerken van de NIP-47 connectie string. Controleer of dit juist is met uw Wallet provider: %1$s. Fout.</string>
+    <string name="cashu_failed_redemption">Kan Cashu niet verzilveren</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint geeft de volgende foutmelding: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu tokens zijn al uitgegeven.</string>
+    <string name="cashu_sucessful_redemption">Cashu ontvangen</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats zijn naar uw wallet gestuurd. (Fees: %2$s sats)</string>
+    <string name="error_unable_to_fetch_invoice">Kan invoice niet ophalen van de servers van de ontvanger</string>
+    <string name="wallet_connect_pay_invoice_error_error">De volgende fout is geretourneerd door uw wallet connect provider: %1$s</string>
+    <string name="could_not_connect_to_tor">Kan geen verbinding maken met Tor</string>
+    <string name="unable_to_download_relay_document">Download relay document niet beschikbaar</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kon LNUrl niet samenbrengen van Lightning Adress \"%1$s\". Controleer de instellingen van de gebruiker</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">De Lightning service van de ontvanger bij %1$s is niet beschikbaar. Het werd berekend op basis van het Lightning Adress \"%2$s\". Fout: %3$s. Controleer of de server klaar is en of het Lightning Adress juist is</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Kan %1$s niet oplossen. Controleer of u verbonden bent, of de server online is en of het Lightning Adress %2$s juist is</string>
+    <string name="could_not_fetch_invoice_from">Kan invoice niet ophalen van %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fout bij het verwerken van JSON uit Lightning Adress. Controleer de Lightning setup van de gebruiker</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL niet gevonden in de Lightning Adress configuratie van de gebruiker</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Fout bij het verwerken van JSON uit Lightning Adress. Controleer de Lightning setup van de gebruiker</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Onjuist Invoice-bedrag (%1$s sats) van %2$s. Het had %3$s moeten zijn</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Kan geen Linghtning invoice aanmaken voor het verzenden van de zap. De Lightning wallet van de ontvanger verstuurde de volgende fout: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Kan geen Linghtning invoice aanmaken voor het verzenden van de zap. Element pr niet gevonden in de resulterende JSON.</string>
+    <string name="read_only_user">Read-only gebruiker</string>
+    <string name="no_reactions_setup">Geen reacties setup</string>
 </resources>
