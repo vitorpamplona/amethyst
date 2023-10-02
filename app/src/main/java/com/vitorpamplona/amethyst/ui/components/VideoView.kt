@@ -98,24 +98,23 @@ fun LoadThumbAndThenVideoView(
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
-
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            try {
-                val request = ImageRequest.Builder(context).data(thumbUri).build()
-                val myCover = context.imageLoader.execute(request).drawable
-                if (myCover != null) {
-                    loadingFinished = Pair(true, myCover)
+        accountViewModel.loadThumb(
+            context,
+            thumbUri,
+            onReady = {
+                if (it != null) {
+                    loadingFinished = Pair(true, it)
                 } else {
                     loadingFinished = Pair(true, null)
                 }
-            } catch (e: Exception) {
-                Log.e("VideoView", "Fail to load cover $thumbUri", e)
+            },
+            onError = {
                 loadingFinished = Pair(true, null)
             }
-        }
+        )
     }
 
     if (loadingFinished.first) {
