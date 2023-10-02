@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -59,8 +58,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import coil.imageLoader
-import coil.request.ImageRequest
 import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.PlaybackClientController
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -685,29 +682,31 @@ fun ControlWhenPlayerIsActive(
     automaticallyStartPlayback: MutableState<Boolean>,
     activeOnScreen: MutableState<Boolean>
 ) {
-    // active means being fully visible
-    if (activeOnScreen.value) {
-        // should auto start video from settings?
-        if (!automaticallyStartPlayback.value) {
-            if (controller.isPlaying) {
-                // if it is visible, it's playing but it wasn't supposed to start automatically.
+    LaunchedEffect(key1 = activeOnScreen.value) {
+        // active means being fully visible
+        if (activeOnScreen.value) {
+            // should auto start video from settings?
+            if (!automaticallyStartPlayback.value) {
+                if (controller.isPlaying) {
+                    // if it is visible, it's playing but it wasn't supposed to start automatically.
+                    controller.pause()
+                }
+            } else if (!controller.isPlaying) {
+                // if it is visible, was supposed to start automatically, but it's not
+
+                // If something else is playing, play on mute.
+                if (keepPlayingMutex != null && keepPlayingMutex != controller) {
+                    controller.volume = 0f
+                }
+                controller.play()
+            }
+        } else {
+            // Pauses the video when it becomes invisible.
+            // Destroys the video later when it Disposes the element
+            // meanwhile if the user comes back, the position in the track is saved.
+            if (!keepPlaying.value) {
                 controller.pause()
             }
-        } else if (!controller.isPlaying) {
-            // if it is visible, was supposed to start automatically, but it's not
-
-            // If something else is playing, play on mute.
-            if (keepPlayingMutex != null && keepPlayingMutex != controller) {
-                controller.volume = 0f
-            }
-            controller.play()
-        }
-    } else {
-        // Pauses the video when it becomes invisible.
-        // Destroys the video later when it Disposes the element
-        // meanwhile if the user comes back, the position in the track is saved.
-        if (!keepPlaying.value) {
-            controller.pause()
         }
     }
 
