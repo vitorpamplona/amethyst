@@ -36,6 +36,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Jelentkezzen be privát kulccsal, hogy Zaps-t küldhessen</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Jelentkezz be a privát kulccsal, hogy követni tudd</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Jelentkezz be a privát kulccsal, hogy őt kikövesd</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Nyilvános kulcsot használsz, és a nyilvános kulcsok csak olvasásra adnak lehetőséget. Jelentkezz be a privát kulccsoddal egy szó vagy mondat elrejtéséhez</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Nyilvános kulcsot használsz, és a nyilvános kulcsok csak olvasásra adnak lehetőséget. Jelentkezz be a privát kulccsoddal egy szó vagy mondat megjelenítéséhez</string>
     <string name="zaps">Zap-ek</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megosztás</string>
@@ -191,6 +193,8 @@
     <string name="secret_key_copied_to_clipboard">A titkos kulcs (nsec) a vágólapra másolva</string>
     <string name="copy_my_secret_key">A titkos kulcsom másolása</string>
     <string name="biometric_authentication_failed">Hitelesítés nem sikerült</string>
+    <string name="biometric_authentication_failed_explainer">A telefon tulajdonosát a biometrikus adatokkal nem sikerült hitelesíteni</string>
+    <string name="biometric_authentication_failed_explainer_with_error">A telefon tulajdonosát a biometrikus adatokkal nem sikerült hitelesíteni. Hiba: %1$s</string>
     <string name="biometric_error">Hiba</string>
     <string name="badge_created_by">"Készítette %1$s"</string>
     <string name="badge_award_image_for">"Kitűző %1$s"</string>
@@ -270,6 +274,8 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
     <string name="poll_closing_time_days">napok</string>
+    <string name="poll_unable_to_vote">Nem lehet szavazni</string>
+    <string name="poll_is_closed_explainer">A szavazásra már nem lehet új szavazatokat leadni</string>
     <string name="poll_zap_amount">Zap összege</string>
     <string name="one_vote_per_user_on_atomic_votes">Az ilyen típusú szavazásokon felhasználónként csak egy szavazat engedélyezett</string>
     <string name="looking_for_event">"%1$s esemény keresése"</string>
@@ -279,6 +285,7 @@
     <string name="custom_zaps_add_a_message_example">Köszönöm a kemény munkát!</string>
     <string name="lightning_create_and_add_invoice">Létrehoz és Hozzáad</string>
     <string name="poll_author_no_vote">A szavazás létrehozója sajátjára nem szavazhat.</string>
+    <string name="hash_verification_info_title">Mit jelent ez?</string>
     <string name="hash_verification_passed">A kép a bejegyzés óta ugyanaz</string>
     <string name="hash_verification_failed">A kép megváltozott. Lehet, hogy a szerző nem látta a változást</string>
     <string name="content_description_add_image">Kép Hozzáadása</string>
@@ -491,6 +498,7 @@
     <string name="zap_split_explainer">A támogató kliensek a zapokat, az itt hozzáadott felhasználóknak helyetted felosztják és továbbítják</string>
     <string name="zap_split_serarch_and_add_user">Felhasználó keresése és hozzáadása</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Felhasználónév vagy megjelenítendő név</string>
+    <string name="missing_lud16">Hiányzó lightning beállítás</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A %1$s felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
     <string name="zap_split_weight">Százalék</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -505,4 +513,33 @@
     <string name="no_wallet_found">Nem található tárca a Lighning számla kifizetésére. Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
     <string name="hidden_words">Elrejtett Szavak</string>
     <string name="hide_new_word_label">Új szó vagy mondat elrejtése</string>
+    <string name="automatically_show_profile_picture">Profilkép</string>
+    <string name="automatically_show_profile_picture_description">Profilképek megjelenítése</string>
+    <string name="select_an_option">Válassz egy lehetőséget</string>
+    <string name="error_dialog_pay_invoice_error">A számla kifizetése sikertelen</string>
+    <string name="error_dialog_pay_withdraw_error">A kivét sikertelen</string>
+    <string name="error_parsing_nip47_title">Nem sikerült a Wallet Connect-et beállítani</string>
+    <string name="error_parsing_nip47">Hiba a NIP-47 kapcsolati karakterlánc elemzése során. Ellenőrizze, hogy a Tárca-szolgáltatónál a következő helyes-e: %1$s. Hiba: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Hiba a NIP-47 kapcsolati karakterlánc elemzése során. Ellenőrizze, hogy a Tárca-szolgáltatónál a következő helyes-e: %1$s.</string>
+    <string name="cashu_failed_redemption">Nem sikerült a Cashu-t beváltani</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">A verde a következő hibaüzenetet küldte:%1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">A Cashu tokeneket már elköltötték.</string>
+    <string name="cashu_sucessful_redemption">Cashu Megkapva</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats érkezett a tárcádba. (Díjak: %2$s sats)</string>
+    <string name="error_unable_to_fetch_invoice">Nem sikerült a számlát a címzett szervereiről lekérni</string>
+    <string name="wallet_connect_pay_invoice_error_error">A Wallet Connect szolgáltatója a következő hibát jelezte: %1$s</string>
+    <string name="could_not_connect_to_tor">Nem sikerült a Tor hálózathoz csatlakozni</string>
+    <string name="unable_to_download_relay_document">Nem elérhető a csomópont dokumentumának letöltése</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nem sikerült az LNUrl-t a(z) \"%1$s\" Lightning-címről összeállítani. Ellenőrizd a felhasználó beállítását</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">A fogadó lightning szolgáltatása itt: %1$s nem érhető el. A \"%2$s\" lightning címből lett kiszámítva. Hiba: %3$s. Ellenőrizd, hogy a szerver működik-e, és hogy a lightning cím helyes-e</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nem sikerült megoldani: %1$s. Ellenőrizd, hogy csatlakozol-e, működik-e a szerver, és hogy a %2$s lightning cím helyes-e</string>
+    <string name="could_not_fetch_invoice_from">Nem sikerült a számlát a következőtől: %1$s lekérni</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Hiba a Lightning-címből származó JSON elemzésekor. Ellenőrizd a felhasználó Lightning beállítását</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">A visszahívási URL a felhasználó Lightning címszerver konfigurációjában nem található</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Hiba a Lightning cím számlalekérése során származó JSON elemzésekor. Ellenőrizd a felhasználó Lightning beállítását</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Helytelen számlaösszeg (%1$s sats) a következőtől: %2$s. %3$s kellett volna</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nem sikerült a zap elküldése előtt lightning számlát készíteni. A fogadó fél lightning tárcája a következő hibát küldte: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nem sikerült a zap elküldése előtt lightning számlát készíteni. A kapott JSON-ban a pr elem nem található.</string>
+    <string name="read_only_user">Csak olvasható felhasználó</string>
+    <string name="no_reactions_setup">Nincs reakcióbeállítás</string>
 </resources>
