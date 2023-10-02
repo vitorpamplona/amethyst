@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,19 +8,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -31,18 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.halilibo.richtext.markdown.Markdown
-import com.halilibo.richtext.ui.material.MaterialRichText
+import com.halilibo.richtext.ui.material3.Material3RichText
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.RichTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.launch
 
 @Composable
-fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: MutableState<String>) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, onError: (String) -> Unit, portNumber: MutableState<String>) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -67,13 +61,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                             try {
                                 Integer.parseInt(portNumber.value)
                             } catch (_: Exception) {
-                                scope.launch {
-                                    Toast.makeText(
-                                        context,
-                                        toastMessage,
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
+                                onError(toastMessage)
                                 return@UseOrbotButton
                             }
 
@@ -90,13 +78,13 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                         stringStyle = RichTextDefaults.stringStyle?.copy(
                             linkStyle = SpanStyle(
                                 textDecoration = TextDecoration.Underline,
-                                color = MaterialTheme.colors.primary
+                                color = MaterialTheme.colorScheme.primary
                             )
                         )
                     )
 
                     Row() {
-                        MaterialRichText(
+                        Material3RichText(
                             style = myMarkDownStyle
                         ) {
                             Markdown(
@@ -122,7 +110,7 @@ fun ConnectOrbotDialog(onClose: () -> Unit, onPost: () -> Unit, portNumber: Muta
                             placeholder = {
                                 Text(
                                     text = "9050",
-                                    color = MaterialTheme.colors.placeholderText
+                                    color = MaterialTheme.colorScheme.placeholderText
                                 )
                             }
                         )
@@ -143,10 +131,9 @@ fun UseOrbotButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifie
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
+        )
     ) {
         Text(text = stringResource(R.string.use_orbot), color = Color.White)
     }

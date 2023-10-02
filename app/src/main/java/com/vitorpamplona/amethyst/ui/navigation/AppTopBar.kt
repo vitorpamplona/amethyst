@@ -17,22 +17,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.AppBarDefaults
-import androidx.compose.material.ContentAlpha
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.ScaffoldState
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.contentColorFor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
@@ -51,7 +47,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -113,6 +108,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
@@ -136,7 +132,7 @@ import kotlinx.coroutines.launch
 fun AppTopBar(
     followLists: FollowListViewModel,
     navEntryState: State<NavBackStackEntry?>,
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit
@@ -153,7 +149,7 @@ fun AppTopBar(
         }
     }
 
-    RenderTopRouteBar(currentRoute, id, followLists, scaffoldState, accountViewModel, nav, navPopBack)
+    RenderTopRouteBar(currentRoute, id, followLists, drawerState, accountViewModel, nav, navPopBack)
 }
 
 @Composable
@@ -161,16 +157,16 @@ private fun RenderTopRouteBar(
     currentRoute: String?,
     id: String?,
     followLists: FollowListViewModel,
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit
 ) {
     when (currentRoute) {
-        Route.Home.base -> HomeTopBar(followLists, scaffoldState, accountViewModel, nav)
-        Route.Video.base -> StoriesTopBar(followLists, scaffoldState, accountViewModel, nav)
-        Route.Discover.base -> DiscoveryTopBar(followLists, scaffoldState, accountViewModel, nav)
-        Route.Notification.base -> NotificationTopBar(followLists, scaffoldState, accountViewModel, nav)
+        Route.Home.base -> HomeTopBar(followLists, drawerState, accountViewModel, nav)
+        Route.Video.base -> StoriesTopBar(followLists, drawerState, accountViewModel, nav)
+        Route.Discover.base -> DiscoveryTopBar(followLists, drawerState, accountViewModel, nav)
+        Route.Notification.base -> NotificationTopBar(followLists, drawerState, accountViewModel, nav)
         Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
         else -> {
             if (id != null) {
@@ -181,10 +177,10 @@ private fun RenderTopRouteBar(
                     Route.Community.base -> CommunityTopBar(id, accountViewModel, nav, navPopBack)
                     Route.Hashtag.base -> HashTagTopBar(id, accountViewModel, navPopBack)
                     Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
-                    else -> MainTopBar(scaffoldState, accountViewModel, nav)
+                    else -> MainTopBar(drawerState, accountViewModel, nav)
                 }
             } else {
-                MainTopBar(scaffoldState, accountViewModel, nav)
+                MainTopBar(drawerState, accountViewModel, nav)
             }
         }
     }
@@ -377,15 +373,13 @@ fun NoTopBar() {
 }
 
 @Composable
-fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun StoriesTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.storiesListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
-        FollowList(
+        FollowListWithRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = false
+            listName = list
         ) { listName ->
             accountViewModel.account.changeDefaultStoriesFollowList(listName.code)
         }
@@ -393,15 +387,13 @@ fun StoriesTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState
 }
 
 @Composable
-fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun HomeTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.homeListLiveData.observeAsState(KIND3_FOLLOWS)
 
-        FollowList(
+        FollowListWithRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = true
+            listName = list
         ) { listName ->
             if (listName.type == CodeNameType.ROUTE) {
                 nav(listName.code)
@@ -413,15 +405,13 @@ fun HomeTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, a
 }
 
 @Composable
-fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun NotificationTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.notificationListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
-        FollowList(
+        FollowListWithoutRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = false
+            listName = list
         ) { listName ->
             accountViewModel.account.changeDefaultNotificationFollowList(listName.code)
         }
@@ -429,15 +419,13 @@ fun NotificationTopBar(followLists: FollowListViewModel, scaffoldState: Scaffold
 }
 
 @Composable
-fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) { accountViewModel ->
+fun DiscoveryTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
         val list by accountViewModel.discoveryListLiveData.observeAsState(GLOBAL_FOLLOWS)
 
-        FollowList(
+        FollowListWithoutRoutes(
             followListsModel = followLists,
-            listName = list,
-            withGlobal = true,
-            withRoutes = false
+            listName = list
         ) { listName ->
             accountViewModel.account.changeDefaultDiscoveryFollowList(listName.code)
         }
@@ -445,24 +433,25 @@ fun DiscoveryTopBar(followLists: FollowListViewModel, scaffoldState: ScaffoldSta
 }
 
 @Composable
-fun MainTopBar(scaffoldState: ScaffoldState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    GenericMainTopBar(scaffoldState, accountViewModel, nav) {
+fun MainTopBar(drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    GenericMainTopBar(drawerState, accountViewModel, nav) {
         AmethystClickableIcon()
     }
 }
 
-@OptIn(coil.annotation.ExperimentalCoilApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenericMainTopBar(
-    scaffoldState: ScaffoldState,
+    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     content: @Composable (AccountViewModel) -> Unit
 ) {
     Column(modifier = BottomTopHeight) {
-        MyTopAppBar(
-            elevation = 0.dp,
-            backgroundColor = MaterialTheme.colors.surface,
+        TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
             title = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -485,7 +474,7 @@ fun GenericMainTopBar(
                 val coroutineScope = rememberCoroutineScope()
                 LoggedInUserPictureDrawer(accountViewModel) {
                     coroutineScope.launch {
-                        scaffoldState.drawerState.open()
+                        drawerState.open()
                     }
                 }
             },
@@ -495,7 +484,7 @@ fun GenericMainTopBar(
                 }
             }
         )
-        Divider(thickness = 0.25.dp)
+        Divider(thickness = DividerThickness)
     }
 }
 
@@ -514,7 +503,6 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit
 ) {
     val profilePicture by accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
-
     val pubkeyHex = remember { accountViewModel.userProfile().pubkeyHex }
 
     val automaticallyShowProfilePicture = remember {
@@ -540,42 +528,35 @@ private fun LoggedInUserPictureDrawer(
 }
 
 @Composable
-fun FollowList(
+fun FollowListWithRoutes(
     followListsModel: FollowListViewModel,
     listName: String,
-    withGlobal: Boolean,
-    withRoutes: Boolean,
     onChange: (CodeName) -> Unit
 ) {
-    val context = LocalContext.current
-
-    val kind3Follow = CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows, context), CodeNameType.HARDCODED)
-    val globalFollow = CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global, context), CodeNameType.HARDCODED)
-
-    val defaultOptions = if (withGlobal) listOf(kind3Follow, globalFollow) else listOf(kind3Follow)
-
-    val followLists by followListsModel.peopleLists.collectAsState()
-    val routeList by followListsModel.routes.collectAsState()
-
-    val allLists = remember(followLists) {
-        if (withRoutes) {
-            (defaultOptions + followLists + routeList)
-        } else {
-            (defaultOptions + followLists)
-        }
-    }
-
-    val followNames by remember(followLists) {
-        derivedStateOf {
-            allLists.map { it.name }.toImmutableList()
-        }
-    }
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsState()
 
     SimpleTextSpinner(
-        placeholder = allLists.firstOrNull { it.code == listName }?.name?.name() ?: "Select an Option",
-        options = followNames,
+        placeholderCode = listName,
+        options = allLists,
         onSelect = {
-            onChange(allLists.getOrNull(it) ?: kind3Follow)
+            onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow)
+        }
+    )
+}
+
+@Composable
+fun FollowListWithoutRoutes(
+    followListsModel: FollowListViewModel,
+    listName: String,
+    onChange: (CodeName) -> Unit
+) {
+    val allLists by followListsModel.kind3GlobalPeople.collectAsState()
+
+    SimpleTextSpinner(
+        placeholderCode = listName,
+        options = allLists,
+        onSelect = {
+            onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow)
         }
     )
 }
@@ -586,6 +567,7 @@ enum class CodeNameType {
 
 abstract class Name {
     abstract fun name(): String
+    open fun name(context: Context) = name()
 }
 
 class GeoHashName(val geoHashTag: String) : Name() {
@@ -594,12 +576,13 @@ class GeoHashName(val geoHashTag: String) : Name() {
 class HashtagName(val hashTag: String) : Name() {
     override fun name() = "#$hashTag"
 }
-class ResourceName(val resourceId: Int, val context: Context) : Name() {
-    override fun name() = context.getString(resourceId)
+class ResourceName(val resourceId: Int) : Name() {
+    override fun name() = " $resourceId " // Space to make sure it goes first
+    override fun name(context: Context) = context.getString(resourceId)
 }
 
 class PeopleListName(val note: AddressableNote) : Name() {
-    override fun name() = note.dTag() ?: ""
+    override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
 }
 class CommunityName(val note: AddressableNote) : Name() {
     override fun name() = "/n/${(note.dTag() ?: "")}"
@@ -610,11 +593,14 @@ data class CodeName(val code: String, val name: Name, val type: CodeNameType)
 
 @Stable
 class FollowListViewModel(val account: Account) : ViewModel() {
-    private var _peopleLists = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
-    val peopleLists = _peopleLists.asStateFlow()
+    val kind3Follow = CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows), CodeNameType.HARDCODED)
+    val globalFollow = CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global), CodeNameType.HARDCODED)
 
-    private var _routes = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
-    val routes = _routes.asStateFlow()
+    private var _kind3GlobalPeopleRoutes = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
+    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.asStateFlow()
+
+    private var _kind3GlobalPeople = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
+    val kind3GlobalPeople = _kind3GlobalPeople.asStateFlow()
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) {
@@ -636,11 +622,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
             } else {
                 null
             }
-        }.sortedBy { it.name.name() }.toImmutableList()
-
-        if (!equalImmutableLists(_peopleLists.value, newFollowLists)) {
-            _peopleLists.emit(newFollowLists)
-        }
+        }.sortedBy { it.name.name() }
 
         val communities = account.userProfile().cachedFollowingCommunitiesSet().mapNotNull {
             LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
@@ -656,10 +638,18 @@ class FollowListViewModel(val account: Account) : ViewModel() {
             CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
         }
 
-        val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }.toImmutableList()
+        val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }
 
-        if (!equalImmutableLists(_routes.value, routeList)) {
-            _routes.emit(routeList)
+        val kind3GlobalPeopleRouteList = listOf(listOf(kind3Follow, globalFollow), newFollowLists, routeList).flatten().toImmutableList()
+
+        if (!equalImmutableLists(_kind3GlobalPeopleRoutes.value, kind3GlobalPeopleRouteList)) {
+            _kind3GlobalPeopleRoutes.emit(kind3GlobalPeopleRouteList)
+        }
+
+        val kind3GlobalPeopleList = listOf(listOf(kind3Follow, globalFollow), newFollowLists).flatten().toImmutableList()
+
+        if (!equalImmutableLists(_kind3GlobalPeople.value, kind3GlobalPeopleList)) {
+            _kind3GlobalPeople.emit(kind3GlobalPeopleList)
         }
     }
 
@@ -695,14 +685,24 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
 @Composable
 fun SimpleTextSpinner(
-    placeholder: String,
-    options: ImmutableList<Name>,
+    placeholderCode: String,
+    options: ImmutableList<CodeName>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
-    var currentText by remember(placeholder) { mutableStateOf(placeholder) }
+
+    val context = LocalContext.current
+    val selectAnOption = stringResource(
+        id = R.string.select_an_option
+    )
+
+    var currentText by remember {
+        mutableStateOf(
+            options.firstOrNull { it.code == placeholderCode }?.name?.name(context) ?: selectAnOption
+        )
+    }
 
     Box(
         modifier = modifier,
@@ -710,12 +710,12 @@ fun SimpleTextSpinner(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Modifier.size(20.dp))
-            Text(placeholder)
+            Text(currentText)
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.placeholderText
+                tint = MaterialTheme.colorScheme.placeholderText
             )
         }
         Box(
@@ -736,27 +736,27 @@ fun SimpleTextSpinner(
                 options = options,
                 onDismiss = { optionsShowing = false },
                 onSelect = {
-                    currentText = options[it].name()
+                    currentText = options[it].name.name(context)
                     optionsShowing = false
                     onSelect(it)
                 }
             ) {
-                RenderOption(it)
+                RenderOption(it.name)
             }
         }
     }
 }
 
 @Composable
-fun RenderOption(it: Name) {
-    when (it) {
+fun RenderOption(option: Name) {
+    when (option) {
         is GeoHashName -> {
-            LoadCityName(it.geoHashTag) {
+            LoadCityName(option.geoHashTag) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "/g/$it", color = MaterialTheme.colors.onSurface)
+                    Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -765,7 +765,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = it.name(), color = MaterialTheme.colors.onSurface)
+                Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is ResourceName -> {
@@ -773,7 +773,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(id = it.resourceId), color = MaterialTheme.colors.onSurface)
+                Text(text = stringResource(id = option.resourceId), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is PeopleListName -> {
@@ -781,7 +781,7 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = it.name(), color = MaterialTheme.colors.onSurface)
+                Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is CommunityName -> {
@@ -789,21 +789,21 @@ fun RenderOption(it: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val name by it.note.live().metadata.map {
+                val name by option.note.live().metadata.map {
                     "/n/" + (it.note as? AddressableNote)?.dTag()
                 }.observeAsState()
 
-                Text(text = name ?: "", color = MaterialTheme.colors.onSurface)
+                Text(text = name ?: "", color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
     Column(modifier = BottomTopHeight) {
-        MyTopAppBar(
-            elevation = 0.dp,
+        TopAppBar(
             title = { Text(caption) },
             navigationIcon = {
                 IconButton(
@@ -821,15 +821,12 @@ fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
 
 @Composable
 fun FlexibleTopBarWithBackButton(
-    prefixRow: (@Composable () -> Unit)? = null,
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
     popBack: () -> Unit
 ) {
     Column() {
         MyExtensibleTopAppBar(
-            elevation = 0.dp,
-            prefixRow = prefixRow,
             title = title,
             extendableRow = extendableRow,
             navigationIcon = {
@@ -907,135 +904,53 @@ fun debugState(context: Context) {
     }
 }
 
-@Composable
-fun MyTopAppBar(
-    title: @Composable RowScope.() -> Unit,
-    modifier: Modifier = Modifier,
-    navigationIcon: @Composable (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-    backgroundColor: Color = MaterialTheme.colors.surface,
-    contentColor: Color = contentColorFor(backgroundColor),
-    elevation: Dp = AppBarDefaults.TopAppBarElevation
-) {
-    Surface(
-        contentColor = contentColor,
-        elevation = elevation,
-        modifier = modifier
-    ) {
-        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(AppBarDefaults.ContentPadding),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (navigationIcon == null) {
-                    Spacer(TitleInsetWithoutIcon)
-                } else {
-                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        CompositionLocalProvider(
-                            LocalContentAlpha provides ContentAlpha.high,
-                            content = navigationIcon
-                        )
-                    }
-                }
-
-                Row(
-                    Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ProvideTextStyle(MaterialTheme.typography.h6) {
-                        title()
-                    }
-                }
-
-                CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = actions
-                    )
-                }
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyExtensibleTopAppBar(
-    prefixRow: (@Composable () -> Unit)? = null,
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
     navigationIcon: @Composable (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-    backgroundColor: Color = MaterialTheme.colors.surface,
-    contentColor: Color = contentColorFor(backgroundColor),
-    elevation: Dp = AppBarDefaults.TopAppBarElevation
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     val expanded = remember { mutableStateOf(false) }
 
-    Surface(
-        color = backgroundColor,
-        contentColor = contentColor,
-        elevation = elevation,
-        modifier = modifier.clickable {
+    Column(
+        Modifier.clickable {
             expanded.value = !expanded.value
         }
     ) {
-        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-            Column(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(AppBarDefaults.ContentPadding),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+        Row(modifier = BottomTopHeight) {
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        title()
+                    }
+                },
+                modifier = modifier,
+                navigationIcon = {
                     if (navigationIcon == null) {
                         Spacer(TitleInsetWithoutIcon)
                     } else {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                            CompositionLocalProvider(
-                                LocalContentAlpha provides ContentAlpha.high,
-                                content = navigationIcon
-                            )
+                            navigationIcon()
                         }
                     }
+                },
+                actions = actions
+            )
+        }
 
-                    Row(
-                        Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ProvideTextStyle(MaterialTheme.typography.h6) {
-                            title()
-                        }
-                    }
-
-                    CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-                        Row(
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically,
-                            content = actions
-                        )
-                    }
-                }
-
-                if (expanded.value && extendableRow != null) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            extendableRow()
-                        }
-                    }
-                }
-
-                if (prefixRow != null) {
-                    prefixRow()
+        if (expanded.value && extendableRow != null) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    extendableRow()
                 }
             }
         }

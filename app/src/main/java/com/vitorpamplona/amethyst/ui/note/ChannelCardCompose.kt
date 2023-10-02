@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -275,44 +276,38 @@ private fun CheckNewAndRenderChannelCard(
     showPopup: () -> Unit,
     nav: (String) -> Unit
 ) {
-    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colors.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
+    val backgroundColor = remember {
+        mutableStateOf<Color>(
+            parentBackgroundColor?.value ?: defaultBackgroundColor
+        )
+    }
 
     LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
-        launch(Dispatchers.IO) {
-            routeForLastRead?.let {
-                val lastTime = accountViewModel.account.loadLastRead(it)
-
-                val createdAt = baseNote.createdAt()
-                if (createdAt != null) {
-                    accountViewModel.account.markAsRead(it, createdAt)
-
-                    val isNew = createdAt > lastTime
-
-                    val newBackgroundColor = if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
+        routeForLastRead?.let {
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, baseNote.createdAt()) { isNew ->
+                val newBackgroundColor = if (isNew) {
+                    if (parentBackgroundColor != null) {
+                        newItemColor.compositeOver(parentBackgroundColor.value)
                     } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor
+                        newItemColor.compositeOver(defaultBackgroundColor)
                     }
-
-                    if (newBackgroundColor != backgroundColor.value) {
-                        launch(Dispatchers.Main) {
-                            backgroundColor.value = newBackgroundColor
-                        }
-                    }
+                } else {
+                    parentBackgroundColor?.value ?: defaultBackgroundColor
                 }
-            } ?: run {
-                val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
 
                 if (newBackgroundColor != backgroundColor.value) {
                     launch(Dispatchers.Main) {
                         backgroundColor.value = newBackgroundColor
                     }
+                }
+            }
+        } ?: run {
+            val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
+            if (newBackgroundColor != backgroundColor.value) {
+                launch(Dispatchers.Main) {
+                    backgroundColor.value = newBackgroundColor
                 }
             }
         }
@@ -510,6 +505,8 @@ fun RenderLiveActivityThumb(
             }
         }
 
+        Spacer(modifier = DoubleVertSpacer)
+
         ChannelHeader(
             channelHex = remember { baseNote.idHex },
             showVideo = false,
@@ -614,9 +611,9 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 )
 
                 Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -624,7 +621,7 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                 Row() {
                     Text(
                         text = it,
-                        color = MaterialTheme.colors.placeholderText,
+                        color = MaterialTheme.colorScheme.placeholderText,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         fontSize = 14.sp
@@ -716,7 +713,9 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
         Spacer(modifier = DoubleHorzSpacer)
 
         Column(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight()
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -728,9 +727,9 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 )
 
                 Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
                 Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
             }
 
             description?.let {
@@ -738,7 +737,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 Row() {
                     Text(
                         text = it,
-                        color = MaterialTheme.colors.placeholderText,
+                        color = MaterialTheme.colorScheme.placeholderText,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         fontSize = 14.sp
@@ -768,7 +767,7 @@ fun Gallery(users: List<User>, accountViewModel: AccountViewModel) {
             Text(
                 text = remember(users) { " + " + (showCount(users.size - 6)).toString() },
                 fontSize = 13.sp,
-                color = MaterialTheme.colors.onSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

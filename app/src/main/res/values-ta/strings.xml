@@ -257,7 +257,6 @@
     <string name="poll_consensus_threshold">ஒருமித்த கருத்து</string>
     <string name="poll_closing_time">நிறைவுறும் நேரம்</string>
     <string name="poll_closing_time_days">நாட்களில்</string>
-    <string name="poll_is_closed">வாக்கெடுப்பு நிறுத்திவைக்கப்பட்டு உள்ளது</string>
     <string name="poll_zap_amount">ஜாப் தொகை</string>
     <string name="one_vote_per_user_on_atomic_votes">இந்த வகை வாக்கெடுப்பில் ஒரு பயனருக்கு ஒரு வாக்கு மட்டுமே அனுமதிக்கப்படுகிறது</string>
     <string name="looking_for_event">"நிகழ்வு %1$s ஐத் தேடி"</string>

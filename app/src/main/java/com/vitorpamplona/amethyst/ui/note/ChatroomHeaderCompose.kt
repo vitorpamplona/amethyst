@@ -14,10 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Divider
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -218,7 +218,7 @@ private fun ChannelRoomCompose(
 @Composable
 private fun ChannelTitleWithLabelInfo(channelName: String, modifier: Modifier) {
     val label = stringResource(id = R.string.public_chat)
-    val placeHolderColor = MaterialTheme.colors.placeholderText
+    val placeHolderColor = MaterialTheme.colorScheme.placeholderText
     val channelNameAndBoostInfo = remember(channelName) {
         buildAnnotatedString {
             withStyle(
@@ -415,9 +415,7 @@ private fun WatchNotificationChanges(
     accountViewModel: AccountViewModel,
     onNewStatus: (Boolean) -> Unit
 ) {
-    val cacheState by accountViewModel.accountLastReadLiveData.observeAsState()
-
-    LaunchedEffect(key1 = note, cacheState) {
+    LaunchedEffect(key1 = note, accountViewModel.accountMarkAsReadUpdates.value) {
         launch(Dispatchers.IO) {
             note.event?.createdAt()?.let {
                 val lastTime = accountViewModel.account.loadLastRead(route)
@@ -530,7 +528,7 @@ private fun SecondRow(channelLastContent: String?, hasNewMessages: MutableState<
     if (channelLastContent != null) {
         Text(
             channelLastContent,
-            color = MaterialTheme.colors.grayText,
+            color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -539,7 +537,7 @@ private fun SecondRow(channelLastContent: String?, hasNewMessages: MutableState<
     } else {
         Text(
             stringResource(R.string.referenced_event_not_found),
-            color = MaterialTheme.colors.grayText,
+            color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = modifier
@@ -573,7 +571,7 @@ private fun TimeAgo(channelLastTime: Long?) {
     }
     Text(
         text = timeAgo,
-        color = MaterialTheme.colors.grayText,
+        color = MaterialTheme.colorScheme.grayText,
         maxLines = 1
     )
 }
@@ -586,7 +584,7 @@ fun NewItemsBubble() {
             .width(10.dp)
             .height(10.dp)
             .clip(shape = CircleShape)
-            .background(MaterialTheme.colors.primary),
+            .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center
     ) {
         Text(

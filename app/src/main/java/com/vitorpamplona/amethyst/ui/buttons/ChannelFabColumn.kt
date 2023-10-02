@@ -2,13 +2,12 @@ package com.vitorpamplona.amethyst.ui.buttons
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +19,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -46,12 +46,11 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
 
     Column() {
         if (isOpen) {
-            OutlinedButton(
+            FloatingActionButton(
                 onClick = { wantsToSendNewMessage = true; isOpen = false },
-                modifier = Modifier.size(55.dp),
+                modifier = Size55Modifier,
                 shape = CircleShape,
-                colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-                contentPadding = PaddingValues(bottom = 3.dp)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Text(
                     text = stringResource(R.string.messages_new_message),
@@ -63,12 +62,11 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            OutlinedButton(
+            FloatingActionButton(
                 onClick = { wantsToCreateChannel = true; isOpen = false },
-                modifier = Modifier.size(55.dp),
+                modifier = Size55Modifier,
                 shape = CircleShape,
-                colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-                contentPadding = PaddingValues(bottom = 3.dp)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Text(
                     text = stringResource(R.string.messages_create_public_chat),
@@ -81,12 +79,11 @@ fun ChannelFabColumn(accountViewModel: AccountViewModel, nav: (String) -> Unit) 
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        OutlinedButton(
+        FloatingActionButton(
             onClick = { isOpen = !isOpen },
-            modifier = Modifier.size(55.dp),
+            modifier = Size55Modifier,
             shape = CircleShape,
-            colors = ButtonDefaults.outlinedButtonColors(backgroundColor = MaterialTheme.colors.primary),
-            contentPadding = PaddingValues(0.dp)
+            containerColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,

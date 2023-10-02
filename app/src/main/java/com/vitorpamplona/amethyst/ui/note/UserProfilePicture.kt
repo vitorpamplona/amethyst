@@ -10,12 +10,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -97,7 +97,7 @@ fun NoteAuthorPicture(
 
 @Composable
 fun DisplayBlankAuthor(size: Dp, modifier: Modifier = Modifier) {
-    val backgroundColor = MaterialTheme.colors.background
+    val backgroundColor = MaterialTheme.colorScheme.background
 
     val nullModifier = remember {
         modifier
@@ -324,7 +324,7 @@ fun PictureAndFollowingMark(
     modifier: Modifier,
     accountViewModel: AccountViewModel
 ) {
-    val backgroundColor = MaterialTheme.colors.background
+    val backgroundColor = MaterialTheme.colorScheme.background
     val myImageModifier = remember {
         modifier
             .size(size)
@@ -430,70 +430,85 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
 
         if (!state.isFollowingAuthor) {
             DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.follow))
+                },
                 onClick = {
                     val author = note.author ?: return@DropdownMenuItem
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.follow(author)
-                        onDismiss()
-                    }
+                    accountViewModel.follow(author)
+                    onDismiss()
                 }
-            ) {
-                Text(stringResource(R.string.follow))
-            }
+            )
             Divider()
         }
         DropdownMenuItem(
+            text = {
+                Text(stringResource(R.string.copy_text))
+            },
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: ""))
                     onDismiss()
                 }
             }
-        ) {
-            Text(stringResource(R.string.copy_text))
-        }
+        )
         DropdownMenuItem(
+            text = {
+                Text(stringResource(R.string.copy_user_pubkey))
+            },
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
                     onDismiss()
                 }
             }
-        ) {
-            Text(stringResource(R.string.copy_user_pubkey))
-        }
-        DropdownMenuItem(onClick = {
-            scope.launch(Dispatchers.IO) {
-                clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
+        )
+        DropdownMenuItem(
+            text = {
+                Text(stringResource(R.string.copy_note_id))
+            },
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
+                    onDismiss()
+                }
+            }
+        )
+        DropdownMenuItem(
+            text = {
+                Text(stringResource(R.string.quick_action_share))
+            },
+            onClick = {
+                val sendIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        externalLinkForNote(note)
+                    )
+                    putExtra(Intent.EXTRA_TITLE, actContext.getString(R.string.quick_action_share_browser_link))
+                }
+
+                val shareIntent = Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
+                ContextCompat.startActivity(actContext, shareIntent, null)
                 onDismiss()
             }
-        }) {
-            Text(stringResource(R.string.copy_note_id))
-        }
-        DropdownMenuItem(onClick = {
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                type = "text/plain"
-                putExtra(
-                    Intent.EXTRA_TEXT,
-                    externalLinkForNote(note)
-                )
-                putExtra(Intent.EXTRA_TITLE, actContext.getString(R.string.quick_action_share_browser_link))
-            }
-
-            val shareIntent = Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
-            ContextCompat.startActivity(actContext, shareIntent, null)
-            onDismiss()
-        }) {
-            Text(stringResource(R.string.quick_action_share))
-        }
+        )
         Divider()
-        DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() } }) {
-            Text(stringResource(R.string.broadcast))
-        }
+        DropdownMenuItem(
+            text = {
+                Text(stringResource(R.string.broadcast))
+            },
+            onClick = {
+                scope.launch(Dispatchers.IO) { accountViewModel.broadcast(note); onDismiss() }
+            }
+        )
         Divider()
         if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.remove_from_private_bookmarks))
+                },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
@@ -511,11 +526,12 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                         }
                     }
                 }
-            ) {
-                Text(stringResource(R.string.remove_from_private_bookmarks))
-            }
+            )
         } else {
             DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.add_to_private_bookmarks))
+                },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
@@ -533,12 +549,13 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                         }
                     }
                 }
-            ) {
-                Text(stringResource(R.string.add_to_private_bookmarks))
-            }
+            )
         }
         if (state.isPublicBookmarkNote) {
             DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.remove_from_public_bookmarks))
+                },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
@@ -559,11 +576,12 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                         }
                     }
                 }
-            ) {
-                Text(stringResource(R.string.remove_from_public_bookmarks))
-            }
+            )
         } else {
             DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.add_to_public_bookmarks))
+                },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
@@ -584,35 +602,48 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                         }
                     }
                 }
-            ) {
-                Text(stringResource(R.string.add_to_public_bookmarks))
-            }
+            )
         }
         Divider()
         if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.hideSensitiveContent(); onDismiss() } }) {
-                Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.content_warning_hide_all_sensitive_content))
+                },
+                onClick = { scope.launch(Dispatchers.IO) { accountViewModel.hideSensitiveContent(); onDismiss() } }
+            )
         }
         if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.disableContentWarnings(); onDismiss() } }) {
-                Text(stringResource(R.string.content_warning_show_all_sensitive_content))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.content_warning_show_all_sensitive_content))
+                },
+                onClick = { scope.launch(Dispatchers.IO) { accountViewModel.disableContentWarnings(); onDismiss() } }
+            )
         }
         if (state.showSensitiveContent != null) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.seeContentWarnings(); onDismiss() } }) {
-                Text(stringResource(R.string.content_warning_see_warnings))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.content_warning_see_warnings))
+                },
+                onClick = { scope.launch(Dispatchers.IO) { accountViewModel.seeContentWarnings(); onDismiss() } }
+            )
         }
         Divider()
         if (state.isLoggedUser) {
-            DropdownMenuItem(onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }) {
-                Text(stringResource(R.string.request_deletion))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.request_deletion))
+                },
+                onClick = { scope.launch(Dispatchers.IO) { accountViewModel.delete(note); onDismiss() } }
+            )
         } else {
-            DropdownMenuItem(onClick = { reportDialogShowing = true }) {
-                Text(stringResource(R.string.block_report))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.block_report))
+                },
+                onClick = { reportDialogShowing = true }
+            )
         }
     }
 

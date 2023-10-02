@@ -15,10 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -73,8 +73,6 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -232,9 +230,9 @@ fun NormalChatNote(
         }
     }
 
-    val loggedInColors = MaterialTheme.colors.mediumImportanceLink
-    val otherColors = MaterialTheme.colors.subtleBorder
-    val defaultBackground = MaterialTheme.colors.background
+    val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
+    val otherColors = MaterialTheme.colorScheme.subtleBorder
+    val defaultBackground = MaterialTheme.colorScheme.background
 
     val backgroundBubbleColor = remember {
         if (accountViewModel.isLoggedUser(note.author)) {
@@ -260,12 +258,7 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            launch(Dispatchers.IO) {
-                val createdAt = note.createdAt()
-                if (createdAt != null) {
-                    accountViewModel.account.markAsRead(routeForLastRead, createdAt)
-                }
-            }
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt()) { }
         }
     }
 
@@ -572,13 +565,13 @@ private fun StatusRow(
 
     Column(modifier = ReactionRowHeightChat) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
-            LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+            LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
+            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
             Spacer(modifier = DoubleHorzSpacer)
             ReplyReaction(
                 baseNote = baseNote,
-                grayTint = MaterialTheme.colors.placeholderText,
+                grayTint = MaterialTheme.colorScheme.placeholderText,
                 accountViewModel = accountViewModel,
                 showCounter = false,
                 iconSize = Size15dp
@@ -599,7 +592,7 @@ fun IncognitoBadge(baseNote: Note) {
             modifier = Modifier
                 .padding(top = 1.dp)
                 .size(14.dp),
-            tint = MaterialTheme.colors.placeholderText
+            tint = MaterialTheme.colorScheme.placeholderText
         )
     } else if (baseNote.event is PrivateDmEvent) {
         Icon(
@@ -608,7 +601,7 @@ fun IncognitoBadge(baseNote: Note) {
             modifier = Modifier
                 .padding(top = 1.dp)
                 .size(14.dp),
-            tint = MaterialTheme.colors.placeholderText
+            tint = MaterialTheme.colorScheme.placeholderText
         )
     }
 }
@@ -625,7 +618,7 @@ fun ChatTimeAgo(baseNote: Note) {
 
     Text(
         text = time,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         fontSize = Font12SP,
         maxLines = 1
     )
@@ -824,7 +817,7 @@ private fun DisplayMessageUsername(
         maxLines = 1,
         tags = userTags,
         fontWeight = FontWeight.Bold,
-        overrideColor = MaterialTheme.colors.onBackground, // we do not want clickable names in purple here.
+        overrideColor = MaterialTheme.colorScheme.onBackground, // we do not want clickable names in purple here.
         route = route,
         nav = nav
     )

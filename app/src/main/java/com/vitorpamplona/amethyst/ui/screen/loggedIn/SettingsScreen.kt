@@ -12,13 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ExposedDropdownMenuBox
-import androidx.compose.material.ExposedDropdownMenuDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -284,7 +284,7 @@ fun SettingsRow(
             )
             Text(
                 text = stringResource(description),
-                style = MaterialTheme.typography.caption,
+                style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -303,7 +303,7 @@ fun SettingsRow(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropDownSettings(
     selectedItem: MutableState<String>,
@@ -340,13 +340,14 @@ fun DropDownSettings(
         ) {
             listItems.forEach { selectedOption ->
                 DropdownMenuItem(
+                    text = {
+                        Text(text = selectedOption)
+                    },
                     onClick = {
                         selectedItem.value = selectedOption
                         expanded = false
                     }
-                ) {
-                    Text(text = selectedOption)
-                }
+                )
             }
         }
     }

@@ -19,7 +19,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
@@ -32,6 +31,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -120,6 +119,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.Math.round
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewPostView(
     onClose: () -> Unit,
@@ -188,9 +188,7 @@ fun NewPostView(
                 TopAppBar(
                     title = {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(end = 10.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -207,7 +205,7 @@ fun NewPostView(
                                         painter = painterResource(R.drawable.relays),
                                         contentDescription = null,
                                         modifier = Modifier.height(25.dp),
-                                        tint = MaterialTheme.colors.onBackground
+                                        tint = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             }
@@ -224,17 +222,20 @@ fun NewPostView(
                         }
                     },
                     navigationIcon = {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(onPress = {
-                            postViewModel.cancel()
-                            scope.launch {
-                                delay(100)
-                                onClose()
-                            }
-                        })
+                        Row() {
+                            Spacer(modifier = StdHorzSpacer)
+                            CloseButton(onPress = {
+                                postViewModel.cancel()
+                                scope.launch {
+                                    delay(100)
+                                    onClose()
+                                }
+                            })
+                        }
                     },
-                    backgroundColor = MaterialTheme.colors.surface,
-                    elevation = 0.dp
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             }
         ) { pad ->
@@ -255,7 +256,6 @@ fun NewPostView(
                 ) {
                     Column(
                         modifier = Modifier
-                            .padding(top = 10.dp)
                             .imePadding()
                             .weight(1f)
                     ) {
@@ -276,7 +276,7 @@ fun NewPostView(
                                             makeItShort = true,
                                             unPackReply = false,
                                             isQuotedNote = true,
-                                            modifier = MaterialTheme.colors.replyModifier,
+                                            modifier = MaterialTheme.colorScheme.replyModifier,
                                             accountViewModel = accountViewModel,
                                             nav = nav
                                         )
@@ -380,6 +380,9 @@ fun NewPostView(
                                                 },
                                                 onClose = {
                                                     postViewModel.wantsInvoice = false
+                                                },
+                                                onError = { title, message ->
+                                                    accountViewModel.toast(title, message)
                                                 }
                                             )
                                         }
@@ -412,7 +415,7 @@ fun NewPostView(
                                                         .clip(shape = QuoteBorder)
                                                         .border(
                                                             1.dp,
-                                                            MaterialTheme.colors.subtleBorder,
+                                                            MaterialTheme.colorScheme.subtleBorder,
                                                             QuoteBorder
                                                         )
                                                 )
@@ -422,7 +425,7 @@ fun NewPostView(
                                                 UrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
                                             }
                                         } else if (startsWithNIP19Scheme(myUrlPreview)) {
-                                            val bgColor = MaterialTheme.colors.background
+                                            val bgColor = MaterialTheme.colorScheme.background
                                             val backgroundColor = remember {
                                                 mutableStateOf(bgColor)
                                             }
@@ -469,7 +472,7 @@ fun NewPostView(
                         ) {
                             UploadFromGallery(
                                 isUploading = postViewModel.isUploadingImage,
-                                tint = MaterialTheme.colors.onBackground,
+                                tint = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier
                             ) {
                                 postViewModel.selectImage(it)
@@ -533,10 +536,10 @@ private fun PollField(postViewModel: NewPostViewModel) {
             },
             border = BorderStroke(
                 1.dp,
-                MaterialTheme.colors.placeholderText
+                MaterialTheme.colorScheme.placeholderText
             ),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colors.placeholderText
+                containerColor = MaterialTheme.colorScheme.placeholderText
             )
         ) {
             Image(
@@ -548,7 +551,7 @@ private fun PollField(postViewModel: NewPostViewModel) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageField(
     postViewModel: NewPostViewModel
@@ -575,7 +578,7 @@ private fun MessageField(
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colors.surface,
+                color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(8.dp)
             )
             .focusRequester(focusRequester)
@@ -587,15 +590,14 @@ private fun MessageField(
         placeholder = {
             Text(
                 text = stringResource(R.string.what_s_on_your_mind),
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         },
-        colors = TextFieldDefaults
-            .outlinedTextFieldColors(
-                unfocusedBorderColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent
-            ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colors.primary),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.Transparent,
+            unfocusedBorderColor = Color.Transparent
+        ),
+        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
     )
 }
@@ -646,7 +648,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
 
         Text(
             text = stringResource(R.string.add_sensitive_content_explainer),
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp)
         )
     }
@@ -676,18 +678,16 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 placeholder = {
                     Text(
                         text = stringResource(R.string.messages_new_message_to_caption),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
                 },
                 visualTransformation = UrlUserTagTransformation(
-                    MaterialTheme.colors.primary
+                    MaterialTheme.colorScheme.primary
                 ),
-                colors = TextFieldDefaults
-                    .outlinedTextFieldColors(
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color.Transparent
-                    ),
-                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                )
             )
         }
 
@@ -713,18 +713,16 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 placeholder = {
                     Text(
                         text = stringResource(R.string.messages_new_message_subject_caption),
-                        color = MaterialTheme.colors.placeholderText
+                        color = MaterialTheme.colorScheme.placeholderText
                     )
                 },
                 visualTransformation = UrlUserTagTransformation(
-                    MaterialTheme.colors.primary
+                    MaterialTheme.colorScheme.primary
                 ),
-                colors = TextFieldDefaults
-                    .outlinedTextFieldColors(
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = Color.Transparent
-                    ),
-                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                )
             )
         }
 
@@ -778,7 +776,7 @@ fun FowardZapTo(postViewModel: NewPostViewModel, accountViewModel: AccountViewMo
 
         Text(
             text = stringResource(R.string.zap_split_explainer),
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp)
         )
 
@@ -823,12 +821,12 @@ fun FowardZapTo(postViewModel: NewPostViewModel, accountViewModel: AccountViewMo
             placeholder = {
                 Text(
                     text = stringResource(R.string.zap_split_serarch_and_add_user_placeholder),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             singleLine = true,
             visualTransformation = UrlUserTagTransformation(
-                MaterialTheme.colors.primary
+                MaterialTheme.colorScheme.primary
             ),
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
         )
@@ -876,7 +874,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
                         imageVector = Icons.Default.LocationOn,
                         null,
                         modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colors.primary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -896,7 +894,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
 
             Text(
                 text = stringResource(R.string.geohash_explainer),
-                color = MaterialTheme.colors.placeholderText,
+                color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(vertical = 10.dp)
             )
         }
@@ -957,7 +955,7 @@ fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
             Text(
                 stringResource(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.placeholderText,
+                color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.align(CenterVertically)
             )
 
@@ -971,7 +969,7 @@ fun Notifying(baseMentions: ImmutableList<User>?, onClick: (User) -> Unit) {
                     Button(
                         shape = ButtonBorder,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.mediumImportanceLink
+                            containerColor = MaterialTheme.colorScheme.mediumImportanceLink
                         ),
                         onClick = {
                             onClick(myUser)
@@ -1030,7 +1028,7 @@ private fun AddZapraiserButton(
                     modifier = Modifier
                         .size(20.dp)
                         .align(Alignment.TopStart),
-                    tint = MaterialTheme.colors.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
@@ -1038,7 +1036,7 @@ private fun AddZapraiserButton(
                     modifier = Modifier
                         .size(13.dp)
                         .align(Alignment.BottomEnd),
-                    tint = MaterialTheme.colors.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             } else {
                 Icon(
@@ -1074,14 +1072,14 @@ fun AddGeoHash(postViewModel: NewPostViewModel, onClick: () -> Unit) {
                 imageVector = Icons.Default.LocationOff,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onBackground
+                tint = MaterialTheme.colorScheme.onBackground
             )
         } else {
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.primary
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -1102,7 +1100,7 @@ private fun AddLnInvoiceButton(
                 imageVector = Icons.Default.CurrencyBitcoin,
                 null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colors.onBackground
+                tint = MaterialTheme.colorScheme.onBackground
             )
         } else {
             Icon(
@@ -1137,7 +1135,7 @@ private fun ForwardZapTo(
                     modifier = Modifier
                         .size(20.dp)
                         .align(Alignment.CenterStart),
-                    tint = MaterialTheme.colors.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForwardIos,
@@ -1145,7 +1143,7 @@ private fun ForwardZapTo(
                     modifier = Modifier
                         .size(13.dp)
                         .align(Alignment.CenterEnd),
-                    tint = MaterialTheme.colors.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             } else {
                 Icon(
@@ -1191,7 +1189,7 @@ private fun MarkAsSensitive(
                     modifier = Modifier
                         .size(18.dp)
                         .align(Alignment.BottomStart),
-                    tint = MaterialTheme.colors.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
@@ -1199,7 +1197,7 @@ private fun MarkAsSensitive(
                     modifier = Modifier
                         .size(10.dp)
                         .align(Alignment.TopEnd),
-                    tint = MaterialTheme.colors.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             } else {
                 Icon(
@@ -1225,13 +1223,9 @@ private fun MarkAsSensitive(
 
 @Composable
 fun CloseButton(onPress: () -> Unit) {
-    Button(
+    OutlinedButton(
         onClick = onPress,
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = Color.Gray
-            )
+        contentPadding = PaddingValues(horizontal = Size5dp)
     ) {
         CloseIcon()
     }
@@ -1241,17 +1235,11 @@ fun CloseButton(onPress: () -> Unit) {
 fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = Modifier) {
     Button(
         modifier = modifier,
+        enabled = isActive,
         onClick = {
-            if (isActive) {
-                onPost()
-            }
+            onPost()
         },
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            ),
-        contentPadding = PaddingValues(0.dp)
+        shape = ButtonBorder
     ) {
         Text(text = stringResource(R.string.post), color = Color.White)
     }
@@ -1260,19 +1248,11 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
 @Composable
 fun SaveButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = Modifier) {
     Button(
+        enabled = isActive,
         modifier = modifier,
-        onClick = {
-            if (isActive) {
-                onPost()
-            }
-        },
-        shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
+        onClick = onPost
     ) {
-        Text(text = stringResource(R.string.save), color = Color.White)
+        Text(text = stringResource(R.string.save))
     }
 }
 
@@ -1286,10 +1266,9 @@ fun CreateButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier 
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
+        )
     ) {
         Text(text = stringResource(R.string.create), color = Color.White)
     }
@@ -1337,7 +1316,7 @@ fun ImageVideoDescription(
             .clip(shape = QuoteBorder)
             .border(
                 1.dp,
-                MaterialTheme.colors.subtleBorder,
+                MaterialTheme.colorScheme.subtleBorder,
                 QuoteBorder
             )
     ) {
@@ -1478,7 +1457,7 @@ fun ImageVideoDescription(
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.content_description_example),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -1497,7 +1476,7 @@ fun ImageVideoDescription(
                 },
                 shape = QuoteBorder,
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.primary
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(text = stringResource(R.string.add_content), color = Color.White, fontSize = 20.sp)
@@ -1531,21 +1510,17 @@ fun SettingSwitchItem(
             modifier = Modifier.weight(1.0f),
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            val contentAlpha = if (enabled) ContentAlpha.high else ContentAlpha.disabled
-
             Text(
                 text = stringResource(id = title),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.alpha(contentAlpha)
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = stringResource(id = description),
-                style = MaterialTheme.typography.caption,
+                style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.alpha(contentAlpha)
+                overflow = TextOverflow.Ellipsis
             )
         }
 

@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
     <string name="poll_closing_time_days">napok</string>
-    <string name="poll_is_closed">A szavazásra nem lehet már új szavazatot leadni</string>
     <string name="poll_zap_amount">Zap összege</string>
     <string name="one_vote_per_user_on_atomic_votes">Az ilyen típusú szavazásokon felhasználónként csak egy szavazat engedélyezett</string>
     <string name="looking_for_event">"%1$s esemény keresése"</string>

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,13 +7,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,21 +49,22 @@ fun InvoiceRequestCard(
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onError: (String, String) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
             .clip(shape = QuoteBorder)
-            .border(1.dp, MaterialTheme.colors.subtleBorder, QuoteBorder)
+            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(30.dp)
         ) {
-            InvoiceRequest(lud16, toUserPubKeyHex, account, titleText, buttonText, onSuccess, onClose)
+            InvoiceRequest(lud16, toUserPubKeyHex, account, titleText, buttonText, onSuccess, onClose, onError)
         }
     }
 }
@@ -77,7 +77,8 @@ fun InvoiceRequest(
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onError: (String, String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -116,7 +117,7 @@ fun InvoiceRequest(
         placeholder = {
             Text(
                 text = stringResource(R.string.thank_you_so_much),
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         },
         keyboardOptions = KeyboardOptions.Default.copy(
@@ -141,7 +142,7 @@ fun InvoiceRequest(
         placeholder = {
             Text(
                 text = "1000",
-                color = MaterialTheme.colors.placeholderText
+                color = MaterialTheme.colorScheme.placeholderText
             )
         },
         keyboardOptions = KeyboardOptions.Default.copy(
@@ -162,20 +163,16 @@ fun InvoiceRequest(
                     message,
                     zapRequest?.toJson(),
                     onSuccess = onSuccess,
-                    onError = {
-                        scope.launch {
-                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                            onClose()
-                        }
-                    },
+                    onError = onError,
                     onProgress = {
-                    }
+                    },
+                    context = context
                 )
             }
         },
         shape = QuoteBorder,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.primary
+            containerColor = MaterialTheme.colorScheme.primary
         )
     ) {
         Text(text = buttonText ?: stringResource(R.string.send_sats), color = Color.White, fontSize = 20.sp)

@@ -5,6 +5,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,25 +22,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextFieldColors
-import androidx.compose.material.TextFieldDefaults
-import androidx.compose.material.TextFieldDefaults.indicatorLine
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -48,6 +50,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -346,7 +349,7 @@ fun DisplayReplyingToNote(
                         modifier = Modifier
                             .padding(end = 5.dp)
                             .size(30.dp),
-                        tint = MaterialTheme.colors.placeholderText
+                        tint = MaterialTheme.colorScheme.placeholderText
                     )
                 }
             }
@@ -381,7 +384,7 @@ fun EditFieldRow(
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -397,7 +400,7 @@ fun EditFieldRow(
             leadingIcon = {
                 UploadFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
-                    tint = MaterialTheme.colors.placeholderText,
+                    tint = MaterialTheme.colorScheme.placeholderText,
                     modifier = EditFieldLeadingIconModifier
                 ) {
                     val fileServer = if (isPrivate) {
@@ -420,7 +423,7 @@ fun EditFieldRow(
                     channelScreenModel.upload(it, "", false, fileServer, context)
                 }
             },
-            colors = TextFieldDefaults.textFieldColors(
+            colors = TextFieldDefaults.colors(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             )
@@ -428,6 +431,7 @@ fun EditFieldRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyTextField(
     value: TextFieldValue,
@@ -440,6 +444,9 @@ fun MyTextField(
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
+    prefix: @Composable (() -> Unit)? = null,
+    suffix: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -448,22 +455,30 @@ fun MyTextField(
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    shape: Shape = TextFieldDefaults.TextFieldShape,
-    colors: TextFieldColors = TextFieldDefaults.textFieldColors()
+    shape: Shape = TextFieldDefaults.shape,
+    colors: TextFieldColors = TextFieldDefaults.colors()
 ) {
-    // If color is not provided via the text style, use content color as a default
+    // COPIED FROM TEXT FIELD
+    // The only change is the contentPadding below
+
     val textColor = textStyle.color.takeOrElse {
-        colors.textColor(enabled).value
+        val focused by interactionSource.collectIsFocusedAsState()
+
+        val targetValue = when {
+            !enabled -> MaterialTheme.colorScheme.placeholderText
+            isError -> MaterialTheme.colorScheme.onSurface
+            focused -> MaterialTheme.colorScheme.onSurface
+            else -> MaterialTheme.colorScheme.onSurface
+        }
+
+        rememberUpdatedState(targetValue).value
     }
     val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
 
-    @OptIn(ExperimentalMaterialApi::class)
-    (
+    CompositionLocalProvider(LocalTextSelectionColors provides LocalTextSelectionColors.current) {
         BasicTextField(
             value = value,
             modifier = modifier
-                .background(colors.backgroundColor(enabled).value, shape)
-                .indicatorLine(enabled, isError, interactionSource, colors)
                 .defaultMinSize(
                     minWidth = TextFieldDefaults.MinWidth,
                     minHeight = 36.dp
@@ -472,7 +487,7 @@ fun MyTextField(
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(colors.cursorColor(isError).value),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -481,8 +496,7 @@ fun MyTextField(
             maxLines = maxLines,
             minLines = minLines,
             decorationBox = @Composable { innerTextField ->
-                // places leading icon, text field with label and placeholder, trailing icon
-                TextFieldDefaults.TextFieldDecorationBox(
+                TextFieldDefaults.DecorationBox(
                     value = value.text,
                     visualTransformation = visualTransformation,
                     innerTextField = innerTextField,
@@ -490,21 +504,25 @@ fun MyTextField(
                     label = label,
                     leadingIcon = leadingIcon,
                     trailingIcon = trailingIcon,
+                    prefix = prefix,
+                    suffix = suffix,
+                    supportingText = supportingText,
+                    shape = shape,
                     singleLine = singleLine,
                     enabled = enabled,
                     isError = isError,
                     interactionSource = interactionSource,
                     colors = colors,
-                    contentPadding = TextFieldDefaults.textFieldWithoutLabelPadding(
-                        top = 12.dp,
-                        bottom = 12.dp,
+                    contentPadding = TextFieldDefaults.contentPaddingWithoutLabel(
                         start = 10.dp,
-                        end = 10.dp
+                        top = 12.dp,
+                        end = 10.dp,
+                        bottom = 12.dp
                     )
                 )
             }
         )
-        )
+    }
 }
 
 @Composable
@@ -766,7 +784,7 @@ fun LongChannelHeader(
             Modifier.weight(1f)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val defaultBackground = MaterialTheme.colors.background
+                val defaultBackground = MaterialTheme.colorScheme.background
                 val background = remember {
                     mutableStateOf(defaultBackground)
                 }
@@ -912,12 +930,10 @@ private fun ShortChannelActionOptions(
 ) {
     LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
         it?.let {
-            var popupExpanded by remember { mutableStateOf(false) }
-
             Spacer(modifier = StdHorzSpacer)
-            LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+            LikeReaction(baseNote = it, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
             Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+            ZapReaction(baseNote = it, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
             Spacer(modifier = StdHorzSpacer)
         }
     }
@@ -990,9 +1006,9 @@ private fun LiveChannelActionOptions(
             Spacer(modifier = StdHorzSpacer)
         }
 
-        LikeReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav)
+        LikeReaction(baseNote = it, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
         Spacer(modifier = StdHorzSpacer)
-        ZapReaction(baseNote = it, grayTint = MaterialTheme.colors.onSurface, accountViewModel = accountViewModel, nav = nav)
+        ZapReaction(baseNote = it, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
     }
 }
 
@@ -1072,10 +1088,9 @@ private fun NoteCopyButton(
             .width(50.dp),
         onClick = { popupExpanded = true },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.placeholderText
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.placeholderText
+        )
     ) {
         Icon(
             tint = Color.White,
@@ -1089,9 +1104,12 @@ private fun NoteCopyButton(
         ) {
             val clipboardManager = LocalClipboardManager.current
 
-            DropdownMenuItem(onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.idNote())); popupExpanded = false }) {
-                Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard))
-            }
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard))
+                },
+                onClick = { clipboardManager.setText(AnnotatedString("nostr:" + note.idNote())); popupExpanded = false }
+            )
         }
     }
 }
@@ -1112,10 +1130,9 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatCh
             .width(50.dp),
         onClick = { wantsToPost = true },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
     ) {
         Icon(
             tint = Color.White,
@@ -1137,10 +1154,9 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.join), color = Color.White)
@@ -1159,10 +1175,9 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.leave), color = Color.White)
@@ -1181,10 +1196,9 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNot
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.join), color = Color.White)
@@ -1203,10 +1217,9 @@ fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNo
             }
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.leave), color = Color.White)

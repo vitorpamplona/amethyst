@@ -1,19 +1,17 @@
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
-import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.encoders.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,29 +41,28 @@ fun MayBeWithdrawal(lnurlWord: String) {
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     val withdraw = remember(withdrawalString) {
         AnnotatedString("$withdrawalString ")
     }
 
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+
+    if (showErrorMessageDialog != null) {
+        ErrorMessageDialog(
+            title = context.getString(R.string.error_dialog_pay_withdraw_error),
+            textContent = showErrorMessageDialog ?: "",
+            onDismiss = { showErrorMessageDialog = null }
+        )
+    }
+
     ClickableText(
         text = withdraw,
         onClick = {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$withdrawalString"))
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                ContextCompat.startActivity(context, intent, null)
-            } catch (e: Exception) {
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.lightning_wallets_not_found),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+            payViaIntent(withdrawalString, context) {
+                showErrorMessageDialog = it
             }
         },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
     )
 }

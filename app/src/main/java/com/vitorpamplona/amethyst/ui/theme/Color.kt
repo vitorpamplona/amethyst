@@ -11,6 +11,9 @@ val Teal200 = Color(0xFF03DAC5)
 val BitcoinOrange = Color(0xFFF7931A)
 val RoyalBlue = Color(0xFF4169E1)
 
+val BitcoinDark = Color(0xFFF7931A)
+val BitcoinLight = Color(0xFFB66605)
+
 val Following = Color(0xFF03DAC5)
 val FollowsFollow = Color.Yellow
 val NIP05Verified = Color.Blue

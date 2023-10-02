@@ -30,13 +30,17 @@
     <string name="report_impersonation">Report Impersonation</string>
     <string name="report_explicit_content">Report Explicit Content</string>
     <string name="report_illegal_behaviour">Report Illegal Behaviour</string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">Login with a Private key to be able to reply</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Login with a Private key to be able to boost posts</string>
-    <string name="login_with_a_private_key_to_like_posts">Login with a Private key to like Posts</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">You are using a public key and public keys are read-only. Login with a Private key to be able to reply</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
+    <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>
     <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Login with a Private key to be able to send Zaps</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">Login with a Private key to be able to Follow</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">Login with a Private key to be able to Unfollow</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">You are using a public key and public keys are read-only. Login with a Private key to be able to send zaps</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">You are using a public key and public keys are read-only. Login with a Private key to be able to follow</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">You are using a public key and public keys are read-only. Login with a Private key to be able to unfollow</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">You are using a public key and public keys are read-only. Login with a Private key to be able to hide a word or sentence</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">You are using a public key and public keys are read-only. Login with a Private key to be able to show a word or sentence</string>
+
+
     <string name="zaps">Zaps</string>
     <string name="view_count">View count</string>
     <string name="boost">Boost</string>
@@ -195,6 +199,8 @@
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>
     <string name="biometric_authentication_failed">Authentication failed</string>
+    <string name="biometric_authentication_failed_explainer">Biometrics failed to authenticate the owner of this phone</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrics failed to authenticate the owner of this phone. Error: %1$s</string>
     <string name="biometric_error">Error</string>
     <string name="badge_created_by">"Created by %1$s"</string>
     <string name="badge_award_image_for">"Badge award image for %1$s"</string>
@@ -285,7 +291,8 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>
-    <string name="poll_is_closed">Poll is closed to new votes</string>
+    <string name="poll_unable_to_vote">Unable to vote</string>
+    <string name="poll_is_closed_explainer">Poll is closed to new votes</string>
     <string name="poll_zap_amount">Zap amount</string>
     <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
 
@@ -301,6 +308,7 @@
     <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
     <string name="poll_hashtag" translatable="false">#zappoll</string>
 
+    <string name="hash_verification_info_title">What does this mean?</string>
     <string name="hash_verification_passed">This content is the same since the post</string>
     <string name="hash_verification_failed">This content has changed. The author might not have seen or approved the change</string>
 
@@ -426,7 +434,7 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Warn when posts have reports from your follows</string>
 
     <string name="new_reaction_symbol">New Reaction Symbol</string>
-    <string name="no_reaction_type_setup_long_press_to_change">No reaction types selected. Long Press to change</string>
+    <string name="no_reaction_type_setup_long_press_to_change">No reaction types pre-selected for this user. Long press on the heart button to change</string>
 
     <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Adds a target amount of sats to raise for this post. Supporting clients may show this as a progress bar to incentivize donations</string>
@@ -581,6 +589,7 @@
     <string name="zap_split_explainer">Supporting clients will split and forward zaps to the users added here instead of yours</string>
     <string name="zap_split_serarch_and_add_user">Search and Add User</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Username or display name</string>
+    <string name="missing_lud16">Missing lightning setup</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">User %1$s does not have a lightning address set up to receive sats</string>
     <string name="zap_split_weight">Percentage</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -600,4 +609,39 @@
     <string name="hide_new_word_label">Hide new word or sentence</string>
     <string name="automatically_show_profile_picture">Profile Picture</string>
     <string name="automatically_show_profile_picture_description">Show Profile pictures</string>
+
+    <string name="select_an_option">Select an Option</string>
+
+    <string name="error_dialog_pay_invoice_error">Could not pay invoice</string>
+    <string name="error_dialog_pay_withdraw_error">Could not withdraw</string>
+
+    <string name="error_parsing_nip47_title">Could not setup Wallet Connect</string>
+    <string name="error_parsing_nip47">Error parsing NIP-47 connection string. Check if this is correct with your Wallet provider: %1$s. Error: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Error parsing NIP-47 connection string. Check if this is correct with your Wallet provider: %1$s.</string>
+
+    <string name="cashu_failed_redemption">Could not redeem Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint provided the following error message: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu tokens already spent.</string>
+
+    <string name="cashu_sucessful_redemption">Cashu Received</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>
+
+    <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
+
+    <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
+
+    <string name="could_not_connect_to_tor">Could not connect to Tor</string>
+    <string name="unable_to_download_relay_document">Download relay document unavailable</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct</string>
+    <string name="could_not_fetch_invoice_from">Could not fetch invoice from %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address. Check the user\'s lightning setup</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL not found in the User\'s lightning address server configuration</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address\'s invoice fetch. Check the user\'s lightning setup</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Incorrect invoice amount (%1$s sats) from %2$s. It should have been %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Unable to create a lightning invoice before sending the zap. The receiver\'s lightning wallet sent the following error: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Unable to create a lightning invoice before sending the zap. Element pr not found in the resulting JSON.</string>
+    <string name="read_only_user">Read-only user</string>
+    <string name="no_reactions_setup">No reactions setup</string>
 </resources>

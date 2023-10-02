@@ -35,7 +35,7 @@ class ZapPaymentHandler(val account: Account) {
         pollOption: Int?,
         message: String,
         context: Context,
-        onError: (String) -> Unit,
+        onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
         zapType: LnZapEvent.ZapType
@@ -48,7 +48,10 @@ class ZapPaymentHandler(val account: Account) {
             val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
 
             if (lud16.isNullOrBlank()) {
-                onError(context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats))
+                onError(
+                    context.getString(R.string.missing_lud16),
+                    context.getString(R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats)
+                )
                 return@withContext
             }
 
@@ -122,6 +125,9 @@ class ZapPaymentHandler(val account: Account) {
                 } else {
                     onError(
                         context.getString(
+                            R.string.missing_lud16
+                        ),
+                        context.getString(
                             R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                             user?.toBestDisplayName() ?: value.lnAddressOrPubKeyHex
                         )
@@ -149,7 +155,7 @@ class ZapPaymentHandler(val account: Account) {
         pollOption: Int?,
         message: String,
         context: Context,
-        onError: (String) -> Unit,
+        onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayInvoiceThroughIntent: (String) -> Unit,
         zapType: LnZapEvent.ZapType,
@@ -181,9 +187,13 @@ class ZapPaymentHandler(val account: Account) {
                             if (response is PayInvoiceErrorResponse) {
                                 onProgress(0.0f)
                                 onError(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: "Error parsing error message"
+                                    context.getString(R.string.error_dialog_pay_invoice_error),
+                                    context.getString(
+                                        R.string.wallet_connect_pay_invoice_error_error,
+                                        response.error?.message
+                                            ?: response.error?.code?.toString()
+                                            ?: "Error parsing error message"
+                                    )
                                 )
                             } else {
                                 onProgress(1f)
@@ -192,16 +202,13 @@ class ZapPaymentHandler(val account: Account) {
                     )
                     onProgress(0.8f)
                 } else {
-                    try {
-                        onPayInvoiceThroughIntent(it)
-                    } catch (e: Exception) {
-                        onError(context.getString(R.string.lightning_wallets_not_found2))
-                    }
+                    onPayInvoiceThroughIntent(it)
                     onProgress(0f)
                 }
             },
             onError = onError,
-            onProgress = onProgress
+            onProgress = onProgress,
+            context = context
         )
     }
 }

@@ -13,8 +13,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk 26
         targetSdk 34
-        versionCode 308
-        versionName "0.78.2"
+        versionCode 311
+        versionName "0.79.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -102,7 +102,7 @@ dependencies {
     // Observe Live data as State
     implementation "androidx.compose.runtime:runtime-livedata:$compose_ui_version"
 
-    implementation "androidx.compose.material:material:$compose_ui_version"
+    implementation "androidx.compose.material3:material3:${material3_version}"
     implementation "androidx.compose.material:material-icons-extended:$compose_ui_version"
 
     // Lifecycle
@@ -155,7 +155,7 @@ dependencies {
 
     // Markdown (With fix for full-image bleeds)
     implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:a0954aba63')
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material:a0954aba63')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material3:a0954aba63')
     implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:a0954aba63')
 
     // Language picker and Theme chooser
@@ -171,7 +171,7 @@ dependencies {
     playImplementation 'com.google.mlkit:translate:17.0.1'
 
     // PushNotifications
-    playImplementation platform('com.google.firebase:firebase-bom:32.2.3')
+    playImplementation platform('com.google.firebase:firebase-bom:32.3.1')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Charts

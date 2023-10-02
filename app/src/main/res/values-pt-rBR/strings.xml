@@ -262,7 +262,6 @@
     <string name="poll_consensus_threshold">Consenso</string>
     <string name="poll_closing_time">Fechar depois</string>
     <string name="poll_closing_time_days">dias</string>
-    <string name="poll_is_closed">Enquete está fechada para novos votos</string>
     <string name="poll_zap_amount">Valor do Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">Apenas um voto por usuário é permitido neste tipo de enquete</string>
     <string name="looking_for_event">"Procurando o evento %1$s"</string>

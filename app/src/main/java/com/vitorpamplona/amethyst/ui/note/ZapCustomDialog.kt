@@ -5,18 +5,19 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonColors
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -89,7 +91,7 @@ class ZapOptionstViewModel : ViewModel() {
 @Composable
 fun ZapCustomDialog(
     onClose: () -> Unit,
-    onError: (text: String) -> Unit,
+    onError: (title: String, text: String) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     accountViewModel: AccountViewModel,
@@ -170,7 +172,7 @@ fun ZapCustomDialog(
                         placeholder = {
                             Text(
                                 text = "100, 1000, 5000",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         singleLine = true,
@@ -220,7 +222,7 @@ fun ZapCustomDialog(
                         placeholder = {
                             Text(
                                 text = stringResource(id = R.string.custom_zaps_add_a_message_example),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         singleLine = true,
@@ -239,10 +241,9 @@ fun ZapButton(isActive: Boolean, onPost: () -> Unit) {
     Button(
         onClick = { onPost() },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
+        )
     ) {
         Text(text = "⚡Zap ", color = Color.White)
     }
@@ -253,7 +254,7 @@ fun ErrorMessageDialog(
     title: String,
     textContent: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-    onClickStartMessage: () -> Unit,
+    onClickStartMessage: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -262,24 +263,28 @@ fun ErrorMessageDialog(
             Text(title)
         },
         text = {
-            Text(textContent)
+            SelectionContainer {
+                Text(textContent)
+            }
         },
-        buttons = {
+        confirmButton = {
             Row(
                 modifier = Modifier
-                    .padding(all = 8.dp)
+                    .padding(vertical = 8.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                TextButton(onClick = onClickStartMessage) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_dm),
-                        contentDescription = null
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.error_dialog_talk_to_user))
+                onClickStartMessage?.let {
+                    TextButton(onClick = onClickStartMessage) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_dm),
+                            contentDescription = null
+                        )
+                        Spacer(StdHorzSpacer)
+                        Text(stringResource(R.string.error_dialog_talk_to_user))
+                    }
                 }
-                Button(onClick = onDismiss, colors = buttonColors) {
+                Button(onClick = onDismiss, colors = buttonColors, contentPadding = PaddingValues(horizontal = Size16dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -287,7 +292,7 @@ fun ErrorMessageDialog(
                             imageVector = Icons.Outlined.Done,
                             contentDescription = null
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(StdHorzSpacer)
                         Text(stringResource(R.string.error_dialog_button_ok))
                     }
                 }
@@ -307,6 +312,7 @@ fun PayViaIntentDialog(
 
     if (payingInvoices.size == 1) {
         payViaIntent(payingInvoices.first().invoice, context, onError)
+        onClose()
     } else {
         Dialog(
             onDismissRequest = onClose,
@@ -409,10 +415,9 @@ fun PayButton(isActive: Boolean, modifier: Modifier = Modifier, onPost: () -> Un
             onPost()
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = if (isActive) MaterialTheme.colors.primary else Color.Gray
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
+        ),
         contentPadding = PaddingValues(0.dp)
     ) {
         if (isActive) {

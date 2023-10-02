@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -43,16 +42,12 @@ fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, 
 
     val scope = rememberCoroutineScope()
 
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-    val newItemColor = MaterialTheme.colors.newItemBackgroundColor
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
     LaunchedEffect(key1 = messageSetCard) {
-        launch(Dispatchers.IO) {
-            val isNew = messageSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
-
-            accountViewModel.account.markAsRead(routeForLastRead, messageSetCard.createdAt())
-
+        accountViewModel.loadAndMarkAsRead(routeForLastRead, messageSetCard.createdAt()) { isNew ->
             val newBackgroundColor = if (isNew) {
                 newItemColor.compositeOver(defaultBackgroundColor)
             } else {

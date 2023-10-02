@@ -1,12 +1,13 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.widget.Toast
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -128,7 +130,7 @@ private fun OptionNote(
             val color = if (poolOption.consensusThreadhold) {
                 Color.Green.copy(alpha = 0.32f)
             } else {
-                MaterialTheme.colors.mediumImportanceLink
+                MaterialTheme.colorScheme.mediumImportanceLink
             }
 
             ZapVote(
@@ -252,7 +254,7 @@ private fun RenderOptionBeforeVote(
             .clip(shape = QuoteBorder)
             .border(
                 2.dp,
-                MaterialTheme.colors.primary,
+                MaterialTheme.colorScheme.primary,
                 QuoteBorder
             )
     ) {
@@ -294,7 +296,7 @@ fun ZapVote(
     }
 
     var zappingProgress by remember { mutableStateOf(0f) }
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -305,50 +307,30 @@ fun ZapVote(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.combinedClickable(
             role = Role.Button,
-            // interactionSource = remember { MutableInteractionSource() },
-            // indication = rememberRipple(bounded = false, radius = 24.dp),
+            interactionSource = remember { MutableInteractionSource() },
+            indication = rememberRipple(bounded = false, radius = 24.dp),
             onClick = {
                 if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_send_zaps
+                    )
                 } else if (pollViewModel.isPollClosed()) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.poll_is_closed),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.poll_unable_to_vote,
+                        R.string.poll_is_closed_explainer
+                    )
                 } else if (isLoggedUser) {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.poll_author_no_vote),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.poll_unable_to_vote,
+                        R.string.poll_author_no_vote
+                    )
                 } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn) {
                     // only allow one vote per option when min==max, i.e. atomic vote amount specified
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                R.string.one_vote_per_user_on_atomic_votes,
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.poll_unable_to_vote,
+                        R.string.one_vote_per_user_on_atomic_votes
+                    )
                     return@combinedClickable
                 } else if (accountViewModel.account.zapAmountChoices.size == 1 &&
                     pollViewModel.isValidInputVoteAmount(accountViewModel.account.zapAmountChoices.first())
@@ -359,13 +341,9 @@ fun ZapVote(
                         poolOption.option,
                         "",
                         context,
-                        onError = {
-                            scope.launch {
-                                zappingProgress = 0f
-                                Toast
-                                    .makeText(context, it, Toast.LENGTH_SHORT)
-                                    .show()
-                            }
+                        onError = { title, message ->
+                            zappingProgress = 0f
+                            showErrorMessageDialog = StringToastMsg(title, message)
                         },
                         onProgress = {
                             scope.launch(Dispatchers.Main) {
@@ -395,11 +373,9 @@ fun ZapVote(
                 onChangeAmount = {
                     wantsToZap = false
                 },
-                onError = {
-                    scope.launch {
-                        zappingProgress = 0f
-                        showErrorMessageDialog = it
-                    }
+                onError = { title, message ->
+                    showErrorMessageDialog = StringToastMsg(title, message)
+                    zappingProgress = 0f
                 },
                 onProgress = {
                     scope.launch(Dispatchers.Main) {
@@ -423,19 +399,22 @@ fun ZapVote(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = it
+                        showErrorMessageDialog = StringToastMsg(
+                            context.getString(R.string.error_dialog_zap_error),
+                            it
+                        )
                     }
                 }
             )
         }
 
-        if (showErrorMessageDialog != null) {
+        showErrorMessageDialog?.let { toast ->
             ErrorMessageDialog(
-                title = stringResource(id = R.string.error_dialog_zap_error),
-                textContent = showErrorMessageDialog ?: "",
+                title = toast.title,
+                textContent = toast.msg,
                 onClickStartMessage = {
                     baseNote.author?.let {
-                        nav(routeToMessage(it, showErrorMessageDialog, accountViewModel))
+                        nav(routeToMessage(it, toast.msg, accountViewModel))
                     }
                 },
                 onDismiss = { showErrorMessageDialog = null }
@@ -458,7 +437,7 @@ fun ZapVote(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colors.placeholderText
+                    tint = MaterialTheme.colorScheme.placeholderText
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
@@ -479,7 +458,7 @@ fun ZapVote(
         Text(
             text = amountStr,
             fontSize = Font14SP,
-            color = MaterialTheme.colors.placeholderText,
+            color = MaterialTheme.colorScheme.placeholderText,
             modifier = modifier
         )
     }
@@ -494,7 +473,7 @@ fun FilteredZapAmountChoicePopup(
     pollOption: Int,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
-    onError: (text: String) -> Unit,
+    onError: (title: String, text: String) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
@@ -543,7 +522,7 @@ fun FilteredZapAmountChoicePopup(
                     shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                 ) {
                     Text(

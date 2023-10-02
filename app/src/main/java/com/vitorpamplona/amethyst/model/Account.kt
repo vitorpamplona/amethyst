@@ -98,7 +98,6 @@ class Account(
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
     val liveLanguages: AccountLiveData = AccountLiveData(this)
-    val liveLastRead: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
     @Immutable
@@ -896,7 +895,7 @@ class Account(
         return returningContactList
     }
 
-    fun follow(user: User) {
+    suspend fun follow(user: User) {
         if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -1065,7 +1064,7 @@ class Account(
         LocalCache.consume(event)
     }
 
-    fun unfollow(user: User) {
+    suspend fun unfollow(user: User) {
         if (!isWriteable() && !loginWithExternalSigner) return
 
         val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
@@ -2955,7 +2954,10 @@ class Account(
     // Takes a User's relay list and adds the types of feeds they are active for.
     fun activeRelays(): Array<Relay>? {
         var usersRelayList = userProfile().latestContactList?.relays()?.map {
-            val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes ?: FeedType.values().toSet()
+            val localFeedTypes = localRelays.firstOrNull() { localRelay -> localRelay.url == it.key }?.feedTypes
+                ?: Constants.defaultRelays.filter { defaultRelay -> defaultRelay.url == it.key }.firstOrNull()?.feedTypes
+                ?: FeedType.values().toSet()
+
             Relay(it.key, it.value.read, it.value.write, localFeedTypes, proxy)
         } ?: return null
 
@@ -3110,12 +3112,14 @@ class Account(
         live.invalidateData()
     }
 
-    fun markAsRead(route: String, timestampInSecs: Long) {
+    fun markAsRead(route: String, timestampInSecs: Long): Boolean {
         val lastTime = lastReadPerRoute[route]
-        if (lastTime == null || timestampInSecs > lastTime) {
+        return if (lastTime == null || timestampInSecs > lastTime) {
             lastReadPerRoute = lastReadPerRoute + Pair(route, timestampInSecs)
             saveable.invalidateData()
-            liveLastRead.invalidateData()
+            true
+        } else {
+            false
         }
     }
 

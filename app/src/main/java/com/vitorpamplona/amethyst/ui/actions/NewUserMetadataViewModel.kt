@@ -15,6 +15,7 @@ import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.MastodonIdentity
 import com.vitorpamplona.quartz.events.TwitterIdentity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
@@ -41,7 +42,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
-    val imageUploadingError = MutableSharedFlow<String?>()
+    val imageUploadingError = MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     fun load(account: Account) {
         this.account = account

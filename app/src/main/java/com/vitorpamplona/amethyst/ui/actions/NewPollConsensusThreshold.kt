@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,13 +38,13 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
         } catch (e: Exception) { pollViewModel.isValidConsensusThreshold.value = false }
     }
 
-    val colorInValid = TextFieldDefaults.outlinedTextFieldColors(
-        focusedBorderColor = MaterialTheme.colors.error,
+    val colorInValid = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.error,
         unfocusedBorderColor = Color.Red
     )
-    val colorValid = TextFieldDefaults.outlinedTextFieldColors(
-        focusedBorderColor = MaterialTheme.colors.primary,
-        unfocusedBorderColor = MaterialTheme.colors.placeholderText
+    val colorValid = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText
     )
 
     Row(
@@ -60,13 +60,13 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
             label = {
                 Text(
                     text = stringResource(R.string.poll_consensus_threshold),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             placeholder = {
                 Text(
                     text = stringResource(R.string.poll_consensus_threshold_percent),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             }
         )

@@ -57,21 +57,30 @@ class NewRelayListViewModel : ViewModel() {
         _relays.update {
             var relayFile = account.userProfile().latestContactList?.relays()
 
-            // Ugly, but forces nostr.band as the only search-supporting relay today.
-            // TODO: Remove when search becomes more available.
-            if (relayFile?.none { it.key.removeSuffix("/") in Constants.forcedRelaysForSearchSet } == true) {
-                relayFile = relayFile + Constants.forcedRelayForSearch.map {
-                    Pair(
-                        it.url,
-                        ContactListEvent.ReadWrite(it.read, it.write)
-                    )
-                }
-            }
-
             if (relayFile != null) {
+                // Ugly, but forces nostr.band as the only search-supporting relay today.
+                // TODO: Remove when search becomes more available.
+
+                val needsSearchRelay = relayFile.none {
+                    it.key.removeSuffix("/") in Constants.forcedRelaysForSearchSet
+                } && relayFile.none {
+                    account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes?.contains(FeedType.SEARCH) ?: false
+                }
+
+                if (needsSearchRelay) {
+                    relayFile = relayFile + Constants.forcedRelayForSearch.map {
+                        Pair(
+                            it.url,
+                            ContactListEvent.ReadWrite(it.read, it.write)
+                        )
+                    }
+                }
+
                 relayFile.map {
                     val liveRelay = RelayPool.getRelay(it.key)
-                    val localInfoFeedTypes = account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes ?: FeedType.values().toSet().toImmutableSet()
+                    val localInfoFeedTypes = account.localRelays.filter { localRelay -> localRelay.url == it.key }.firstOrNull()?.feedTypes
+                        ?: Constants.defaultRelays.filter { defaultRelay -> defaultRelay.url == it.key }.firstOrNull()?.feedTypes
+                        ?: FeedType.values().toSet().toImmutableSet()
 
                     val errorCounter = liveRelay?.errorCounter ?: 0
                     val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0

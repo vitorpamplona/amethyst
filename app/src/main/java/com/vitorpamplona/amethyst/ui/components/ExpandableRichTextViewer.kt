@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -97,7 +97,7 @@ fun ExpandableRichTextViewer(
                     .fillMaxWidth()
                     .background(getGradient(backgroundColor))
             ) {
-                ShowMoreButton() {
+                ShowMoreButton {
                     showFullText = !showFullText
                 }
             }
@@ -112,7 +112,7 @@ fun ShowMoreButton(onClick: () -> Unit) {
         onClick = onClick,
         shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.secondaryButtonBackground
+            containerColor = MaterialTheme.colorScheme.secondaryButtonBackground
         ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {

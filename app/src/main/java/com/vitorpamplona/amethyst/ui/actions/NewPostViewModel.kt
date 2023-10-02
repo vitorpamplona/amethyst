@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
@@ -58,7 +59,7 @@ open class NewPostViewModel() : ViewModel() {
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
     var isUploadingImage by mutableStateOf(false)
-    val imageUploadingError = MutableSharedFlow<String?>()
+    val imageUploadingError = MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null

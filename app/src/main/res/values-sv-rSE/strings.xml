@@ -269,7 +269,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Avsluta efter</string>
     <string name="poll_closing_time_days">dagar</string>
-    <string name="poll_is_closed">Omröstningen är stängd för nya röster</string>
     <string name="poll_zap_amount">Zap belopp</string>
     <string name="one_vote_per_user_on_atomic_votes">Endast en röst per användare tillåts i denna typ av omröstning</string>
     <string name="looking_for_event">"Letar efter Event %1$s"</string>
@@ -504,4 +503,6 @@
     <string name="no_wallet_found">Inga plånböcker hittades för att betala en blixtfaktura. Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="hidden_words">Dolda ord</string>
     <string name="hide_new_word_label">Dölj nytt ord eller mening</string>
+    <string name="automatically_show_profile_picture">Profilbild</string>
+    <string name="automatically_show_profile_picture_description">Visa profilbilder</string>
 </resources>

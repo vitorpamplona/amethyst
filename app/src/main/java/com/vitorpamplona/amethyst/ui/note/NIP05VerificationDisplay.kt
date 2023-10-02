@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -172,7 +172,7 @@ fun DisplayUsersNpub(npub: String) {
     Text(
         text = npub,
         fontSize = 14.sp,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
@@ -205,7 +205,7 @@ fun DisplayStatus(
             painter = painterResource(id = R.drawable.tunestr),
             null,
             modifier = Size15Modifier.padding(end = Size5dp),
-            tint = MaterialTheme.colors.placeholderText
+            tint = MaterialTheme.colorScheme.placeholderText
         )
         else -> {}
     }
@@ -213,7 +213,7 @@ fun DisplayStatus(
     Text(
         text = content,
         fontSize = Font14SP,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
@@ -229,7 +229,7 @@ fun DisplayStatus(
                 imageVector = Icons.Default.OpenInNew,
                 null,
                 modifier = Size15Modifier,
-                tint = MaterialTheme.colors.lessImportantLink
+                tint = MaterialTheme.colorScheme.lessImportantLink
             )
         }
     } else if (nostrATag != null) {
@@ -249,7 +249,7 @@ fun DisplayStatus(
                         imageVector = Icons.Default.OpenInNew,
                         null,
                         modifier = Size15Modifier,
-                        tint = MaterialTheme.colors.lessImportantLink
+                        tint = MaterialTheme.colorScheme.lessImportantLink
                     )
                 }
             }
@@ -271,7 +271,7 @@ fun DisplayStatus(
                         imageVector = Icons.Default.OpenInNew,
                         null,
                         modifier = Size15Modifier,
-                        tint = MaterialTheme.colors.lessImportantLink
+                        tint = MaterialTheme.colorScheme.lessImportantLink
                     )
                 }
             }
@@ -298,7 +298,7 @@ private fun DisplayNIP05(
         Text(
             text = remember(nip05) { AnnotatedString(user) },
             fontSize = Font14SP,
-            color = MaterialTheme.colors.nip05,
+            color = MaterialTheme.colorScheme.nip05,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -309,7 +309,7 @@ private fun DisplayNIP05(
     ClickableText(
         text = remember(nip05) { AnnotatedString(domain) },
         onClick = { runCatching { uri.openUri("https://$domain") } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.nip05, fontSize = Font14SP),
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
         maxLines = 1,
         overflow = TextOverflow.Visible
     )
@@ -349,7 +349,7 @@ fun DisplayNip05ProfileStatus(user: User, accountViewModel: AccountViewModel) {
                 if (user != "_") {
                     Text(
                         text = remember { AnnotatedString(user + "@") },
-                        color = MaterialTheme.colors.primary,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -360,7 +360,7 @@ fun DisplayNip05ProfileStatus(user: User, accountViewModel: AccountViewModel) {
                 ClickableText(
                     text = AnnotatedString(domain),
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary),
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

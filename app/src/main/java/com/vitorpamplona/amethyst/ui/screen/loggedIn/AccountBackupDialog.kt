@@ -17,14 +17,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -40,7 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material.MaterialRichText
+import com.halilibo.richtext.ui.material3.Material3RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -52,7 +52,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
+fun AccountBackupDialog(accountViewModel: AccountViewModel, onClose: () -> Unit) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -60,7 +60,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colors.background)
+                    .background(MaterialTheme.colorScheme.background)
                     .fillMaxSize()
             ) {
                 Row(
@@ -80,7 +80,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    MaterialRichText(
+                    Material3RichText(
                         style = RichTextStyle().resolveDefaults()
                     ) {
                         Markdown(
@@ -90,7 +90,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(30.dp))
 
-                    NSecCopyButton(account)
+                    NSecCopyButton(accountViewModel)
                 }
             }
         }
@@ -99,7 +99,7 @@ fun AccountBackupDialog(account: Account, onClose: () -> Unit) {
 
 @Composable
 private fun NSecCopyButton(
-    account: Account
+    accountViewModel: AccountViewModel
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -108,7 +108,7 @@ private fun NSecCopyButton(
     val keyguardLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
-                copyNSec(context, scope, account, clipboardManager)
+                copyNSec(context, scope, accountViewModel.account, clipboardManager)
             }
         }
 
@@ -118,25 +118,28 @@ private fun NSecCopyButton(
             authenticate(
                 title = context.getString(R.string.copy_my_secret_key),
                 context = context,
-                scope = scope,
-                keyguardLauncher = keyguardLauncher
-            ) {
-                copyNSec(context, scope, account, clipboardManager)
-            }
+                keyguardLauncher = keyguardLauncher,
+                onApproved = {
+                    copyNSec(context, scope, accountViewModel.account, clipboardManager)
+                },
+                onError = { title, message ->
+                    accountViewModel.toast(title, message)
+                }
+            )
         },
         shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.primary
+            containerColor = MaterialTheme.colorScheme.primary
         ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Icon(
-            tint = MaterialTheme.colors.onPrimary,
+            tint = MaterialTheme.colorScheme.onPrimary,
             imageVector = Icons.Default.Key,
             contentDescription = stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
             modifier = Modifier.padding(end = 5.dp)
         )
-        Text(stringResource(id = R.string.copy_my_secret_key), color = MaterialTheme.colors.onPrimary)
+        Text(stringResource(id = R.string.copy_my_secret_key), color = MaterialTheme.colorScheme.onPrimary)
     }
 }
 

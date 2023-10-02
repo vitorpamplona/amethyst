@@ -20,11 +20,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -401,7 +401,7 @@ private fun VideoUserOptionAction(
             imageVector = Icons.Default.MoreVert,
             null,
             modifier = remember { Modifier.size(20.dp) },
-            tint = MaterialTheme.colors.placeholderText
+            tint = MaterialTheme.colorScheme.placeholderText
         )
 
         NoteDropDownMenu(
@@ -445,17 +445,17 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
-        ReplyReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
+        ReplyReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp) {
             routeFor(
                 baseNote,
                 accountViewModel.userProfile()
             )?.let { nav(it) }
         }
-        BoostReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp) {
+        BoostReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp) {
             wantsToQuote = baseNote
         }
-        LikeReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
-        ZapReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp, nav = nav)
-        ViewCountReaction(baseNote, grayTint = MaterialTheme.colors.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colors.onBackgroundColorFilter)
+        LikeReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
+        ZapReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp, nav = nav)
+        ViewCountReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter)
     }
 }

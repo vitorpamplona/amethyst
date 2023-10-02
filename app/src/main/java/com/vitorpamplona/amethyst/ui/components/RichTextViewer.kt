@@ -6,13 +6,12 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -30,7 +29,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.em
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
-import com.halilibo.richtext.ui.material.MaterialRichText
+import com.halilibo.richtext.ui.material3.Material3RichText
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -137,7 +136,7 @@ private fun RenderRegular(
     val textStyle = currentTextStyle.copy(
         lineHeight = 1.4.em,
         color = currentTextStyle.color.takeOrElse {
-            LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+            LocalContentColor.current
         }
     )
 
@@ -333,8 +332,8 @@ private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<
     }
 
     ProvideTextStyle(MarkdownTextStyle) {
-        MaterialRichText(
-            style = MaterialTheme.colors.markdownStyle
+        Material3RichText(
+            style = MaterialTheme.colorScheme.markdownStyle
         ) {
             RefreshableContent(content, tags, accountViewModel) {
                 Markdown(
@@ -511,7 +510,7 @@ private fun DisplayFullNote(
     NoteCompose(
         baseNote = it,
         accountViewModel = accountViewModel,
-        modifier = MaterialTheme.colors.replyModifier,
+        modifier = MaterialTheme.colorScheme.replyModifier,
         parentBackgroundColor = backgroundColor,
         isQuotedNote = true,
         nav = nav
@@ -540,12 +539,12 @@ private fun RenderHashtag(
     segment: HashTagSegment,
     nav: (String) -> Unit
 ) {
-    val primary = MaterialTheme.colors.primary
+    val primary = MaterialTheme.colorScheme.primary
     val hashtagIcon = remember(segment.hashtag) { checkForHashtagWithIcon(segment.hashtag, primary) }
     ClickableText(
         text = buildAnnotatedString {
             withStyle(
-                LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+                LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary).toSpanStyle()
             ) {
                 append("#${segment.hashtag}")
             }
@@ -557,7 +556,7 @@ private fun RenderHashtag(
         val myId = "inlineContent"
         val emptytext = buildAnnotatedString {
             withStyle(
-                LocalTextStyle.current.copy(color = MaterialTheme.colors.primary).toSpanStyle()
+                LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary).toSpanStyle()
             ) {
                 append("")
                 appendInlineContent(myId, "[icon]")
@@ -656,7 +655,7 @@ private fun DisplayNoteFromTag(
         NoteCompose(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
-            modifier = MaterialTheme.colors.innerPostModifier,
+            modifier = MaterialTheme.colorScheme.innerPostModifier,
             parentBackgroundColor = backgroundColor,
             isQuotedNote = true,
             nav = nav

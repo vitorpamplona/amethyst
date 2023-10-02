@@ -9,14 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -59,16 +58,12 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
     if (note == null) {
         BlankNote(Modifier, isInnerNote)
     } else {
-        val defaultBackgroundColor = MaterialTheme.colors.background
+        val defaultBackgroundColor = MaterialTheme.colorScheme.background
         val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-        val newItemColor = MaterialTheme.colors.newItemBackgroundColor
+        val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
         LaunchedEffect(key1 = likeSetCard) {
-            scope.launch(Dispatchers.IO) {
-                val isNew = likeSetCard.createdAt() > accountViewModel.account.loadLastRead(routeForLastRead)
-
-                accountViewModel.account.markAsRead(routeForLastRead, likeSetCard.createdAt())
-
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, likeSetCard.createdAt()) { isNew ->
                 val newBackgroundColor = if (isNew) {
                     newItemColor.compositeOver(defaultBackgroundColor)
                 } else {
@@ -117,7 +112,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                             modifier = Modifier
                                 .size(25.dp)
                                 .align(Alignment.TopEnd),
-                            tint = MaterialTheme.colors.primary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -134,7 +129,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colors.placeholderText,
+                            color = MaterialTheme.colorScheme.placeholderText,
                             maxLines = 1
                         )
 
@@ -146,7 +141,7 @@ fun BadgeCompose(likeSetCard: BadgeCard, isInnerNote: Boolean = false, routeForL
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.placeholderText
+                                tint = MaterialTheme.colorScheme.placeholderText
                             )
 
                             NoteDropDownMenu(note, popupExpanded, accountViewModel)

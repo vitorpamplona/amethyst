@@ -14,6 +14,7 @@ import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -22,7 +23,7 @@ open class NewMediaModel : ViewModel() {
     var account: Account? = null
 
     var isUploadingImage by mutableStateOf(false)
-    val imageUploadingError = MutableSharedFlow<String?>()
+    val imageUploadingError = MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     var mediaType by mutableStateOf<String?>(null)
 
     var selectedServer by mutableStateOf<ServersAvailable?>(null)

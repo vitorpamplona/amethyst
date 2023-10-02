@@ -1,8 +1,8 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -28,6 +28,6 @@ fun ClickableUserTag(
     ClickableText(
         text = userName,
         onClick = { nav(route) },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colors.primary)
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
     )
 }

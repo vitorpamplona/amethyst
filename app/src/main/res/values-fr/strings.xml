@@ -270,7 +270,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Clôturer après</string>
     <string name="poll_closing_time_days">jours</string>
-    <string name="poll_is_closed">Le Sondage est fermé aux nouveaux votes</string>
     <string name="poll_zap_amount">Montant des Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">Un seul vote par utilisateur est autorisé sur ce type de sondage</string>
     <string name="looking_for_event">"Recherche de l'Événement %1$s"</string>

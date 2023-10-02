@@ -16,15 +16,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -135,7 +135,7 @@ fun JoinUserOrChannelView(searchBarViewModel: SearchBarViewModel, onClose: () ->
 
                     Text(
                         text = "",
-                        color = MaterialTheme.colors.placeholderText,
+                        color = MaterialTheme.colorScheme.placeholderText,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -272,7 +272,7 @@ private fun SearchEditTextForJoin(
             placeholder = {
                 Text(
                     text = stringResource(R.string.channel_list_user_or_group_id_demo),
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
             },
             trailingIcon = {
@@ -437,7 +437,7 @@ private fun DisplayUserAboutInfo(baseUser: User) {
 
     Text(
         text = about,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )

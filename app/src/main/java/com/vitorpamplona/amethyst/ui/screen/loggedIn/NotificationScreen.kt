@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -195,7 +195,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
                 .clickable(onClick = { showChart = !showChart })
         ) {
             ProvideChartStyle(
-                chartStyle = MaterialTheme.colors.chartStyle
+                chartStyle = MaterialTheme.colorScheme.chartStyle
             ) {
                 ObserveAndShowChart(model, lineChartCount, lineChartZaps)
             }

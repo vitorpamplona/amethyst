@@ -264,7 +264,6 @@
     <string name="poll_consensus_threshold">コンセンサス</string>
     <string name="poll_closing_time">終了まで</string>
     <string name="poll_closing_time_days">日</string>
-    <string name="poll_is_closed">投票は締め切られました</string>
     <string name="poll_zap_amount">ザップ額</string>
     <string name="one_vote_per_user_on_atomic_votes">このタイプの投票では、1ユーザにつき1回のみ投票可能です</string>
     <string name="looking_for_event">"イベント %1$s を探しています"</string>

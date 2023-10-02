@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -73,7 +73,7 @@ private fun ReplyInformation(
                 Text(
                     stringResource(R.string.replying_to),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
 
                 repliesToDisplay.forEachIndexed { idx, user ->
@@ -84,13 +84,13 @@ private fun ReplyInformation(
                             Text(
                                 ", ",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         } else if (idx < repliesToDisplay.size - 1) {
                             Text(
                                 stringResource(R.string.and),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     } else {
@@ -98,25 +98,25 @@ private fun ReplyInformation(
                             Text(
                                 ", ",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         } else if (idx < repliesToDisplay.size) {
                             Text(
                                 stringResource(R.string.and),
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
 
                             ClickableText(
                                 AnnotatedString("${sortedMentions.size - 2}"),
-                                style = LocalTextStyle.current.copy(color = MaterialTheme.colors.lessImportantLink, fontSize = 13.sp),
+                                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.lessImportantLink, fontSize = 13.sp),
                                 onClick = { expanded = true }
                             )
 
                             Text(
                                 " ${stringResource(R.string.others)}",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     }
@@ -176,7 +176,7 @@ fun ReplyInformationChannel(
                 Text(
                     stringResource(id = R.string.replying_to),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colors.placeholderText
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
 
                 mentions.forEachIndexed { idx, user ->
@@ -186,13 +186,13 @@ fun ReplyInformationChannel(
                         Text(
                             ", ",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     } else if (idx < mentions.size - 1) {
                         Text(
                             " ${stringResource(id = R.string.and)} ",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colors.placeholderText
+                            color = MaterialTheme.colorScheme.placeholderText
                         )
                     }
                 }
@@ -213,7 +213,7 @@ private fun ReplyInfoMention(
         clickablePart = remember(innerUserState) { "$prefix${innerUserState?.user?.toBestDisplayName()}" },
         tags = remember(innerUserState) { innerUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() },
         style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colors.lessImportantLink,
+            color = MaterialTheme.colorScheme.lessImportantLink,
             fontSize = 13.sp
         ),
         onClick = { onUserTagClick(user) }

@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -46,7 +46,7 @@ fun UrlPreviewCard(
         val uri = LocalUriHandler.current
 
         Row(
-            modifier = MaterialTheme.colors.innerPostModifier
+            modifier = MaterialTheme.colorScheme.innerPostModifier
                 .clickable {
                     runCatching { uri.openUri(url) }
                 }
@@ -63,7 +63,7 @@ fun UrlPreviewCard(
 
                 Text(
                     text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
-                    style = MaterialTheme.typography.caption,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = MaxWidthWithHorzPadding,
                     color = Color.Gray,
                     maxLines = 1,
@@ -72,7 +72,7 @@ fun UrlPreviewCard(
 
                 Text(
                     text = previewInfo.title,
-                    style = MaterialTheme.typography.body2,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = MaxWidthWithHorzPadding,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -80,7 +80,7 @@ fun UrlPreviewCard(
 
                 Text(
                     text = previewInfo.description,
-                    style = MaterialTheme.typography.caption,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = MaxWidthWithHorzPadding,
                     color = Color.Gray,
                     maxLines = 3,

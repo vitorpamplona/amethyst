@@ -1,14 +1,13 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -20,7 +19,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -182,9 +180,6 @@ fun ShowFollowingOrUnfollowingButton(
     baseAuthor: User,
     accountViewModel: AccountViewModel
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
     var isFollowing by remember { mutableStateOf(false) }
     val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
 
@@ -203,48 +198,30 @@ fun ShowFollowingOrUnfollowingButton(
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.unfollow(baseAuthor)
-                    }
+                    accountViewModel.unfollow(baseAuthor)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_unfollow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_unfollow
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.unfollow(baseAuthor)
-                }
+                accountViewModel.unfollow(baseAuthor)
             }
         }
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 if (accountViewModel.loggedInWithExternalSigner()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.follow(baseAuthor)
-                    }
+                    accountViewModel.follow(baseAuthor)
                 } else {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                context.getString(R.string.login_with_a_private_key_to_be_able_to_follow),
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_follow
+                    )
                 }
             } else {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.follow(baseAuthor)
-                }
+                accountViewModel.follow(baseAuthor)
             }
         }
     }
@@ -261,7 +238,7 @@ fun AboutDisplay(baseAuthor: User) {
 
     Text(
         userAboutMe,
-        color = MaterialTheme.colors.placeholderText,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )

@@ -22,6 +22,10 @@ abstract class GeneralListEvent(
     fun bookmarkedPosts() = taggedEvents()
     fun bookmarkedPeople() = taggedUsers()
 
+    fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
+    fun nameOrTitle() = name() ?: title()
+
     fun plainContent(privKey: ByteArray): String? {
         if (content.isBlank()) return null
 

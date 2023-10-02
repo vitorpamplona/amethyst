@@ -5,7 +5,6 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -27,18 +26,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,7 +81,6 @@ import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope as rememberCoroutineScope
 
@@ -228,9 +226,16 @@ fun UpdateZapAmountDialog(
             try {
                 postViewModel.updateNIP47(nip47uri)
             } catch (e: IllegalArgumentException) {
-                scope.launch {
-                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT)
-                        .show()
+                if (e.message != null) {
+                    accountViewModel.toast(
+                        context.getString(R.string.error_parsing_nip47_title),
+                        context.getString(R.string.error_parsing_nip47, nip47uri, e.message!!)
+                    )
+                } else {
+                    accountViewModel.toast(
+                        context.getString(R.string.error_parsing_nip47_title),
+                        context.getString(R.string.error_parsing_nip47_no_error, nip47uri)
+                    )
                 }
             }
         }
@@ -288,7 +293,7 @@ fun UpdateZapAmountDialog(
                                             modifier = Modifier.padding(horizontal = 3.dp),
                                             shape = ButtonBorder,
                                             colors = ButtonDefaults.buttonColors(
-                                                backgroundColor = MaterialTheme.colors.primary
+                                                containerColor = MaterialTheme.colorScheme.primary
                                             ),
                                             onClick = {
                                                 postViewModel.removeAmount(amountInSats)
@@ -330,7 +335,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = "100, 1000, 5000",
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -343,7 +348,7 @@ fun UpdateZapAmountDialog(
                                 onClick = { postViewModel.addAmount() },
                                 shape = ButtonBorder,
                                 colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = MaterialTheme.colors.primary
+                                    containerColor = MaterialTheme.colorScheme.primary
                                 )
                             ) {
                                 Text(text = stringResource(R.string.add), color = Color.White)
@@ -418,7 +423,7 @@ fun UpdateZapAmountDialog(
                                     painter = painterResource(R.drawable.ic_qrcode),
                                     null,
                                     modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colors.primary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -432,7 +437,7 @@ fun UpdateZapAmountDialog(
                             Text(
                                 stringResource(id = R.string.wallet_connect_service_explainer),
                                 Modifier.weight(1f),
-                                color = MaterialTheme.colors.placeholderText,
+                                color = MaterialTheme.colorScheme.placeholderText,
                                 fontSize = Font14SP
                             )
                         }
@@ -444,9 +449,16 @@ fun UpdateZapAmountDialog(
                                     try {
                                         postViewModel.updateNIP47(it)
                                     } catch (e: IllegalArgumentException) {
-                                        scope.launch {
-                                            Toast.makeText(context, e.message, Toast.LENGTH_SHORT)
-                                                .show()
+                                        if (e.message != null) {
+                                            accountViewModel.toast(
+                                                context.getString(R.string.error_parsing_nip47_title),
+                                                context.getString(R.string.error_parsing_nip47, it, e.message!!)
+                                            )
+                                        } else {
+                                            accountViewModel.toast(
+                                                context.getString(R.string.error_parsing_nip47_title),
+                                                context.getString(R.string.error_parsing_nip47_no_error, it)
+                                            )
                                         }
                                     }
                                 }
@@ -471,7 +483,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = "npub, hex",
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 singleLine = true,
@@ -493,7 +505,7 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = "wss://relay.server.com",
-                                        color = MaterialTheme.colors.placeholderText,
+                                        color = MaterialTheme.colorScheme.placeholderText,
                                         maxLines = 1
                                     )
                                 },
@@ -505,7 +517,6 @@ fun UpdateZapAmountDialog(
                             mutableStateOf(false)
                         }
 
-                        val scope = rememberCoroutineScope()
                         val context = LocalContext.current
 
                         val keyguardLauncher =
@@ -537,20 +548,23 @@ fun UpdateZapAmountDialog(
                                 placeholder = {
                                     Text(
                                         text = stringResource(R.string.wallet_connect_service_secret_placeholder),
-                                        color = MaterialTheme.colors.placeholderText
+                                        color = MaterialTheme.colorScheme.placeholderText
                                     )
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         if (!showPassword) {
                                             authenticate(
-                                                authTitle,
-                                                context,
-                                                scope,
-                                                keyguardLauncher
-                                            ) {
-                                                showPassword = true
-                                            }
+                                                title = authTitle,
+                                                context = context,
+                                                keyguardLauncher = keyguardLauncher,
+                                                onApproved = {
+                                                    showPassword = true
+                                                },
+                                                onError = { title, message ->
+                                                    accountViewModel.toast(title, message)
+                                                }
+                                            )
                                         } else {
                                             showPassword = false
                                         }
@@ -580,9 +594,9 @@ fun UpdateZapAmountDialog(
 fun authenticate(
     title: String,
     context: Context,
-    scope: CoroutineScope,
     keyguardLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
-    onApproved: () -> Unit
+    onApproved: () -> Unit,
+    onError: (String, String) -> Unit
 ) {
     val fragmentContext = context.getFragmentActivity()!!
     val keyguardManager =
@@ -626,26 +640,19 @@ fun authenticate(
                 when (errorCode) {
                     BiometricPrompt.ERROR_NEGATIVE_BUTTON -> keyguardPrompt()
                     BiometricPrompt.ERROR_LOCKOUT -> keyguardPrompt()
-                    else ->
-                        scope.launch {
-                            Toast.makeText(
-                                context,
-                                "${context.getString(R.string.biometric_error)}: $errString",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                    else -> onError(
+                        context.getString(R.string.biometric_authentication_failed),
+                        context.getString(R.string.biometric_authentication_failed_explainer_with_error, errString)
+                    )
                 }
             }
 
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
-                scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.biometric_authentication_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                onError(
+                    context.getString(R.string.biometric_authentication_failed),
+                    context.getString(R.string.biometric_authentication_failed_explainer)
+                )
             }
 
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {

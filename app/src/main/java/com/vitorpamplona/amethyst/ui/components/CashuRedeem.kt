@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +75,7 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
             .fillMaxWidth()
             .padding(start = 30.dp, end = 30.dp)
             .clip(shape = QuoteBorder)
-            .border(1.dp, MaterialTheme.colors.subtleBorder, QuoteBorder)
+            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
@@ -133,31 +132,25 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                                 CashuProcessor().melt(
                                     token,
                                     lud16,
-                                    onSuccess = {
-                                        scope.launch {
-                                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                                        }
+                                    onSuccess = { title, message ->
+                                        accountViewModel.toast(title, message)
                                     },
-                                    onError = {
-                                        scope.launch {
-                                            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                                    onError = { title, message ->
+                                        accountViewModel.toast(title, message)
+                                    },
+                                    context
                                 )
                             }
                         } else {
-                            scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.no_lightning_address_set),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            accountViewModel.toast(
+                                context.getString(R.string.no_lightning_address_set),
+                                context.getString(R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats, accountViewModel.account.userProfile().toBestDisplayName())
+                            )
                         }
                     },
                     shape = QuoteBorder,
                     colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(
@@ -177,16 +170,12 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                             startActivity(context, intent, null)
                         } else {
                             // Copying the token to clipboard for now
-                            var orignaltoken = token.token
-                            clipboardManager.setText(AnnotatedString("$orignaltoken"))
-                            scope.launch {
-                                Toast.makeText(context, context.getString(R.string.copied_token_to_clipboard), Toast.LENGTH_SHORT).show()
-                            }
+                            clipboardManager.setText(AnnotatedString(token.token))
                         }
                     },
                     shape = QuoteBorder,
                     colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text("⎘", color = Color.White, fontSize = 18.sp)

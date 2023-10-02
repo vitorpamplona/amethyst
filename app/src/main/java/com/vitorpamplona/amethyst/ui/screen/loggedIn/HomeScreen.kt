@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Tab
-import androidx.compose.material.TabRow
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -103,9 +103,10 @@ private fun HomePages(
     nav: (String) -> Unit
 ) {
     TabRow(
-        backgroundColor = MaterialTheme.colors.background,
-        selectedTabIndex = pagerState.currentPage,
-        modifier = TabRowHeight
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        modifier = TabRowHeight,
+        selectedTabIndex = pagerState.currentPage
     ) {
         val coroutineScope = rememberCoroutineScope()
 

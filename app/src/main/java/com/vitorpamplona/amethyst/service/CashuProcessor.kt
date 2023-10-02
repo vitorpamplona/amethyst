@@ -1,8 +1,10 @@
 package com.vitorpamplona.amethyst.service
 
+import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.quartz.events.Event
@@ -45,7 +47,7 @@ class CashuProcessor {
         }
     }
 
-    suspend fun melt(token: CashuToken, lud16: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    suspend fun melt(token: CashuToken, lud16: String, onSuccess: (String, String) -> Unit, onError: (String, String) -> Unit, context: Context) {
         checkNotInMainThread()
 
         runCatching {
@@ -54,16 +56,17 @@ class CashuProcessor {
                 milliSats = token.redeemInvoiceAmount * 1000, // Make invoice and leave room for fees
                 message = "Redeem Cashu",
                 onSuccess = { invoice ->
-                    meltInvoice(token, invoice, onSuccess, onError)
+                    meltInvoice(token, invoice, onSuccess, onError, context)
                 },
                 onProgress = {
                 },
-                onError = onError
+                onError = onError,
+                context = context
             )
         }
     }
 
-    private fun meltInvoice(token: CashuToken, invoice: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+    private fun meltInvoice(token: CashuToken, invoice: String, onSuccess: (String, String) -> Unit, onError: (String, String) -> Unit, context: Context) {
         try {
             val client = HttpClient.getHttpClient()
             val url = token.mint + "/melt" // Melt cashu tokens at Mint
@@ -88,13 +91,24 @@ class CashuProcessor {
                 val successful = tree?.get("paid")?.asText() == "true"
 
                 if (successful) {
-                    onSuccess("Redeemed ${token.totalAmount} Sats" + " (Fees: ${token.fees} Sats)")
+                    onSuccess(
+                        context.getString(R.string.cashu_sucessful_redemption),
+                        context.getString(R.string.cashu_sucessful_redemption_explainer, token.totalAmount.toString(), token.fees.toString())
+                    )
                 } else {
-                    onError(tree?.get("detail")?.asText()?.split('.')?.getOrNull(0) ?: "Cashu: Tokens already spent.")
+                    val msg = tree?.get("detail")?.asText()?.split('.')?.getOrNull(0)?.ifBlank { null }
+                    onError(
+                        context.getString(R.string.cashu_failed_redemption),
+                        if (msg != null) {
+                            context.getString(R.string.cashu_failed_redemption_explainer_error_msg, msg)
+                        } else {
+                            context.getString(R.string.cashu_failed_redemption_explainer_error_msg)
+                        }
+                    )
                 }
             }
         } catch (e: Exception) {
-            onError("Token melt failure: " + e.message)
+            onError(context.getString(R.string.cashu_sucessful_redemption), context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message))
         }
     }
 }

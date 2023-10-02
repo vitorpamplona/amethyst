@@ -18,18 +18,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.Divider
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
+import androidx.compose.material3.pullrefresh.PullRefreshIndicator
+import androidx.compose.material3.pullrefresh.pullRefresh
+import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -92,7 +91,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val feedState by viewModel.feedContent.collectAsState()
@@ -132,7 +130,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                     }
 
                                     withContext(Dispatchers.Main) {
-                                        listState.animateScrollToItem(position)
+                                        listState.scrollToItem(position)
                                     }
                                 }
                             }
@@ -152,8 +150,8 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                             item,
                                             modifier = Modifier.drawReplyLevel(
                                                 item.replyLevel(),
-                                                MaterialTheme.colors.placeholderText,
-                                                if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
+                                                MaterialTheme.colorScheme.placeholderText,
+                                                if (item.idHex == noteId) MaterialTheme.colorScheme.lessImportantLink else MaterialTheme.colorScheme.placeholderText
                                             ),
                                             accountViewModel = accountViewModel,
                                             nav = nav
@@ -162,7 +160,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                 } else {
                                     Column() {
                                         Row() {
-                                            val selectedNoteColor = MaterialTheme.colors.selectedNote
+                                            val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
                                             val background = remember {
                                                 if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
                                             }
@@ -171,8 +169,8 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                                                 item,
                                                 modifier = Modifier.drawReplyLevel(
                                                     item.replyLevel(),
-                                                    MaterialTheme.colors.placeholderText,
-                                                    if (item.idHex == noteId) MaterialTheme.colors.lessImportantLink else MaterialTheme.colors.placeholderText
+                                                    MaterialTheme.colorScheme.placeholderText,
+                                                    if (item.idHex == noteId) MaterialTheme.colorScheme.lessImportantLink else MaterialTheme.colorScheme.placeholderText
                                                 ),
                                                 parentBackgroundColor = background,
                                                 isBoostedNote = false,
@@ -251,7 +249,7 @@ fun NoteMaster(
 
     var popupExpanded by remember { mutableStateOf(false) }
 
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
     if (noteEvent == null) {
@@ -310,7 +308,7 @@ fun NoteMaster(
 
                         Text(
                             timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colors.placeholderText,
+                            color = MaterialTheme.colorScheme.placeholderText,
                             maxLines = 1
                         )
 
@@ -322,7 +320,7 @@ fun NoteMaster(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
                                 modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colors.placeholderText
+                                tint = MaterialTheme.colorScheme.placeholderText
                             )
 
                             NoteDropDownMenu(baseNote, moreActionsExpanded, accountViewModel)
@@ -518,7 +516,7 @@ private fun RenderClassifiedsReaderForThread(
                 title?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.body1,
+                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
@@ -538,7 +536,7 @@ private fun RenderClassifiedsReaderForThread(
                     Text(
                         text = priceTag,
                         maxLines = 1,
-                        color = MaterialTheme.colors.primary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = remember {
                             Modifier
@@ -557,7 +555,7 @@ private fun RenderClassifiedsReaderForThread(
                 ) {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.caption,
+                        style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1f),
                         color = Color.Gray,
                         overflow = TextOverflow.Ellipsis
@@ -572,7 +570,7 @@ private fun RenderClassifiedsReaderForThread(
                 ) {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.caption,
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

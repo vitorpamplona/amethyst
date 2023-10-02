@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,12 +9,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -49,7 +48,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
 
 @Composable
 public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -102,7 +100,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
             imageVector = Icons.Default.ChevronRight,
             null,
             modifier = Size15Modifier,
-            tint = MaterialTheme.colors.placeholderText
+            tint = MaterialTheme.colorScheme.placeholderText
         )
     }
 }
@@ -125,6 +123,7 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
     val interactionSource = remember { MutableInteractionSource() }
     val ripple = rememberRipple(bounded = false, radius = Size15dp)
 
@@ -158,15 +157,10 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
                                 Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS -> context.getString(R.string.relay_information_document_error_assemble_url, url, exceptionMessage)
                             }
 
-                            scope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        msg,
-                                        Toast.LENGTH_SHORT
-                                    )
-                                    .show()
-                            }
+                            accountViewModel.toast(
+                                context.getString(R.string.unable_to_download_relay_document),
+                                msg
+                            )
                         }
                     )
                 }
@@ -182,7 +176,7 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
 
 @Composable
 fun RenderRelayIcon(iconUrl: String, loadProfilePicture: Boolean, size: Dp = Size13dp) {
-    val backgroundColor = MaterialTheme.colors.background
+    val backgroundColor = MaterialTheme.colorScheme.background
 
     val iconModifier = remember {
         Modifier

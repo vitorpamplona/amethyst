@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -94,7 +94,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.my_display_name),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -115,7 +115,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(id = R.string.about_me),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -134,13 +134,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "https://mywebsite.com/me.jpg",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         leadingIcon = {
                             UploadFromGallery(
                                 isUploading = postViewModel.isUploadingImageForPicture,
-                                tint = MaterialTheme.colors.placeholderText,
+                                tint = MaterialTheme.colorScheme.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp)
                             ) {
                                 postViewModel.uploadForPicture(it, context)
@@ -159,13 +159,13 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "https://mywebsite.com/mybanner.jpg",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         leadingIcon = {
                             UploadFromGallery(
                                 isUploading = postViewModel.isUploadingImageForBanner,
-                                tint = MaterialTheme.colors.placeholderText,
+                                tint = MaterialTheme.colorScheme.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp)
                             ) {
                                 postViewModel.uploadForBanner(it, context)
@@ -184,7 +184,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "https://mywebsite.com",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         singleLine = true
@@ -200,7 +200,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "_@mywebsite.com",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         singleLine = true
@@ -215,7 +215,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = "me@mylightiningnode.com",
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         },
                         singleLine = true
@@ -231,7 +231,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.lnurl),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     )
@@ -246,7 +246,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.twitter_proof_url_template),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     )
@@ -261,7 +261,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.mastodon_proof_url_template),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     )
@@ -276,7 +276,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         placeholder = {
                             Text(
                                 text = stringResource(R.string.github_proof_url_template),
-                                color = MaterialTheme.colors.placeholderText
+                                color = MaterialTheme.colorScheme.placeholderText
                             )
                         }
                     )

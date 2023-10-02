@@ -2,7 +2,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
@@ -29,16 +28,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LinearProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProgressIndicatorDefaults
-import androidx.compose.material.Text
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -110,7 +109,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -172,7 +170,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ReplyReactionWithDialog(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+                    ReplyReactionWithDialog(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Reply: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -186,7 +184,7 @@ private fun InnerReactionRow(
                 Row(verticalAlignment = CenterVertically) {
                     BoostWithDialog(
                         baseNote,
-                        MaterialTheme.colors.placeholderText,
+                        MaterialTheme.colorScheme.placeholderText,
                         accountViewModel,
                         nav
                     )
@@ -201,7 +199,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    LikeReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav)
+                    LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Likes: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -213,7 +211,7 @@ private fun InnerReactionRow(
         ) {
             val (value, elapsed) = measureTimedValue {
                 Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, MaterialTheme.colors.placeholderText, accountViewModel, nav = nav)
+                    ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
                 }
             }
             Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
@@ -227,8 +225,8 @@ private fun InnerReactionRow(
                 Row(verticalAlignment = CenterVertically) {
                     ViewCountReaction(
                         note = baseNote,
-                        grayTint = MaterialTheme.colors.placeholderText,
-                        viewCountColorFilter = MaterialTheme.colors.placeholderTextColorFilter
+                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter
                     )
                 }
             }
@@ -285,7 +283,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
     val color = if (zapraiserStatus.progress > 0.99) {
         DarkerGreen
     } else {
-        MaterialTheme.colors.mediumImportanceLink
+        MaterialTheme.colorScheme.mediumImportanceLink
     }
 
     LinearProgressIndicator(
@@ -310,7 +308,7 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
             Text(
                 text = stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
-                color = MaterialTheme.colors.placeholderText,
+                color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = Font14SP,
                 maxLines = 1
             )
@@ -389,7 +387,7 @@ private fun ReactionDetailGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val defaultBackgroundColor = MaterialTheme.colors.background
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
     val hasReactions by baseNote.live().hasReactions.observeAsState(
@@ -540,9 +538,6 @@ fun ReplyReaction(
     iconSize: Dp = Size17dp,
     onPress: () -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     IconButton(
         modifier = remember {
             Modifier.size(iconSize)
@@ -554,13 +549,10 @@ fun ReplyReaction(
                 if (accountViewModel.loggedInWithExternalSigner()) {
                     onPress()
                 } else {
-                    scope.launch {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_reply),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_reply
+                    )
                 }
             }
         }
@@ -643,9 +635,6 @@ fun BoostReaction(
     iconSize: Dp = 20.dp,
     onQuotePress: () -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     var wantsToBoost by remember { mutableStateOf(false) }
 
     val iconButtonModifier = remember {
@@ -657,29 +646,22 @@ fun BoostReaction(
         onClick = {
             if (accountViewModel.isWriteable()) {
                 if (accountViewModel.hasBoosted(baseNote)) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.deleteBoostsTo(baseNote)
-                    }
+                    accountViewModel.deleteBoostsTo(baseNote)
                 } else {
                     wantsToBoost = true
                 }
             } else {
                 if (accountViewModel.loggedInWithExternalSigner()) {
                     if (accountViewModel.hasBoosted(baseNote)) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.deleteBoostsTo(baseNote)
-                        }
+                        accountViewModel.deleteBoostsTo(baseNote)
                     } else {
                         wantsToBoost = true
                     }
                 } else {
-                    scope.launch {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.login_with_a_private_key_to_be_able_to_boost_posts),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_boost_posts
+                    )
                 }
             }
         }
@@ -699,9 +681,7 @@ fun BoostReaction(
                     onQuotePress()
                 },
                 onRepost = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.boost(baseNote)
-                    }
+                    accountViewModel.boost(baseNote)
                 }
             )
         }
@@ -741,9 +721,6 @@ fun LikeReaction(
     heartSize: Dp = 16.dp,
     iconFontSize: TextUnit = Font14SP
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     val iconButtonModifier = remember {
         Modifier.size(iconSize)
     }
@@ -761,21 +738,12 @@ fun LikeReaction(
                 likeClick(
                     baseNote,
                     accountViewModel,
-                    scope,
-                    context,
                     onMultipleChoices = {
                         wantsToReact = true
                     },
                     onWantsToSignReaction = {
                         if (accountViewModel.account.reactionChoices.size == 1) {
-                            scope.launch(Dispatchers.IO) {
-                                val reaction = accountViewModel.account.reactionChoices.first()
-                                if (accountViewModel.hasReactedTo(baseNote, reaction)) {
-                                    accountViewModel.deleteReactionTo(baseNote, reaction)
-                                } else {
-                                    accountViewModel.reactTo(baseNote, reaction)
-                                }
-                            }
+                            accountViewModel.reactToOrDelete(baseNote)
                         } else if (accountViewModel.account.reactionChoices.size > 1) {
                             wantsToReact = true
                         }
@@ -896,44 +864,25 @@ fun LikeText(baseNote: Note, grayTint: Color) {
 private fun likeClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    scope: CoroutineScope,
-    context: Context,
     onMultipleChoices: () -> Unit,
     onWantsToSignReaction: () -> Unit
 ) {
     if (accountViewModel.account.reactionChoices.isEmpty()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.no_reaction_type_setup_long_press_to_change),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
-        }
+        accountViewModel.toast(
+            R.string.no_reactions_setup,
+            R.string.no_reaction_type_setup_long_press_to_change
+        )
     } else if (!accountViewModel.isWriteable()) {
         if (accountViewModel.loggedInWithExternalSigner()) {
             onWantsToSignReaction()
         } else {
-            scope.launch {
-                Toast
-                    .makeText(
-                        context,
-                        context.getString(R.string.login_with_a_private_key_to_like_posts),
-                        Toast.LENGTH_SHORT
-                    )
-                    .show()
-            }
+            accountViewModel.toast(
+                R.string.read_only_user,
+                R.string.login_with_a_private_key_to_like_posts
+            )
         }
     } else if (accountViewModel.account.reactionChoices.size == 1) {
-        scope.launch(Dispatchers.IO) {
-            val reaction = accountViewModel.account.reactionChoices.first()
-            if (accountViewModel.hasReactedTo(baseNote, reaction)) {
-                accountViewModel.deleteReactionTo(baseNote, reaction)
-            } else {
-                accountViewModel.reactTo(baseNote, reaction)
-            }
-        }
+        accountViewModel.reactToOrDelete(baseNote)
     } else if (accountViewModel.account.reactionChoices.size > 1) {
         onMultipleChoices()
     }
@@ -976,18 +925,19 @@ fun ZapReaction(
                     zapClick(
                         baseNote,
                         accountViewModel,
-                        scope,
                         context,
                         onZappingProgress = { progress: Float ->
-                            zappingProgress = progress
+                            scope.launch {
+                                zappingProgress = progress
+                            }
                         },
                         onMultipleChoices = {
                             wantsToZap = true
                         },
-                        onError = {
+                        onError = { title, message ->
                             scope.launch {
                                 zappingProgress = 0f
-                                showErrorMessageDialog = it
+                                showErrorMessageDialog = message
                             }
                         },
                         onPayViaIntent = {
@@ -1015,10 +965,10 @@ fun ZapReaction(
                     wantsToZap = false
                     wantsToChangeZapAmount = true
                 },
-                onError = {
+                onError = { title, message ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = it
+                        showErrorMessageDialog = message
                     }
                 },
                 onProgress = {
@@ -1075,10 +1025,10 @@ fun ZapReaction(
         if (wantsToSetCustomZap) {
             ZapCustomDialog(
                 onClose = { wantsToSetCustomZap = false },
-                onError = {
+                onError = { title, message ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = it
+                        showErrorMessageDialog = message
                     }
                 },
                 onProgress = {
@@ -1121,33 +1071,22 @@ fun ZapReaction(
 private fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    scope: CoroutineScope,
     context: Context,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
-    onError: (String) -> Unit,
+    onError: (String, String) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.no_zap_amount_setup_long_press_to_change),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
-        }
+        accountViewModel.toast(
+            context.getString(R.string.error_dialog_zap_error),
+            context.getString(R.string.no_zap_amount_setup_long_press_to_change)
+        )
     } else if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
-                    Toast.LENGTH_SHORT
-                )
-                .show()
-        }
+        accountViewModel.toast(
+            context.getString(R.string.error_dialog_zap_error),
+            context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps)
+        )
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
         accountViewModel.zap(
             baseNote,
@@ -1157,9 +1096,7 @@ private fun zapClick(
             context,
             onError = onError,
             onProgress = {
-                scope.launch(Dispatchers.Main) {
-                    onZappingProgress(it)
-                }
+                onZappingProgress(it)
             },
             zapType = accountViewModel.account.defaultZapType,
             onPayViaIntent = onPayViaIntent
@@ -1270,7 +1207,7 @@ private fun DrawViewCount(
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build()
         },
-        contentDescription = stringResource(R.string.view_count),
+        contentDescription = context.getString(R.string.view_count),
         modifier = iconModifier,
         colorFilter = viewCountColorFilter
     )
@@ -1289,15 +1226,12 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow {
-            val scope = rememberCoroutineScope()
             Button(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
                     if (accountViewModel.isWriteable()) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.boost(baseNote)
-                            onDismiss()
-                        }
+                        accountViewModel.boost(baseNote)
+                        onDismiss()
                     } else {
                         onRepost()
                         onDismiss()
@@ -1306,7 +1240,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
             ) {
                 Text(stringResource(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
@@ -1318,7 +1252,7 @@ private fun BoostTypeChoicePopup(baseNote: Note, iconSize: Dp, accountViewModel:
                 shape = ButtonBorder,
                 colors = ButtonDefaults
                     .buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
             ) {
                 Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
@@ -1387,10 +1321,9 @@ private fun ActionableReactionButton(
             onDismiss()
         },
         shape = ButtonBorder,
-        colors = ButtonDefaults
-            .buttonColors(
-                backgroundColor = MaterialTheme.colors.primary
-            )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
     ) {
         val thisModifier = remember(reactionType) {
             Modifier.combinedClickable(
@@ -1471,12 +1404,11 @@ fun ZapAmountChoicePopup(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
-    onError: (text: String) -> Unit,
+    onError: (title: String, text: String) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val account = accountState?.account ?: return
     val zapMessage = ""
@@ -1507,7 +1439,7 @@ fun ZapAmountChoicePopup(
                     shape = ButtonBorder,
                     colors = ButtonDefaults
                         .buttonColors(
-                            backgroundColor = MaterialTheme.colors.primary
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                 ) {
                     Text(

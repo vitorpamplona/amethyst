@@ -262,7 +262,6 @@
     <string name="poll_consensus_threshold">Консенсус</string>
     <string name="poll_closing_time">Закриття після</string>
     <string name="poll_closing_time_days">днів</string>
-    <string name="poll_is_closed">Опитування закрито</string>
     <string name="poll_zap_amount">Сума запу</string>
     <string name="one_vote_per_user_on_atomic_votes">У цьому опитуванні можна голосувати тільки один раз</string>
     <string name="looking_for_event">"Пошук події %1$s"</string>
