@@ -139,7 +139,7 @@ fun CheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnli
     var online by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = url) {
-        accountViewModel.checkIfOnline(url) { isOnline ->
+        accountViewModel.checkIsOnline(url) { isOnline ->
             if (online != isOnline) {
                 online = isOnline
             }

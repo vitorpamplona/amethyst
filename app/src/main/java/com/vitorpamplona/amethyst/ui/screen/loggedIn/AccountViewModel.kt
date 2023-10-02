@@ -625,13 +625,6 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
-    fun checkIfOnline(url: String, onResult: (Boolean) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val isOnline = OnlineChecker.isOnline(url)
-            onResult(isOnline)
-        }
-    }
-
     fun urlPreview(url: String, onResult: suspend (UrlPreviewState) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             UrlCachedPreviewer.previewInfo(url, onResult)
