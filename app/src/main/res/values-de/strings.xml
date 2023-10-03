@@ -511,4 +511,49 @@ anz der Bedingungen ist erforderlich</string>
     <string name="hide_new_word_label">Neues Wort oder neuen Satz verstecken</string>
     <string name="automatically_show_profile_picture">Profilbild</string>
     <string name="automatically_show_profile_picture_description">Profilbilder anzeigen</string>
+
+    <string name="error_parsing_nip47_title">Konnte Wallet Connect nicht einrichten</string>
+    <string name="error_parsing_nip47">Fehler beim Parsen der NIP-47-Verbindungszeichenfolge. Überprüfen Sie, ob diese korrekt ist, Ihr Wallet-Anbieter: %1$s. Fehler: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Fehler beim Parsen der NIP-47-Verbindungszeichenfolge. Überprüfen Sie, ob diese korrekt ist, Ihr Wallet-Anbieter: %1$s.</string>
+
+    <string name="cashu_failed_redemption">Cashu konnte nicht eingelöst werden</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint hat folgende Fehlermeldung geliefert: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu-Token bereits ausgegeben.</string>
+
+    <string name="cashu_sucessful_redemption">Cashu erhalten</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s Sats wurden an Ihre Wallet gesendet. (Gebühren: %2$s Sats)</string>
+
+    <string name="error_unable_to_fetch_invoice">Konnte Rechnung nicht vom Server des Empfängers abrufen</string>
+
+    <string name="wallet_connect_pay_invoice_error_error">Ihr Wallet-Connect-Anbieter hat folgenden Fehler zurückgegeben: %1$s</string>
+
+    <string name="could_not_connect_to_tor">Konnte keine Verbindung zu Tor herstellen</string>
+    <string name="unable_to_download_relay_document">Herunterladen des Relaisdokuments nicht verfügbar</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Konnte keine LNUrl aus der Lightning-Adresse \"%1$s\" zusammenstellen. Überprüfen Sie die Konfiguration des Benutzers</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Der Lightning-Service des Empfängers unter %1$s ist nicht verfügbar. Er wurde aus der Lightning-Adresse \"%2$s\" berechnet. Fehler: %3$s. Überprüfen Sie, ob der Server online ist und ob die Lightning-Adresse korrekt ist</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Konnte %1$s nicht auflösen. Überprüfen Sie, ob Sie verbunden sind, ob der Server online ist und ob die Lightning-Adresse %2$s korrekt ist</string>
+    <string name="could_not_fetch_invoice_from">Konnte Rechnung nicht von %1$s abholen</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fehler beim analysieren von JSON aus der Lightning-Adresse. Überprüfen Sie die Lightning-Konfiguration des Benutzers</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback-URL nicht in der Serverkonfiguration der Lightning-Adresse des Benutzers gefunden</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Fehler beim Parsen von JSON aus der Rechnungsabruf der Lightning-Adresse. Überprüfen Sie die Lightning-Konfiguration des Benutzers</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Falscher Rechnungsbetrag (%1$s Sats) von %2$s. Er hätte %3$s sein sollen</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Konnte keine Lightning-Rechnung erstellen, bevor der Zap gesendet wurde. Die Lightning-Wallet des Empfängers hat folgenden Fehler gesendet: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Konnte keine Lightning-Rechnung erstellen, bevor der Zap gesendet wurde. Element pr wurde nicht in der resultierenden JSON gefunden.</string>
+    <string name="read_only_user">Nur-Lese-Benutzer</string>
+    <string name="no_reactions_setup">Keine Reaktionen eingerichtet</string>
+
+    <string name="missing_lud16">Fehlende Lightning-Konfiguration</string>
+    <string name="hash_verification_info_title">Was bedeutet das?</string>
+    <string name="poll_unable_to_vote">Konnte nicht abstimmen</string>
+    <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
+    <string name="biometric_authentication_failed_explainer">Biometrie konnte den Besitzer dieses Telefons nicht authentifizieren</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrie konnte den Besitzer dieses Telefons nicht authentifizieren. Fehler: %1$s</string>
+
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz auszublenden</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz anzuzeigen</string>
+
+    <string name="select_an_option">Option auswählen</string>
+
+    <string name="error_dialog_pay_invoice_error">Konnte Rechnung nicht bezahlen</string>
+    <string name="error_dialog_pay_withdraw_error">Konnte nicht abheben</string>
 </resources>

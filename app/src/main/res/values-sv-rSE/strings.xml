@@ -505,4 +505,49 @@
     <string name="hide_new_word_label">Dölj nytt ord eller mening</string>
     <string name="automatically_show_profile_picture">Profilbild</string>
     <string name="automatically_show_profile_picture_description">Visa profilbilder</string>
+
+    <string name="error_parsing_nip47_title">Kunde inte konfigurera Wallet Connect</string>
+    <string name="error_parsing_nip47">Fel vid tolkning av NIP-47-anslutningssträngen. Kontrollera om den är korrekt med din plånboksleverantör: %1$s. Fel: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Fel vid tolkning av NIP-47-anslutningssträngen. Kontrollera om den är korrekt med din plånboksleverantör: %1$s.</string>
+
+    <string name="cashu_failed_redemption">Kunde inte lösa in Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint gav följande felmeddelande: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu-token har redan spenderats.</string>
+
+    <string name="cashu_sucessful_redemption">Cashu mottagen</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats skickades till din plånbok. (Avgifter: %2$s sats)</string>
+
+    <string name="error_unable_to_fetch_invoice">Kunde inte hämta fakturan från mottagarens servrar</string>
+
+    <string name="wallet_connect_pay_invoice_error_error">Din Wallet Connect-leverantör returnerade följande fel: %1$s</string>
+
+    <string name="could_not_connect_to_tor">Kunde inte ansluta till Tor</string>
+    <string name="unable_to_download_relay_document">Kunde inte ladda ner relädokument</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kunde inte montera LNUrl från Lightning Address \"%1$s\". Kontrollera användarens konfiguration</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Mottagarens Lightning-tjänst på %1$s är inte tillgänglig. Den beräknades från Lightning Address \"%2$s\". Fel: %3$s. Kontrollera om servern är uppe och om Lightning Addressen är korrekt</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Kunde inte lösa %1$s. Kontrollera om du är ansluten, om servern är uppe och om Lightning Addressen %2$s är korrekt</string>
+    <string name="could_not_fetch_invoice_from">Kunde inte hämta fakturan från %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address. Kontrollera användarens Lightning-konfiguration</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Återuppringnings-URL hittades inte i användarens konfiguration för Lightning Address-servern</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address fakturahämtning. Kontrollera användarens Lightning-konfiguration</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Felaktig fakturabelopp (%1$s sats) från %2$s. Det borde ha varit %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Kunde inte skapa en Lightning-faktura innan Zap skickades. Mottagarens Lightning-plånbok skickade följande fel: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Kunde inte skapa en Lightning-faktura innan Zap skickades. Elementet pr hittades inte i den resulterande JSON.</string>
+    <string name="read_only_user">Skrivskyddad användare</string>
+    <string name="no_reactions_setup">Inga reaktioner konfigurerade</string>
+
+    <string name="missing_lud16">Saknad lightning-konfiguration</string>
+    <string name="hash_verification_info_title">Vad betyder detta?</string>
+    <string name="poll_unable_to_vote">Kunde inte rösta</string>
+    <string name="poll_is_closed_explainer">Omröstningen är stängd för nya röster</string>
+    <string name="biometric_authentication_failed_explainer">Biometri misslyckades med att autentisera ägaren av denna telefon</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometri misslyckades med att autentisera ägaren av denna telefon. Fel: %1$s</string>
+
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna dölja ett ord eller en mening</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna visa ett ord eller en mening</string>
+
+    <string name="select_an_option">Välj ett alternativ</string>
+
+    <string name="error_dialog_pay_invoice_error">Kunde inte betala fakturan</string>
+    <string name="error_dialog_pay_withdraw_error">Kunde inte ta ut</string>
 </resources>
