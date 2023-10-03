@@ -536,4 +536,18 @@
     <string name="read_only_user">Skrivskyddad användare</string>
     <string name="no_reactions_setup">Inga reaktioner konfigurerade</string>
 
+    <string name="missing_lud16">Saknad lightning-konfiguration</string>
+    <string name="hash_verification_info_title">Vad betyder detta?</string>
+    <string name="poll_unable_to_vote">Kunde inte rösta</string>
+    <string name="poll_is_closed_explainer">Omröstningen är stängd för nya röster</string>
+    <string name="biometric_authentication_failed_explainer">Biometri misslyckades med att autentisera ägaren av denna telefon</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometri misslyckades med att autentisera ägaren av denna telefon. Fel: %1$s</string>
+
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna dölja ett ord eller en mening</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna visa ett ord eller en mening</string>
+
+    <string name="select_an_option">Välj ett alternativ</string>
+
+    <string name="error_dialog_pay_invoice_error">Kunde inte betala fakturan</string>
+    <string name="error_dialog_pay_withdraw_error">Kunde inte ta ut</string>
 </resources>

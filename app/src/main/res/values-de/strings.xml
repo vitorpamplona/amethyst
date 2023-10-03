@@ -542,4 +542,18 @@ anz der Bedingungen ist erforderlich</string>
     <string name="read_only_user">Nur-Lese-Benutzer</string>
     <string name="no_reactions_setup">Keine Reaktionen eingerichtet</string>
 
+    <string name="missing_lud16">Fehlende Lightning-Konfiguration</string>
+    <string name="hash_verification_info_title">Was bedeutet das?</string>
+    <string name="poll_unable_to_vote">Konnte nicht abstimmen</string>
+    <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
+    <string name="biometric_authentication_failed_explainer">Biometrie konnte den Besitzer dieses Telefons nicht authentifizieren</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrie konnte den Besitzer dieses Telefons nicht authentifizieren. Fehler: %1$s</string>
+
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz auszublenden</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz anzuzeigen</string>
+
+    <string name="select_an_option">Option auswählen</string>
+
+    <string name="error_dialog_pay_invoice_error">Konnte Rechnung nicht bezahlen</string>
+    <string name="error_dialog_pay_withdraw_error">Konnte nicht abheben</string>
 </resources>
