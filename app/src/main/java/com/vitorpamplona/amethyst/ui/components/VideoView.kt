@@ -154,24 +154,26 @@ fun VideoView(
     authorName: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
+    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false
 ) {
     val defaultToStart by remember(videoUri) { mutableStateOf(DefaultMutedSetting.value) }
 
     VideoViewInner(
-        videoUri,
-        defaultToStart,
-        title,
-        thumb,
-        roundedCorner,
-        waveform,
-        artworkUri,
-        authorName,
-        nostrUriCallback,
-        alwaysShowVideo,
-        accountViewModel,
-        onDialog
+        videoUri = videoUri,
+        defaultToStart = defaultToStart,
+        title = title,
+        thumb = thumb,
+        roundedCorner = roundedCorner,
+        waveform = waveform,
+        artworkUri = artworkUri,
+        authorName = authorName,
+        nostrUriCallback = nostrUriCallback,
+        alwaysShowVideo = alwaysShowVideo,
+        accountViewModel = accountViewModel,
+        onControllerVisibilityChanged = onControllerVisibilityChanged,
+        onDialog = onDialog
     )
 }
 
@@ -189,6 +191,7 @@ fun VideoViewInner(
     nostrUriCallback: String? = null,
     alwaysShowVideo: Boolean = false,
     accountViewModel: AccountViewModel,
+    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val automaticallyStartPlayback = remember {
@@ -247,6 +250,7 @@ fun VideoViewInner(
                     keepPlaying = keepPlaying,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     activeOnScreen = activeOnScreen,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog
                 )
             }
@@ -514,6 +518,7 @@ private fun RenderVideoPlayer(
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
     activeOnScreen: MutableState<Boolean>,
+    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)?
 ) {
     ControlWhenPlayerIsActive(controller, keepPlaying, automaticallyStartPlayback, activeOnScreen)
@@ -558,8 +563,11 @@ private fun RenderVideoPlayer(
                         }
                     }
                     setControllerVisibilityListener(
-                        PlayerView.ControllerVisibilityListener {
-                            controllerVisible.value = it == View.VISIBLE
+                        PlayerView.ControllerVisibilityListener { visible ->
+                            controllerVisible.value = visible == View.VISIBLE
+                            onControllerVisibilityChanged?.let { callback ->
+                                callback(visible == View.VISIBLE)
+                            }
                         }
                     )
                 }

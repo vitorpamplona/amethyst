@@ -6,6 +6,9 @@ import android.content.ContextWrapper
 import android.os.Build
 import android.util.Log
 import android.view.Window
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -636,48 +639,87 @@ fun ZoomableImageDialog(
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                val pagerState: PagerState = rememberPagerState() { allImages.size }
+                DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
+            }
+        }
+    }
+}
 
-                LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
-                    val page = allImages.indexOf(imageUrl)
-                    if (page > -1) {
-                        pagerState.scrollToPage(page)
-                    }
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun DialogContent(
+    allImages: ImmutableList<ZoomableContent>,
+    imageUrl: ZoomableContent,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    val pagerState: PagerState = rememberPagerState() { allImages.size }
+    val controllerVisible = remember { mutableStateOf(false) }
+    val holdOn = remember { mutableStateOf<Boolean>(true) }
+
+    LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
+        launch {
+            val page = allImages.indexOf(imageUrl)
+            if (page > -1) {
+                pagerState.scrollToPage(page)
+            }
+        }
+        launch(Dispatchers.Default) {
+            delay(2000)
+            holdOn.value = false
+        }
+    }
+
+    if (allImages.size > 1) {
+        SlidingCarousel(
+            pagerState = pagerState
+        ) { index ->
+            RenderImageOrVideo(
+                content = allImages[index],
+                roundedCorner = false,
+                onControllerVisibilityChanged = {
+                    controllerVisible.value = it
+                },
+                accountViewModel = accountViewModel
+            )
+        }
+    } else {
+        RenderImageOrVideo(
+            content = imageUrl,
+            roundedCorner = false,
+            onControllerVisibilityChanged = {
+                controllerVisible.value = it
+            },
+            accountViewModel = accountViewModel
+        )
+    }
+
+    AnimatedVisibility(
+        visible = holdOn.value || controllerVisible.value,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CloseButton(onPress = onDismiss)
+
+            val myContent = allImages[pagerState.currentPage]
+            if (myContent is ZoomableUrlContent) {
+                Row() {
+                    CopyToClipboard(content = myContent)
+                    Spacer(modifier = StdHorzSpacer)
+                    SaveToGallery(url = myContent.url)
                 }
-
-                if (allImages.size > 1) {
-                    SlidingCarousel(
-                        pagerState = pagerState
-                    ) { index ->
-                        RenderImageOrVideo(allImages[index], false, accountViewModel)
-                    }
-                } else {
-                    RenderImageOrVideo(imageUrl, false, accountViewModel)
-                }
-
-                Row(
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CloseButton(onPress = onDismiss)
-
-                    val myContent = allImages[pagerState.currentPage]
-                    if (myContent is ZoomableUrlContent) {
-                        Row() {
-                            CopyToClipboard(content = myContent)
-                            Spacer(modifier = StdHorzSpacer)
-                            SaveToGallery(url = myContent.url)
-                        }
-                    } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
-                        SaveToGallery(
-                            localFile = myContent.localFile,
-                            mimeType = myContent.mimeType
-                        )
-                    }
-                }
+            } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
+                SaveToGallery(
+                    localFile = myContent.localFile,
+                    mimeType = myContent.mimeType
+                )
             }
         }
     }
@@ -751,7 +793,12 @@ private fun ShareImageAction(
 }
 
 @Composable
-private fun RenderImageOrVideo(content: ZoomableContent, roundedCorner: Boolean, accountViewModel: AccountViewModel) {
+private fun RenderImageOrVideo(
+    content: ZoomableContent,
+    roundedCorner: Boolean,
+    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
+    accountViewModel: AccountViewModel
+) {
     val mainModifier = Modifier
         .fillMaxSize()
         .zoomable(rememberZoomState())
@@ -766,6 +813,7 @@ private fun RenderImageOrVideo(content: ZoomableContent, roundedCorner: Boolean,
                 artworkUri = content.artworkUri,
                 authorName = content.authorName,
                 roundedCorner = roundedCorner,
+                onControllerVisibilityChanged = onControllerVisibilityChanged,
                 accountViewModel = accountViewModel,
                 alwaysShowVideo = true
             )
@@ -781,6 +829,7 @@ private fun RenderImageOrVideo(content: ZoomableContent, roundedCorner: Boolean,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
                     roundedCorner = roundedCorner,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged,
                     accountViewModel = accountViewModel,
                     alwaysShowVideo = true
                 )
