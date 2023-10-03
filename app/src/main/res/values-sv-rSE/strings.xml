@@ -36,6 +36,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Logga in med en privat nyckel för att kunna skicka Zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Logga in med en privat nyckel för att kunna följa</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Logga in med en privat nyckel för att kunna sluta följa</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna dölja ett ord eller en mening</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna visa ett ord eller en mening</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Antal visningar</string>
     <string name="boost">Boosta</string>
@@ -190,6 +192,8 @@
     <string name="secret_key_copied_to_clipboard">Hemlig nyckel (nsec) kopierad till urklipp</string>
     <string name="copy_my_secret_key">Kopiera min hemliga nyckel</string>
     <string name="biometric_authentication_failed">Autentisering misslyckades</string>
+    <string name="biometric_authentication_failed_explainer">Biometri misslyckades med att autentisera ägaren av denna telefon</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometri misslyckades med att autentisera ägaren av denna telefon. Fel: %1$s</string>
     <string name="biometric_error">Fel</string>
     <string name="badge_created_by">"Skapad av %1$s"</string>
     <string name="badge_award_image_for">"Tilldelad Badge för %1$s"</string>
@@ -269,6 +273,8 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Avsluta efter</string>
     <string name="poll_closing_time_days">dagar</string>
+    <string name="poll_unable_to_vote">Kunde inte rösta</string>
+    <string name="poll_is_closed_explainer">Omröstningen är stängd för nya röster</string>
     <string name="poll_zap_amount">Zap belopp</string>
     <string name="one_vote_per_user_on_atomic_votes">Endast en röst per användare tillåts i denna typ av omröstning</string>
     <string name="looking_for_event">"Letar efter Event %1$s"</string>
@@ -278,6 +284,7 @@
     <string name="custom_zaps_add_a_message_example">Tack för allt ditt arbete!</string>
     <string name="lightning_create_and_add_invoice">Skapa och lägg till</string>
     <string name="poll_author_no_vote">Omröstningsskapare kan inte rösta i sina egna omröstningar.</string>
+    <string name="hash_verification_info_title">Vad betyder detta?</string>
     <string name="hash_verification_passed">Bilden är densamma sedan inlägget</string>
     <string name="hash_verification_failed">Bilden har ändrats. Användaren kanske inte har sett förändringen</string>
     <string name="content_description_add_image">Lägg till Bild</string>
@@ -489,6 +496,7 @@
     <string name="zap_split_explainer">Stödjande klienter kommer att dela och vidarebefordra zaps till användarna som har lagts till här istället för dig</string>
     <string name="zap_split_serarch_and_add_user">Sök och lägg till användare</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Användarnamn eller visningsnamn</string>
+    <string name="missing_lud16">Saknad lightning-konfiguration</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren %1$s har inte ställt in en blixtfakturaadress för att ta emot satoshis</string>
     <string name="zap_split_weight">Procent</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -505,4 +513,31 @@
     <string name="hide_new_word_label">Dölj nytt ord eller mening</string>
     <string name="automatically_show_profile_picture">Profilbild</string>
     <string name="automatically_show_profile_picture_description">Visa profilbilder</string>
+    <string name="select_an_option">Välj ett alternativ</string>
+    <string name="error_dialog_pay_invoice_error">Kunde inte betala fakturan</string>
+    <string name="error_dialog_pay_withdraw_error">Kunde inte ta ut</string>
+    <string name="error_parsing_nip47_title">Kunde inte konfigurera Wallet Connect</string>
+    <string name="error_parsing_nip47">Fel vid tolkning av NIP-47-anslutningssträngen. Kontrollera om den är korrekt med din plånboksleverantör: %1$s. Fel: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Fel vid tolkning av NIP-47-anslutningssträngen. Kontrollera om den är korrekt med din plånboksleverantör: %1$s.</string>
+    <string name="cashu_failed_redemption">Kunde inte lösa in Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint gav följande felmeddelande: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu-token har redan spenderats.</string>
+    <string name="cashu_sucessful_redemption">Cashu mottagen</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats skickades till din plånbok. (Avgifter: %2$s sats)</string>
+    <string name="error_unable_to_fetch_invoice">Kunde inte hämta fakturan från mottagarens servrar</string>
+    <string name="wallet_connect_pay_invoice_error_error">Din Wallet Connect-leverantör returnerade följande fel: %1$s</string>
+    <string name="could_not_connect_to_tor">Kunde inte ansluta till Tor</string>
+    <string name="unable_to_download_relay_document">Kunde inte ladda ner relädokument</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kunde inte montera LNUrl från Lightning Address \"%1$s\". Kontrollera användarens konfiguration</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Mottagarens Lightning-tjänst på %1$s är inte tillgänglig. Den beräknades från Lightning Address \"%2$s\". Fel: %3$s. Kontrollera om servern är uppe och om Lightning Addressen är korrekt</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Kunde inte lösa %1$s. Kontrollera om du är ansluten, om servern är uppe och om Lightning Addressen %2$s är korrekt</string>
+    <string name="could_not_fetch_invoice_from">Kunde inte hämta fakturan från %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address. Kontrollera användarens Lightning-konfiguration</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Återuppringnings-URL hittades inte i användarens konfiguration för Lightning Address-servern</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address fakturahämtning. Kontrollera användarens Lightning-konfiguration</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Felaktig fakturabelopp (%1$s sats) från %2$s. Det borde ha varit %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Kunde inte skapa en Lightning-faktura innan Zap skickades. Mottagarens Lightning-plånbok skickade följande fel: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Kunde inte skapa en Lightning-faktura innan Zap skickades. Elementet pr hittades inte i den resulterande JSON.</string>
+    <string name="read_only_user">Skrivskyddad användare</string>
+    <string name="no_reactions_setup">Inga reaktioner konfigurerade</string>
 </resources>
