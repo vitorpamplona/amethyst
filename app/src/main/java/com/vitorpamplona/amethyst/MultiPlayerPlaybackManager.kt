@@ -84,6 +84,7 @@ class MultiPlayerPlaybackManager(
                     playingMap.put(id, mediaSession)
                 } else {
                     player.setWakeMode(C.WAKE_MODE_NONE)
+                    cachedPositions.add(uri, player.currentPosition)
                     cache.put(id, mediaSession)
                     playingMap.remove(id, mediaSession)
                 }
@@ -92,7 +93,10 @@ class MultiPlayerPlaybackManager(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     STATE_IDLE -> {
-                        cachedPositions.add(uri, player.currentPosition)
+                        // only saves if it wqs playing
+                        if (abs(player.currentPosition) > 1) {
+                            cachedPositions.add(uri, player.currentPosition)
+                        }
                     }
                     STATE_READY -> {
                         cachedPositions.get(uri)?.let { lastPosition ->
@@ -102,7 +106,10 @@ class MultiPlayerPlaybackManager(
                         }
                     }
                     else -> {
-                        cachedPositions.add(uri, player.currentPosition)
+                        // only saves if it wqs playing
+                        if (abs(player.currentPosition) > 1) {
+                            cachedPositions.add(uri, player.currentPosition)
+                        }
                     }
                 }
             }
