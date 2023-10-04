@@ -94,7 +94,6 @@ import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
-import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -389,13 +388,12 @@ fun EditFieldRow(
             },
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
             trailingIcon = {
-                PostButton(
-                    onPost = {
-                        onSendNewMessage()
-                    },
+                ThinSendButton(
                     isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                     modifier = EditFieldTrailingIconModifier
-                )
+                ) {
+                    onSendNewMessage()
+                }
             },
             leadingIcon = {
                 UploadFromGallery(

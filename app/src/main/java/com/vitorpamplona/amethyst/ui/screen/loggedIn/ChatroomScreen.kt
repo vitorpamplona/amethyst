@@ -21,10 +21,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -330,7 +331,6 @@ fun ChatroomScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivateMessageEditFieldRow(
     channelScreenModel: NewPostViewModel,
@@ -362,13 +362,12 @@ fun PrivateMessageEditFieldRow(
                 )
             },
             trailingIcon = {
-                PostButton(
-                    onPost = {
-                        onSendNewMessage()
-                    },
+                ThinSendButton(
                     isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                     modifier = EditFieldTrailingIconModifier
-                )
+                ) {
+                    onSendNewMessage()
+                }
             },
             leadingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
@@ -481,6 +480,21 @@ fun NewFeatureNIP24AlertDialog(accountViewModel: AccountViewModel, onConfirm: ()
         },
         onDismiss = onDismiss
     )
+}
+
+@Composable
+fun ThinSendButton(isActive: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    IconButton(
+        enabled = isActive,
+        modifier = modifier,
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Default.Send,
+            null,
+            modifier = Size20Modifier
+        )
+    }
 }
 
 @Composable

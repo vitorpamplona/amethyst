@@ -253,7 +253,6 @@ fun ProfileContent(
 
 @Composable
 private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewModel) {
-    val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
     LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
