@@ -419,18 +419,18 @@ object LocalPreferences {
                 settings.automaticallyShowImages = if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
                     parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false))
                 } else {
-                    ConnectivityType.ALWAYS
+                    ConnectivityType.WIFI_ONLY
                 }
 
                 settings.automaticallyStartPlayback = if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
                     parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false))
                 } else {
-                    ConnectivityType.ALWAYS
+                    ConnectivityType.WIFI_ONLY
                 }
                 settings.automaticallyShowUrlPreview = if (contains(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)) {
                     parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
                 } else {
-                    ConnectivityType.ALWAYS
+                    ConnectivityType.WIFI_ONLY
                 }
                 settings.automaticallyHideNavigationBars = if (contains(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)) {
                     parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
@@ -441,7 +441,7 @@ object LocalPreferences {
                 settings.automaticallyShowProfilePictures = if (contains(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)) {
                     parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, false))
                 } else {
-                    ConnectivityType.ALWAYS
+                    ConnectivityType.WIFI_ONLY
                 }
 
                 settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")

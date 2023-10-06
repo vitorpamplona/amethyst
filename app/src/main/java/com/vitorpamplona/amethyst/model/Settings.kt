@@ -6,11 +6,11 @@ import com.vitorpamplona.amethyst.R
 @Stable
 class Settings(
     var preferredLanguage: String? = null,
-    var automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
+    var automaticallyShowImages: ConnectivityType = ConnectivityType.WIFI_ONLY,
+    var automaticallyStartPlayback: ConnectivityType = ConnectivityType.WIFI_ONLY,
+    var automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.WIFI_ONLY,
     var automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
-    var automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS
+    var automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.WIFI_ONLY
 )
 
 enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val reourceId: Int) {
