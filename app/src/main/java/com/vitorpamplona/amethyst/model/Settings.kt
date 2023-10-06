@@ -25,7 +25,7 @@ fun parseConnectivityType(code: Boolean?): ConnectivityType {
         ConnectivityType.WIFI_ONLY.prefCode -> ConnectivityType.WIFI_ONLY
         ConnectivityType.NEVER.prefCode -> ConnectivityType.NEVER
         else -> {
-            ConnectivityType.ALWAYS
+            ConnectivityType.WIFI_ONLY
         }
     }
 }
@@ -36,7 +36,7 @@ fun parseConnectivityType(screenCode: Int): ConnectivityType {
         ConnectivityType.WIFI_ONLY.screenCode -> ConnectivityType.WIFI_ONLY
         ConnectivityType.NEVER.screenCode -> ConnectivityType.NEVER
         else -> {
-            ConnectivityType.ALWAYS
+            ConnectivityType.WIFI_ONLY
         }
     }
 }
