@@ -36,6 +36,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Connectez vous avec une clé privée pour pouvoir envoyer des zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Connectez-vous avec une clé privée pour Suivre</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Connectez-vous avec une clé privée pour ne plus Suivre</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Vous utilisez une clé publique et les clés publiques sont en lecture seule. Connectez-vous avec une clé privée pour pouvoir masquer un mot ou une phrase</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Vous utilisez une clé publique et les clés publiques sont en lecture seule. Connectez-vous avec une clé privée pour pouvoir afficher un mot ou une phrase</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Nombre de vues</string>
     <string name="boost">Boost</string>
@@ -191,6 +193,8 @@
     <string name="secret_key_copied_to_clipboard">Clé secrète (nsec) copiée dans le presse-papiers</string>
     <string name="copy_my_secret_key">Copier ma clé secrète</string>
     <string name="biometric_authentication_failed">Échec de l\'authentification</string>
+    <string name="biometric_authentication_failed_explainer">La biométrie n\'a pas pu authentifier le propriétaire de ce téléphone</string>
+    <string name="biometric_authentication_failed_explainer_with_error">La biométrie n\'a pas pu authentifier le propriétaire de ce téléphone. Erreur : %1$s</string>
     <string name="biometric_error">Erreur</string>
     <string name="badge_created_by">"Créé par %1$s"</string>
     <string name="badge_award_image_for">"Image de badge pour %1$s"</string>
@@ -270,6 +274,8 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Clôturer après</string>
     <string name="poll_closing_time_days">jours</string>
+    <string name="poll_unable_to_vote">Impossible de voter</string>
+    <string name="poll_is_closed_explainer">Le Sondage est fermé aux nouveaux votes</string>
     <string name="poll_zap_amount">Montant des Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">Un seul vote par utilisateur est autorisé sur ce type de sondage</string>
     <string name="looking_for_event">"Recherche de l'Événement %1$s"</string>
@@ -279,6 +285,7 @@
     <string name="custom_zaps_add_a_message_example">Merci pour tout votre travail !</string>
     <string name="lightning_create_and_add_invoice">Créer et Ajouter</string>
     <string name="poll_author_no_vote">Les auteurs du sondage ne peuvent pas voter dans leurs propres sondages.</string>
+    <string name="hash_verification_info_title">Qu\'est-ce que cela signifie ?</string>
     <string name="hash_verification_passed">Ce contenu est le même depuis le message</string>
     <string name="hash_verification_failed">Ce contenu a changé. L\'auteur n\'a peut-être pas vu ou approuvé le changement</string>
     <string name="content_description_add_image">Ajouter une Image</string>
@@ -491,6 +498,7 @@
     <string name="zap_split_explainer">Les clients supportés vont diviser et transférer les zaps aux utilisateurs ajoutés ici au lieu du vôtre</string>
     <string name="zap_split_serarch_and_add_user">Rechercher et Ajouter un Utilisateur</string>
     <string name="zap_split_serarch_and_add_user_placeholder">Nom d\'utilisateur ou nom affiché</string>
+    <string name="missing_lud16">Configuration lightning manquante</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">L\'utilisateur %1$s n\'a pas configuré d\'adresse Lightning pour recevoir des sats</string>
     <string name="zap_split_weight">Pourcentage</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -505,4 +513,25 @@
     <string name="no_wallet_found">Aucun portefeuille trouvé pour payer une facture lightning. Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
     <string name="hidden_words">Mots Masqués</string>
     <string name="hide_new_word_label">Masquer un nouveau mot ou une phrase</string>
+    <string name="automatically_show_profile_picture">Photo de profil</string>
+    <string name="automatically_show_profile_picture_description">Afficher les photos de profil</string>
+    <string name="select_an_option">Sélectionnez une option</string>
+    <string name="error_dialog_pay_invoice_error">Impossible de payer la facture</string>
+    <string name="error_dialog_pay_withdraw_error">Impossible de retirer</string>
+    <string name="error_parsing_nip47_title">Impossible de configurer Wallet Connect</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats ont été envoyés à votre portefeuille. (Frais : %2$s sats)</string>
+    <string name="could_not_connect_to_tor">Impossible de se connecter à Tor</string>
+    <string name="unable_to_download_relay_document">Téléchargement du document relais indisponible</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Impossible d\'assembler LNUrl à partir de l\'adresse Lightning \"%1$s\". Vérifiez la configuration de l\'utilisateur</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Le service lightning du récepteur à %1$s n\'est pas disponible. Il a été calculé à partir de l\'adresse lightning \"%2$s\". Erreur: %3$s. Vérifiez si le serveur est en ligne et si l\'adresse lightning est correcte</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Impossible de résoudre %1$s. Vérifiez si vous êtes connecté, si le serveur est en ligne et si l\'adresse lightning %2$s est correcte</string>
+    <string name="could_not_fetch_invoice_from">Impossible de récupérer la facture depuis %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Erreur lors de l\'analyse du JSON à partir de l\'Adresse Lightning. Vérifiez la configuration lightning de l\'utilisateur</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL de callback introuvable dans la configuration serveur de l\'adresse lightning de l\'utilisateur</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Erreur lors de l\'analyse du JSON à partir de la récupération de la facture de l\'Adresse Lightning. Vérifiez la configuration Lightning de l\'utilisateur</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Montant de la facture (%1$s sats) incorrect de %2$s. Il aurait dû être %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Impossible de créer une facture lightning avant d\'envoyer le zap. Le portefeuille lightning du destinataire a envoyé l\'erreur suivante : %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Impossible de créer une facture lightning avant d\'envoyer le zap. Élément pr introuvable dans le JSON résultant.</string>
+    <string name="read_only_user">Utilisateur en lecture seule</string>
+    <string name="no_reactions_setup">Aucune réaction configurée</string>
 </resources>
