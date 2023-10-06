@@ -23,7 +23,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -265,7 +264,10 @@ fun MainScreen(
         }
     }
 
-    WatchNavStateToUpdateBarVisibility(navState, bottomBarOffsetHeightPx)
+    WatchNavStateToUpdateBarVisibility(navState) {
+        bottomBarOffsetHeightPx.value = 0f
+        shouldShow.value = true
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -393,16 +395,16 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-fun WatchNavStateToUpdateBarVisibility(navState: State<NavBackStackEntry?>, bottomBarOffsetHeightPx: MutableState<Float>) {
+fun WatchNavStateToUpdateBarVisibility(navState: State<NavBackStackEntry?>, onReset: () -> Unit) {
     LaunchedEffect(key1 = navState.value) {
-        bottomBarOffsetHeightPx.value = 0f
+        onReset()
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                bottomBarOffsetHeightPx.value = 0f
+                onReset()
             }
         }
 
