@@ -94,7 +94,15 @@ object LocalCache {
             val noteEvent = note.event
             return if (noteEvent is AddressableEvent) {
                 // upgrade to the latest
-                checkGetOrCreateAddressableNote(noteEvent.address().toTag())
+                val newNote = checkGetOrCreateAddressableNote(noteEvent.address().toTag())
+
+                if (newNote != null && noteEvent is Event && newNote.event == null) {
+                    val author = note.author ?: getOrCreateUser(noteEvent.pubKey)
+                    newNote.loadEvent(noteEvent as Event, author, emptyList())
+                    note.moveAllReferencesTo(newNote)
+                }
+
+                newNote
             } else {
                 note
             }

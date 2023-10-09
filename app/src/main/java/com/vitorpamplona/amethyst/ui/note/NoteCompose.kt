@@ -212,6 +212,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.math.BigDecimal
 import java.net.URL
+import java.net.URLEncoder
 import java.util.Locale
 import kotlin.time.measureTimedValue
 
@@ -1276,16 +1277,16 @@ fun routeFor(note: Note, loggedIn: User): String? {
         }
     } else if (noteEvent is LiveActivitiesEvent || noteEvent is LiveActivitiesChatMessageEvent) {
         note.channelHex()?.let {
-            return "Channel/$it"
+            return "Channel/${URLEncoder.encode(it, "utf-8")}"
         }
     } else if (noteEvent is ChatroomKeyable) {
         val room = noteEvent.chatroomKey(loggedIn.pubkeyHex)
         loggedIn.createChatroom(room)
         return "Room/${room.hashCode()}"
     } else if (noteEvent is CommunityDefinitionEvent) {
-        return "Community/${note.idHex}"
+        return "Community/${URLEncoder.encode(note.idHex, "utf-8")}"
     } else {
-        return "Note/${note.idHex}"
+        return "Note/${URLEncoder.encode(note.idHex, "utf-8")}"
     }
 
     return null

@@ -147,6 +147,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             latestEOSEs.addOrUpdate(account.userProfile(), account.defaultNotificationFollowList, relayUrl, time)
         } else {
             hasLoadedTheBasics[account.userProfile()] = true
+
+            invalidateFilters()
         }
     }
 
