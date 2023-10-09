@@ -17,12 +17,15 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
+
+    private val regex = ("30000:[a-f0-9]+:" + PeopleListEvent.blockList).toRegex(RegexOption.IGNORE_CASE)
+
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList.endsWith(PeopleListEvent.blockList)
+        return regex.matches(account.defaultHomeFollowList)
     }
 
     override fun feed(): List<Note> {
