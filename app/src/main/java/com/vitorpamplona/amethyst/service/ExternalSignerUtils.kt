@@ -274,6 +274,8 @@ object ExternalSignerUtils {
     }
 
     fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
+        content.remove(id)
+        cachedDecryptedContent.remove(id)
         val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
         if (result !== null) {
             content.put(id, result)
