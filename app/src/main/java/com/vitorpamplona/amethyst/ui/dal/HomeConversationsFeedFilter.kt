@@ -13,14 +13,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
-    private val regex = ("30000:[a-f0-9]+:" + PeopleListEvent.blockList).toRegex(RegexOption.IGNORE_CASE)
-
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
     }
 
     override fun showHiddenKey(): Boolean {
-        return regex.matches(account.defaultHomeFollowList)
+        return account.defaultHomeFollowList == "30000:${account.userProfile().pubkeyHex}:${PeopleListEvent.blockList}"
     }
 
     override fun feed(): List<Note> {
