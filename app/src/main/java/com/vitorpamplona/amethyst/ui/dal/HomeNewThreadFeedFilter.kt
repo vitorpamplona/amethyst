@@ -22,7 +22,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList == PeopleListEvent.blockList
+        return account.defaultHomeFollowList.endsWith(PeopleListEvent.blockList)
     }
 
     override fun feed(): List<Note> {
