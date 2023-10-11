@@ -156,40 +156,39 @@ object ExternalSignerUtils {
         checkNotInMainThread()
 
         val result = getDataFromResolver(SignerType.SIGN_EVENT, arrayOf(event.toJson(), event.pubKey()), columnName)
-        if (result !== null) {
+        if (result == null) {
+            ServiceManager.shouldPauseService = false
+            isActivityRunning = true
+            openSigner(
+                event.toJson(),
+                SignerType.SIGN_EVENT,
+                activityResultLauncher,
+                "",
+                event.id()
+            )
+            while (isActivityRunning) {
+                Thread.sleep(100)
+            }
+        } else {
             content.put(event.id(), result)
-            return
-        }
-
-        ServiceManager.shouldPauseService = false
-        isActivityRunning = true
-        openSigner(
-            event.toJson(),
-            SignerType.SIGN_EVENT,
-            activityResultLauncher,
-            "",
-            event.id()
-        )
-        while (isActivityRunning) {
-            Thread.sleep(100)
         }
     }
 
     fun decryptBlockList(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
         val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
-        if (result !== null) {
+        if (result == null) {
+            isActivityRunning = true
+            openSigner(
+                encryptedContent,
+                signerType,
+                blockListResultLauncher,
+                pubKey,
+                id
+            )
+        } else {
             content.put(id, result)
             cachedDecryptedContent[id] = result
-            return
         }
-        isActivityRunning = true
-        openSigner(
-            encryptedContent,
-            signerType,
-            blockListResultLauncher,
-            pubKey,
-            id
-        )
     }
 
     fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature"): String? {
@@ -206,15 +205,16 @@ object ExternalSignerUtils {
             null,
             null
         ).use {
-            if (it !== null) {
-                if (it.moveToFirst()) {
-                    val index = it.getColumnIndex(columnName)
-                    if (index < 0) {
-                        Log.d("getDataFromResolver", "column '$columnName' not found")
-                        return null
-                    }
-                    return it.getString(index)
+            if (it == null) {
+                return null
+            }
+            if (it.moveToFirst()) {
+                val index = it.getColumnIndex(columnName)
+                if (index < 0) {
+                    Log.d("getDataFromResolver", "column '$columnName' not found")
+                    return null
                 }
+                return it.getString(index)
             }
         }
         return null
@@ -222,92 +222,90 @@ object ExternalSignerUtils {
 
     fun decrypt(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
         val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
-        if (result !== null) {
+        if (result == null) {
+            isActivityRunning = true
+            openSigner(
+                encryptedContent,
+                signerType,
+                decryptResultLauncher,
+                pubKey,
+                id
+            )
+            while (isActivityRunning) {
+                // do nothing
+            }
+        } else {
             content.put(id, result)
             cachedDecryptedContent[id] = result
-            return
-        }
-
-        isActivityRunning = true
-        openSigner(
-            encryptedContent,
-            signerType,
-            decryptResultLauncher,
-            pubKey,
-            id
-        )
-        while (isActivityRunning) {
-            // do nothing
         }
     }
 
     fun decryptDM(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
         val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
-        if (result !== null) {
+        if (result == null) {
+            openSigner(
+                encryptedContent,
+                signerType,
+                decryptResultLauncher,
+                pubKey,
+                id
+            )
+        } else {
             content.put(id, result)
             cachedDecryptedContent[id] = result
-            return
         }
-        openSigner(
-            encryptedContent,
-            signerType,
-            decryptResultLauncher,
-            pubKey,
-            id
-        )
     }
 
     fun decryptBookmark(encryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_DECRYPT) {
         val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
-        if (result !== null) {
+        if (result == null) {
+            openSigner(
+                encryptedContent,
+                signerType,
+                decryptResultLauncher,
+                pubKey,
+                id
+            )
+        } else {
             content.put(id, result)
             cachedDecryptedContent[id] = result
-            return
         }
-        openSigner(
-            encryptedContent,
-            signerType,
-            decryptResultLauncher,
-            pubKey,
-            id
-        )
     }
 
     fun encrypt(decryptedContent: String, pubKey: HexKey, id: String, signerType: SignerType = SignerType.NIP04_ENCRYPT) {
         content.remove(id)
         cachedDecryptedContent.remove(id)
         val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
-        if (result !== null) {
+        if (result == null) {
+            isActivityRunning = true
+            openSigner(
+                decryptedContent,
+                signerType,
+                activityResultLauncher,
+                pubKey,
+                id
+            )
+            while (isActivityRunning) {
+                Thread.sleep(100)
+            }
+        } else {
             content.put(id, result)
-            return
-        }
-
-        isActivityRunning = true
-        openSigner(
-            decryptedContent,
-            signerType,
-            activityResultLauncher,
-            pubKey,
-            id
-        )
-        while (isActivityRunning) {
-            Thread.sleep(100)
         }
     }
 
     fun decryptZapEvent(event: LnZapRequestEvent) {
         val result = getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson(), event.pubKey))
-        if (result !== null) {
+        if (result == null) {
+            openSigner(
+                event.toJson(),
+                SignerType.DECRYPT_ZAP_EVENT,
+                decryptResultLauncher,
+                event.pubKey,
+                event.id
+            )
+        } else {
             content.put(event.id, result)
             cachedDecryptedContent[event.id] = result
-            return
         }
-        openSigner(
-            event.toJson(),
-            SignerType.DECRYPT_ZAP_EVENT,
-            decryptResultLauncher,
-            event.pubKey,
-            event.id
-        )
     }
 }
