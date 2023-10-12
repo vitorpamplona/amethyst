@@ -3,7 +3,12 @@ pluginManagement {
         gradlePluginPortal()
         google()
         mavenCentral()
-        maven { url "https://jitpack.io" }
+        maven {
+            url "https://jitpack.io"
+            content {
+                includeModule 'com.github.UnifiedPush', 'android-connector'
+            }
+        }
     }
 }
 dependencyResolutionManagement {
