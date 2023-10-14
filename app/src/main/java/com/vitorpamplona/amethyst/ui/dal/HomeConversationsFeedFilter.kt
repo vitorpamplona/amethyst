@@ -18,7 +18,7 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList == PeopleListEvent.blockList
+        return account.defaultHomeFollowList == "30000:${account.userProfile().pubkeyHex}:${PeopleListEvent.blockList}"
     }
 
     override fun feed(): List<Note> {
