@@ -13,7 +13,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultNotificationFollowList == PeopleListEvent.blockList
+        return account.defaultNotificationFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {

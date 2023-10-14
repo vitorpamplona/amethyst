@@ -13,7 +13,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultStoriesFollowList == PeopleListEvent.blockList
+        return account.defaultStoriesFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {
@@ -29,7 +29,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
         val isGlobal = account.defaultStoriesFollowList == GLOBAL_FOLLOWS
-        val isHiddenList = account.defaultStoriesFollowList == PeopleListEvent.blockList
+        val isHiddenList = account.defaultStoriesFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
 
         val followingKeySet = account.selectedUsersFollowList(account.defaultStoriesFollowList) ?: emptySet()
         val followingTagSet = account.selectedTagsFollowList(account.defaultStoriesFollowList) ?: emptySet()

@@ -14,7 +14,7 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultDiscoveryFollowList == PeopleListEvent.blockList
+        return account.defaultDiscoveryFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {

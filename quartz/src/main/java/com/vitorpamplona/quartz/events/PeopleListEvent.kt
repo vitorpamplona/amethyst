@@ -102,6 +102,10 @@ class PeopleListEvent(
         const val kind = 30000
         const val blockList = "mute"
 
+        fun blockListFor(pubKeyHex: HexKey): String {
+            return "30000:$pubKeyHex:$blockList"
+        }
+
         fun createListWithTag(name: String, key: String, tag: String, isPrivate: Boolean, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): PeopleListEvent {
             return if (isPrivate) {
                 create(

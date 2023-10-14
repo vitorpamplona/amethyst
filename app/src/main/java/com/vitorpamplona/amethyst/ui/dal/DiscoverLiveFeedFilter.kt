@@ -23,7 +23,7 @@ open class DiscoverLiveFeedFilter(
     }
 
     override fun showHiddenKey(): Boolean {
-        return followList() == PeopleListEvent.blockList
+        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {
