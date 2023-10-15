@@ -6,7 +6,15 @@ import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.ReactionEvent
+import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()

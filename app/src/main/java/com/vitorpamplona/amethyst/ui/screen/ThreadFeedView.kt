@@ -57,7 +57,38 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.note.*
+import com.vitorpamplona.amethyst.ui.note.AudioHeader
+import com.vitorpamplona.amethyst.ui.note.AudioTrackHeader
+import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
+import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.note.CreateImageHeader
+import com.vitorpamplona.amethyst.ui.note.DisplayFollowingCommunityInPost
+import com.vitorpamplona.amethyst.ui.note.DisplayFollowingHashtagsInPost
+import com.vitorpamplona.amethyst.ui.note.DisplayHighlight
+import com.vitorpamplona.amethyst.ui.note.DisplayLocation
+import com.vitorpamplona.amethyst.ui.note.DisplayPeopleList
+import com.vitorpamplona.amethyst.ui.note.DisplayPoW
+import com.vitorpamplona.amethyst.ui.note.DisplayRelaySet
+import com.vitorpamplona.amethyst.ui.note.DisplayReward
+import com.vitorpamplona.amethyst.ui.note.DisplayZapSplits
+import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.HiddenNote
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
+import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.RenderPinListEvent
+import com.vitorpamplona.amethyst.ui.note.RenderPoll
+import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
+import com.vitorpamplona.amethyst.ui.note.RenderRepost
+import com.vitorpamplona.amethyst.ui.note.RenderTextEvent
+import com.vitorpamplona.amethyst.ui.note.Reward
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -103,7 +134,11 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
 
     Box(Modifier.pullRefresh(pullRefreshState)) {
         Column() {
-            Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+            Crossfade(
+                targetState = feedState,
+                animationSpec = tween(durationMillis = 100),
+                label = "ThreadViewMainState"
+            ) { state ->
                 when (state) {
                     is FeedState.Empty -> {
                         FeedEmpty {

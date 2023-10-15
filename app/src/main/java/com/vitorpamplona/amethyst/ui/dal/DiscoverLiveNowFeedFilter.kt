@@ -5,7 +5,7 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 
 class DiscoverLiveNowFeedFilter(

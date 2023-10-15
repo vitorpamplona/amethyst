@@ -189,7 +189,7 @@ private fun RenderCardItem(
     nav: (String) -> Unit
 ) {
     when (item) {
-        is NoteCard -> NoteCompose(
+        is NoteCard -> NoteCardCompose(
             item,
             isBoostedNote = false,
             accountViewModel = accountViewModel,
@@ -233,7 +233,7 @@ private fun RenderCardItem(
 }
 
 @Composable
-fun NoteCompose(
+fun NoteCardCompose(
     baseNote: NoteCard,
     routeForLastRead: String? = null,
     modifier: Modifier = remember { Modifier },

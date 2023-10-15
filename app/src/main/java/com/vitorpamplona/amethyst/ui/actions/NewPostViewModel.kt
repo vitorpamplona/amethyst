@@ -14,7 +14,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
-import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ServersAvailable
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource

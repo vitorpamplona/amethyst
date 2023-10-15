@@ -1,8 +1,9 @@
 package com.vitorpamplona.amethyst.service.previews
 
 import android.net.Uri
-import kotlinx.coroutines.*
-import java.util.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class BahaUrlPreview(val url: String, var callback: IUrlPreviewCallback?) {
     private val imageExtensionArray = arrayOf(".gif", ".png", ".jpg", ".jpeg", ".bmp", ".webp")

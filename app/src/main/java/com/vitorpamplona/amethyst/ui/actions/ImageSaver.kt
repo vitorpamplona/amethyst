@@ -11,7 +11,10 @@ import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClient
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Request
+import okhttp3.Response
 import okio.BufferedSource
 import okio.IOException
 import okio.buffer

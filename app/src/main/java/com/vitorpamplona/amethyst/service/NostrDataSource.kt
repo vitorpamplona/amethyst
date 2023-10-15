@@ -15,7 +15,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.Error
 
 abstract class NostrDataSource(val debugName: String) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())

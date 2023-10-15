@@ -7,7 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.CLOSED_AT
+import com.vitorpamplona.quartz.events.CONSENSUS_THRESHOLD
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.VALUE_MAXIMUM
+import com.vitorpamplona.quartz.events.VALUE_MINIMUM
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

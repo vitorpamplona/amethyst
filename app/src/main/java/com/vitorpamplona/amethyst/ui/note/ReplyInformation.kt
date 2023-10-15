@@ -18,7 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.*
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -26,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -133,24 +136,17 @@ fun ReplyInformationChannel(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var sortedMentions by remember { mutableStateOf<ImmutableList<User>?>(null) }
+    var sortedMentions by remember { mutableStateOf<ImmutableList<User>>(persistentListOf()) }
 
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            val newSortedMentions = mentions
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-                .toSet()
-                .sortedBy { accountViewModel.account.isFollowing(it) }
-                .toImmutableList()
-                .ifEmpty { null }
-
+        accountViewModel.loadMentions(mentions) { newSortedMentions ->
             if (newSortedMentions != sortedMentions) {
                 sortedMentions = newSortedMentions
             }
         }
     }
 
-    if (sortedMentions != null) {
+    if (sortedMentions.isNotEmpty()) {
         ReplyInformationChannel(
             replyTo,
             sortedMentions,

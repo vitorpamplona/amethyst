@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,8 +82,6 @@ import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope as rememberCoroutineScope
 
 class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))

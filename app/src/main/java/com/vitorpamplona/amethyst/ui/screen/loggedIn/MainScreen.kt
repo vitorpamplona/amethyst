@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.*
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +53,15 @@ import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
 import com.vitorpamplona.amethyst.ui.buttons.NewNoteButton
-import com.vitorpamplona.amethyst.ui.navigation.*
+import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
+import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
+import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
+import com.vitorpamplona.amethyst.ui.navigation.FollowListViewModel
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.Route.Companion.InvertedLayouts
+import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel

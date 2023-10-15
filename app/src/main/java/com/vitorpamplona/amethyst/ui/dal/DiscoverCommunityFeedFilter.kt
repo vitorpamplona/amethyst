@@ -5,7 +5,9 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {

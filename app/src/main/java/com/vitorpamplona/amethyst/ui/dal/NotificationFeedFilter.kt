@@ -5,7 +5,18 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.BaseTextNoteEvent
+import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.ReactionEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 
 class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {

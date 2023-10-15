@@ -6,7 +6,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.lang.IllegalArgumentException
 
 private const val ELEMENT_TAG_META = "meta"
 private const val ATTRIBUTE_VALUE_PROPERTY = "property"

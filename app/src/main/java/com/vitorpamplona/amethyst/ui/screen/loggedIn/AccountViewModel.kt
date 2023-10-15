@@ -933,6 +933,18 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
             }
         }
     }
+
+    fun loadMentions(mentions: ImmutableList<String>, onReady: (ImmutableList<User>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newSortedMentions = mentions
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+                .toSet()
+                .sortedBy { account.isFollowing(it) }
+                .toImmutableList()
+
+            onReady(newSortedMentions)
+        }
+    }
 }
 
 class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>, val account: Account) {

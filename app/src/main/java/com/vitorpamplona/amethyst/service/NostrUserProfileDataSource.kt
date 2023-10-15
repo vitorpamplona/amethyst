@@ -4,7 +4,23 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.quartz.events.*
+import com.vitorpamplona.quartz.events.AppRecommendationEvent
+import com.vitorpamplona.quartz.events.AudioHeaderEvent
+import com.vitorpamplona.quartz.events.AudioTrackEvent
+import com.vitorpamplona.quartz.events.BadgeAwardEvent
+import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.BookmarkListEvent
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PinListEvent
+import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
     var user: User? = null
