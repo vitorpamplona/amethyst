@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jlleitschuh.gradle.ktlint' version "11.5.1"
+    id 'org.jlleitschuh.gradle.ktlint' version "11.6.1"
     id 'com.google.gms.google-services'
 }
 
@@ -89,7 +89,7 @@ android {
 dependencies {
     implementation project(path: ':quartz')
     implementation "androidx.core:core-ktx:$core_ktx_version"
-    implementation 'androidx.activity:activity-compose:1.7.2'
+    implementation 'androidx.activity:activity-compose:1.8.0'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
 
@@ -198,10 +198,6 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_ui_version"
-}
-
-ktlint {
-    disabledRules.set(["no-wildcard-imports"])
 }
 
 // https://gitlab.com/fdroid/wiki/-/wikis/HOWTO:-diff-&-fix-APKs-for-Reproducible-Builds#differing-assetsdexoptbaselineprofm-easy-to-fix
