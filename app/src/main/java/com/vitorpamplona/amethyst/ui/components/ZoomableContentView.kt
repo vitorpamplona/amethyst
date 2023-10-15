@@ -64,8 +64,10 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
@@ -92,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -234,7 +237,7 @@ fun ZoomableContentView(
     }
 
     when (content) {
-        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel)
+        is ZoomableUrlImage -> UrlImageView(content, mainImageModifier, accountViewModel = accountViewModel)
         is ZoomableUrlVideo -> VideoView(
             videoUri = content.url,
             title = content.description,
@@ -246,7 +249,7 @@ fun ZoomableContentView(
             accountViewModel = accountViewModel
         )
 
-        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel)
+        is ZoomableLocalImage -> LocalImageView(content, mainImageModifier, accountViewModel = accountViewModel)
         is ZoomableLocalVideo ->
             content.localFile?.let {
                 VideoView(
@@ -271,6 +274,7 @@ fun ZoomableContentView(
 private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier,
+    topPaddingForControllers: Dp = Dp.Unspecified,
     accountViewModel: AccountViewModel?,
     alwayShowImage: Boolean = false
 ) {
@@ -304,7 +308,11 @@ private fun LocalImageView(
                 if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
             }
 
-            val verifierModifier = Modifier.align(Alignment.TopEnd)
+            val verifierModifier = if (topPaddingForControllers.isSpecified) {
+                Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
+            } else {
+                Modifier.align(Alignment.TopEnd)
+            }
 
             val painterState = remember {
                 mutableStateOf<AsyncImagePainter.State?>(null)
@@ -340,6 +348,7 @@ private fun LocalImageView(
 private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier,
+    topPaddingForControllers: Dp = Dp.Unspecified,
     accountViewModel: AccountViewModel?,
     alwayShowImage: Boolean = false
 ) {
@@ -374,7 +383,11 @@ private fun UrlImageView(
             if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
         }
 
-        val verifierModifier = Modifier.align(Alignment.TopEnd)
+        val verifierModifier = if (topPaddingForControllers.isSpecified) {
+            Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
+        } else {
+            Modifier.align(Alignment.TopEnd)
+        }
 
         val painterState = remember {
             mutableStateOf<AsyncImagePainter.State?>(null)
@@ -679,6 +692,7 @@ private fun DialogContent(
             RenderImageOrVideo(
                 content = allImages[index],
                 roundedCorner = false,
+                topPaddingForControllers = Size55dp,
                 onControllerVisibilityChanged = {
                     controllerVisible.value = it
                 },
@@ -689,6 +703,7 @@ private fun DialogContent(
         RenderImageOrVideo(
             content = imageUrl,
             roundedCorner = false,
+            topPaddingForControllers = Size55dp,
             onControllerVisibilityChanged = {
                 controllerVisible.value = it
             },
@@ -798,6 +813,7 @@ private fun ShareImageAction(
 private fun RenderImageOrVideo(
     content: ZoomableContent,
     roundedCorner: Boolean,
+    topPaddingForControllers: Dp = Dp.Unspecified,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel
 ) {
@@ -806,7 +822,13 @@ private fun RenderImageOrVideo(
         .zoomable(rememberZoomState())
 
     if (content is ZoomableUrlImage) {
-        UrlImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
+        UrlImageView(
+            content = content,
+            mainImageModifier = mainModifier,
+            topPaddingForControllers = topPaddingForControllers,
+            accountViewModel,
+            alwayShowImage = true
+        )
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             VideoView(
@@ -815,13 +837,20 @@ private fun RenderImageOrVideo(
                 artworkUri = content.artworkUri,
                 authorName = content.authorName,
                 roundedCorner = roundedCorner,
+                topPaddingForControllers = topPaddingForControllers,
                 onControllerVisibilityChanged = onControllerVisibilityChanged,
                 accountViewModel = accountViewModel,
                 alwaysShowVideo = true
             )
         }
     } else if (content is ZoomableLocalImage) {
-        LocalImageView(content = content, mainImageModifier = mainModifier, accountViewModel, alwayShowImage = true)
+        LocalImageView(
+            content = content,
+            mainImageModifier = mainModifier,
+            topPaddingForControllers = topPaddingForControllers,
+            accountViewModel,
+            alwayShowImage = true
+        )
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
@@ -831,6 +860,7 @@ private fun RenderImageOrVideo(
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
                     roundedCorner = roundedCorner,
+                    topPaddingForControllers = topPaddingForControllers,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     accountViewModel = accountViewModel,
                     alwaysShowVideo = true

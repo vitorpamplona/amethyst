@@ -46,8 +46,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -149,6 +151,7 @@ fun VideoView(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -166,6 +169,7 @@ fun VideoView(
         title = title,
         thumb = thumb,
         roundedCorner = roundedCorner,
+        topPaddingForControllers = topPaddingForControllers,
         waveform = waveform,
         artworkUri = artworkUri,
         authorName = authorName,
@@ -185,6 +189,7 @@ fun VideoViewInner(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -246,6 +251,7 @@ fun VideoViewInner(
                     controller = controller,
                     thumbData = thumb,
                     roundedCorner = roundedCorner,
+                    topPaddingForControllers = topPaddingForControllers,
                     waveform = waveform,
                     keepPlaying = keepPlaying,
                     automaticallyStartPlayback = automaticallyStartPlayback,
@@ -514,6 +520,7 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     roundedCorner: Boolean,
+    topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: MutableState<Boolean>,
@@ -587,7 +594,17 @@ private fun RenderVideoPlayer(
             controller.volume < 0.001
         }
 
-        MuteButton(controllerVisible, startingMuteState) { mute: Boolean ->
+        MuteButton(
+            controllerVisible,
+            startingMuteState,
+            remember {
+                if (topPaddingForControllers.isSpecified) {
+                    Modifier.padding(top = topPaddingForControllers)
+                } else {
+                    Modifier
+                }
+            }
+        ) { mute: Boolean ->
             // makes the new setting the default for new creations.
             DefaultMutedSetting.value = mute
 
@@ -601,7 +618,17 @@ private fun RenderVideoPlayer(
             controller.volume = if (mute) 0f else 1f
         }
 
-        KeepPlayingButton(keepPlaying, controllerVisible, remember { Modifier.align(Alignment.TopEnd) }) { newKeepPlaying: Boolean ->
+        KeepPlayingButton(
+            keepPlaying,
+            controllerVisible,
+            remember {
+                if (topPaddingForControllers.isSpecified) {
+                    Modifier.align(Alignment.TopEnd).padding(top = topPaddingForControllers)
+                } else {
+                    Modifier.align(Alignment.TopEnd)
+                }
+            }
+        ) { newKeepPlaying: Boolean ->
             // If something else is playing and the user marks this video to keep playing, stops the other one.
             if (newKeepPlaying) {
                 if (keepPlayingMutex != null && keepPlayingMutex != controller) {
@@ -775,6 +802,7 @@ fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
 private fun MuteButton(
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
+    modifier: Modifier,
     toggle: (Boolean) -> Unit
 ) {
     val holdOn = remember {
@@ -794,6 +822,7 @@ private fun MuteButton(
 
     AnimatedVisibility(
         visible = holdOn.value || controllerVisible.value,
+        modifier = modifier,
         enter = fadeIn(),
         exit = fadeOut()
     ) {
