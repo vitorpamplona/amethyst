@@ -361,11 +361,13 @@ private fun UrlImageView(
             mainImageModifier
                 .widthIn(max = maxWidth)
                 .heightIn(max = maxHeight)
+                /* Is this necessary? It makes images bleed into other pages
                 .run {
                     aspectRatio(content.dim)?.let { ratio ->
                         this.aspectRatio(ratio, false)
                     } ?: this
                 }
+                */
         }
 
         val contentScale = remember {
