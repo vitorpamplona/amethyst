@@ -1529,7 +1529,7 @@ object LocalCache {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
-                Log.w("Event failed retest ${event.kind}", e.message ?: "")
+                Log.w("Event failed retest ${event.kind}", (e.message ?: "") + event.toJson())
             }
             false
         } else {
