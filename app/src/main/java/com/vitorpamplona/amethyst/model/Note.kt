@@ -417,9 +417,16 @@ open class Note(val idHex: String) {
         }
     }
 
+    @Synchronized
+    fun addRelaySync(url: String) {
+        if (url !in relays) {
+            relays = relays + url
+        }
+    }
+
     fun addRelay(relay: Relay) {
         if (relay.url !in relays) {
-            relays = relays + relay.url
+            addRelaySync(relay.url)
             liveSet?.innerRelays?.invalidateData()
         }
     }
