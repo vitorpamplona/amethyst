@@ -79,6 +79,7 @@ import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
+import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -2595,15 +2596,15 @@ fun LoadStatuses(
 }
 
 @Composable
-fun LoadCityName(geohash: String, content: @Composable (String) -> Unit) {
+fun LoadCityName(geohash: GeoHash, content: @Composable (String) -> Unit) {
     val context = LocalContext.current
     var cityName by remember(geohash) {
-        mutableStateOf<String>(geohash)
+        mutableStateOf<String>(geohash.toString())
     }
 
     LaunchedEffect(key1 = geohash) {
         launch(Dispatchers.IO) {
-            val newCityName = ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank { null }
+            val newCityName = ReverseGeoLocationUtil().execute(geohash.toLocation(), context)?.ifBlank { null }
             if (newCityName != null && newCityName != cityName) {
                 cityName = newCityName
             }
@@ -2614,20 +2615,23 @@ fun LoadCityName(geohash: String, content: @Composable (String) -> Unit) {
 }
 
 @Composable
-fun DisplayLocation(geohash: String, nav: (String) -> Unit) {
-    LoadCityName(geohash) { cityName ->
-        ClickableText(
-            text = AnnotatedString(cityName),
-            onClick = { nav("Geohash/$geohash") },
-            style = LocalTextStyle.current.copy(
-                color = MaterialTheme.colorScheme.primary.copy(
-                    alpha = 0.52f
+fun DisplayLocation(geohashStr: String, nav: (String) -> Unit) {
+    val geoHash = runCatching { geohashStr.toGeoHash() }.getOrNull()
+    if (geoHash != null) {
+        LoadCityName(geoHash) { cityName ->
+            ClickableText(
+                text = AnnotatedString(cityName),
+                onClick = { nav("Geohash/$geoHash") },
+                style = LocalTextStyle.current.copy(
+                    color = MaterialTheme.colorScheme.primary.copy(
+                        alpha = 0.52f
+                    ),
+                    fontSize = Font14SP,
+                    fontWeight = FontWeight.Bold
                 ),
-                fontSize = Font14SP,
-                fontWeight = FontWeight.Bold
-            ),
-            maxLines = 1
-        )
+                maxLines = 1
+            )
+        }
     }
 }
 
