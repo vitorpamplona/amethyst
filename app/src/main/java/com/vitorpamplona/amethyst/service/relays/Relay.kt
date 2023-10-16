@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.RelayAuthEvent
@@ -60,6 +61,8 @@ class Relay(
 
     var afterEOSE = false
 
+    val authResponse = mutableMapOf<HexKey, Boolean>()
+
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
     }
@@ -77,9 +80,7 @@ class Relay(
             checkNotInMainThread()
 
             // Sends everything.
-            Client.allSubscriptions().forEach {
-                sendFilter(requestId = it)
-            }
+            renewFilters()
         }
     }
 
@@ -224,8 +225,20 @@ class Relay(
                 it.onError(this@Relay, channel, Error("Relay sent notice: " + channel))
             }
             "OK" -> listeners.forEach {
-                Log.w("Relay", "Relay on OK $url, ${msgArray[1].asText()}, ${msgArray[2].asBoolean()}, ${msgArray[3].asText()}")
-                it.onSendResponse(this@Relay, msgArray[1].asText(), msgArray[2].asBoolean(), msgArray[3].asText())
+                val eventId = msgArray[1].asText()
+                val sucess = msgArray[2].asBoolean()
+                val message = msgArray[3].asText()
+
+                if (authResponse.containsKey(eventId)) {
+                    val wasAlreadyAuthenticated = authResponse.get(eventId)
+                    authResponse.put(eventId, sucess)
+                    if (wasAlreadyAuthenticated != true && sucess) {
+                        renewFilters()
+                    }
+                }
+
+                Log.w("Relay", "Relay on OK $url, $eventId, $sucess, $message")
+                it.onSendResponse(this@Relay, eventId, sucess, message)
             }
             "AUTH" -> listeners.forEach {
                 // Log.w("Relay", "Relay$url, ${msg[1].asString}")
@@ -290,10 +303,18 @@ class Relay(
         }
     }
 
+    fun renewFilters() {
+        // Force update all filters after AUTH.
+        Client.allSubscriptions().forEach {
+            sendFilter(requestId = it)
+        }
+    }
+
     fun send(signedEvent: EventInterface) {
         checkNotInMainThread()
 
         if (signedEvent is RelayAuthEvent) {
+            authResponse.put(signedEvent.id, false)
             // specific protocol for this event.
             val event = """["AUTH",${signedEvent.toJson()}]"""
             socket?.send(event)
