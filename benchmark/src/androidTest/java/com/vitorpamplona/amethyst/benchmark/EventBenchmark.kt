@@ -74,7 +74,7 @@ class EventBenchmark {
         val event = Event.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue( event.hasVerifedSignature() )
+            assertTrue( event.hasVerifiedSignature() )
         }
     }
 

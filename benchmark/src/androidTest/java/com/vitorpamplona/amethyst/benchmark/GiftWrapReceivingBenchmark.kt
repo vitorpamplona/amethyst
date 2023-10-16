@@ -114,7 +114,7 @@ class GiftWrapReceivingBenchmark {
         )
 
         benchmarkRule.measureRepeated {
-            wrap.hasVerifedSignature()
+            wrap.hasVerifiedSignature()
         }
     }
 

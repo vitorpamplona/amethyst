@@ -217,8 +217,15 @@ open class Event(
         return "nostr:${toNIP19()}"
     }
 
-    fun hasCorrectIDHash() = id.equals(generateId())
-    fun hasVerifedSignature() = CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+    fun hasCorrectIDHash(): Boolean {
+        if (id.isEmpty()) return false
+        return id.equals(generateId())
+    }
+
+    fun hasVerifiedSignature(): Boolean {
+        if (id.isEmpty() || sig.isEmpty()) return false
+        return CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+    }
 
     /**
      * Checks if the ID is correct and then if the pubKey's secret key signed the event.
@@ -233,14 +240,14 @@ open class Event(
                 """.trimIndent()
             )
         }
-        if (!hasVerifedSignature()) {
+        if (!hasVerifiedSignature()) {
             throw Exception("""Bad signature!""")
         }
     }
 
     override fun hasValidSignature(): Boolean {
         return try {
-            hasCorrectIDHash() && hasVerifedSignature()
+            hasCorrectIDHash() && hasVerifiedSignature()
         } catch (e: Exception) {
             Log.w("Event", "Event $id does not have a valid signature: ${toJson()}", e)
             false
