@@ -54,6 +54,7 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
 import coil.Coil
+import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -751,12 +752,15 @@ fun SimpleTextSpinner(
 fun RenderOption(option: Name) {
     when (option) {
         is GeoHashName -> {
-            LoadCityName(option.geoHashTag) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
+            val geohash = runCatching { option.geoHashTag.toGeoHash() }.getOrNull()
+            if (geohash != null) {
+                LoadCityName(geohash) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
             }
         }
