@@ -17,6 +17,7 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -205,6 +206,28 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             } else {
                 LocalCache.justConsume(event, relay)
             }
+        }
+    }
+
+    override fun markAsSeenOnRelay(eventId: String, relay: Relay) {
+        super.markAsSeenOnRelay(eventId, relay)
+
+        val note = LocalCache.getNoteIfExists(eventId) ?: return
+        val privKey = account.keyPair.privKey ?: return
+
+        val noteEvent = note.event ?: return
+        markInnerAsSeenOnRelay(noteEvent, privKey, relay)
+    }
+
+    private fun markInnerAsSeenOnRelay(noteEvent: EventInterface, privKey: ByteArray, relay: Relay) {
+        LocalCache.getNoteIfExists(noteEvent.id())?.addRelay(relay)
+
+        if (noteEvent is GiftWrapEvent) {
+            val gift = noteEvent.cachedGift(privKey) ?: return
+            markInnerAsSeenOnRelay(gift, privKey, relay)
+        } else if (noteEvent is SealedGossipEvent) {
+            val rumor = noteEvent.cachedGossip(privKey) ?: return
+            markInnerAsSeenOnRelay(rumor, privKey, relay)
         }
     }
 

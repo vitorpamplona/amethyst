@@ -7,6 +7,8 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 
 class NIP24Factory {
+    data class Result(val msg: Event, val wraps: List<GiftWrapEvent>)
+
     fun createMsgNIP24(
         msg: String,
         to: List<HexKey>,
@@ -18,7 +20,7 @@ class NIP24Factory {
         markAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
         geohash: String? = null
-    ): List<GiftWrapEvent> {
+    ): Result {
         val senderPublicKey = keyPair.pubKey.toHexKey()
 
         val senderMessage = ChatMessageEvent.create(
@@ -34,19 +36,22 @@ class NIP24Factory {
             geohash = geohash
         )
 
-        return to.plus(senderPublicKey).map {
-            GiftWrapEvent.create(
-                event = SealedGossipEvent.create(
-                    event = senderMessage,
-                    encryptTo = it,
-                    privateKey = keyPair.privKey!!
-                ),
-                recipientPubKey = it
-            )
-        }
+        return Result(
+            msg = senderMessage,
+            wraps = to.plus(senderPublicKey).map {
+                GiftWrapEvent.create(
+                    event = SealedGossipEvent.create(
+                        event = senderMessage,
+                        encryptTo = it,
+                        privateKey = keyPair.privKey!!
+                    ),
+                    recipientPubKey = it
+                )
+            }
+        )
     }
 
-    fun createReactionWithinGroup(content: String, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): List<GiftWrapEvent> {
+    fun createReactionWithinGroup(content: String, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): Result {
         val senderPublicKey = from.pubKey.toHexKey()
 
         val senderReaction = ReactionEvent.create(
@@ -55,19 +60,22 @@ class NIP24Factory {
             from
         )
 
-        return to.plus(senderPublicKey).map {
-            GiftWrapEvent.create(
-                event = SealedGossipEvent.create(
-                    event = senderReaction,
-                    encryptTo = it,
-                    privateKey = from.privKey!!
-                ),
-                recipientPubKey = it
-            )
-        }
+        return Result(
+            msg = senderReaction,
+            wraps = to.plus(senderPublicKey).map {
+                GiftWrapEvent.create(
+                    event = SealedGossipEvent.create(
+                        event = senderReaction,
+                        encryptTo = it,
+                        privateKey = from.privKey!!
+                    ),
+                    recipientPubKey = it
+                )
+            }
+        )
     }
 
-    fun createReactionWithinGroup(emojiUrl: EmojiUrl, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): List<GiftWrapEvent> {
+    fun createReactionWithinGroup(emojiUrl: EmojiUrl, originalNote: EventInterface, to: List<HexKey>, from: KeyPair): Result {
         val senderPublicKey = from.pubKey.toHexKey()
 
         val senderReaction = ReactionEvent.create(
@@ -76,16 +84,19 @@ class NIP24Factory {
             from
         )
 
-        return to.plus(senderPublicKey).map {
-            GiftWrapEvent.create(
-                event = SealedGossipEvent.create(
-                    event = senderReaction,
-                    encryptTo = it,
-                    privateKey = from.privKey!!
-                ),
-                recipientPubKey = it
-            )
-        }
+        return Result(
+            msg = senderReaction,
+            wraps = to.plus(senderPublicKey).map {
+                GiftWrapEvent.create(
+                    event = SealedGossipEvent.create(
+                        event = senderReaction,
+                        encryptTo = it,
+                        privateKey = from.privKey!!
+                    ),
+                    recipientPubKey = it
+                )
+            }
+        )
     }
 
     fun createTextNoteNIP24(
@@ -103,7 +114,7 @@ class NIP24Factory {
         directMentions: Set<HexKey>,
         zapRaiserAmount: Long? = null,
         geohash: String? = null
-    ): List<GiftWrapEvent> {
+    ): Result {
         val senderPublicKey = keyPair.pubKey.toHexKey()
 
         val senderMessage = TextNoteEvent.create(
@@ -122,15 +133,18 @@ class NIP24Factory {
             geohash = geohash
         )
 
-        return to.plus(senderPublicKey).map {
-            GiftWrapEvent.create(
-                event = SealedGossipEvent.create(
-                    event = senderMessage,
-                    encryptTo = it,
-                    privateKey = keyPair.privKey!!
-                ),
-                recipientPubKey = it
-            )
-        }
+        return Result(
+            msg = senderMessage,
+            wraps = to.plus(senderPublicKey).map {
+                GiftWrapEvent.create(
+                    event = SealedGossipEvent.create(
+                        event = senderMessage,
+                        encryptTo = it,
+                        privateKey = keyPair.privKey!!
+                    ),
+                    recipientPubKey = it
+                )
+            }
+        )
     }
 }

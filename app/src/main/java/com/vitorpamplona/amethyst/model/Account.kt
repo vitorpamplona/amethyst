@@ -406,7 +406,7 @@ class Account(
                                 )
                             }
 
-                            broadcastPrivately(giftWraps)
+                            broadcastPrivately(NIP24Factory.Result(senderReaction, giftWraps))
                         } else {
                             val giftWraps = NIP24Factory().createReactionWithinGroup(
                                 emojiUrl = emojiUrl,
@@ -459,7 +459,7 @@ class Account(
                             recipientPubKey = it
                         )
 
-                        broadcastPrivately(listOf(giftWraps))
+                        broadcastPrivately(NIP24Factory.Result(senderReaction, listOf(giftWraps)))
                     }
                 } else {
                     val giftWraps = NIP24Factory().createReactionWithinGroup(
@@ -1662,7 +1662,7 @@ class Account(
                         event = sealedEvent,
                         recipientPubKey = it
                     )
-                    broadcastPrivately(listOf(giftWraps))
+                    broadcastPrivately(NIP24Factory.Result(chatMessageEvent, listOf(giftWraps)))
                 }
             }
         } else {
@@ -1683,42 +1683,53 @@ class Account(
         }
     }
 
-    fun broadcastPrivately(signedEvents: List<GiftWrapEvent>) {
-        signedEvents.forEach {
-            Client.send(it)
+    fun broadcastPrivately(signedEvents: NIP24Factory.Result) {
+        val mine = signedEvents.wraps.filter {
+            (it.recipientPubKey() == keyPair.pubKey.toHexKey())
+        }
 
+        mine.forEach {
             // Only keep in cache the GiftWrap for the account.
-            if (it.recipientPubKey() == keyPair.pubKey.toHexKey()) {
-                if (loginWithExternalSigner) {
-                    ExternalSignerUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
-                    val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[it.id] ?: ""
-                    if (decryptedContent.isEmpty()) return
-                    it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
-                        if (cached is SealedGossipEvent) {
-                            ExternalSignerUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
-                            val localDecryptedContent = ExternalSignerUtils.cachedDecryptedContent[cached.id] ?: ""
-                            if (localDecryptedContent.isEmpty()) return
-                            cached.cachedGossip(keyPair.pubKey, localDecryptedContent)?.let { gossip ->
-                                LocalCache.justConsume(gossip, null)
-                            }
-                        } else {
-                            LocalCache.justConsume(it, null)
+            if (loginWithExternalSigner) {
+                ExternalSignerUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
+                val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[it.id] ?: ""
+                if (decryptedContent.isEmpty()) return
+                it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
+                    if (cached is SealedGossipEvent) {
+                        ExternalSignerUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
+                        val localDecryptedContent = ExternalSignerUtils.cachedDecryptedContent[cached.id] ?: ""
+                        if (localDecryptedContent.isEmpty()) return
+                        cached.cachedGossip(keyPair.pubKey, localDecryptedContent)?.let { gossip ->
+                            LocalCache.justConsume(gossip, null)
                         }
-                    }
-                } else {
-                    it.cachedGift(keyPair.privKey!!)?.let {
-                        if (it is SealedGossipEvent) {
-                            it.cachedGossip(keyPair.privKey!!)?.let {
-                                LocalCache.justConsume(it, null)
-                            }
-                        } else {
-                            LocalCache.justConsume(it, null)
-                        }
+                    } else {
+                        LocalCache.justConsume(it, null)
                     }
                 }
-
-                LocalCache.consume(it, null)
+            } else {
+                it.cachedGift(keyPair.privKey!!)?.let {
+                    if (it is SealedGossipEvent) {
+                        it.cachedGossip(keyPair.privKey!!)?.let {
+                            LocalCache.justConsume(it, null)
+                        }
+                    } else {
+                        LocalCache.justConsume(it, null)
+                    }
+                }
             }
+
+            LocalCache.consume(it, null)
+        }
+
+        val mineNote = LocalCache.getNoteIfExists(mine.first().id)
+
+        signedEvents.wraps.forEach {
+            // Creates an alias
+            if (mineNote != null && it.recipientPubKey() != keyPair.pubKey.toHexKey()) {
+                LocalCache.getOrAddAliasNote(it.id, mineNote)
+            }
+
+            Client.send(it)
         }
     }
 

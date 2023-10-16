@@ -166,6 +166,18 @@ object LocalCache {
         return null
     }
 
+    fun getOrAddAliasNote(idHex: String, note: Note): Note {
+        checkNotInMainThread()
+
+        return notes.get(idHex) ?: run {
+            require(isValidHex(idHex)) {
+                "$idHex is not a valid hex"
+            }
+
+            notes.putIfAbsent(idHex, note) ?: note
+        }
+    }
+
     fun getOrCreateNote(idHex: String): Note {
         checkNotInMainThread()
 
