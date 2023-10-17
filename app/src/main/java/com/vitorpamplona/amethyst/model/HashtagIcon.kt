@@ -8,7 +8,7 @@ import com.vitorpamplona.amethyst.R
 fun checkForHashtagWithIcon(tag: String, primary: Color): HashtagIcon? {
     return when (tag.lowercase()) {
         "bitcoin", "btc", "timechain", "bitcoiner", "bitcoiners" -> HashtagIcon(R.drawable.ht_btc, "Bitcoin", Color.Unspecified, Modifier.padding(2.dp, 2.dp, 0.dp, 0.dp))
-        "nostr", "nostrich", "nostriches" -> HashtagIcon(R.drawable.ht_nostr, "Nostr", Color.Unspecified, Modifier.padding(1.dp, 2.dp, 0.dp, 0.dp))
+        "nostr", "nostrich", "nostriches", "thenostr" -> HashtagIcon(R.drawable.ht_nostr, "Nostr", Color.Unspecified, Modifier.padding(1.dp, 2.dp, 0.dp, 0.dp))
         "lightning", "lightningnetwork" -> HashtagIcon(R.drawable.ht_lightning, "Lightning", Color.Unspecified, Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp))
         "zap", "zaps", "zapper", "zappers", "zapping", "zapped", "zapathon", "zapraiser", "zaplife", "zapchain" -> HashtagIcon(R.drawable.zap, "Zap", Color.Unspecified, Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp))
         "amethyst" -> HashtagIcon(R.drawable.amethyst, "Amethyst", Color.Unspecified, Modifier.padding(3.dp, 2.dp, 0.dp, 0.dp))
