@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.content.Context
+import android.os.Debug
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -887,6 +888,17 @@ fun debugState(context: Context) {
     NostrThreadDataSource.printCounter()
     NostrUserProfileDataSource.printCounter()
     NostrVideoDataSource.printCounter()
+
+    val totalMemoryKb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
+    val freeMemoryKb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
+
+    val jvmHeapAllocatedKb = totalMemoryKb - freeMemoryKb
+
+    Log.d("STATE DUMP", "Total Heap Allocated: " + jvmHeapAllocatedKb + " MB")
+
+    val nativeHeap = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
+
+    Log.d("STATE DUMP", "Total Native Heap Allocated: " + nativeHeap + " MB")
 
     Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
 
