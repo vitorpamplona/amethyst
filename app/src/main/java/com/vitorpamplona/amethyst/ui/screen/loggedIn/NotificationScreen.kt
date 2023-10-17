@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -30,8 +31,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.patrykandpatrick.vico.compose.axis.axisLabelComponent
 import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
+import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.endAxis
+import com.patrykandpatrick.vico.compose.axis.vertical.rememberEndAxis
+import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
@@ -213,7 +218,7 @@ private fun ObserveAndShowChart(
     lineChartCount: LineChart,
     lineChartZaps: LineChart
 ) {
-    val axisModel by model.axisLabels.collectAsState()
+    val axisModel = model.axisLabels.collectAsState()
     val chartModel by model.chartModel.collectAsState()
     chartModel?.let {
         Chart(
@@ -221,13 +226,14 @@ private fun ObserveAndShowChart(
                 lineChartCount.plus(lineChartZaps)
             },
             model = it,
-            startAxis = startAxis(
+            startAxis = rememberStartAxis(
                 valueFormatter = CountAxisValueFormatter()
             ),
-            endAxis = endAxis(
+            endAxis = rememberEndAxis(
+                label = axisLabelComponent(color = BitcoinOrange),
                 valueFormatter = AmountAxisValueFormatter()
             ),
-            bottomAxis = bottomAxis(
+            bottomAxis = rememberBottomAxis(
                 valueFormatter = LabelValueFormatter(axisModel)
             )
         )
@@ -235,12 +241,12 @@ private fun ObserveAndShowChart(
 }
 
 @Stable
-class LabelValueFormatter(val axisLabels: List<String>) : AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
+class LabelValueFormatter(val axisLabels: State<List<String>>) : AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
     override fun formatValue(
         value: Float,
         chartValues: ChartValues
     ): String {
-        return axisLabels[value.roundToInt()]
+        return axisLabels.value[value.roundToInt()]
     }
 }
 
