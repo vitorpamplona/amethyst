@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
+import com.vitorpamplona.amethyst.service.playback.VideoCache
 
 class Amethyst : Application() {
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

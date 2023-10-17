@@ -108,7 +108,7 @@
             tools:replace="screenOrientation" />
 
         <service
-            android:name=".PlaybackService"
+            android:name=".service.playback.PlaybackService"
             android:foregroundServiceType="mediaPlayback"
             android:stopWithTask="true"
             android:exported="true">

@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst
+package com.vitorpamplona.amethyst.service.playback
 
 import android.util.LruCache
 

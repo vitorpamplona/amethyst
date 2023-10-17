@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst
+package com.vitorpamplona.amethyst.service.playback
 
 import android.content.Context
 import androidx.media3.common.util.UnstableApi

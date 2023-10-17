@@ -87,6 +87,7 @@ object LocalPreferences {
     private const val comma = ","
 
     private var _currentAccount: String? = null
+    private var _savedAccounts: List<String>? = null
 
     fun currentAccount(): String? {
         if (_currentAccount == null) {
@@ -104,8 +105,6 @@ object LocalPreferences {
             }.apply()
         }
     }
-
-    private var _savedAccounts: List<String>? = null
 
     private fun savedAccounts(): List<String> {
         if (_savedAccounts == null) {

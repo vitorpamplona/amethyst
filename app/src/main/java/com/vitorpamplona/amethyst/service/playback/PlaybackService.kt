@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst
+package com.vitorpamplona.amethyst.service.playback
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -8,6 +8,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.HttpClient
 
 @UnstableApi // Extend MediaSessionService
@@ -23,7 +24,12 @@ class PlaybackService : MediaSessionService() {
     }
 
     fun newProgressiveDataSource(): MediaSource.Factory {
-        return ProgressiveMediaSource.Factory(VideoCache.get(Amethyst.instance, HttpClient.getHttpClient()))
+        return ProgressiveMediaSource.Factory(
+            VideoCache.get(
+                Amethyst.instance,
+                HttpClient.getHttpClient()
+            )
+        )
     }
 
     fun lazyHlsDS(): MultiPlayerPlaybackManager {
