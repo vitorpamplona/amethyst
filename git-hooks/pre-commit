@@ -6,6 +6,11 @@ NO_COLOR='\033[0m'
 echo "*********************************************************"
 echo "Running git pre-commit hook. Running Static analysis... "
 echo "*********************************************************"
+echo ""
+echo "Java Version: "
+echo "$JAVA_HOME"
+echo "$(java -version)"
+echo "Running test... "
 
 ./gradlew ktlintCheck
 
