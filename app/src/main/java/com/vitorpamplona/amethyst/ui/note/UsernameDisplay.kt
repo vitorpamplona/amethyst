@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -35,7 +36,7 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true, textColor: Color = Color.Unspecified) {
     val authorState by baseNote.live().metadata.map {
         it.note.author
-    }.observeAsState(baseNote.author)
+    }.distinctUntilChanged().observeAsState(baseNote.author)
 
     Crossfade(targetState = authorState, modifier = weight) {
         it?.let {
