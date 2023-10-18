@@ -3,6 +3,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -40,6 +43,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -323,13 +327,18 @@ fun MainScreen(
                     }
                 },
                 floatingActionButton = {
-                    FloatingButtons(
-                        navState,
-                        accountViewModel,
-                        accountStateViewModel,
-                        nav,
-                        navBottomRow
-                    )
+                    AnimatedVisibility(
+                        visible = shouldShow.value,
+                        enter = fadeIn() + expandIn { IntSize(width = 1, height = 1) }
+                    ) {
+                        FloatingButtons(
+                            navState,
+                            accountViewModel,
+                            accountStateViewModel,
+                            nav,
+                            navBottomRow
+                        )
+                    }
                 }
             ) {
                 Column(
