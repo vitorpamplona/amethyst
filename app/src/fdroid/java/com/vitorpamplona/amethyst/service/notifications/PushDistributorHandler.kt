@@ -16,7 +16,7 @@ class PushDistributorHandler() : PushDistributorActions {
     private var endpointInternal = ""
     val endpoint = endpointInternal
 
-    fun getEndpoint() = endpoint
+    fun getSavedEndpoint() = endpoint
     fun setEndpoint(newEndpoint: String) {
         endpointInternal = newEndpoint
     }
