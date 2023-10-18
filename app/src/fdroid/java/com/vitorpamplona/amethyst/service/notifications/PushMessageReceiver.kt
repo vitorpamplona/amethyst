@@ -20,17 +20,22 @@ import kotlinx.coroutines.launch
 import org.unifiedpush.android.connector.MessagingReceiver
 
 class PushMessageReceiver : MessagingReceiver() {
+    private val TAG = "Amethyst-OSSPushReceiver"
     private val appContext = Amethyst.instance.applicationContext
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val eventCache = LruCache<String, String>(100)
-    private val pushHandler = PushDistributorHandler()
+    private val pushHandler = PushDistributorHandler
 
     override fun onMessage(context: Context, message: ByteArray, instance: String) {
         val messageStr = String(message)
-        Log.d("Amethyst-OSSPush", "New message ${message.decodeToString()} for Instance: $instance")
+        Log.d(TAG, "New message ${message.decodeToString()} for Instance: $instance")
         scope.launch {
-            parseMessage(messageStr)?.let {
-                receiveIfNew(it)
+            try {
+                parseMessage(messageStr)?.let {
+                    receiveIfNew(it)
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Message could not be parsed: ${e.message}")
             }
         }
     }
@@ -50,7 +55,7 @@ class PushMessageReceiver : MessagingReceiver() {
     }
 
     override fun onNewEndpoint(context: Context, endpoint: String, instance: String) {
-        Log.d("Amethyst-OSSPush", "New endpoint provided:- $endpoint for Instance: $instance")
+        Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance")
         pushHandler.setEndpoint(endpoint)
         scope.launch(Dispatchers.IO) {
             RegisterAccounts(LocalPreferences.allSavedAccounts()).go(endpoint)
@@ -62,17 +67,22 @@ class PushMessageReceiver : MessagingReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val intentData = intent.dataString
         val intentAction = intent.action.toString()
-        Log.d("Amethyst-OSSPush", "Intent Data:- $intentData Intent Action: $intentAction")
+        Log.d(TAG, "Intent Data:- $intentData Intent Action: $intentAction")
         super.onReceive(context, intent)
     }
 
     override fun onRegistrationFailed(context: Context, instance: String) {
+        Log.d(TAG, "Registration failed for Instance: $instance")
         scope.cancel()
-        super.onRegistrationFailed(context, instance)
+        pushHandler.forceRemoveDistributor(context)
     }
 
     override fun onUnregistered(context: Context, instance: String) {
-        super.onUnregistered(context, instance)
+        val removedEndpoint = pushHandler.endpoint
+        Log.d(TAG, "Endpoint: $removedEndpoint removed for Instance: $instance")
+        Log.d(TAG, "App is unregistered. ")
+        pushHandler.forceRemoveDistributor(context)
+        pushHandler.removeEndpoint()
     }
 
     fun notificationManager(): NotificationManager {
