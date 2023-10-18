@@ -12,7 +12,7 @@ object PushNotificationUtils {
             return@with
         }
         try {
-            RegisterAccounts(accounts).go(pushHandler.getEndpoint())
+            RegisterAccounts(accounts).go(pushHandler.getSavedEndpoint())
         } catch (e: Exception) {
             Log.d("Amethyst-OSSPushUtils", "Failed to get endpoint.")
         }
