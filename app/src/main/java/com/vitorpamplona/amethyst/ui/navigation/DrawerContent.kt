@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,7 +27,6 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerState
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,10 +67,8 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -89,11 +85,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawerContent(
     nav: (String) -> Unit,
@@ -102,11 +96,7 @@ fun DrawerContent(
     accountViewModel: AccountViewModel
 ) {
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     ModalDrawerSheet(
@@ -138,7 +128,12 @@ fun DrawerContent(
                 accountViewModel
             )
 
-            BottomContent(accountViewModel.account.userProfile(), drawerState, automaticallyShowProfilePicture, nav)
+            BottomContent(
+                accountViewModel.account.userProfile(),
+                drawerState,
+                automaticallyShowProfilePicture,
+                nav
+            )
         }
     }
 }
@@ -165,11 +160,7 @@ fun ProfileContent(
     val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
 
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     Box {
@@ -574,7 +565,9 @@ fun ListContent(
                 conectOrbotDialogOpen = false
                 disconnectTorDialog = false
                 checked = true
-                enableTor(accountViewModel.account, true, proxyPort, context, coroutineScope)
+                coroutineScope.launch(Dispatchers.IO) {
+                    enableTor(accountViewModel.account, true, proxyPort)
+                }
             },
             onError = {
                 accountViewModel.toast(
@@ -602,7 +595,13 @@ fun ListContent(
                     onClick = {
                         disconnectTorDialog = false
                         checked = false
-                        enableTor(accountViewModel.account, false, proxyPort, context, coroutineScope)
+                        coroutineScope.launch(Dispatchers.IO) {
+                            enableTor(
+                                accountViewModel.account,
+                                false,
+                                proxyPort
+                            )
+                        }
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -621,20 +620,16 @@ fun ListContent(
     }
 }
 
-private fun enableTor(
+private suspend fun enableTor(
     account: Account,
     checked: Boolean,
-    portNumber: MutableState<String>,
-    context: Context,
-    scope: CoroutineScope
+    portNumber: MutableState<String>
 ) {
     account.proxyPort = portNumber.value.toInt()
     account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
-    scope.launch(Dispatchers.IO) {
-        LocalPreferences.saveToEncryptedStorage(account)
-        ServiceManager.pause()
-        ServiceManager.start(context)
-    }
+    LocalPreferences.saveToEncryptedStorage(account)
+    ServiceManager.pause()
+    ServiceManager.start()
 }
 
 @Composable

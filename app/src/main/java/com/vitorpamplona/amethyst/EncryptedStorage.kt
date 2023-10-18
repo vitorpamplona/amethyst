@@ -6,6 +6,7 @@ import androidx.security.crypto.MasterKey
 object EncryptedStorage {
     private const val PREFERENCES_NAME = "secret_keeper"
 
+    // returns the preferences for each account or a global file if null.
     fun prefsFileName(npub: String? = null): String {
         return if (npub == null) PREFERENCES_NAME else "${PREFERENCES_NAME}_$npub"
     }

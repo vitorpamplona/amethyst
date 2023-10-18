@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,7 +23,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,23 +35,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
-import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
+import com.vitorpamplona.amethyst.model.parseThemeType
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableMap
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
@@ -79,7 +76,7 @@ fun Context.getLocaleListFromXml(): LocaleListCompat {
     return LocaleListCompat.forLanguageTags(tagsList.joinToString(","))
 }
 
-fun Context.getLangPreferenceDropdownEntries(): Map<String, String> {
+fun Context.getLangPreferenceDropdownEntries(): ImmutableMap<String, String> {
     val localeList = getLocaleListFromXml()
     val map = mutableMapOf<String, String>()
 
@@ -88,13 +85,13 @@ fun Context.getLangPreferenceDropdownEntries(): Map<String, String> {
             map.put(it!!.getDisplayName(it).replaceFirstChar { char -> char.uppercase() }, it.toLanguageTag())
         }
     }
-    return map
+    return map.toImmutableMap()
 }
 
-fun getLanguageIndex(languageEntries: Map<String, String>): Int {
-    val language = LocalPreferences.getPreferredLanguage()
+fun getLanguageIndex(languageEntries: ImmutableMap<String, String>, sharedPreferencesViewModel: SharedPreferencesViewModel): Int {
+    val language = sharedPreferencesViewModel.sharedPrefs.language
     var languageIndex = -1
-    if (language.isNotBlank()) {
+    if (language != null) {
         languageIndex = languageEntries.values.toTypedArray().indexOf(language)
     } else {
         languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
@@ -104,44 +101,43 @@ fun getLanguageIndex(languageEntries: Map<String, String>): Int {
     return languageIndex
 }
 
-@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun SettingsScreen(
-    accountViewModel: AccountViewModel,
-    themeViewModel: ThemeViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
-    val scope = rememberCoroutineScope()
     val selectedItens = persistentListOf(
-        TitleExplainer(stringResource(ConnectivityType.ALWAYS.reourceId)),
-        TitleExplainer(stringResource(ConnectivityType.WIFI_ONLY.reourceId)),
-        TitleExplainer(stringResource(ConnectivityType.NEVER.reourceId))
+        TitleExplainer(stringResource(ConnectivityType.ALWAYS.resourceId)),
+        TitleExplainer(stringResource(ConnectivityType.WIFI_ONLY.resourceId)),
+        TitleExplainer(stringResource(ConnectivityType.NEVER.resourceId))
     )
 
     val themeItens = persistentListOf(
-        TitleExplainer(stringResource(R.string.system)),
-        TitleExplainer(stringResource(R.string.light)),
-        TitleExplainer(stringResource(R.string.dark))
+        TitleExplainer(stringResource(ThemeType.SYSTEM.resourceId)),
+        TitleExplainer(stringResource(ThemeType.LIGHT.resourceId)),
+        TitleExplainer(stringResource(ThemeType.DARK.resourceId))
     )
 
     val booleanItems = persistentListOf(
-        TitleExplainer(stringResource(ConnectivityType.ALWAYS.reourceId)),
-        TitleExplainer(stringResource(ConnectivityType.NEVER.reourceId))
+        TitleExplainer(stringResource(ConnectivityType.ALWAYS.resourceId)),
+        TitleExplainer(stringResource(ConnectivityType.NEVER.resourceId))
     )
 
-    val settings = accountViewModel.account.settings
-    val showImagesIndex = settings.automaticallyShowImages.screenCode
-    val videoIndex = settings.automaticallyStartPlayback.screenCode
-    val linkIndex = settings.automaticallyShowUrlPreview.screenCode
-    val hideNavBarsIndex = settings.automaticallyHideNavigationBars.screenCode
-    val profilePictureIndex = settings.automaticallyShowProfilePictures.screenCode
-
-    val themeIndex = themeViewModel.theme.value ?: 0
+    val showImagesIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowImages.screenCode
+    val videoIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyStartPlayback.screenCode
+    val linkIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowUrlPreview.screenCode
+    val hideNavBarsIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyHideNavigationBars.screenCode
+    val profilePictureIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowProfilePictures.screenCode
+    val themeIndex = sharedPreferencesViewModel.sharedPrefs.theme.screenCode
 
     val context = LocalContext.current
 
-    val languageEntries = context.getLangPreferenceDropdownEntries()
-    val languageList = languageEntries.keys.map { TitleExplainer(it) }.toImmutableList()
-    val languageIndex = getLanguageIndex(languageEntries)
+    val languageEntries = remember {
+        context.getLangPreferenceDropdownEntries()
+    }
+    val languageList = remember {
+        languageEntries.keys.map { TitleExplainer(it) }.toImmutableList()
+    }
+    val languageIndex = getLanguageIndex(languageEntries, sharedPreferencesViewModel)
 
     Column(
         Modifier
@@ -155,16 +151,7 @@ fun SettingsScreen(
             languageList,
             languageIndex
         ) {
-            GlobalScope.launch(Dispatchers.Main) {
-                val job = scope.launch(Dispatchers.IO) {
-                    val locale = languageEntries[languageList[it].title]
-                    accountViewModel.account.settings.preferredLanguage = locale
-                    LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-                }
-                job.join()
-                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageEntries[languageList[it].title])
-                AppCompatDelegate.setApplicationLocales(appLocale)
-            }
+            sharedPreferencesViewModel.updateLanguage(languageEntries[languageList[it].title])
         }
 
         Spacer(modifier = HalfVertSpacer)
@@ -175,10 +162,7 @@ fun SettingsScreen(
             themeItens,
             themeIndex
         ) {
-            themeViewModel.onChange(it)
-            scope.launch(Dispatchers.IO) {
-                LocalPreferences.updateTheme(it)
-            }
+            sharedPreferencesViewModel.updateTheme(parseThemeType(it))
         }
 
         Spacer(modifier = HalfVertSpacer)
@@ -189,12 +173,7 @@ fun SettingsScreen(
             selectedItens,
             showImagesIndex
         ) {
-            val automaticallyShowImages = parseConnectivityType(it)
-
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.updateAutomaticallyShowImages(automaticallyShowImages)
-                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-            }
+            sharedPreferencesViewModel.updateAutomaticallyShowImages(parseConnectivityType(it))
         }
 
         Spacer(modifier = HalfVertSpacer)
@@ -205,12 +184,7 @@ fun SettingsScreen(
             selectedItens,
             videoIndex
         ) {
-            val automaticallyStartPlayback = parseConnectivityType(it)
-
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
-                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-            }
+            sharedPreferencesViewModel.updateAutomaticallyStartPlayback(parseConnectivityType(it))
         }
 
         Spacer(modifier = HalfVertSpacer)
@@ -221,12 +195,7 @@ fun SettingsScreen(
             selectedItens,
             linkIndex
         ) {
-            val automaticallyShowUrlPreview = parseConnectivityType(it)
-
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
-                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-            }
+            sharedPreferencesViewModel.updateAutomaticallyShowUrlPreview(parseConnectivityType(it))
         }
 
         SettingsRow(
@@ -235,12 +204,7 @@ fun SettingsScreen(
             selectedItens,
             profilePictureIndex
         ) {
-            val automaticallyShowProfilePicture = parseConnectivityType(it)
-
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.updateAutomaticallyShowProfilePicture(automaticallyShowProfilePicture)
-                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-            }
+            sharedPreferencesViewModel.updateAutomaticallyShowProfilePicture(parseConnectivityType(it))
         }
 
         Spacer(modifier = HalfVertSpacer)
@@ -251,12 +215,7 @@ fun SettingsScreen(
             booleanItems,
             hideNavBarsIndex
         ) {
-            val automaticallyHideNavBars = parseBooleanType(it)
-
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.updateAutomaticallyHideNavBars(automaticallyHideNavBars)
-                LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
-            }
+            sharedPreferencesViewModel.updateAutomaticallyHideNavBars(parseBooleanType(it))
         }
     }
 }

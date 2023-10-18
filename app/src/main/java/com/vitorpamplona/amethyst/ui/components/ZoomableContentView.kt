@@ -78,9 +78,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.service.BlurHashRequester
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
@@ -276,21 +274,14 @@ private fun LocalImageView(
     content: ZoomableLocalImage,
     mainImageModifier: Modifier,
     topPaddingForControllers: Dp = Dp.Unspecified,
-    accountViewModel: AccountViewModel?,
+    accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false
 ) {
     if (content.localFile != null && content.localFile.exists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
             val showImage = remember {
                 mutableStateOf(
-                    if (alwayShowImage) { true } else {
-                        when (accountViewModel?.account?.settings?.automaticallyShowImages) {
-                            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-                            ConnectivityType.NEVER -> false
-                            ConnectivityType.ALWAYS -> true
-                            else -> true
-                        }
-                    }
+                    if (alwayShowImage) true else accountViewModel.settings.showImages.value
                 )
             }
 
@@ -350,20 +341,13 @@ private fun UrlImageView(
     content: ZoomableUrlImage,
     mainImageModifier: Modifier,
     topPaddingForControllers: Dp = Dp.Unspecified,
-    accountViewModel: AccountViewModel?,
+    accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val showImage = remember {
-            mutableStateOf(
-                if (alwayShowImage) { true } else {
-                    when (accountViewModel?.account?.settings?.automaticallyShowImages) {
-                        ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-                        ConnectivityType.NEVER -> false
-                        ConnectivityType.ALWAYS -> true
-                        else -> true
-                    }
-                }
+            mutableStateOf<Boolean>(
+                if (alwayShowImage) true else accountViewModel.settings.showImages.value
             )
         }
 

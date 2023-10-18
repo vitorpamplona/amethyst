@@ -95,12 +95,10 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -884,11 +882,7 @@ private fun DrawAdditionalInfo(
     val clipboardManager = LocalClipboardManager.current
 
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     user.toBestDisplayName().let {
@@ -1208,11 +1202,7 @@ private fun DisplayBadges(
     nav: (String) -> Unit
 ) {
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     LoadAddressableNote(

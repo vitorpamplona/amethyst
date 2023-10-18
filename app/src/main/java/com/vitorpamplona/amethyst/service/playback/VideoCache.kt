@@ -10,7 +10,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
 import java.io.File
 
-@UnstableApi object VideoCache {
+@UnstableApi class VideoCache {
 
     var exoPlayerCacheSize: Long = 150 * 1024 * 1024 // 90MB
 
@@ -42,11 +42,7 @@ import java.io.File
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    fun get(context: Context, client: OkHttpClient): CacheDataSource.Factory {
-        if (!this::simpleCache.isInitialized) {
-            initFileCache(context)
-        }
-
+    fun get(client: OkHttpClient): CacheDataSource.Factory {
         // Renews the factory because OkHttpMight have changed.
         renewCacheFactory(client)
 

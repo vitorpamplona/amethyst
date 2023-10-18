@@ -8,19 +8,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel) {
     val automaticallyShowUrlPreview = remember {
-        when (accountViewModel.account.settings.automaticallyShowUrlPreview) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showUrlPreview.value
     }
 
     if (!automaticallyShowUrlPreview) {

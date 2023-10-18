@@ -17,9 +17,7 @@ import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayInformation
@@ -41,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
@@ -81,7 +80,7 @@ class StringToastMsg(val title: String, val msg: String) : ToastMsg()
 class ResourceToastMsg(val titleResId: Int, val resourceId: Int) : ToastMsg()
 
 @Stable
-class AccountViewModel(val account: Account) : ViewModel(), Dao {
+class AccountViewModel(val account: Account, val settings: SettingsState) : ViewModel(), Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountMarkAsReadUpdates = mutableStateOf(0)
@@ -127,36 +126,6 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         viewModelScope.launch {
             toasts.emit(ResourceToastMsg(titleResId, resourceId))
         }
-    }
-
-    fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: ConnectivityType
-    ) {
-        account.updateAutomaticallyStartPlayback(automaticallyStartPlayback)
-    }
-
-    fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: ConnectivityType
-    ) {
-        account.updateAutomaticallyShowUrlPreview(automaticallyShowUrlPreview)
-    }
-
-    fun updateAutomaticallyShowProfilePicture(
-        automaticallyShowProfilePicture: ConnectivityType
-    ) {
-        account.updateAutomaticallyShowProfilePicture(automaticallyShowProfilePicture)
-    }
-
-    fun updateAutomaticallyHideNavBars(
-        automaticallyHideHavBars: BooleanType
-    ) {
-        account.updateAutomaticallyHideHavBars(automaticallyHideHavBars)
-    }
-
-    fun updateAutomaticallyShowImages(
-        automaticallyShowImages: ConnectivityType
-    ) {
-        account.updateAutomaticallyShowImages(automaticallyShowImages)
     }
 
     fun isWriteable(): Boolean {
@@ -884,9 +853,9 @@ class AccountViewModel(val account: Account) : ViewModel(), Dao {
         }
     }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
+    class Factory(val account: Account, val settings: SettingsState) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
-            return AccountViewModel(account) as AccountViewModel
+            return AccountViewModel(account, settings) as AccountViewModel
         }
     }
 

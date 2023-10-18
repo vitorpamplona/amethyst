@@ -28,6 +28,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,8 +64,6 @@ import androidx.media3.session.MediaController
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.linc.audiowaveform.infiniteLinearGradient
-import com.vitorpamplona.amethyst.model.ConnectivityType
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
 import com.vitorpamplona.amethyst.ui.note.LyricsIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
@@ -202,14 +201,8 @@ fun VideoViewInner(
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     val automaticallyStartPlayback = remember {
-        mutableStateOf(
-            if (alwaysShowVideo) { true } else {
-                when (accountViewModel.account.settings.automaticallyStartPlayback) {
-                    ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-                    ConnectivityType.NEVER -> false
-                    ConnectivityType.ALWAYS -> true
-                }
-            }
+        mutableStateOf<Boolean>(
+            if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback.value
         )
     }
 
@@ -525,7 +518,7 @@ private fun RenderVideoPlayer(
     topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
+    automaticallyStartPlayback: State<Boolean>,
     activeOnScreen: MutableState<Boolean>,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)?
@@ -735,7 +728,7 @@ fun DrawWaveform(waveform: ImmutableList<Int>, waveformProgress: MutableState<Fl
 fun ControlWhenPlayerIsActive(
     controller: Player,
     keepPlaying: MutableState<Boolean>,
-    automaticallyStartPlayback: MutableState<Boolean>,
+    automaticallyStartPlayback: State<Boolean>,
     activeOnScreen: MutableState<Boolean>
 ) {
     LaunchedEffect(key1 = activeOnScreen.value) {

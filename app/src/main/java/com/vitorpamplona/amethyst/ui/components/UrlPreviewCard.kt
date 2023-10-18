@@ -17,8 +17,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ConnectivityType
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -33,11 +31,7 @@ fun UrlPreviewCard(
     accountViewModel: AccountViewModel
 ) {
     val automaticallyShowUrlPreview = remember {
-        when (accountViewModel.account.settings.automaticallyShowUrlPreview) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showUrlPreview.value
     }
 
     if (!automaticallyShowUrlPreview) {

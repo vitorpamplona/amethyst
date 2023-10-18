@@ -82,7 +82,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -90,7 +89,6 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
@@ -696,11 +694,7 @@ fun ShortChannelHeader(
     } ?: return
 
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {

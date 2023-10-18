@@ -74,7 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
-import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -83,7 +83,7 @@ import kotlin.math.abs
 fun MainScreen(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
-    themeViewModel: ThemeViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
     val scope = rememberCoroutineScope()
     var openBottomSheet by rememberSaveable { mutableStateOf(false) }
@@ -243,7 +243,7 @@ fun MainScreen(
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val newOffset = bottomBarOffsetHeightPx.value + available.y
 
-                if (accountViewModel.account.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+                if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
                     val newBottomBarOffset = if (navState.value?.destination?.route !in InvertedLayouts) {
                         newOffset.coerceIn(-bottomBarHeightPx, 0f)
                     } else {
@@ -352,7 +352,7 @@ fun MainScreen(
                         userReactionsStatsModel = userReactionsStatsModel,
                         navController = navController,
                         accountViewModel = accountViewModel,
-                        themeViewModel = themeViewModel
+                        sharedPreferencesViewModel = sharedPreferencesViewModel
                     )
                 }
             }
@@ -432,6 +432,10 @@ fun FloatingButtons(
     val accountState by accountStateViewModel.accountContent.collectAsState()
 
     when (accountState) {
+        is AccountState.Loading -> {
+            // Does nothing.
+        }
+
         is AccountState.LoggedInViewOnly -> {
             if (accountViewModel.loggedInWithExternalSigner()) {
                 WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)

@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
+import android.util.Log
 import android.util.LruCache
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlin.time.measureTimedValue
 
 class PushNotificationReceiverService : FirebaseMessagingService() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -23,9 +25,12 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
     // this is called when a message is received
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         scope.launch(Dispatchers.IO) {
-            parseMessage(remoteMessage.data)?.let {
-                receiveIfNew(it)
+            val (value, elapsed) = measureTimedValue {
+                parseMessage(remoteMessage.data)?.let {
+                    receiveIfNew(it)
+                }
             }
+            Log.d("Time", "Notification processed in $elapsed")
         }
     }
 

@@ -149,6 +149,7 @@
     <string name="login">Login</string>
     <string name="generate_a_new_key">Generate a new key</string>
     <string name="loading_feed">Loading feed</string>
+    <string name="loading_account">Loading account</string>
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
     <string name="feed_is_empty">Feed is empty.</string>

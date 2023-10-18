@@ -17,15 +17,20 @@ import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.Settings
+import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
+import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 
@@ -81,22 +86,25 @@ private object PrefKeys {
     const val AUTOMATICALLY_HIDE_NAV_BARS = "automatically_hide_nav_bars"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
+
+    const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
+    const val SHARED_SETTINGS = "shared_settings"
 }
 
 object LocalPreferences {
     private const val comma = ","
 
     private var _currentAccount: String? = null
-    private var _savedAccounts: List<String>? = null
+    private var _savedAccounts: List<AccountInfo>? = null
 
-    fun currentAccount(): String? {
+    suspend fun currentAccount(): String? {
         if (_currentAccount == null) {
             _currentAccount = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
         }
         return _currentAccount
     }
 
-    private fun updateCurrentAccount(npub: String) {
+    private suspend fun updateCurrentAccount(npub: String) {
         if (_currentAccount != npub) {
             _currentAccount = npub
 
@@ -106,20 +114,41 @@ object LocalPreferences {
         }
     }
 
-    private fun savedAccounts(): List<String> {
+    private fun savedAccounts(): List<AccountInfo> {
         if (_savedAccounts == null) {
-            _savedAccounts = encryptedPreferences()
-                .getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(comma) ?: listOf()
+            with(encryptedPreferences()) {
+                val newSystemOfAccounts = getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
+                    Event.mapper.readValue<List<AccountInfo>>(it)
+                }
+
+                if (newSystemOfAccounts != null && newSystemOfAccounts.isNotEmpty()) {
+                    _savedAccounts = newSystemOfAccounts
+                } else {
+                    val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(comma) ?: listOf()
+
+                    val migrated = oldAccounts.map { npub ->
+                        AccountInfo(
+                            npub,
+                            encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                            (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
+                        )
+                    }
+
+                    println("AAA migrated:  $migrated")
+
+                    _savedAccounts = migrated
+                }
+            }
         }
         return _savedAccounts!!
     }
 
-    private fun updateSavedAccounts(accounts: List<String>) {
+    private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) = withContext(Dispatchers.IO) {
         if (_savedAccounts != accounts) {
             _savedAccounts = accounts
 
             encryptedPreferences().edit().apply {
-                putString(PrefKeys.SAVED_ACCOUNTS, accounts.joinToString(comma).ifBlank { null })
+                putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(accounts))
             }.apply()
         }
     }
@@ -127,7 +156,7 @@ object LocalPreferences {
     private val prefsDirPath: String
         get() = "${Amethyst.instance.filesDir.parent}/shared_prefs/"
 
-    private fun addAccount(npub: String) {
+    private suspend fun addAccount(npub: AccountInfo) {
         val accounts = savedAccounts().toMutableList()
         if (npub !in accounts) {
             accounts.add(npub)
@@ -135,22 +164,27 @@ object LocalPreferences {
         }
     }
 
-    private fun setCurrentAccount(account: Account) {
+    private suspend fun setCurrentAccount(account: Account) = withContext(Dispatchers.IO) {
         val npub = account.userProfile().pubkeyNpub()
+        val accInfo = AccountInfo(
+            npub,
+            account.isWriteable(),
+            account.loginWithExternalSigner
+        )
         updateCurrentAccount(npub)
-        addAccount(npub)
+        addAccount(accInfo)
     }
 
-    fun switchToAccount(npub: String) {
-        updateCurrentAccount(npub)
+    suspend fun switchToAccount(accountInfo: AccountInfo) = withContext(Dispatchers.IO) {
+        updateCurrentAccount(accountInfo.npub)
     }
 
     /**
      * Removes the account from the app level shared preferences
      */
-    private fun removeAccount(npub: String) {
+    private suspend fun removeAccount(accountInfo: AccountInfo) {
         val accounts = savedAccounts().toMutableList()
-        if (accounts.remove(npub)) {
+        if (accounts.remove(accountInfo)) {
             updateSavedAccounts(accounts)
         }
     }
@@ -159,6 +193,8 @@ object LocalPreferences {
      * Deletes the npub-specific shared preference file
      */
     private fun deleteUserPreferenceFile(npub: String) {
+        checkNotInMainThread()
+
         val prefsDir = File(prefsDirPath)
         prefsDir.list()?.forEach {
             if (it.contains(npub)) {
@@ -168,6 +204,8 @@ object LocalPreferences {
     }
 
     private fun encryptedPreferences(npub: String? = null): SharedPreferences {
+        checkNotInMainThread()
+
         return if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) {
             val preferenceFile = if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
@@ -185,40 +223,31 @@ object LocalPreferences {
      * condition and the file will probably not be deleted
      */
     @SuppressLint("ApplySharedPref")
-    fun updatePrefsForLogout(npub: String) {
-        val userPrefs = encryptedPreferences(npub)
+    suspend fun updatePrefsForLogout(accountInfo: AccountInfo) = withContext(Dispatchers.IO) {
+        val userPrefs = encryptedPreferences(accountInfo.npub)
         userPrefs.edit().clear().commit()
-        removeAccount(npub)
-        deleteUserPreferenceFile(npub)
+        removeAccount(accountInfo)
+        deleteUserPreferenceFile(accountInfo.npub)
 
         if (savedAccounts().isEmpty()) {
-            val appPrefs = encryptedPreferences()
-            appPrefs.edit().clear().apply()
-        } else if (currentAccount() == npub) {
-            updateCurrentAccount(savedAccounts().elementAt(0))
+            encryptedPreferences().edit().clear().apply()
+        } else if (currentAccount() == accountInfo.npub) {
+            updateCurrentAccount(savedAccounts().elementAt(0).npub)
         }
     }
 
-    fun updatePrefsForLogin(account: Account) {
+    suspend fun updatePrefsForLogin(account: Account) {
         setCurrentAccount(account)
         saveToEncryptedStorage(account)
     }
 
     fun allSavedAccounts(): List<AccountInfo> {
-        return savedAccounts().map { npub ->
-            AccountInfo(
-                npub,
-                hasPrivKey(npub),
-                getLoggedInWithExternalSigner(npub)
-            )
-        }
+        return savedAccounts()
     }
 
-    fun allLocalAccountNPubs(): Set<String> {
-        return savedAccounts().toSet()
-    }
+    suspend fun saveToEncryptedStorage(account: Account) = withContext(Dispatchers.IO) {
+        checkNotInMainThread()
 
-    fun saveToEncryptedStorage(account: Account) {
         val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
         prefs.edit().apply {
             account.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
@@ -256,71 +285,102 @@ object LocalPreferences {
             }
             putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.loginWithExternalSigner)
         }.apply()
-
-        val globalPrefs = encryptedPreferences()
-        globalPrefs.edit().apply {
-            if (account.settings.automaticallyShowImages.prefCode == null) {
-                remove(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)
-            } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, account.settings.automaticallyShowImages.prefCode!!)
-            }
-
-            if (account.settings.automaticallyStartPlayback.prefCode == null) {
-                remove(PrefKeys.AUTOMATICALLY_START_PLAYBACK)
-            } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, account.settings.automaticallyStartPlayback.prefCode!!)
-            }
-            if (account.settings.automaticallyShowUrlPreview.prefCode == null) {
-                remove(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)
-            } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, account.settings.automaticallyShowUrlPreview.prefCode!!)
-            }
-            if (account.settings.automaticallyHideNavigationBars.prefCode == null) {
-                remove(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)
-            } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, account.settings.automaticallyHideNavigationBars.prefCode!!)
-            }
-
-            if (account.settings.automaticallyShowProfilePictures.prefCode == null) {
-                remove(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)
-            } else {
-                putBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, account.settings.automaticallyShowProfilePictures.prefCode!!)
-            }
-            putString(PrefKeys.PREFERRED_LANGUAGE, account.settings.preferredLanguage ?: "")
-        }.apply()
     }
 
-    fun updateTheme(theme: Int) {
-        encryptedPreferences().edit().apply {
-            putInt(PrefKeys.THEME, theme)
-        }.apply()
-    }
-
-    fun getTheme(): Int {
-        return encryptedPreferences().getInt(PrefKeys.THEME, 0)
-    }
-
-    fun getPreferredLanguage(): String {
-        return encryptedPreferences().getString(PrefKeys.PREFERRED_LANGUAGE, "") ?: ""
-    }
-
-    private fun getLoggedInWithExternalSigner(npub: String): Boolean {
-        return encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
-    }
-
-    private fun hasPrivKey(npub: String): Boolean {
-        return (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank()
-    }
-
-    fun loadFromEncryptedStorage(): Account? {
-        val acc = loadFromEncryptedStorage(currentAccount())
+    suspend fun loadCurrentAccountFromEncryptedStorage(): Account? {
+        val acc = loadCurrentAccountFromEncryptedStorage(currentAccount())
         acc?.registerObservers()
         return acc
     }
 
-    fun loadFromEncryptedStorage(npub: String?): Account? {
-        encryptedPreferences(npub).apply {
-            val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return null
+    suspend fun migrateOldSharedSettings(): Settings? {
+        val prefs = encryptedPreferences()
+        loadOldSharedSettings(prefs)?.let {
+            saveSharedSettings(it, prefs)
+            return it
+        }
+        return null
+    }
+
+    suspend fun saveSharedSettings(sharedSettings: Settings, prefs: SharedPreferences = encryptedPreferences()) {
+        with(prefs.edit()) {
+            putString(PrefKeys.SHARED_SETTINGS, Event.mapper.writeValueAsString(sharedSettings))
+            apply()
+        }
+    }
+
+    suspend fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): Settings? {
+        with(prefs) {
+            return try {
+                getString(PrefKeys.SHARED_SETTINGS, "{}")?.let {
+                    Event.mapper.readValue<Settings>(it)
+                }
+            } catch (e: Throwable) {
+                Log.w("LocalPreferences", "Unable to decode shared preferences: ${getString(PrefKeys.SHARED_SETTINGS, null)}", e)
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    @Deprecated("Turned into a single JSON object")
+    suspend fun loadOldSharedSettings(prefs: SharedPreferences = encryptedPreferences()): Settings? {
+        with(prefs) {
+            if (!contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
+                return null
+            }
+
+            val automaticallyShowImages = if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
+                parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false))
+            } else {
+                ConnectivityType.ALWAYS
+            }
+
+            val automaticallyStartPlayback = if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
+                parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false))
+            } else {
+                ConnectivityType.ALWAYS
+            }
+            val automaticallyShowUrlPreview = if (contains(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)) {
+                parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
+            } else {
+                ConnectivityType.ALWAYS
+            }
+            val automaticallyHideNavigationBars = if (contains(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)) {
+                parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
+            } else {
+                BooleanType.ALWAYS
+            }
+
+            val automaticallyShowProfilePictures = if (contains(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)) {
+                parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, false))
+            } else {
+                ConnectivityType.ALWAYS
+            }
+
+            val themeType = if (contains(PrefKeys.THEME)) {
+                parseThemeType(getInt(PrefKeys.THEME, ThemeType.SYSTEM.screenCode))
+            } else {
+                ThemeType.SYSTEM
+            }
+
+            return Settings(
+                themeType,
+                getString(PrefKeys.PREFERRED_LANGUAGE, null)?.ifBlank { null },
+                automaticallyShowImages,
+                automaticallyStartPlayback,
+                automaticallyShowUrlPreview,
+                automaticallyHideNavigationBars,
+                automaticallyShowProfilePictures
+            )
+        }
+    }
+
+    suspend fun loadCurrentAccountFromEncryptedStorage(npub: String?): Account? = withContext(Dispatchers.IO) {
+        checkNotInMainThread()
+
+        return@withContext with(encryptedPreferences(npub)) {
+            val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
             val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
             val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
@@ -413,40 +473,7 @@ object LocalPreferences {
                 mapOf()
             }
 
-            val settings = Settings()
-            encryptedPreferences().apply {
-                settings.automaticallyShowImages = if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-
-                settings.automaticallyStartPlayback = if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-                settings.automaticallyShowUrlPreview = if (contains(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-                settings.automaticallyHideNavigationBars = if (contains(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)) {
-                    parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
-                } else {
-                    BooleanType.ALWAYS
-                }
-
-                settings.automaticallyShowProfilePictures = if (contains(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-
-                settings.preferredLanguage = getString(PrefKeys.PREFERRED_LANGUAGE, "")
-            }
-
-            val a = Account(
+            return@with Account(
                 keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
                 followingChannels = followingChannels,
                 followingCommunities = followingCommunities,
@@ -474,11 +501,8 @@ object LocalPreferences {
                 warnAboutPostsWithReports = warnAboutReports,
                 filterSpamFromStrangers = filterSpam,
                 lastReadPerRoute = lastReadPerRoute,
-                settings = settings,
                 loginWithExternalSigner = loginWithExternalSigner
             )
-
-            return a
         }
     }
 }

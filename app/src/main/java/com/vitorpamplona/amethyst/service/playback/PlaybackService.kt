@@ -25,10 +25,7 @@ class PlaybackService : MediaSessionService() {
 
     fun newProgressiveDataSource(): MediaSource.Factory {
         return ProgressiveMediaSource.Factory(
-            VideoCache.get(
-                Amethyst.instance,
-                HttpClient.getHttpClient()
-            )
+            (applicationContext as Amethyst).videoCache.get(HttpClient.getHttpClient())
         )
     }
 

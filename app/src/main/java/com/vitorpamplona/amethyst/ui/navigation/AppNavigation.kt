@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
-import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
@@ -69,7 +69,7 @@ fun AppNavigation(
 
     navController: NavHostController,
     accountViewModel: AccountViewModel,
-    themeViewModel: ThemeViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
     val scope = rememberCoroutineScope()
     val nav = remember {
@@ -263,8 +263,7 @@ fun AppNavigation(
         Route.Settings.let { route ->
             composable(route.route, route.arguments, content = {
                 SettingsScreen(
-                    accountViewModel = accountViewModel,
-                    themeViewModel
+                    sharedPreferencesViewModel
                 )
             })
         }

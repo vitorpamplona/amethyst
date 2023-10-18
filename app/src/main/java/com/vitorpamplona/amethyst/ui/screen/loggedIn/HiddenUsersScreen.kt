@@ -46,7 +46,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.AddButton
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
@@ -122,7 +121,6 @@ fun HiddenUsersScreen(
                     onCheckedChange = {
                         warnAboutReports = it
                         accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
-                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                     }
                 )
 
@@ -135,7 +133,6 @@ fun HiddenUsersScreen(
                     onCheckedChange = {
                         filterSpam = it
                         accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
-                        LocalPreferences.saveToEncryptedStorage(accountViewModel.account)
                     }
                 )
 

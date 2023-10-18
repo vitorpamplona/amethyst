@@ -73,6 +73,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale
@@ -130,7 +131,6 @@ class Account(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
-    var settings: Settings = Settings(),
     var loginWithExternalSigner: Boolean = false
 ) {
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
@@ -207,46 +207,6 @@ class Account(
     }
 
     var userProfileCache: User? = null
-
-    fun updateAutomaticallyStartPlayback(
-        automaticallyStartPlayback: ConnectivityType
-    ) {
-        settings.automaticallyStartPlayback = automaticallyStartPlayback
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun updateAutomaticallyShowUrlPreview(
-        automaticallyShowUrlPreview: ConnectivityType
-    ) {
-        settings.automaticallyShowUrlPreview = automaticallyShowUrlPreview
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun updateAutomaticallyShowProfilePicture(
-        automaticallyShowProfilePicture: ConnectivityType
-    ) {
-        settings.automaticallyShowProfilePictures = automaticallyShowProfilePicture
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun updateAutomaticallyHideHavBars(
-        automaticallyHideHavBars: BooleanType
-    ) {
-        settings.automaticallyHideNavigationBars = automaticallyHideHavBars
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun updateAutomaticallyShowImages(
-        automaticallyShowImages: ConnectivityType
-    ) {
-        settings.automaticallyShowImages = automaticallyShowImages
-        live.invalidateData()
-        saveable.invalidateData()
-    }
 
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports
@@ -3178,7 +3138,7 @@ class Account(
         return lastReadPerRoute[route] ?: 0
     }
 
-    fun registerObservers() {
+    suspend fun registerObservers() = withContext(Dispatchers.Main) {
         // Observes relays to restart connections
         userProfile().live().relays.observeForever {
             GlobalScope.launch(Dispatchers.IO) {

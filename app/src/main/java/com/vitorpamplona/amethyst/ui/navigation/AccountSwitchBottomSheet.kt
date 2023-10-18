@@ -45,10 +45,8 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -141,14 +139,6 @@ fun DisplayAccount(
         )
     }
 
-    val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
-    }
-
     if (baseUser == null) {
         LaunchedEffect(key1 = acc.npub) {
             launch(Dispatchers.IO) {
@@ -168,7 +158,7 @@ fun DisplayAccount(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    accountStateViewModel.switchUser(acc.npub)
+                    accountStateViewModel.switchUser(acc)
                 }
                 .padding(16.dp, 16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -186,6 +176,10 @@ fun DisplayAccount(
                             .width(55.dp)
                             .padding(0.dp)
                     ) {
+                        val automaticallyShowProfilePicture = remember {
+                            accountViewModel.settings.showProfilePictures.value
+                        }
+
                         AccountPicture(it, automaticallyShowProfilePicture)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -281,7 +275,7 @@ private fun LogoutButton(
                 TextButton(
                     onClick = {
                         logoutDialog = false
-                        accountStateViewModel.logOff(acc.npub)
+                        accountStateViewModel.logOff(acc)
                     }
                 ) {
                     Text(text = stringResource(R.string.log_out))

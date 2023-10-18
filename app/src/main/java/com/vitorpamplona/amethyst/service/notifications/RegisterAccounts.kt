@@ -18,12 +18,12 @@ class RegisterAccounts(
 ) {
 
     // creates proof that it controls all accounts
-    private fun signEventsToProveControlOfAccounts(
+    private suspend fun signEventsToProveControlOfAccounts(
         accounts: List<AccountInfo>,
         notificationToken: String
     ): List<RelayAuthEvent> {
         return accounts.mapNotNull {
-            val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
+            val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
             if (acc != null && (acc.isWriteable() || acc.loginWithExternalSigner)) {
                 if (acc.loginWithExternalSigner) {
                     ExternalSignerUtils.account = acc

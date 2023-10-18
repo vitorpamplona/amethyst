@@ -58,11 +58,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11Retriever
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
 import com.vitorpamplona.amethyst.service.relays.FeedType
@@ -304,7 +302,6 @@ fun ServerConfig(
     nav: (String) -> Unit
 ) {
     var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     relayInfo?.let {
@@ -318,16 +315,12 @@ fun ServerConfig(
     }
 
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     ServerConfigClickableLine(
-        loadProfilePicture = automaticallyShowProfilePicture,
         item = item,
+        loadProfilePicture = automaticallyShowProfilePicture,
         onToggleDownload = onToggleDownload,
         onToggleUpload = onToggleUpload,
         onToggleFollows = onToggleFollows,
@@ -362,8 +355,8 @@ fun ServerConfig(
 
 @Composable
 fun ServerConfigClickableLine(
-    loadProfilePicture: Boolean,
     item: RelaySetupInfo,
+    loadProfilePicture: Boolean,
     onToggleDownload: (RelaySetupInfo) -> Unit,
     onToggleUpload: (RelaySetupInfo) -> Unit,
     onToggleFollows: (RelaySetupInfo) -> Unit,

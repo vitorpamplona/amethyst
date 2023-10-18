@@ -33,9 +33,10 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         // PushNotification Wraps don't include a receiver.
         // Test with all logged in accounts
         LocalPreferences.allSavedAccounts().forEach {
-            val acc = LocalPreferences.loadFromEncryptedStorage(it.npub)
-            if (acc != null && (acc.keyPair.privKey != null || acc.loginWithExternalSigner)) {
-                consumeIfMatchesAccount(event, acc)
+            if (it.hasPrivKey || it.loggedInWithExternalSigner) {
+                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                    consumeIfMatchesAccount(event, acc)
+                }
             }
         }
     }
@@ -72,9 +73,6 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             }
         } else if (key != null) {
             pushWrappedEvent.unwrap(key)?.let { notificationEvent ->
-                if (!LocalCache.justVerify(notificationEvent)) return // invalid event
-                if (LocalCache.notes[notificationEvent.id] != null) return // already processed
-
                 LocalCache.justConsume(notificationEvent, null)
 
                 unwrapAndConsume(notificationEvent, account)?.let { innerEvent ->

@@ -14,7 +14,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -31,7 +30,8 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.style.ChartStyle
 import com.patrykandpatrick.vico.core.DefaultColors
-import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
+import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 
 private val DarkColorPalette = darkColorScheme(
     primary = Purple200,
@@ -328,11 +328,10 @@ val ColorScheme.chartStyle: ChartStyle
     }
 
 @Composable
-fun AmethystTheme(themeViewModel: ThemeViewModel, content: @Composable () -> Unit) {
-    val theme = themeViewModel.theme.observeAsState()
-    val darkTheme = when (theme.value) {
-        2 -> true
-        1 -> false
+fun AmethystTheme(sharedPrefsViewModel: SharedPreferencesViewModel, content: @Composable () -> Unit) {
+    val darkTheme = when (sharedPrefsViewModel.sharedPrefs.theme) {
+        ThemeType.DARK -> true
+        ThemeType.LIGHT -> false
         else -> isSystemInDarkTheme()
     }
     val colors = if (darkTheme) DarkColorPalette else LightColorPalette

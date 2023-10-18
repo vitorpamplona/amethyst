@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
 import android.app.Activity
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -92,6 +91,7 @@ fun LoginPage(
     var errorMessage by remember { mutableStateOf("") }
     val acceptedTerms = remember { mutableStateOf(!isFirstLogin) }
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
+
     val uri = LocalUriHandler.current
     val context = LocalContext.current
     var dialogOpen by remember {
@@ -102,6 +102,7 @@ fun LoginPage(
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var loginWithExternalSigner by remember { mutableStateOf(false) }
+
     val activity = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
         onResult = {
@@ -130,10 +131,7 @@ fun LoginPage(
                 }
 
                 if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                    try {
-                        accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt(), true)
-                    } catch (e: Exception) {
-                        Log.e("Login", "Could not sign in", e)
+                    accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt(), true) {
                         errorMessage = context.getString(R.string.invalid_key)
                     }
                 }
@@ -254,10 +252,18 @@ fun LoginPage(
                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardActions = KeyboardActions(
                     onGo = {
-                        try {
-                            accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
-                        } catch (e: Exception) {
-                            errorMessage = context.getString(R.string.invalid_key)
+                        if (!acceptedTerms.value) {
+                            termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                        }
+
+                        if (key.value.text.isBlank()) {
+                            errorMessage = context.getString(R.string.key_is_required)
+                        }
+
+                        if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                            accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
+                                errorMessage = context.getString(R.string.invalid_key)
+                            }
                         }
                     }
                 )
@@ -368,10 +374,7 @@ fun LoginPage(
                         }
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                            try {
-                                accountViewModel.startUI(key.value.text, useProxy.value, proxyPort.value.toInt())
-                            } catch (e: Exception) {
-                                Log.e("Login", "Could not sign in", e)
+                            accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
                         }
@@ -409,15 +412,12 @@ fun LoginPage(
                                 }
 
                                 if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                                    try {
-                                        accountViewModel.startUI(
-                                            key.value.text,
-                                            useProxy.value,
-                                            proxyPort.value.toInt(),
-                                            true
-                                        )
-                                    } catch (e: Exception) {
-                                        Log.e("Login", "Could not sign in", e)
+                                    accountViewModel.login(
+                                        key.value.text,
+                                        useProxy.value,
+                                        proxyPort.value.toInt(),
+                                        true
+                                    ) {
                                         errorMessage = context.getString(R.string.invalid_key)
                                     }
                                 }

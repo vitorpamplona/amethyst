@@ -84,12 +84,10 @@ import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -730,11 +728,7 @@ fun ShortCommunityHeader(baseNote: AddressableNote, fontWeight: FontWeight = Fon
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2791,11 +2785,7 @@ private fun RenderAuthorImages(
     val isChannel = baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null
 
     val automaticallyShowProfilePicture = remember {
-        when (accountViewModel.account.settings.automaticallyShowProfilePictures) {
-            ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-            ConnectivityType.NEVER -> false
-            ConnectivityType.ALWAYS -> true
-        }
+        accountViewModel.settings.showProfilePictures.value
     }
 
     if (isChannel) {
@@ -3793,11 +3783,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
     ) {
         Column {
             val automaticallyShowUrlPreview = remember {
-                when (accountViewModel.account.settings.automaticallyShowUrlPreview) {
-                    ConnectivityType.WIFI_ONLY -> !ConnectivityStatus.isOnMobileData.value
-                    ConnectivityType.NEVER -> false
-                    ConnectivityType.ALWAYS -> true
-                }
+                accountViewModel.settings.showUrlPreview.value
             }
 
             if (automaticallyShowUrlPreview) {

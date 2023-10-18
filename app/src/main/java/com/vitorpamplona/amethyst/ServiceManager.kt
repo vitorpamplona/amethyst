@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import coil.Coil
-import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
@@ -44,14 +43,14 @@ object ServiceManager {
     private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
 
-    fun start(account: Account, context: Context) {
+    fun start(account: Account) {
         this.account = account
         ExternalSignerUtils.account = account
-        start(context)
+        start()
     }
 
     @Synchronized
-    fun start(context: Context) {
+    fun start() {
         if (isStarted && account != null) {
             return
         }
@@ -63,7 +62,7 @@ object ServiceManager {
         HttpClient.start(account)
         OptOutFromFilters.start(account?.warnAboutPostsWithReports ?: true, account?.filterSpamFromStrangers ?: true)
         Coil.setImageLoader {
-            ImageLoader.Builder(context).components {
+            Amethyst.instance.imageLoaderBuilder().components {
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(ImageDecoderDecoder.Factory())
                 } else {
@@ -71,7 +70,6 @@ object ServiceManager {
                 }
                 add(SvgDecoder.Factory())
             }.logger(DebugLogger())
-                .diskCache { SingletonDiskCache.get(context.applicationContext) }
                 .okHttpClient { HttpClient.getHttpClient() }
                 .respectCacheHeaders(false)
                 .build()
@@ -138,7 +136,9 @@ object ServiceManager {
     fun trimMemory() {
         LocalCache.cleanObservers()
 
-        val accounts = LocalPreferences.allLocalAccountNPubs().mapNotNull { decodePublicKeyAsHexOrNull(it) }.toSet()
+        val accounts = LocalPreferences.allSavedAccounts().mapNotNull {
+            decodePublicKeyAsHexOrNull(it.npub)
+        }.toSet()
 
         account?.let {
             LocalCache.pruneOldAndHiddenMessages(it)
@@ -152,10 +152,10 @@ object ServiceManager {
         }
     }
 
-    fun restartIfDifferentAccount(account: Account, context: Context) {
+    fun restartIfDifferentAccount(account: Account) {
         if (this.account != account) {
             pause()
-            start(account, context)
+            start(account)
         }
     }
 }

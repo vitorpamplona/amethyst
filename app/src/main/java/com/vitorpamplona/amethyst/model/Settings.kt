@@ -4,16 +4,34 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
 
 @Stable
-class Settings(
-    var preferredLanguage: String? = null,
-    var automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
-    var automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
-    var automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS
+data class Settings(
+    val theme: ThemeType = ThemeType.SYSTEM,
+    val preferredLanguage: String? = null,
+    val automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
+    val automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
+    val automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
+    val automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
+    val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS
 )
 
-enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val reourceId: Int) {
+enum class ThemeType(val screenCode: Int, val resourceId: Int) {
+    SYSTEM(0, R.string.system),
+    LIGHT(1, R.string.light),
+    DARK(2, R.string.dark)
+}
+
+fun parseThemeType(code: Int?): ThemeType {
+    return when (code) {
+        ThemeType.SYSTEM.screenCode -> ThemeType.SYSTEM
+        ThemeType.LIGHT.screenCode -> ThemeType.LIGHT
+        ThemeType.DARK.screenCode -> ThemeType.DARK
+        else -> {
+            ThemeType.SYSTEM
+        }
+    }
+}
+
+enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val resourceId: Int) {
     ALWAYS(null, 0, R.string.connectivity_type_always),
     WIFI_ONLY(true, 1, R.string.connectivity_type_wifi_only),
     NEVER(false, 2, R.string.connectivity_type_never)

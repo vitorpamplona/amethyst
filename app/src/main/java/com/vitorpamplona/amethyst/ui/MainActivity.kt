@@ -14,17 +14,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.ExternalSignerUtils
-import com.vitorpamplona.amethyst.service.connectivitystatus.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
@@ -33,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.navigation.debugState
 import com.vitorpamplona.amethyst.ui.note.Nip47
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.ThemeViewModel
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -50,46 +49,38 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
+    private val isOnMobileDataState = mutableStateOf(false)
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         ExternalSignerUtils.start(this)
 
         super.onCreate(savedInstanceState)
 
-        val language = LocalPreferences.getPreferredLanguage()
-        if (language.isNotBlank()) {
-            val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(language)
-            AppCompatDelegate.setApplicationLocales(appLocale)
-        }
-
         setContent {
-            val themeViewModel: ThemeViewModel = viewModel()
+            val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
 
-            themeViewModel.onChange(LocalPreferences.getTheme())
-            AmethystTheme(themeViewModel) {
+            LaunchedEffect(key1 = sharedPreferencesViewModel, isOnMobileDataState) {
+                sharedPreferencesViewModel.init()
+                sharedPreferencesViewModel.updateConnectivityStatusState(isOnMobileDataState)
+            }
+
+            AmethystTheme(sharedPreferencesViewModel) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val accountStateViewModel: AccountStateViewModel = viewModel {
-                        AccountStateViewModel(this@MainActivity)
+                    val accountStateViewModel: AccountStateViewModel = viewModel()
+
+                    LaunchedEffect(key1 = Unit) {
+                        accountStateViewModel.tryLoginExistingAccountAsync()
                     }
 
-                    AccountScreen(accountStateViewModel, themeViewModel)
+                    AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
                 }
             }
         }
-
-        val networkRequest = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-            .build()
-
-        val connectivityManager =
-            getSystemService(ConnectivityManager::class.java) as ConnectivityManager
-        connectivityManager.requestNetwork(networkRequest, networkCallback)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -102,13 +93,22 @@ class MainActivity : AppCompatActivity() {
         // Only starts after login
         GlobalScope.launch(Dispatchers.IO) {
             if (ServiceManager.shouldPauseService) {
-                ServiceManager.start(this@MainActivity)
+                ServiceManager.start()
             }
         }
 
         GlobalScope.launch(Dispatchers.IO) {
             PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
         }
+
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+            .build()
+
+        (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
+            .registerNetworkCallback(networkRequest, networkCallback)
     }
 
     override fun onPause() {
@@ -120,6 +120,10 @@ class MainActivity : AppCompatActivity() {
         if (ServiceManager.shouldPauseService) {
             ServiceManager.pause()
         }
+
+        (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
+            .unregisterNetworkCallback(networkCallback)
+
         super.onPause()
     }
 
@@ -153,7 +157,7 @@ class MainActivity : AppCompatActivity() {
             GlobalScope.launch(Dispatchers.IO) {
                 if (ServiceManager.shouldPauseService) {
                     ServiceManager.pause()
-                    ServiceManager.start(this@MainActivity)
+                    ServiceManager.start()
                 }
             }
         }
@@ -166,15 +170,10 @@ class MainActivity : AppCompatActivity() {
             super.onCapabilitiesChanged(network, networkCapabilities)
 
             GlobalScope.launch(Dispatchers.IO) {
-                val hasMobileData =
-                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $hasMobileData")
-                Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasWifi $hasWifi")
-                ConnectivityStatus.updateConnectivityStatus(
-                    hasMobileData,
-                    hasWifi
-                )
+                val isOnMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $isOnMobileData")
+
+                isOnMobileDataState.value = isOnMobileData
             }
         }
 

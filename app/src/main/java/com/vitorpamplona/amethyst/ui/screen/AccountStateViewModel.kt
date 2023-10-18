@@ -1,9 +1,10 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
@@ -20,32 +21,36 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.regex.Pattern
 
 val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
 
 @Stable
-class AccountStateViewModel(val context: Context) : ViewModel() {
-    private val _accountContent = MutableStateFlow<AccountState>(AccountState.LoggedOff)
+class AccountStateViewModel() : ViewModel() {
+    private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
 
-    init {
-        Log.d("Init", "AccountStateViewModel")
+    fun tryLoginExistingAccountAsync() {
         // pulls account from storage.
-
-        // Keeps it in the the UI thread to void blinking the login page.
-        // viewModelScope.launch(Dispatchers.IO) {
-        tryLoginExistingAccount()
-        // }
-    }
-
-    private fun tryLoginExistingAccount() {
-        LocalPreferences.loadFromEncryptedStorage()?.let {
-            startUI(it)
+        viewModelScope.launch {
+            tryLoginExistingAccount()
         }
     }
 
-    fun startUI(key: String, useProxy: Boolean, proxyPort: Int, loginWithExternalSigner: Boolean = false) {
+    private suspend fun tryLoginExistingAccount() = withContext(Dispatchers.IO) {
+        LocalPreferences.loadCurrentAccountFromEncryptedStorage()?.let {
+            startUI(it)
+        } ?: run {
+            requestLoginUI()
+        }
+    }
+
+    private suspend fun requestLoginUI() {
+        _accountContent.update { AccountState.LoggedOff }
+    }
+
+    suspend fun loginAndStartUI(key: String, useProxy: Boolean, proxyPort: Int, loginWithExternalSigner: Boolean = false) = withContext(Dispatchers.IO) {
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
@@ -63,36 +68,22 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
             }
 
         LocalPreferences.updatePrefsForLogin(account)
-        startUI(account)
-    }
 
-    fun switchUser(npub: String) {
-        prepareLogoutOrSwitch()
-        LocalPreferences.switchToAccount(npub)
-        tryLoginExistingAccount()
-    }
-
-    fun newKey(useProxy: Boolean, proxyPort: Int) {
-        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
-        val account = Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
-        // saves to local preferences
-        LocalPreferences.updatePrefsForLogin(account)
         startUI(account)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun startUI(account: Account) {
+    suspend fun startUI(account: Account) = withContext(Dispatchers.Main) {
         if (account.keyPair.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
         GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.restartIfDifferentAccount(account, context)
+            ServiceManager.restartIfDifferentAccount(account)
         }
-        GlobalScope.launch(Dispatchers.Main) {
-            account.saveable.observeForever(saveListener)
-        }
+
+        account.saveable.observeForever(saveListener)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -102,28 +93,58 @@ class AccountStateViewModel(val context: Context) : ViewModel() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun prepareLogoutOrSwitch() {
-        when (val state = accountContent.value) {
+    private suspend fun prepareLogoutOrSwitch() = withContext(Dispatchers.Main) {
+        when (val state = _accountContent.value) {
             is AccountState.LoggedIn -> {
-                GlobalScope.launch(Dispatchers.Main) {
-                    state.account.saveable.removeObserver(saveListener)
-                }
+                state.account.saveable.removeObserver(saveListener)
             }
             is AccountState.LoggedInViewOnly -> {
-                GlobalScope.launch(Dispatchers.Main) {
-                    state.account.saveable.removeObserver(saveListener)
-                }
+                state.account.saveable.removeObserver(saveListener)
             }
             else -> {}
         }
-
-        _accountContent.update { AccountState.LoggedOff }
     }
 
-    fun logOff(npub: String) {
-        prepareLogoutOrSwitch()
-        LocalPreferences.updatePrefsForLogout(npub)
-        tryLoginExistingAccount()
+    fun login(
+        key: String,
+        useProxy: Boolean,
+        proxyPort: Int,
+        loginWithExternalSigner: Boolean = false,
+        onError: () -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner)
+            } catch (e: Exception) {
+                Log.e("Login", "Could not sign in", e)
+                onError()
+            }
+        }
+    }
+
+    fun newKey(useProxy: Boolean, proxyPort: Int) {
+        viewModelScope.launch {
+            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+            val account = Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
+            // saves to local preferences
+            LocalPreferences.updatePrefsForLogin(account)
+            startUI(account)
+        }
+    }
+
+    fun switchUser(accountInfo: AccountInfo) {
+        viewModelScope.launch {
+            prepareLogoutOrSwitch()
+            LocalPreferences.switchToAccount(accountInfo)
+            tryLoginExistingAccount()
+        }
+    }
+
+    fun logOff(accountInfo: AccountInfo) {
+        viewModelScope.launch {
+            prepareLogoutOrSwitch()
+            LocalPreferences.updatePrefsForLogout(accountInfo)
+            tryLoginExistingAccount()
+        }
     }
 }
