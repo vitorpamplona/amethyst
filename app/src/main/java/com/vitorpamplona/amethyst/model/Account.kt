@@ -1681,7 +1681,8 @@ class Account(
             LocalCache.consume(it, null)
         }
 
-        val mineNote = LocalCache.getNoteIfExists(mine.first().id)
+        val id = mine.firstOrNull()?.id
+        val mineNote = if (id == null) null else LocalCache.getNoteIfExists(id)
 
         signedEvents.wraps.forEach {
             // Creates an alias
