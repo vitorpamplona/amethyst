@@ -723,7 +723,7 @@ fun LongCommunityHeader(
 }
 
 @Composable
-fun ShortCommunityHeader(baseNote: AddressableNote, fontWeight: FontWeight = FontWeight.Bold, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun ShortCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
@@ -753,7 +753,6 @@ fun ShortCommunityHeader(baseNote: AddressableNote, fontWeight: FontWeight = Fon
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = remember(noteState) { noteEvent.dTag() },
-                    fontWeight = fontWeight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

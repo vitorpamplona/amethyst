@@ -211,7 +211,6 @@ private fun HashTagTopBar(
         title = {
             Text(
                 remember(tag) { "#$tag" },
-                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
 
@@ -232,7 +231,7 @@ private fun CommunityTopBar(
         if (baseNote != null) {
             FlexibleTopBarWithBackButton(
                 title = {
-                    ShortCommunityHeader(baseNote, fontWeight = FontWeight.Medium, accountViewModel, nav)
+                    ShortCommunityHeader(baseNote, accountViewModel, nav)
                 },
                 extendableRow = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -299,7 +298,7 @@ private fun RenderRoomTopBar(
 
                         Spacer(modifier = DoubleHorzSpacer)
 
-                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal)
                     }
                 }
             },
@@ -330,7 +329,7 @@ private fun RenderRoomTopBar(
                     Modifier
                         .padding(start = 10.dp)
                         .weight(1f),
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Normal,
                     accountViewModel.userProfile()
                 )
             },
@@ -355,7 +354,6 @@ private fun ChannelTopBar(
                 ShortChannelHeader(
                     baseChannel = baseChannel,
                     accountViewModel = accountViewModel,
-                    fontWeight = FontWeight.Medium,
                     nav = nav,
                     showFlag = true
                 )
@@ -829,10 +827,7 @@ fun FlexibleTopBarWithBackButton(
             title = title,
             extendableRow = extendableRow,
             navigationIcon = {
-                IconButton(
-                    onClick = popBack,
-                    modifier = Modifier
-                ) {
+                IconButton(onClick = popBack) {
                     ArrowBackIcon()
                 }
             },

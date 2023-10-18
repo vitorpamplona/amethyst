@@ -684,7 +684,6 @@ fun ShowVideoStreaming(
 fun ShortChannelHeader(
     baseChannel: Channel,
     accountViewModel: AccountViewModel,
-    fontWeight: FontWeight = FontWeight.Bold,
     nav: (String) -> Unit,
     showFlag: Boolean
 ) {
@@ -730,7 +729,6 @@ fun ShortChannelHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = remember(channelState) { channel.toBestDisplayName() },
-                    fontWeight = fontWeight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
