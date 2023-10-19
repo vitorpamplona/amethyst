@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import com.vitorpamplona.amethyst.ui.theme.chartStyle
 import kotlinx.collections.immutable.ImmutableList
@@ -216,7 +217,7 @@ fun SelectPushDistributor(
                             onDistributorSelected(index, distributor)
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = HalfPadding.fillMaxWidth()
                     ) {
                         Material3RichText(
                             style = RichTextStyle().resolveDefaults()
