@@ -692,7 +692,7 @@ fun SimpleTextSpinner(
         id = R.string.select_an_option
     )
 
-    var currentText by remember {
+    var currentText by remember(placeholderCode) {
         mutableStateOf(
             options.firstOrNull { it.code == placeholderCode }?.name?.name(context) ?: selectAnOption
         )
