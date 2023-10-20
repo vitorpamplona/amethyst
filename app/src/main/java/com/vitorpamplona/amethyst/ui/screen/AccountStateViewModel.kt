@@ -55,16 +55,22 @@ class AccountStateViewModel() : ViewModel() {
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
         val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
 
+        if (loginWithExternalSigner && pubKeyParsed == null) {
+            throw Exception("Invalid key while trying to login with external signer")
+        }
+
         val account =
-            if (key.startsWith("nsec")) {
-                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
+            if (loginWithExternalSigner) {
+                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = true)
+            } else if (key.startsWith("nsec")) {
+                Account(KeyPair(privKey = key.bechToBytes()), proxy = proxy, proxyPort = proxyPort)
             } else if (pubKeyParsed != null) {
-                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
+                Account(KeyPair(pubKey = pubKeyParsed), proxy = proxy, proxyPort = proxyPort)
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 // Evaluate NIP-5
-                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
+                Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
             } else {
-                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort, loginWithExternalSigner = loginWithExternalSigner)
+                Account(KeyPair(Hex.decode(key)), proxy = proxy, proxyPort = proxyPort)
             }
 
         LocalPreferences.updatePrefsForLogin(account)
