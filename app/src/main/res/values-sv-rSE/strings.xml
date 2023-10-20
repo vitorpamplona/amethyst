@@ -146,6 +146,7 @@
     <string name="login">Inloggning</string>
     <string name="generate_a_new_key">Skapa en ny nyckel</string>
     <string name="loading_feed">Ladda flöde</string>
+    <string name="loading_account">Laddar kontot</string>
     <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
     <string name="try_again">Försök igen</string>
     <string name="feed_is_empty">Flöde är tomt.</string>
