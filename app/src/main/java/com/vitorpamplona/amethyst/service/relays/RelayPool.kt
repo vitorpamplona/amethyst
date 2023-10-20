@@ -107,7 +107,7 @@ object RelayPool : Relay.Listener {
 
         fun onError(error: Error, subscriptionId: String, relay: Relay)
 
-        fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?)
+        fun onRelayStateChange(type: Relay.StateType, relay: Relay, channel: String?)
 
         fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
 
@@ -123,9 +123,9 @@ object RelayPool : Relay.Listener {
         updateStatus()
     }
 
-    override fun onRelayStateChange(relay: Relay, type: Relay.Type, channel: String?) {
+    override fun onRelayStateChange(relay: Relay, type: Relay.StateType, channel: String?) {
         listeners.forEach { it.onRelayStateChange(type, relay, channel) }
-        if (type != Relay.Type.EOSE) {
+        if (type != Relay.StateType.EOSE) {
             updateStatus()
         }
     }

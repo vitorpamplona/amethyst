@@ -43,7 +43,7 @@ object ServiceManager {
     private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
 
-    fun start(account: Account) {
+    private fun start(account: Account) {
         this.account = account
         ExternalSignerUtils.account = account
         start()
@@ -51,6 +51,7 @@ object ServiceManager {
 
     @Synchronized
     fun start() {
+        Log.d("ServiceManager", "Pre Starting Relay Services $isStarted $account")
         if (isStarted && account != null) {
             return
         }
@@ -156,6 +157,13 @@ object ServiceManager {
         if (this.account != account) {
             pause()
             start(account)
+        }
+    }
+
+    fun forceRestartIfItShould() {
+        if (shouldPauseService) {
+            pause()
+            start()
         }
     }
 }

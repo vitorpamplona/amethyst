@@ -151,7 +151,7 @@ object Client : RelayPool.Listener {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) {
+    override fun onRelayStateChange(type: Relay.StateType, relay: Relay, channel: String?) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
         GlobalScope.launch(Dispatchers.Default) {
@@ -207,7 +207,7 @@ object Client : RelayPool.Listener {
         /**
          * Connected to or disconnected from a relay
          */
-        open fun onRelayStateChange(type: Relay.Type, relay: Relay, channel: String?) = Unit
+        open fun onRelayStateChange(type: Relay.StateType, relay: Relay, channel: String?) = Unit
 
         /**
          * When an relay saves or rejects a new event.

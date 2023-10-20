@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -91,8 +90,8 @@ class MainActivity : AppCompatActivity() {
         DefaultMutedSetting.value = true
 
         // Only starts after login
-        GlobalScope.launch(Dispatchers.IO) {
-            if (ServiceManager.shouldPauseService) {
+        if (ServiceManager.shouldPauseService) {
+            GlobalScope.launch(Dispatchers.IO) {
                 ServiceManager.start()
             }
         }
@@ -101,24 +100,21 @@ class MainActivity : AppCompatActivity() {
             PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
         }
 
-        val networkRequest = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-            .build()
-
-        (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
-            .registerNetworkCallback(networkRequest, networkCallback)
+        (getSystemService(ConnectivityManager::class.java) as ConnectivityManager).registerDefaultNetworkCallback(networkCallback)
     }
 
     override fun onPause() {
         ServiceManager.cleanObservers()
         // if (BuildConfig.DEBUG) {
-        debugState(this)
+        GlobalScope.launch(Dispatchers.IO) {
+            debugState(this@MainActivity)
+        }
         // }
 
         if (ServiceManager.shouldPauseService) {
-            ServiceManager.pause()
+            GlobalScope.launch(Dispatchers.IO) {
+                ServiceManager.pause()
+            }
         }
 
         (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
@@ -149,19 +145,6 @@ class MainActivity : AppCompatActivity() {
 
     @OptIn(DelicateCoroutinesApi::class)
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        // network is available for use
-        override fun onAvailable(network: Network) {
-            super.onAvailable(network)
-            Log.d("NETWORKCALLBACK", "onAvailable: Disconnecting and connecting again")
-            // Only starts after login
-            GlobalScope.launch(Dispatchers.IO) {
-                if (ServiceManager.shouldPauseService) {
-                    ServiceManager.pause()
-                    ServiceManager.start()
-                }
-            }
-        }
-
         // Network capabilities have changed for the network
         override fun onCapabilitiesChanged(
             network: Network,
@@ -171,20 +154,13 @@ class MainActivity : AppCompatActivity() {
 
             GlobalScope.launch(Dispatchers.IO) {
                 val isOnMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                Log.d("NETWORKCALLBACK", "onCapabilitiesChanged: hasMobileData $isOnMobileData")
+                val isOnWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                Log.d("ServiceManager NetworkCallback", "onCapabilitiesChanged: ${network.networkHandle} hasMobileData $isOnMobileData hasWifi $isOnWifi")
 
-                isOnMobileDataState.value = isOnMobileData
-            }
-        }
+                if (isOnMobileDataState.value != isOnMobileData) {
+                    isOnMobileDataState.value = isOnMobileData
 
-        // lost network connection
-        override fun onLost(network: Network) {
-            super.onLost(network)
-            Log.d("NETWORKCALLBACK", "onLost: Disconnecting and pausing relay's connection")
-            // Only starts after login
-            GlobalScope.launch(Dispatchers.IO) {
-                if (ServiceManager.shouldPauseService) {
-                    ServiceManager.pause()
+                    ServiceManager.forceRestartIfItShould()
                 }
             }
         }

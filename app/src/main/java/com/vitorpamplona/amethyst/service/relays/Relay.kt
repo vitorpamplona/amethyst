@@ -128,7 +128,7 @@ class Relay(
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected(this@Relay)
 
-            listeners.forEach { it.onRelayStateChange(this@Relay, Type.CONNECT, null) }
+            listeners.forEach { it.onRelayStateChange(this@Relay, StateType.CONNECT, null) }
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -152,7 +152,7 @@ class Relay(
             listeners.forEach {
                 it.onRelayStateChange(
                     this@Relay,
-                    Type.DISCONNECTING,
+                    StateType.DISCONNECTING,
                     null
                 )
             }
@@ -163,7 +163,7 @@ class Relay(
 
             markConnectionAsClosed()
 
-            listeners.forEach { it.onRelayStateChange(this@Relay, Type.DISCONNECT, null) }
+            listeners.forEach { it.onRelayStateChange(this@Relay, StateType.DISCONNECT, null) }
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -211,14 +211,14 @@ class Relay(
                 listeners.forEach {
                     it.onEvent(this@Relay, channel, event)
                     if (afterEOSE) {
-                        it.onRelayStateChange(this@Relay, Type.EOSE, channel)
+                        it.onRelayStateChange(this@Relay, StateType.EOSE, channel)
                     }
                 }
             }
             "EOSE" -> listeners.forEach {
                 afterEOSE = true
                 // Log.w("Relay", "Relay onEOSE $url, $channel")
-                it.onRelayStateChange(this@Relay, Type.EOSE, channel)
+                it.onRelayStateChange(this@Relay, StateType.EOSE, channel)
             }
             "NOTICE" -> listeners.forEach {
                 Log.w("Relay", "Relay onNotice $url, $channel")
@@ -256,7 +256,8 @@ class Relay(
     }
 
     fun disconnect() {
-        // httpClient.dispatcher.executorService.shutdown()
+        checkNotInMainThread()
+
         closingTimeInSeconds = TimeUtils.now()
         socket?.close(1000, "Normal close")
         socket = null
@@ -360,7 +361,7 @@ class Relay(
             activeTypes == other.activeTypes
     }
 
-    enum class Type {
+    enum class StateType {
         // Websocket connected
         CONNECT,
 
@@ -391,6 +392,6 @@ class Relay(
          *
          * @param type is 0 for disconnect and 1 for connect
          */
-        fun onRelayStateChange(relay: Relay, type: Type, channel: String?)
+        fun onRelayStateChange(relay: Relay, type: StateType, channel: String?)
     }
 }
