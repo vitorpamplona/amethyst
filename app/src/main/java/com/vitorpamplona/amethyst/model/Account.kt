@@ -1532,40 +1532,51 @@ class Account(
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        var localMessage = message
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.encrypt(localMessage, toUser, "encrypt")
+            ExternalSignerUtils.encrypt(message, toUser, "encrypt")
             val eventContent = ExternalSignerUtils.content["encrypt"] ?: ""
             if (eventContent.isBlank()) return
-            localMessage = eventContent
             ExternalSignerUtils.content.remove("encrypt")
-        }
+            val unsignedEvent = PrivateDmEvent.create(
+                recipientPubKey = toUser.hexToByteArray(),
+                publishedRecipientPubKey = toUser.hexToByteArray(),
+                msg = eventContent,
+                replyTos = repliesToHex,
+                mentions = mentionsHex,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                geohash = geohash,
+                keyPair = keyPair,
+                advertiseNip18 = false
+            )
 
-        var signedEvent = PrivateDmEvent.create(
-            recipientPubKey = toUser.hexToByteArray(),
-            publishedRecipientPubKey = toUser.hexToByteArray(),
-            msg = localMessage,
-            replyTos = repliesToHex,
-            mentions = mentionsHex,
-            zapReceiver = zapReceiver,
-            markAsSensitive = wantsToMarkAsSensitive,
-            zapRaiserAmount = zapRaiserAmount,
-            geohash = geohash,
-            keyPair = keyPair,
-            advertiseNip18 = false
-        )
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
-            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
-            if (eventContent.isBlank()) {
+            ExternalSignerUtils.openSigner(unsignedEvent)
+            val signature = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
+            if (signature.isBlank()) {
                 return
             }
-            signedEvent = PrivateDmEvent.create(signedEvent, eventContent)
-        }
+            val signedEvent = PrivateDmEvent.create(unsignedEvent, signature)
+            Client.send(signedEvent)
+            LocalCache.consume(signedEvent, null)
+        } else {
+            val signedEvent = PrivateDmEvent.create(
+                recipientPubKey = toUser.hexToByteArray(),
+                publishedRecipientPubKey = toUser.hexToByteArray(),
+                msg = message,
+                replyTos = repliesToHex,
+                mentions = mentionsHex,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                geohash = geohash,
+                keyPair = keyPair,
+                advertiseNip18 = false
+            )
 
-        Client.send(signedEvent)
-        LocalCache.consume(signedEvent, null)
+            Client.send(signedEvent)
+            LocalCache.consume(signedEvent, null)
+        }
     }
 
     fun sendNIP24PrivateMessage(

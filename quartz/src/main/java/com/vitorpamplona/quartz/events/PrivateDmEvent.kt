@@ -130,6 +130,49 @@ class PrivateDmEvent(
             return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
         }
 
+        fun createWithoutSignature(
+            msg: String,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            keyPair: KeyPair,
+            createdAt: Long = TimeUtils.now(),
+            publishedRecipientPubKey: ByteArray? = null,
+            advertiseNip18: Boolean = true,
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?,
+            geohash: String? = null
+        ): PrivateDmEvent {
+            val message = if (advertiseNip18) { nip18Advertisement } else { "" } + msg
+            val content = message
+            val tags = mutableListOf<List<String>>()
+            publishedRecipientPubKey?.let {
+                tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
+            }
+            replyTos?.forEach {
+                tags.add(listOf("e", it))
+            }
+            mentions?.forEach {
+                tags.add(listOf("p", it))
+            }
+            zapReceiver?.forEach {
+                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+            }
+            if (markAsSensitive) {
+                tags.add(listOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let {
+                tags.add(listOf("zapraiser", "$it"))
+            }
+            geohash?.let {
+                tags.add(listOf("g", it))
+            }
+
+            val pubKey = keyPair.pubKey.toHexKey()
+            val id = generateId(pubKey, createdAt, kind, tags, content)
+            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+        }
+
         fun create(
             unsignedEvent: PrivateDmEvent,
             signature: String,
