@@ -5,7 +5,10 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import android.util.Log
+import android.view.View
 import android.view.Window
+import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -48,12 +51,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -611,32 +616,46 @@ fun ZoomableImageDialog(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val view = LocalView.current
-
-    DisposableEffect(key1 = view) {
-        if (Build.VERSION.SDK_INT >= 30) {
-            view.windowInsetsController?.hide(
-                android.view.WindowInsets.Type.systemBars()
-            )
-        }
-
-        onDispose {
-            if (Build.VERSION.SDK_INT >= 30) {
-                view.windowInsetsController?.show(
-                    android.view.WindowInsets.Type.systemBars()
-                )
-            }
-        }
-    }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false,
+            usePlatformDefaultWidth = true,
             decorFitsSystemWindows = false
         )
     ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        val view = LocalView.current
+
+        val activityWindow = getActivityWindow()
+        val dialogWindow = getDialogWindow()
+        val parentView = LocalView.current.parent as View
+        SideEffect {
+            if (activityWindow != null && dialogWindow != null) {
+                val attributes = WindowManager.LayoutParams()
+                attributes.copyFrom(activityWindow.attributes)
+                attributes.type = dialogWindow.attributes.type
+                dialogWindow.attributes = attributes
+                parentView.layoutParams = FrameLayout.LayoutParams(activityWindow.decorView.width, activityWindow.decorView.height)
+                view.layoutParams = FrameLayout.LayoutParams(activityWindow.decorView.width, activityWindow.decorView.height)
+            }
+        }
+
+        DisposableEffect(key1 = Unit) {
+            if (Build.VERSION.SDK_INT >= 30) {
+                view.windowInsetsController?.hide(
+                    android.view.WindowInsets.Type.systemBars()
+                )
+            }
+
+            onDispose {
+                if (Build.VERSION.SDK_INT >= 30) {
+                    view.windowInsetsController?.show(
+                        android.view.WindowInsets.Type.systemBars()
+                    )
+                }
+            }
+        }
+
+        Surface(modifier = Modifier.fillMaxSize(), color = Color.Yellow) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
             }
