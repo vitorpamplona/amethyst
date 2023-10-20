@@ -655,7 +655,7 @@ fun ZoomableImageDialog(
             }
         }
 
-        Surface(modifier = Modifier.fillMaxSize(), color = Color.Yellow) {
+        Surface(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
             }
