@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.ExternalSignerUtils
+import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
@@ -104,7 +105,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        LanguageTranslatorService.clear()
         ServiceManager.cleanObservers()
+
         // if (BuildConfig.DEBUG) {
         GlobalScope.launch(Dispatchers.IO) {
             debugState(this@MainActivity)

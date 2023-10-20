@@ -24,7 +24,7 @@ data class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    var executorService = Executors.newScheduledThreadPool(5)
+    var executorService = Executors.newScheduledThreadPool(3)
 
     private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.6f).build()
     private val languageIdentification = LanguageIdentification.getClient(options)
@@ -32,7 +32,7 @@ object LanguageTranslatorService {
     val tagRegex = Pattern.compile("(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)", Pattern.CASE_INSENSITIVE)
 
     private val translators =
-        object : LruCache<TranslatorOptions, Translator>(20) {
+        object : LruCache<TranslatorOptions, Translator>(3) {
             override fun create(options: TranslatorOptions): Translator {
                 return Translation.getClient(options)
             }
@@ -46,6 +46,10 @@ object LanguageTranslatorService {
                 oldValue.close()
             }
         }
+
+    fun clear() {
+        translators.evictAll()
+    }
 
     fun identifyLanguage(text: String): Task<String> {
         return languageIdentification.identifyLanguage(text)
@@ -61,6 +65,7 @@ object LanguageTranslatorService {
         }
 
         val options = TranslatorOptions.Builder()
+            .setExecutor(executorService)
             .setSourceLanguage(sourceLangCode)
             .setTargetLanguage(targetLangCode)
             .build()
@@ -116,7 +121,7 @@ object LanguageTranslatorService {
                 val short = "A$counter"
                 counter++
                 returningList.put(short, tag)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
         return returningList
@@ -132,7 +137,7 @@ object LanguageTranslatorService {
                 val short = "A$counter"
                 counter++
                 returningList.put(short, lnInvoice)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
         return returningList

@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service.playback
 
+import android.annotation.SuppressLint
 import android.content.Context
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -10,7 +10,8 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
 import java.io.File
 
-@UnstableApi class VideoCache {
+@SuppressLint("UnsafeOptInUsageError")
+class VideoCache {
 
     var exoPlayerCacheSize: Long = 150 * 1024 * 1024 // 90MB
 

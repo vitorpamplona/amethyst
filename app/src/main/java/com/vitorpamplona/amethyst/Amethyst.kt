@@ -5,7 +5,6 @@ import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
 import android.util.Log
-import androidx.media3.common.util.UnstableApi
 import coil.ImageLoader
 import com.vitorpamplona.amethyst.service.playback.VideoCache
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +12,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlin.time.measureTimedValue
 
-@UnstableApi class Amethyst : Application() {
+class Amethyst : Application() {
     val videoCache: VideoCache by lazy {
         val newCache = VideoCache()
         newCache.initFileCache(instance)
