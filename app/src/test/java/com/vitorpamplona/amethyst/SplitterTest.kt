@@ -1,16 +1,40 @@
 package com.vitorpamplona.amethyst
 
+import android.os.Looper
 import com.vitorpamplona.amethyst.ui.components.Split
+import io.mockk.MockKAnnotations
+import io.mockk.every
+import io.mockk.impl.annotations.SpyK
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class SplitterTest {
-    @Test
-    fun testSplit() {
-        val mySplit = Split<String>()
+    @SpyK
+    var mySplit = Split<String>()
 
+    @Before
+    fun setUp() {
+        mockkStatic(Looper::class)
+        every { Looper.myLooper() } returns mockk<Looper>()
+        every { Looper.getMainLooper() } returns mockk<Looper>()
+        MockKAnnotations.init(this)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    @Test
+    fun testSplit() = runBlocking {
         val vitor = mySplit.addItem("Vitor")
 
         assertEquals(1f, mySplit.items[vitor].percentage, 0.01f)
