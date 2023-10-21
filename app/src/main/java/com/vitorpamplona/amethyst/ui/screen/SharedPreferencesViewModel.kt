@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -10,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.window.layout.DisplayFeature
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -30,6 +32,9 @@ class SettingsState() {
     var automaticallyShowProfilePictures by mutableStateOf(ConnectivityType.ALWAYS)
 
     var isOnMobileData: State<Boolean> = mutableStateOf(false)
+
+    var windowSizeClass = mutableStateOf<WindowSizeClass?>(null)
+    var displayFeatures = mutableStateOf<List<DisplayFeature>>(emptyList())
 
     val showProfilePictures = derivedStateOf {
         when (automaticallyShowProfilePictures) {
@@ -148,6 +153,15 @@ class SharedPreferencesViewModel : ViewModel() {
     fun updateConnectivityStatusState(isOnMobileDataState: State<Boolean>) {
         if (sharedPrefs.isOnMobileData != isOnMobileDataState) {
             sharedPrefs.isOnMobileData = isOnMobileDataState
+        }
+    }
+
+    fun updateDisplaySettings(windowSizeClass: WindowSizeClass, displayFeatures: List<DisplayFeature>) {
+        if (sharedPrefs.windowSizeClass.value != windowSizeClass) {
+            sharedPrefs.windowSizeClass.value = windowSizeClass
+        }
+        if (sharedPrefs.displayFeatures.value != displayFeatures) {
+            sharedPrefs.displayFeatures.value = displayFeatures
         }
     }
 

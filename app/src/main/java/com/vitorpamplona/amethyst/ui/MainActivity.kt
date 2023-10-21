@@ -16,10 +16,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.service.ExternalSignerUtils
@@ -51,6 +54,7 @@ import java.nio.charset.StandardCharsets
 class MainActivity : AppCompatActivity() {
     private val isOnMobileDataState = mutableStateOf(false)
 
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         ExternalSignerUtils.start(this)
@@ -60,9 +64,16 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
 
-            LaunchedEffect(key1 = sharedPreferencesViewModel, isOnMobileDataState) {
+            val displayFeatures = calculateDisplayFeatures(this)
+            val windowSizeClass = calculateWindowSizeClass(this)
+
+            LaunchedEffect(key1 = sharedPreferencesViewModel) {
                 sharedPreferencesViewModel.init()
+            }
+
+            LaunchedEffect(isOnMobileDataState) {
                 sharedPreferencesViewModel.updateConnectivityStatusState(isOnMobileDataState)
+                sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
             }
 
             AmethystTheme(sharedPreferencesViewModel) {

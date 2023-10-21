@@ -238,7 +238,9 @@ private fun ChannelTitleWithLabelInfo(channelName: String, modifier: Modifier) {
         text = channelNameAndBoostInfo,
         fontWeight = FontWeight.Bold,
         modifier = modifier,
-        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }
 

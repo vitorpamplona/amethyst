@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -474,7 +475,11 @@ private fun WritePermissionButtons(
 
     when (currentRoute) {
         Route.Home.base -> NewNoteButton(accountViewModel, nav)
-        Route.Message.base -> ChannelFabColumn(accountViewModel, nav)
+        Route.Message.base -> {
+            if (accountViewModel.settings.windowSizeClass.value?.widthSizeClass == WindowWidthSizeClass.Compact) {
+                ChannelFabColumn(accountViewModel, nav)
+            }
+        }
         Route.Video.base -> NewImageButton(accountViewModel, nav, navScrollToTop)
         Route.Community.base -> {
             val communityId by remember(navEntryState.value) {

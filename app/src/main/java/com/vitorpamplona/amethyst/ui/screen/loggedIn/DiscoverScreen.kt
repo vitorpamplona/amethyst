@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -238,7 +242,48 @@ private fun DiscoverFeedLoaded(
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember {
-                Modifier.fillMaxWidth().animateItemPlacement()
+                Modifier
+                    .fillMaxWidth()
+                    .animateItemPlacement()
+            }
+
+            Row(defaultModifier) {
+                ChannelCardCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier,
+                    forceEventKind = forceEventKind,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DiscoverFeedTwoColumnsLoaded(
+    state: FeedState.Loaded,
+    routeForLastRead: String?,
+    listState: LazyGridState,
+    forceEventKind: Int?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(
+            top = 10.dp,
+            bottom = 10.dp
+        ),
+        state = listState
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            val defaultModifier = remember {
+                Modifier
+                    .fillMaxWidth()
+                    .animateItemPlacement()
             }
 
             Row(defaultModifier) {
