@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -607,7 +608,6 @@ private fun DisplayBlurHash(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ZoomableImageDialog(
     imageUrl: ZoomableContent,
@@ -615,6 +615,9 @@ fun ZoomableImageDialog(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel
 ) {
+    val orientation = LocalConfiguration.current.orientation
+    println("This Log only exists to force orientation listener $orientation")
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -623,6 +626,8 @@ fun ZoomableImageDialog(
         )
     ) {
         val view = LocalView.current
+        val orientation = LocalConfiguration.current.orientation
+        println("This Log only exists to force orientation listener $orientation")
 
         val activityWindow = getActivityWindow()
         val dialogWindow = getDialogWindow()
@@ -964,5 +969,15 @@ private tailrec fun Context.getActivityWindow(): Window? =
     when (this) {
         is Activity -> window
         is ContextWrapper -> baseContext.getActivityWindow()
+        else -> null
+    }
+
+@Composable
+fun getActivity(): Activity? = LocalView.current.context.getActivity()
+
+private tailrec fun Context.getActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.getActivity()
         else -> null
     }
