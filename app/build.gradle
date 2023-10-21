@@ -121,7 +121,7 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
     // HTML Parsing for Link Preview
-    implementation 'org.jsoup:jsoup:1.16.1'
+    implementation 'org.jsoup:jsoup:1.16.2'
 
     // Encrypted Key Storage
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
