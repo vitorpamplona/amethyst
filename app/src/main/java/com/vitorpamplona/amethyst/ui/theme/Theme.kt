@@ -37,7 +37,9 @@ private val DarkColorPalette = darkColorScheme(
     primary = Purple200,
     secondary = Teal200,
     // secondary = Purple700,
-    tertiary = Teal200
+    tertiary = Teal200,
+    background = Color(0xFF000000),
+    surface = Color(0xFF000000)
 )
 
 private val LightColorPalette = lightColorScheme(
