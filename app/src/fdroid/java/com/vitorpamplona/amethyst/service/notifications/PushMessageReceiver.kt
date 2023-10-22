@@ -56,9 +56,10 @@ class PushMessageReceiver : MessagingReceiver() {
 
     override fun onNewEndpoint(context: Context, endpoint: String, instance: String) {
         Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance")
-        pushHandler.setEndpoint(endpoint)
+        val sanitizedEndpoint = endpoint.dropLast(5)
+        pushHandler.setEndpoint(sanitizedEndpoint)
         scope.launch(Dispatchers.IO) {
-            RegisterAccounts(LocalPreferences.allSavedAccounts()).go(endpoint)
+            RegisterAccounts(LocalPreferences.allSavedAccounts()).go(sanitizedEndpoint)
             notificationManager().getOrCreateZapChannel(appContext)
             notificationManager().getOrCreateDMChannel(appContext)
         }
