@@ -156,12 +156,9 @@ object LocalPreferences {
     private val prefsDirPath: String
         get() = "${Amethyst.instance.filesDir.parent}/shared_prefs/"
 
-    private suspend fun addAccount(npub: AccountInfo) {
-        val accounts = savedAccounts().toMutableList()
-        if (npub !in accounts) {
-            accounts.add(npub)
-            updateSavedAccounts(accounts)
-        }
+    private suspend fun addAccount(accInfo: AccountInfo) {
+        val accounts = savedAccounts().filter { it.npub != accInfo.npub }.plus(accInfo)
+        updateSavedAccounts(accounts)
     }
 
     private suspend fun setCurrentAccount(account: Account) = withContext(Dispatchers.IO) {
@@ -183,10 +180,8 @@ object LocalPreferences {
      * Removes the account from the app level shared preferences
      */
     private suspend fun removeAccount(accountInfo: AccountInfo) {
-        val accounts = savedAccounts().toMutableList()
-        if (accounts.remove(accountInfo)) {
-            updateSavedAccounts(accounts)
-        }
+        val accounts = savedAccounts().filter { it.npub != accountInfo.npub }
+        updateSavedAccounts(accounts)
     }
 
     /**
