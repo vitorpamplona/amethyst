@@ -113,7 +113,7 @@ dependencies {
 
     // Adaptive Layout / Two Pane
     implementation "androidx.compose.material3:material3-window-size-class:${material3_version}"
-    implementation "com.google.accompanist:accompanist-adaptive:0.33.2-alpha"
+    implementation "com.google.accompanist:accompanist-adaptive:0.32.0"
 
 
     // Lifecycle
