@@ -222,8 +222,8 @@ fun ProfileContent(
                 )
             }
 
-            Row(Modifier.padding(top = Size10dp)) {
-                EditStatusBox(baseAccountUser, accountViewModel)
+            Column(Modifier.padding(top = Size10dp)) {
+                EditStatusBoxes(baseAccountUser, accountViewModel)
             }
 
             Row(
@@ -243,7 +243,7 @@ fun ProfileContent(
 }
 
 @Composable
-private fun EditStatusBox(baseAccountUser: User, accountViewModel: AccountViewModel) {
+private fun EditStatusBoxes(baseAccountUser: User, accountViewModel: AccountViewModel) {
     val focusManager = LocalFocusManager.current
 
     LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
