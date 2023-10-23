@@ -322,28 +322,30 @@ open class NewPostViewModel() : ViewModel() {
                             createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList)
                         }
                     } else {
-                        ImageUploader.uploadImage(
-                            uri = fileUri,
-                            contentType = contentType,
-                            size = size,
-                            server = server,
-                            contentResolver = contentResolver,
-                            onSuccess = { imageUrl, mimeType ->
-                                if (isNIP94Server(server)) {
-                                    createNIP94Record(imageUrl, mimeType, alt, sensitiveContent)
-                                } else {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            ImageUploader.uploadImage(
+                                uri = fileUri,
+                                contentType = contentType,
+                                size = size,
+                                server = server,
+                                contentResolver = contentResolver,
+                                onSuccess = { imageUrl, mimeType ->
+                                    if (isNIP94Server(server)) {
+                                        createNIP94Record(imageUrl, mimeType, alt, sensitiveContent)
+                                    } else {
+                                        isUploadingImage = false
+                                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                                        urlPreview = findUrlInMessage()
+                                    }
+                                },
+                                onError = {
                                     isUploadingImage = false
-                                    message = TextFieldValue(message.text + "\n\n" + imageUrl)
-                                    urlPreview = findUrlInMessage()
+                                    viewModelScope.launch {
+                                        imageUploadingError.emit("Failed to upload the image / video")
+                                    }
                                 }
-                            },
-                            onError = {
-                                isUploadingImage = false
-                                viewModelScope.launch {
-                                    imageUploadingError.emit("Failed to upload the image / video")
-                                }
-                            }
-                        )
+                            )
+                        }
                     }
                 },
                 onError = {
