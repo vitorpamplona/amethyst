@@ -41,7 +41,7 @@ fun AccountScreen(
                 }
                 is AccountState.LoggedIn -> {
                     val accountViewModel: AccountViewModel = viewModel(
-                        key = state.account.userProfile().pubkeyHex,
+                        key = state.account.hashCode().toString(),
                         factory = AccountViewModel.Factory(state.account, sharedPreferencesViewModel.sharedPrefs)
                     )
 
@@ -49,7 +49,7 @@ fun AccountScreen(
                 }
                 is AccountState.LoggedInViewOnly -> {
                     val accountViewModel: AccountViewModel = viewModel(
-                        key = state.account.userProfile().pubkeyHex,
+                        key = state.account.hashCode().toString(),
                         factory = AccountViewModel.Factory(state.account, sharedPreferencesViewModel.sharedPrefs)
                     )
 
