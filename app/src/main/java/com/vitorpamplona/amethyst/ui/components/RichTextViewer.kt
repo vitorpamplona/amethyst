@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -318,10 +319,8 @@ private fun NoProtocolUrlRenderer(word: SchemelessUrlSegment) {
 
 @Composable
 private fun RenderUrl(segment: SchemelessUrlSegment) {
-    Row() {
-        ClickableUrl(segment.url, "https://${segment.url}")
-        segment.extras?.let { it1 -> Text(it1) }
-    }
+    ClickableUrl(segment.url, "https://${segment.url}")
+    segment.extras?.let { it1 -> Text(it1) }
 }
 
 @Composable
@@ -545,9 +544,7 @@ private fun DisplayFullNote(
 
 @Composable
 fun HashTag(word: HashTagSegment, nav: (String) -> Unit) {
-    Row() {
-        RenderHashtag(word, nav)
-    }
+    RenderHashtag(word, nav)
 }
 
 @Composable
@@ -556,39 +553,51 @@ private fun RenderHashtag(
     nav: (String) -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
-    val hashtagIcon = remember(segment.hashtag) { checkForHashtagWithIcon(segment.hashtag, primary) }
-    ClickableText(
-        text = buildAnnotatedString {
-            withStyle(
-                LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary).toSpanStyle()
-            ) {
-                append("#${segment.hashtag}")
-            }
-        },
-        onClick = { nav("Hashtag/${segment.hashtag}") }
-    )
+    val hashtagIcon = remember(segment.hashtag) {
+        checkForHashtagWithIcon(segment.hashtag, primary)
+    }
 
-    if (hashtagIcon != null) {
-        val myId = "inlineContent"
-        val emptytext = buildAnnotatedString {
-            withStyle(
-                LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary).toSpanStyle()
-            ) {
-                append("")
-                appendInlineContent(myId, "[icon]")
+    val regularText =
+        SpanStyle(color = MaterialTheme.colorScheme.onBackground)
+
+    val clickableTextStyle =
+        SpanStyle(color = primary)
+
+    val annotatedTermsString = buildAnnotatedString {
+        withStyle(clickableTextStyle) {
+            pushStringAnnotation("routeToHashtag", "")
+            append("#${segment.hashtag}")
+        }
+
+        if (hashtagIcon != null) {
+            withStyle(clickableTextStyle) {
+                pushStringAnnotation("routeToHashtag", "")
+                appendInlineContent("inlineContent", "[icon]")
             }
         }
-        // Empty Text for Size of Icon
-        Text(
-            text = emptytext,
-            inlineContent = mapOf(
-                myId to InlineIcon(hashtagIcon)
-            )
-        )
+
+        segment.extras?.ifBlank { "" }?.let {
+            withStyle(regularText) {
+                append(it)
+            }
+        }
     }
-    segment.extras?.ifBlank { "" }?.let {
-        Text(text = it)
+
+    val inlineContent = if (hashtagIcon != null) {
+        mapOf("inlineContent" to InlineIcon(hashtagIcon))
+    } else {
+        emptyMap()
     }
+
+    val pressIndicator = Modifier.clickable {
+        nav("Hashtag/${segment.hashtag}")
+    }
+
+    Text(
+        text = annotatedTermsString,
+        modifier = pressIndicator,
+        inlineContent = inlineContent
+    )
 }
 
 @Composable
