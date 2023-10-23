@@ -49,28 +49,30 @@ class TextToSpeechEngine private constructor() {
     fun initTTS(context: Context, message: String) {
         tts = TextToSpeech(context) {
             if (it == TextToSpeech.SUCCESS) {
-                tts!!.language = defLanguage
-                tts!!.setPitch(defaultPitch)
-                tts!!.setSpeechRate(defaultSpeed)
-                tts!!.setListener(
-                    onStart = {
-                        onStartListener?.invoke()
-                    },
-                    onError = { e ->
-                        e?.let { error ->
-                            onErrorListener?.invoke(error)
+                tts?.let {
+                    it.language = defLanguage
+                    it.setPitch(defaultPitch)
+                    it.setSpeechRate(defaultSpeed)
+                    it.setListener(
+                        onStart = {
+                            onStartListener?.invoke()
+                        },
+                        onError = { e ->
+                            e?.let { error ->
+                                onErrorListener?.invoke(error)
+                            }
+                        },
+                        onRange = { start, end ->
+                            if (this@TextToSpeechEngine.message != null) {
+                                onHighlightListener?.invoke(start, end)
+                            }
+                        },
+                        onDone = {
+                            onStartListener?.invoke()
                         }
-                    },
-                    onRange = { start, end ->
-                        if (this@TextToSpeechEngine.message != null) {
-                            onHighlightListener?.invoke(start, end)
-                        }
-                    },
-                    onDone = {
-                        onStartListener?.invoke()
-                    }
-                )
-                speak(message)
+                    )
+                    speak(message)
+                }
             } else {
                 onErrorListener?.invoke(getErrorText(it))
             }
@@ -78,7 +80,7 @@ class TextToSpeechEngine private constructor() {
     }
 
     private fun speak(message: String): TextToSpeechEngine {
-        tts!!.speak(
+        tts?.speak(
             message,
             TextToSpeech.QUEUE_FLUSH,
             null,

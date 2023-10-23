@@ -21,7 +21,7 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
 
     private var message: String? = null
 
-    private var tts: TextToSpeechEngine? = null
+    private var ttsEngine: TextToSpeechEngine? = null
 
     private var onStart: (() -> Unit)? = null
 
@@ -44,19 +44,19 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
     }
 
     private fun initTTS() = context.get()?.run {
-        tts = TextToSpeechEngine.getInstance()
+        ttsEngine = TextToSpeechEngine.getInstance()
             .setOnCompletionListener { onDoneListener?.invoke() }
             .setOnErrorListener { onErrorListener?.invoke(it) }
             .setOnStartListener { onStart?.invoke() }
     }
 
     fun speak(message: String): TextToSpeechHelper {
-        if (tts == null) {
+        if (ttsEngine == null) {
             initTTS()
         }
         this.message = message
 
-        tts?.initTTS(
+        ttsEngine?.initTTS(
             appContext,
             message
         )
@@ -70,8 +70,8 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
      */
     fun highlight(): TextToSpeechHelper {
         if (message == null) throw Exception("Message can't be null for highlighting !! Call speak() first")
-        tts?.setHighlightedMessage(message!!)
-        tts?.setOnHighlightListener { i, i2 ->
+        ttsEngine?.setHighlightedMessage(message!!)
+        ttsEngine?.setOnHighlightListener { i, i2 ->
             onHighlightListener?.invoke(Pair(i, i2))
         }
         return this
@@ -86,8 +86,8 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
     fun destroy(
         action: (() -> Unit) = {}
     ) {
-        tts?.destroy()
-        tts = null
+        ttsEngine?.destroy()
+        ttsEngine = null
         action.invoke()
         INSTANCE = null
     }
@@ -118,7 +118,7 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
     }
 
     fun setLanguage(locale: Locale): TextToSpeechHelper {
-        tts?.setLanguage(locale)
+        ttsEngine?.setLanguage(locale)
         return this
     }
 
@@ -126,12 +126,12 @@ class TextToSpeechHelper private constructor(private val context: WeakReference<
         pitch: Float = DEF_SPEECH_AND_PITCH,
         speed: Float = DEF_SPEECH_AND_PITCH
     ): TextToSpeechHelper {
-        tts?.setPitchAndSpeed(pitch, speed)
+        ttsEngine?.setPitchAndSpeed(pitch, speed)
         return this
     }
 
     fun resetPitchAndSpeed(): TextToSpeechHelper {
-        tts?.resetPitchAndSpeed()
+        ttsEngine?.resetPitchAndSpeed()
         return this
     }
 
