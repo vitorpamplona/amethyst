@@ -72,7 +72,7 @@ fun NewUserMetadataView(onClose: () -> Unit, account: Account) {
                         onClose()
                     })
 
-                    PostButton(
+                    SaveButton(
                         onPost = {
                             postViewModel.create()
                             onClose()

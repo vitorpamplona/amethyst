@@ -1279,12 +1279,9 @@ fun PostButton(onPost: () -> Unit = {}, isActive: Boolean, modifier: Modifier = 
     Button(
         modifier = modifier,
         enabled = isActive,
-        onClick = {
-            onPost()
-        },
-        shape = ButtonBorder
+        onClick = onPost
     ) {
-        Text(text = stringResource(R.string.post), color = Color.White)
+        Text(text = stringResource(R.string.post))
     }
 }
 

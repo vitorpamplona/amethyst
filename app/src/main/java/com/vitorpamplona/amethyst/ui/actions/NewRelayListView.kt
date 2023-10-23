@@ -103,8 +103,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                     title = {
                         Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(end = 10.dp),
+                                .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -122,7 +121,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                                 Text(stringResource(R.string.default_relays))
                             }
 
-                            PostButton(
+                            SaveButton(
                                 onPost = {
                                     postViewModel.create()
                                     onClose()
