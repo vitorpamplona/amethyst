@@ -109,9 +109,11 @@ class SharedPreferencesViewModel : ViewModel() {
 
     fun updateLanguageInTheUI() {
         if (sharedPrefs.language != null) {
-            AppCompatDelegate.setApplicationLocales(
-                LocaleListCompat.forLanguageTags(sharedPrefs.language)
-            )
+            viewModelScope.launch(Dispatchers.Main) {
+                AppCompatDelegate.setApplicationLocales(
+                    LocaleListCompat.forLanguageTags(sharedPrefs.language)
+                )
+            }
         }
     }
 
