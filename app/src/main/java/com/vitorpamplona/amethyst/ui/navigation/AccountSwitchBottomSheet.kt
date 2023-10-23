@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -262,6 +263,7 @@ private fun LogoutButton(
     accountStateViewModel: AccountStateViewModel
 ) {
     var logoutDialog by remember { mutableStateOf(false) }
+    val activity = getActivity()
     if (logoutDialog) {
         AlertDialog(
             title = {
@@ -277,7 +279,15 @@ private fun LogoutButton(
                 TextButton(
                     onClick = {
                         logoutDialog = false
-                        accountStateViewModel.logOff(acc)
+                        accountStateViewModel.logOff(
+                            acc
+                        ) {
+                            val intent = activity?.intent
+                            if (intent != null) {
+                                activity.finish()
+                                activity.startActivity(intent)
+                            }
+                        }
                     }
                 ) {
                     Text(text = stringResource(R.string.log_out))

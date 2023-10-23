@@ -146,11 +146,12 @@ class AccountStateViewModel() : ViewModel() {
         }
     }
 
-    fun logOff(accountInfo: AccountInfo) {
+    fun logOff(accountInfo: AccountInfo, onLogout: () -> Unit) {
         viewModelScope.launch {
             prepareLogoutOrSwitch()
             LocalPreferences.updatePrefsForLogout(accountInfo)
             tryLoginExistingAccount()
+            onLogout()
         }
     }
 }
