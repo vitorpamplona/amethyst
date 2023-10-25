@@ -41,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -121,9 +122,11 @@ fun CheckHiddenChatMessage(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val isHidden by accountViewModel.account.liveHiddenUsers.map {
-        baseNote.isHiddenFor(it)
-    }.observeAsState(accountViewModel.isNoteHidden(baseNote))
+    val isHidden by remember {
+        accountViewModel.account.liveHiddenUsers.map {
+            baseNote.isHiddenFor(it)
+        }.distinctUntilChanged()
+    }.observeAsState(false)
 
     if (!isHidden) {
         LoadedChatMessageCompose(

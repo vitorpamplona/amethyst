@@ -60,7 +60,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -178,7 +177,8 @@ fun ProfileContent(
                 painter = painterResource(R.drawable.profile_banner),
                 contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .height(120.dp)
             )
         }
@@ -290,9 +290,7 @@ private fun EditStatusBoxes(baseAccountUser: User, accountViewModel: AccountView
             )
         } else {
             statuses.forEach {
-                val originalStatus by it.live().metadata.map {
-                    it.note.event?.content() ?: ""
-                }.observeAsState(it.event?.content() ?: "")
+                val originalStatus by it.live().content.observeAsState("")
 
                 val thisStatus = remember {
                     mutableStateOf(originalStatus)

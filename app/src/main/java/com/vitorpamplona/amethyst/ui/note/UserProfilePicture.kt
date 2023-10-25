@@ -363,11 +363,11 @@ fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewMod
 
 @Composable
 fun WatchUserFollows(userHex: String, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
-    val showFollowingMark by accountViewModel.userFollows.map {
-        it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    }.distinctUntilChanged().observeAsState(
-        accountViewModel.account.userProfile().isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-    )
+    val showFollowingMark by remember {
+        accountViewModel.userFollows.map {
+            it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
+        }.distinctUntilChanged()
+    }.observeAsState(false)
 
     onFollowChanges(showFollowingMark)
 }

@@ -692,9 +692,11 @@ fun BoostReaction(
 
 @Composable
 fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountViewModel: AccountViewModel) {
-    val iconTint by baseNote.live().boosts.map {
-        if (it.note.isBoostedBy(accountViewModel.userProfile())) Color.Unspecified else grayTint
-    }.distinctUntilChanged().observeAsState(grayTint)
+    val iconTint by remember(baseNote) {
+        baseNote.live().boosts.map {
+            if (it.note.isBoostedBy(accountViewModel.userProfile())) Color.Unspecified else grayTint
+        }.distinctUntilChanged()
+    }.observeAsState(grayTint)
 
     val iconModifier = remember {
         Modifier.size(iconSize)

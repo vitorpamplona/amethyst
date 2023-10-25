@@ -302,9 +302,11 @@ fun CheckHiddenNoteCompose(
             nav = nav
         )
     } else {
-        val isHidden by accountViewModel.account.liveHiddenUsers.map {
-            note.isHiddenFor(it)
-        }.observeAsState(accountViewModel.isNoteHidden(note))
+        val isHidden by remember(note) {
+            accountViewModel.account.liveHiddenUsers.map {
+                note.isHiddenFor(it)
+            }.distinctUntilChanged()
+        }.observeAsState(false)
 
         Crossfade(targetState = isHidden) {
             if (!it) {
@@ -791,11 +793,11 @@ private fun ShortCommunityActionOptions(
 
 @Composable
 fun WatchAddressableNoteFollows(note: AddressableNote, accountViewModel: AccountViewModel, onFollowChanges: @Composable (Boolean) -> Unit) {
-    val showFollowingMark by accountViewModel.userFollows.map {
-        it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
-    }.distinctUntilChanged().observeAsState(
-        accountViewModel.userProfile().latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
-    )
+    val showFollowingMark by remember {
+        accountViewModel.userFollows.map {
+            it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false
+        }.distinctUntilChanged()
+    }.observeAsState(false)
 
     onFollowChanges(showFollowingMark)
 }
@@ -2212,9 +2214,11 @@ private fun EmojiListOptions(
         accountViewModel
     ) {
         it?.let { usersEmojiList ->
-            val hasAddedThis by usersEmojiList.live().metadata.map {
-                usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
-            }.distinctUntilChanged().observeAsState()
+            val hasAddedThis by remember {
+                usersEmojiList.live().metadata.map {
+                    usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
+                }.distinctUntilChanged()
+            }.observeAsState()
 
             Crossfade(targetState = hasAddedThis) {
                 val scope = rememberCoroutineScope()

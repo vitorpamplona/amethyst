@@ -777,6 +777,10 @@ class NoteLiveSet(u: Note) {
         }.toImmutableList()
     }
 
+    val content = innerMetadata.map {
+        it.note.event?.content() ?: ""
+    }
+
     fun isInUse(): Boolean {
         return metadata.hasObservers() ||
             reactions.hasObservers() ||
