@@ -146,6 +146,7 @@
     <string name="login">Inloggen</string>
     <string name="generate_a_new_key">Genereer een nieuwe sleutel</string>
     <string name="loading_feed">Feed laden…</string>
+    <string name="loading_account">Account wordt geladen</string>
     <string name="error_loading_replies">"Foutmelding bij het laden reacties: "</string>
     <string name="try_again">Opnieuw proberen</string>
     <string name="feed_is_empty">Feed is leeg.</string>
