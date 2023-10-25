@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
@@ -143,7 +143,7 @@ public fun WatchScrollToTop(
     viewModel: FeedViewModel,
     pagerState: PagerState
 ) {
-    val scrollToTop by viewModel.scrollToTop.collectAsState()
+    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
         if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
@@ -161,7 +161,7 @@ fun RenderPage(
     pagerStateKey: String?,
     nav: (String) -> Unit
 ) {
-    val feedState by videoFeedView.feedContent.collectAsState()
+    val feedState by videoFeedView.feedContent.collectAsStateWithLifecycle()
 
     Box() {
         Column {

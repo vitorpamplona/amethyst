@@ -14,7 +14,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +27,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -218,8 +218,8 @@ private fun ObserveAndShowChart(
     lineChartCount: LineChart,
     lineChartZaps: LineChart
 ) {
-    val axisModel = model.axisLabels.collectAsState()
-    val chartModel by model.chartModel.collectAsState()
+    val axisModel = model.axisLabels.collectAsStateWithLifecycle()
+    val chartModel by model.chartModel.collectAsStateWithLifecycle()
     chartModel?.let {
         Chart(
             chart = remember(lineChartCount, lineChartZaps) {

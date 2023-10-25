@@ -37,7 +37,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -60,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
@@ -634,7 +634,7 @@ private suspend fun enableTor(
 
 @Composable
 private fun RelayStatus(accountViewModel: AccountViewModel) {
-    val connectedRelaysText by RelayPool.statusFlow.collectAsState(initial = RelayPoolStatus(0, 0))
+    val connectedRelaysText by RelayPool.statusFlow.collectAsStateWithLifecycle(RelayPoolStatus(0, 0))
 
     RenderRelayStatus(connectedRelaysText)
 }

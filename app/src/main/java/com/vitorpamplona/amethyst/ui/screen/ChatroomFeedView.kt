@@ -12,13 +12,13 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -51,7 +51,7 @@ fun RenderChatroomFeedView(
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {

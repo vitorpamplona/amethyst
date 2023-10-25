@@ -52,7 +52,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -88,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -1126,7 +1126,7 @@ private fun DisplayAppRecommendations(
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     nav: (String) -> Unit
 ) {
-    val feedState by appRecommendations.feedContent.collectAsState()
+    val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) {
         appRecommendations.invalidateData()

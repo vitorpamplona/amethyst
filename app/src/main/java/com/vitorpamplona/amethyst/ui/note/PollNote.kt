@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -108,7 +108,7 @@ fun PollNote(
 ) {
     WatchZapsAndUpdateTallies(baseNote, pollViewModel)
 
-    val tallies by pollViewModel.tallies.collectAsState()
+    val tallies by pollViewModel.tallies.collectAsStateWithLifecycle()
 
     tallies.forEach { poll_op ->
         OptionNote(

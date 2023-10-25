@@ -14,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.patrykandpatrick.vico.core.chart.composed.ComposedChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
@@ -380,7 +380,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 fun UserReplyReaction(
     model: UserReactionsViewModel
 ) {
-    val showCounts by model.todaysReplyCount.collectAsState("")
+    val showCounts by model.todaysReplyCount.collectAsStateWithLifecycle("")
 
     Text(
         showCounts,
@@ -393,7 +393,7 @@ fun UserReplyReaction(
 fun UserBoostReaction(
     model: UserReactionsViewModel
 ) {
-    val boosts by model.todaysBoostCount.collectAsState("")
+    val boosts by model.todaysBoostCount.collectAsStateWithLifecycle("")
 
     Text(
         boosts,
@@ -406,7 +406,7 @@ fun UserBoostReaction(
 fun UserLikeReaction(
     model: UserReactionsViewModel
 ) {
-    val reactions by model.todaysReactionCount.collectAsState("")
+    val reactions by model.todaysReactionCount.collectAsStateWithLifecycle("")
 
     Text(
         text = reactions,
@@ -419,7 +419,7 @@ fun UserLikeReaction(
 fun UserZapReaction(
     model: UserReactionsViewModel
 ) {
-    val amount by model.todaysZapAmount.collectAsState("")
+    val amount by model.todaysZapAmount.collectAsStateWithLifecycle("")
     Text(
         amount,
         fontWeight = FontWeight.Bold,

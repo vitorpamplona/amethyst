@@ -7,9 +7,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.ZapNoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -19,7 +19,7 @@ fun LnZapFeedView(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
         when (state) {

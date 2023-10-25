@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
@@ -133,7 +133,7 @@ private fun RowScope.HasNewItemsIcon(
 
     NavigationBarItem(
         icon = {
-            val hasNewItems = accountViewModel.notificationDots.hasNewItems[route]?.collectAsState()
+            val hasNewItems = accountViewModel.notificationDots.hasNewItems[route]?.collectAsStateWithLifecycle()
 
             NotifiableIcon(
                 route.icon,

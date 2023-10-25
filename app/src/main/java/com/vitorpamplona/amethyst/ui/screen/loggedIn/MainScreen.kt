@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +47,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -389,7 +389,7 @@ fun MainScreen(
 @Composable
 private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
     val context = LocalContext.current
-    val openDialogMsg = accountViewModel.toasts.collectAsState(initial = null)
+    val openDialogMsg = accountViewModel.toasts.collectAsStateWithLifecycle(null)
 
     openDialogMsg.value?.let { obj ->
         when (obj) {
@@ -439,7 +439,7 @@ fun FloatingButtons(
     nav: (String) -> Unit,
     navScrollToTop: (Route, Boolean) -> Unit
 ) {
-    val accountState by accountStateViewModel.accountContent.collectAsState()
+    val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
     when (accountState) {
         is AccountState.Loading -> {

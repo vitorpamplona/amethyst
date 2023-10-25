@@ -31,7 +31,6 @@ import androidx.compose.material3.pullrefresh.pullRefresh
 import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -53,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -124,7 +124,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedState by viewModel.feedContent.collectAsState()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
 

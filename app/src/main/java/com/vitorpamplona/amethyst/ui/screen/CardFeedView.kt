@@ -19,7 +19,6 @@ import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
@@ -96,7 +96,7 @@ private fun WatchScrollToTop(
     viewModel: CardFeedViewModel,
     listState: LazyListState
 ) {
-    val scrollToTop by viewModel.scrollToTop.collectAsState()
+    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
         if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
@@ -114,7 +114,7 @@ fun RenderCardFeed(
     nav: (String) -> Unit,
     routeForLastRead: String
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     Crossfade(
         modifier = remember { Modifier.fillMaxSize() },

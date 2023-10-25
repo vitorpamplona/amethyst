@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -52,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -298,8 +298,8 @@ private fun RenderSearchResults(
     nav: (String) -> Unit
 ) {
     if (searchBarViewModel.isSearching) {
-        val users by searchBarViewModel.searchResultsUsers.collectAsState()
-        val channels by searchBarViewModel.searchResultsChannels.collectAsState()
+        val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
+        val channels by searchBarViewModel.searchResultsChannels.collectAsStateWithLifecycle()
 
         val automaticallyShowProfilePicture = remember {
             accountViewModel.settings.showProfilePictures.value

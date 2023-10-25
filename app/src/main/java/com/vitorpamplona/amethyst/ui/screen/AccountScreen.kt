@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -24,7 +24,7 @@ fun AccountScreen(
     accountStateViewModel: AccountStateViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
-    val accountState by accountStateViewModel.accountContent.collectAsState()
+    val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
     Column() {
         Crossfade(

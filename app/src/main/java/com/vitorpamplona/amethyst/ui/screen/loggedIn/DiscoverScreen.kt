@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -169,7 +169,7 @@ private fun RenderDiscoverFeed(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val feedState by viewModel.feedContent.collectAsState()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     Crossfade(
         targetState = feedState,

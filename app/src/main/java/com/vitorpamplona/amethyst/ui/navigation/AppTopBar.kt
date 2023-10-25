@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -51,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
@@ -527,7 +527,7 @@ fun FollowListWithRoutes(
     listName: String,
     onChange: (CodeName) -> Unit
 ) {
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsState()
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
 
     SimpleTextSpinner(
         placeholderCode = listName,
@@ -544,7 +544,7 @@ fun FollowListWithoutRoutes(
     listName: String,
     onChange: (CodeName) -> Unit
 ) {
-    val allLists by followListsModel.kind3GlobalPeople.collectAsState()
+    val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
 
     SimpleTextSpinner(
         placeholderCode = listName,

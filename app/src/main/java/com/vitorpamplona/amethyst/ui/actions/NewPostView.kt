@@ -69,7 +69,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -102,6 +101,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.fonfon.kgeohash.toGeoHash
@@ -950,7 +950,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
 
 @Composable
 fun DisplayLocationObserver(geoLocation: Flow<String>) {
-    val location by geoLocation.collectAsState(initial = null)
+    val location by geoLocation.collectAsStateWithLifecycle(null)
 
     location?.let {
         DisplayLocationInTitle(geohash = it)
