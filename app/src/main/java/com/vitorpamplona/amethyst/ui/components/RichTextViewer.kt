@@ -149,13 +149,16 @@ private fun RenderRegular(
     }
 
     val currentTextStyle = LocalTextStyle.current
+    val currentTextColor = LocalContentColor.current
 
-    val textStyle = currentTextStyle.copy(
-        lineHeight = 1.4.em,
-        color = currentTextStyle.color.takeOrElse {
-            LocalContentColor.current
-        }
-    )
+    val textStyle = remember(currentTextStyle, currentTextColor) {
+        currentTextStyle.copy(
+            lineHeight = 1.4.em,
+            color = currentTextStyle.color.takeOrElse {
+                currentTextColor
+            }
+        )
+    }
 
     MeasureSpaceWidth() { spaceWidth ->
         Column() {
