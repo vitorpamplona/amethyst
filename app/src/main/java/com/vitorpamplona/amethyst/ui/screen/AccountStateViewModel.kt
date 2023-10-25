@@ -103,9 +103,15 @@ class AccountStateViewModel() : ViewModel() {
         when (val state = _accountContent.value) {
             is AccountState.LoggedIn -> {
                 state.account.saveable.removeObserver(saveListener)
+                withContext(Dispatchers.IO) {
+                    state.currentViewModelStore.viewModelStore.clear()
+                }
             }
             is AccountState.LoggedInViewOnly -> {
                 state.account.saveable.removeObserver(saveListener)
+                withContext(Dispatchers.IO) {
+                    state.currentViewModelStore.viewModelStore.clear()
+                }
             }
             else -> {}
         }

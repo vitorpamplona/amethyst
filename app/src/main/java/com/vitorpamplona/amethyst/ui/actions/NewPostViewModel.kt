@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -631,6 +632,7 @@ open class NewPostViewModel() : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         viewModelScope.launch(Dispatchers.IO) {
             locUtil?.stop()
         }

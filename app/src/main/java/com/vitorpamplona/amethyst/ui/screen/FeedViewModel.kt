@@ -322,7 +322,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     private var collectorJob: Job? = null
 
     init {
-        Log.d("Init", "${this.javaClass.simpleName}")
+        Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 checkNotInMainThread()
@@ -340,6 +340,7 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
     }
 
     override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         bundlerInsert.cancel()
         bundler.cancel()
         collectorJob?.cancel()

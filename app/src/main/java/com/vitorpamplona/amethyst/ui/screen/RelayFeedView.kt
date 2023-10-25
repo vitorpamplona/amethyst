@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -96,6 +97,7 @@ class RelayFeedViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         bundler.cancel()
         super.onCleared()
     }

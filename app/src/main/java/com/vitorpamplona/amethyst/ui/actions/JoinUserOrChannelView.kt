@@ -81,7 +81,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun JoinUserOrChannelView(onClose: () -> Unit, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val searchBarViewModel: SearchBarViewModel = viewModel(
-        key = accountViewModel.account.userProfile().pubkeyHex + "SearchBarViewModel",
+        key = "SearchBarViewModel",
         factory = SearchBarViewModel.Factory(
             accountViewModel.account
         )

@@ -127,7 +127,7 @@ fun UpdateReactionTypeDialog(
     nav: (String) -> Unit
 ) {
     val postViewModel: UpdateReactionTypeViewModel = viewModel(
-        key = accountViewModel.userProfile().pubkeyHex,
+        key = "UpdateReactionTypeViewModel",
         factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account)
     )
 

@@ -792,7 +792,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun refreshMarkAsReadObservers() {
+    suspend fun refreshMarkAsReadObservers() {
         updateNotificationDots()
         accountMarkAsReadUpdates.value++
     }
@@ -862,25 +862,26 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     private var collectorJob: Job? = null
     val notificationDots = HasNotificationDot(bottomNavigationItems, account)
 
-    fun updateNotificationDots(newNotes: Set<Note> = emptySet()) {
-        viewModelScope.launch(Dispatchers.Default) {
-            val (value, elapsed) = measureTimedValue {
-                notificationDots.update(newNotes)
-            }
-            Log.d("Rendering Metrics", "Notification Dots Calculation in $elapsed for ${newNotes.size} new notes")
+    suspend fun updateNotificationDots(newNotes: Set<Note> = emptySet()) {
+        val (value, elapsed) = measureTimedValue {
+            notificationDots.update(newNotes)
         }
+        Log.d("Rendering Metrics", "Notification Dots Calculation in $elapsed for ${newNotes.size} new notes")
     }
 
     init {
         Log.d("Init", "AccountViewModel")
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Notification Dots Calculation refresh ${this@AccountViewModel}")
+
                 updateNotificationDots(newNotes)
             }
         }
     }
 
     override fun onCleared() {
+        Log.d("Init", "AccountViewModel onCleared")
         collectorJob?.cancel()
         super.onCleared()
     }
@@ -920,11 +921,16 @@ class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>, val accoun
     val hasNewItems = bottomNavigationItems.associateWith { MutableStateFlow(false) }
 
     fun update(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
         hasNewItems.forEach {
-            val newResult = it.key.hasNewItems(account, newNotes)
-            if (newResult != it.value.value) {
-                it.value.value = newResult
+            val (value, elapsed) = measureTimedValue {
+                val newResult = it.key.hasNewItems(account, newNotes)
+                if (newResult != it.value.value) {
+                    it.value.value = newResult
+                }
             }
+            Log.d("Rendering Metrics", "Notification Dots Calculation for ${it.key.route} in $elapsed for ${newNotes.size} new notes")
         }
     }
 }

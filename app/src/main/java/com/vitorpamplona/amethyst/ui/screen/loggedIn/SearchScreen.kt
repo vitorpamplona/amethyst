@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -86,7 +87,7 @@ fun SearchScreen(
     nav: (String) -> Unit
 ) {
     val searchBarViewModel: SearchBarViewModel = viewModel(
-        key = accountViewModel.account.userProfile().pubkeyHex + "SearchBarViewModel",
+        key = "SearchBarViewModel",
         factory = SearchBarViewModel.Factory(
             accountViewModel.account
         )
@@ -198,6 +199,7 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
 
     override fun onCleared() {
         bundler.cancel()
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         super.onCleared()
     }
 

@@ -667,6 +667,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
     override fun onCleared() {
         collectorJob?.cancel()
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         super.onCleared()
     }
 

@@ -204,7 +204,7 @@ fun UpdateZapAmountDialog(
     val scope = rememberCoroutineScope()
 
     val postViewModel: UpdateZapAmountViewModel = viewModel(
-        key = accountViewModel.userProfile().pubkeyHex,
+        key = "UpdateZapAmountViewModel",
         factory = UpdateZapAmountViewModel.Factory(accountViewModel.account)
     )
 
