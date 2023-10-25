@@ -81,13 +81,17 @@ class BundledInsert<T>(
             try {
                 val mySet = mutableSetOf<T>()
                 queue.drainTo(mySet)
-                onUpdate(mySet)
+                if (mySet.isNotEmpty()) {
+                    onUpdate(mySet)
+                }
 
                 delay(delay)
 
                 val mySet2 = mutableSetOf<T>()
                 queue.drainTo(mySet2)
-                onUpdate(mySet2)
+                if (mySet2.isNotEmpty()) {
+                    onUpdate(mySet2)
+                }
             } finally {
                 withContext(NonCancellable) {
                     onlyOneInBlock.set(false)
