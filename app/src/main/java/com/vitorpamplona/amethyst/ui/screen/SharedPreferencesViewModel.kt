@@ -30,6 +30,7 @@ class SettingsState() {
     var automaticallyShowUrlPreview by mutableStateOf(ConnectivityType.ALWAYS)
     var automaticallyHideNavigationBars by mutableStateOf(BooleanType.ALWAYS)
     var automaticallyShowProfilePictures by mutableStateOf(ConnectivityType.ALWAYS)
+    var dontShowPushNotificationSelector by mutableStateOf<Boolean>(false)
 
     var isOnMobileData: State<Boolean> = mutableStateOf(false)
 
@@ -152,6 +153,13 @@ class SharedPreferencesViewModel : ViewModel() {
         }
     }
 
+    fun dontShowPushNotificationSelector() {
+        if (!sharedPrefs.dontShowPushNotificationSelector) {
+            sharedPrefs.dontShowPushNotificationSelector = true
+            saveSharedSettings()
+        }
+    }
+
     fun updateConnectivityStatusState(isOnMobileDataState: State<Boolean>) {
         if (sharedPrefs.isOnMobileData != isOnMobileDataState) {
             sharedPrefs.isOnMobileData = isOnMobileDataState
@@ -177,7 +185,8 @@ class SharedPreferencesViewModel : ViewModel() {
                     sharedPrefs.automaticallyStartPlayback,
                     sharedPrefs.automaticallyShowUrlPreview,
                     sharedPrefs.automaticallyHideNavigationBars,
-                    sharedPrefs.automaticallyShowProfilePictures
+                    sharedPrefs.automaticallyShowProfilePictures,
+                    sharedPrefs.dontShowPushNotificationSelector
                 )
             )
         }

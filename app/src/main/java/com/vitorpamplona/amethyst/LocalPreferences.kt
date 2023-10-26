@@ -370,7 +370,8 @@ object LocalPreferences {
                 automaticallyStartPlayback,
                 automaticallyShowUrlPreview,
                 automaticallyHideNavigationBars,
-                automaticallyShowProfilePictures
+                automaticallyShowProfilePictures,
+                false
             )
         }
     }

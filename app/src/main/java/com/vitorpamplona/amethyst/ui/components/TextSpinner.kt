@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -85,11 +86,13 @@ fun TextSpinner(
 
 @Composable
 fun SpinnerSelectionDialog(
+    title: String? = null,
     options: ImmutableList<TitleExplainer>,
     onDismiss: () -> Unit,
     onSelect: (Int) -> Unit
 ) {
     SpinnerSelectionDialog(
+        title = title,
         options = options,
         onSelect = onSelect,
         onDismiss = onDismiss
@@ -104,8 +107,7 @@ fun SpinnerSelectionDialog(
             Spacer(modifier = Modifier.height(5.dp))
             Row(
                 horizontalArrangement = Arrangement.Start,
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = it, color = Color.Gray, fontSize = Font14SP)
             }
@@ -115,6 +117,7 @@ fun SpinnerSelectionDialog(
 
 @Composable
 fun <T> SpinnerSelectionDialog(
+    title: String? = null,
     options: ImmutableList<T>,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
@@ -126,14 +129,31 @@ fun <T> SpinnerSelectionDialog(
             shape = RoundedCornerShape(5.dp)
         ) {
             LazyColumn() {
+                title?.let {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp, 16.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = title,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Divider(color = Color.LightGray, thickness = 0.25.dp)
+                    }
+                }
                 itemsIndexed(options) { index, item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp, 16.dp)
                             .clickable {
                                 onSelect(index)
                             }
+                            .padding(16.dp, 16.dp)
                     ) {
                         Column() {
                             onRenderItem(item)

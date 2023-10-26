@@ -38,13 +38,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreenByAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CustomNotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
@@ -157,9 +157,10 @@ fun AppNavigation(
 
         Route.Notification.let { route ->
             composable(route.route, route.arguments, content = {
-                CustomNotificationScreen(
+                NotificationScreen(
                     notifFeedViewModel = notifFeedViewModel,
                     userReactionsStatsModel = userReactionsStatsModel,
+                    sharedPreferencesViewModel = sharedPreferencesViewModel,
                     accountViewModel = accountViewModel,
                     nav = nav
                 )

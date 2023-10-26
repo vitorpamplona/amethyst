@@ -645,4 +645,11 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Unable to create a lightning invoice before sending the zap. Element pr not found in the resulting JSON.</string>
     <string name="read_only_user">Read-only user</string>
     <string name="no_reactions_setup">No reactions setup</string>
+
+    <string name="select_push_server">Select a Push Notification distributor</string>
+    <string name="push_server_title">Push Notification</string>
+    <string name="push_server_explainer">From installed UnifiedPush apps</string>
+    <string name="push_server_none">None</string>
+    <string name="push_server_none_explainer">Disables Push Notifications</string>
+    <string name="push_server_uses_app_explainer">Uses app %1$s</string>
 </resources>

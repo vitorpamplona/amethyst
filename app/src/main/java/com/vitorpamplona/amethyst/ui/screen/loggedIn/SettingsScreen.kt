@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseThemeType
+import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
@@ -217,6 +218,10 @@ fun SettingsScreen(
         ) {
             sharedPreferencesViewModel.updateAutomaticallyHideNavBars(parseBooleanType(it))
         }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        PushNotificationSettingsRow(sharedPreferencesViewModel)
     }
 }
 
