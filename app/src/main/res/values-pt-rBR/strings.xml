@@ -274,7 +274,7 @@
     <string name="hash_verification_passed">A imagem é a mesma desde o post</string>
     <string name="hash_verification_failed">A imagem mudou. O autor pode não ter visto a mudança</string>
     <string name="content_description_add_image">Adicionar Imagem</string>
-    <string name="content_description_add_video">Adicionar Video</string>
+    <string name="content_description_add_video">Adicionar Vídeo</string>
     <string name="content_description_add_document">Adicionar Documento</string>
     <string name="add_content">Adicionar à mensagem</string>
     <string name="content_description">Descrição do conteúdo</string>
@@ -290,7 +290,7 @@
     <string name="zap_type_nonzap">Sem Zap</string>
     <string name="zap_type_nonzap_explainer">Nenhum traço no Nostr, apenas na Lightning</string>
     <string name="file_server">Servidor de arquivos</string>
-    <string name="zap_forward_lnAddress">LnAddress ou @Usuario</string>
+    <string name="zap_forward_lnAddress">LnAddress ou @Usuário</string>
     <string name="upload_server_imgur">imgur.com - confiável</string>
     <string name="upload_server_imgur_explainer">Imgur pode modificar o arquivo</string>
     <string name="upload_server_nostrimg">nostrimg.com - confiável</string>
@@ -484,4 +484,82 @@
     <string name="sign_request_rejected">Solicitação de assinatura rejeitada</string>
     <string name="no_wallet_found_with_error">Nenhuma carteira encontrada para pagar uma fatura Lightning (Erro: %1$s). Instale uma carteira Lightning para usar zaps</string>
     <string name="no_wallet_found">Nenhuma carteira encontrada para pagar uma fatura Lightning. Instale uma carteira Lightning para usar zaps</string>
+
+    <string name="discover_chat">Conversas</string>
+
+    <string name="automatically_hide_nav_bars">Rolagem Imersiva</string>
+    <string name="automatically_hide_nav_bars_description">Ocultar as barras de navegação ao rolar</string>
+
+    <string name="spamming_users">Spammers</string>
+
+    <string name="error_dialog_button_ok">OK</string>
+
+    <string name="active_for_global">Global</string>
+
+    <string name="missing_lud16">Configuração Lightning ausente</string>
+    <string name="zap_split_weight_placeholder">25</string>
+
+    <string name="hidden_words">Palavras Ocultas</string>
+    <string name="hide_new_word_label">Ocultar nova palavra ou frase</string>
+    <string name="automatically_show_profile_picture">Foto de Perfil</string>
+    <string name="automatically_show_profile_picture_description">Mostrar fotos de perfil</string>
+
+    <string name="select_an_option">Selecione uma Opção</string>
+
+    <string name="error_dialog_pay_invoice_error">Não foi possível pagar a fatura</string>
+    <string name="error_dialog_pay_withdraw_error">Não foi possível sacar</string>
+
+    <string name="error_parsing_nip47_title">Não foi possível configurar o Wallet Connect</string>
+    <string name="error_parsing_nip47">Erro ao analisar a sequência de conexão NIP-47. Verifique se esta está correta com o seu provedor de carteira: %1$s. Erro: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Erro ao analisar a sequência de conexão NIP-47. Verifique se esta está correta com o seu provedor de carteira: %1$s.</string>
+
+    <string name="cashu_failed_redemption">Não foi possível resgatar o Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">O Mint forneceu a seguinte mensagem de erro: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Tokens Cashu já foram gastos.</string>
+
+    <string name="cashu_sucessful_redemption">Cashu Recebido</string>
+    <string name="cashu_sucessful_redemption_explainer">%1$s sats foram enviados para a sua carteira. (Taxas: %2$s sats)</string>
+
+    <string name="error_unable_to_fetch_invoice">Não foi possível obter a fatura dos servidores do destinatário</string>
+
+    <string name="wallet_connect_pay_invoice_error_error">Seu provedor de Wallet Connect retornou o seguinte erro: %1$s</string>
+
+    <string name="could_not_connect_to_tor">Não foi possível conectar ao Tor</string>
+    <string name="unable_to_download_relay_document">O baixar do documento do relay indisponível</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Não foi possível montar o LNUrl a partir do Endereço Lightning "%1$s". Verifique a configuração do usuário</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">O serviço Lightning do destinatário em %1$s não está disponível. Foi calculado a partir do endereço Lightning "%2$s". Erro: %3$s. Verifique se o servidor está funcionando e se o endereço Lightning está correto</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Não foi possível resolver %1$s. Verifique se você está conectado, se o servidor está funcionando e se o endereço Lightning %2$s está correto</string>
+    <string name="could_not_fetch_invoice_from">Não foi possível obter a fatura de %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Erro ao analisar JSON do Endereço Lightning. Verifique a configuração de Lightning do usuário</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL de retorno não encontrada na configuração do servidor de endereço Lightning do usuário</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Erro ao analisar o pedido de fatura do endereço Lightning. Verifique a configuração de Lightning do usuário</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Quantidade incorreta na fatura (%1$s sats) de %2$s. Deveria ser %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Não foi possível criar uma fatura Lightning antes de enviar o zap. A carteira Lightning do destinatário enviou o seguinte erro: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Não foi possível criar uma fatura Lightning antes de enviar o zap. O elemento pr não foi encontrado no JSON resultante.</string>
+    <string name="read_only_user">Usuário somente leitura</string>
+
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_unable_to_vote">Impossibilitado de votar</string>
+    <string name="poll_is_closed_explainer">A enquete está fechada para novos votos</string>
+
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Você está usando uma chave pública e as chaves públicas são somente de leitura. Faça login com uma chave privada para poder ocultar uma palavra ou frase.</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Você está usando uma chave pública e as chaves públicas são somente de leitura. Faça login com uma chave privada para poder mostrar uma palavra ou frase.</string>
+    <string name="biometric_authentication_failed_explainer">A autenticação biométrica falhou ao autenticar o proprietário deste telefone</string>
+    <string name="biometric_authentication_failed_explainer_with_error">A autenticação biométrica falhou ao autenticar o proprietário deste telefone. Erro: %1$s</string>
+    <string name="no_reactions_setup">Nenhuma configuração de reações</string>
+    <string name="tags">Tags</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="follow_list_global">Global</string>
+    <string name="hash_verification_info_title">O que isso significa?</string>
+    <string name="loading_account">Carregando conta</string>
+
+    <string name="bytes">Bytes</string>
+    <string name="zaps">Zaps</string>
+    <string name="spam">Spam</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
+
+    <string name="relay_setup">Relays</string>
+    <string name="relays">" Relays"</string>
 </resources>
