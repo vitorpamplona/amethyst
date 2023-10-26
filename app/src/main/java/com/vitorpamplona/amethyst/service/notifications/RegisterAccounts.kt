@@ -62,7 +62,12 @@ class RegisterAccounts(
                 it.isSuccessful
             }
         } catch (e: java.lang.Exception) {
-            Log.e("FirebaseMsgService", "Unable to register with push server", e)
+            val tag = if (BuildConfig.FLAVOR == "play") {
+                "FirebaseMsgService"
+            } else {
+                "UnifiedPushService"
+            }
+            Log.e(tag, "Unable to register with push server", e)
         }
     }
 

@@ -185,6 +185,9 @@ dependencies {
     playImplementation platform('com.google.firebase:firebase-bom:32.3.1')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
+    //PushNotifications(FDroid)
+    fdroidImplementation 'com.github.UnifiedPush:android-connector:2.2.0'
+
     // Charts
     implementation "com.patrykandpatrick.vico:core:${vico_version}"
     implementation "com.patrykandpatrick.vico:compose:${vico_version}"
