@@ -543,4 +543,11 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Não foi possível criar uma fatura Lightning antes de enviar o zap. O elemento pr não foi encontrado no JSON resultante.</string>
     <string name="read_only_user">Usuário somente leitura</string>
     <string name="no_reactions_setup">Nenhuma configuração de reações</string>
+
+    <string name="select_push_server">Selecione um Distribuidor de Notificações Push</string>
+    <string name="push_server_title">Notificações Push</string>
+    <string name="push_server_explainer">De aplicativos UnifiedPush instalados</string>
+    <string name="push_server_none">Nenhum</string>
+    <string name="push_server_none_explainer">Desativa as Notificações Push</string>
+    <string name="push_server_uses_app_explainer">Usa o aplicativo %1$s</string>
 </resources>
