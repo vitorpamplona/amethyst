@@ -543,4 +543,10 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nepodařilo se vytvořit bleskovou fakturu před odesláním zap. Prvek pr nebyl nalezen v výsledném JSON.</string>
     <string name="read_only_user">Uživatel pouze pro čtení</string>
     <string name="no_reactions_setup">Žádné nastavení reakcí</string>
+    <string name="select_push_server">Vyberte distributor push oznámení</string>
+    <string name="push_server_title">Push oznámení</string>
+    <string name="push_server_explainer">Z instalovaných aplikací UnifiedPush</string>
+    <string name="push_server_none">Žádný</string>
+    <string name="push_server_none_explainer">Zakázat Push upozornění</string>
+    <string name="push_server_uses_app_explainer">Použít aplikaci %1$s</string>
 </resources>
