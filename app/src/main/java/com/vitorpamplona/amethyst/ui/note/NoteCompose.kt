@@ -306,7 +306,7 @@ fun CheckHiddenNoteCompose(
             accountViewModel.account.liveHiddenUsers.map {
                 note.isHiddenFor(it)
             }.distinctUntilChanged()
-        }.observeAsState(false)
+        }.observeAsState(accountViewModel.isNoteHidden(note))
 
         Crossfade(targetState = isHidden) {
             if (!it) {
