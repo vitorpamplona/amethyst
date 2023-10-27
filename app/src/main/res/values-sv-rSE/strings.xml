@@ -541,7 +541,6 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Kunde inte skapa en Lightning-faktura innan Zap skickades. Elementet pr hittades inte i den resulterande JSON.</string>
     <string name="read_only_user">Skrivskyddad användare</string>
     <string name="no_reactions_setup">Inga reaktioner konfigurerade</string>
-
     <string name="select_push_server">Välj en Push-meddelandetjänst</string>
     <string name="push_server_title">Push-meddelande</string>
     <string name="push_server_explainer">Från installerade UnifiedPush-appar</string>
