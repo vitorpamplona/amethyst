@@ -35,14 +35,14 @@ class GiftWrapSigningBenchmark {
         return ChatMessageEvent.create(
             msg = "Hi there! This is a test message",
             to = to,
-            privateKey = sender.privKey!!,
             subject = "Party Tonight",
             replyTos = emptyList(),
             mentions = emptyList(),
             zapReceiver = null,
             markAsSensitive = true,
             zapRaiserAmount = 10000,
-            geohash = null
+            geohash = null,
+            keyPair = sender
         )
     }
 
