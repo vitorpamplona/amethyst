@@ -81,14 +81,14 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                                 distributorPresent = true
                             },
                             title = {
-                                Text(stringResource(R.string.push_server_insteall_app))
+                                Text(stringResource(R.string.push_server_install_app))
                             },
                             text = {
                                 Material3RichText(
                                     style = RichTextStyle().resolveDefaults()
                                 ) {
                                     Markdown(
-                                        content = stringResource(R.string.push_server_insteall_app_description)
+                                        content = stringResource(R.string.push_server_install_app_description)
                                     )
                                 }
                             },
