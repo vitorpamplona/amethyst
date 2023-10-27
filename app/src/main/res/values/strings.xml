@@ -646,10 +646,16 @@
     <string name="read_only_user">Read-only user</string>
     <string name="no_reactions_setup">No reactions setup</string>
 
-    <string name="select_push_server">Select a Push Notification distributor</string>
+    <string name="select_push_server">Select a UnifiedPush App</string>
     <string name="push_server_title">Push Notification</string>
     <string name="push_server_explainer">From installed UnifiedPush apps</string>
     <string name="push_server_none">None</string>
     <string name="push_server_none_explainer">Disables Push Notifications</string>
     <string name="push_server_uses_app_explainer">Uses app %1$s</string>
+
+    <string name="push_server_insteall_app">Push Notification Setup</string>
+    <string name="push_server_insteall_app_description">
+        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Nfty](https://ntfy.sh/).
+        After installing, select the app you want to use in the Settings.
+    </string>
 </resources>

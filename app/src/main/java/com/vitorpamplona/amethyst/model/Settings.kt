@@ -12,7 +12,8 @@ data class Settings(
     val automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyHideNavigationBars: BooleanType = BooleanType.ALWAYS,
     val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS,
-    val dontShowPushNotificationSelector: Boolean = false
+    val dontShowPushNotificationSelector: Boolean = false,
+    val dontAskForNotificationPermissions: Boolean = false
 )
 
 enum class ThemeType(val screenCode: Int, val resourceId: Int) {

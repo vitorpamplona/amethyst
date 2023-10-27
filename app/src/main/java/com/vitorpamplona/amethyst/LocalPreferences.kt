@@ -371,6 +371,7 @@ object LocalPreferences {
                 automaticallyShowUrlPreview,
                 automaticallyHideNavigationBars,
                 automaticallyShowProfilePictures,
+                false,
                 false
             )
         }

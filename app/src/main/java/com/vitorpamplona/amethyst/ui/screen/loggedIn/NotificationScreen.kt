@@ -29,6 +29,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.patrykandpatrick.vico.compose.axis.axisLabelComponent
@@ -79,8 +80,6 @@ fun NotificationScreen(
 
     WatchAccountForNotifications(notifFeedViewModel, accountViewModel)
 
-    CheckifItNeedsToRequestNotificationPermission()
-
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -114,26 +113,29 @@ fun NotificationScreen(
     }
 }
 
-// TODO: Turn this into an Account flag
-var hasAlreadyAskedNotificationPermissions = false
-
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun CheckifItNeedsToRequestNotificationPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAlreadyAskedNotificationPermissions) {
-        val notificationPermissionState = rememberPermissionState(
-            Manifest.permission.POST_NOTIFICATIONS
-        )
+fun CheckifItNeedsToRequestNotificationPermission(
+    sharedPreferencesViewModel: SharedPreferencesViewModel
+): PermissionState {
+    val notificationPermissionState = rememberPermissionState(
+        Manifest.permission.POST_NOTIFICATIONS
+    )
 
-        if (!notificationPermissionState.status.isGranted) {
-            hasAlreadyAskedNotificationPermissions = true
+    if (!sharedPreferencesViewModel.sharedPrefs.dontAskForNotificationPermissions) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!notificationPermissionState.status.isGranted) {
+                sharedPreferencesViewModel.dontAskForNotificationPermissions()
 
-            // This will pause the APP, including the connection with relays.
-            LaunchedEffect(notificationPermissionState) {
-                notificationPermissionState.launchPermissionRequest()
+                // This will pause the APP, including the connection with relays.
+                LaunchedEffect(notificationPermissionState) {
+                    notificationPermissionState.launchPermissionRequest()
+                }
             }
         }
     }
+
+    return notificationPermissionState
 }
 
 @Composable
