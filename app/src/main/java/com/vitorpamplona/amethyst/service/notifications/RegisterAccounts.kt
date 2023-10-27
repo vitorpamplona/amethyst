@@ -28,7 +28,10 @@ class RegisterAccounts(
                 if (acc.loginWithExternalSigner) {
                     ExternalSignerUtils.account = acc
                 }
-                val relayToUse = acc.activeRelays()?.firstOrNull { it.read }
+
+                val readRelays = acc.userProfile().latestContactList?.relays() ?: acc.backupContactList?.relays()
+
+                val relayToUse = readRelays?.firstNotNullOfOrNull { if (it.value.read) it.key else null }
                 if (relayToUse != null) {
                     acc.createAuthEvent(relayToUse, notificationToken)
                 } else {

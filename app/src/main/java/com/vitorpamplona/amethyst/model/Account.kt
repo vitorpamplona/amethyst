@@ -2142,9 +2142,13 @@ class Account(
     }
 
     fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
+        return createAuthEvent(relay.url, challenge)
+    }
+
+    fun createAuthEvent(relayUrl: String, challenge: String): RelayAuthEvent? {
         if (!isWriteable() && !loginWithExternalSigner) return null
 
-        var event = RelayAuthEvent.create(relay.url, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
+        var event = RelayAuthEvent.create(relayUrl, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithExternalSigner) {
             ExternalSignerUtils.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
