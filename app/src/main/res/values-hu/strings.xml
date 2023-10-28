@@ -543,4 +543,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nem sikerült a zap elküldése előtt lightning számlát készíteni. A kapott JSON-ban a pr elem nem található.</string>
     <string name="read_only_user">Csak olvasható felhasználó</string>
     <string name="no_reactions_setup">Nincs reakcióbeállítás</string>
+    <string name="select_push_server">Válassz ki egy UnifiedPush alkalmazást</string>
+    <string name="push_server_title">Push értesítés</string>
+    <string name="push_server_explainer">A telepített UnifiedPush alkalmazásokból</string>
+    <string name="push_server_none">Nincs</string>
+    <string name="push_server_none_explainer">Push értesítések letiltása</string>
+    <string name="push_server_uses_app_explainer">A(z) %1$s alkalmazást használja</string>
+    <string name="push_server_install_app">Push értesítések beállítása</string>
+    <string name="push_server_install_app_description">        A push értesítések fogadásához olyan alkalmazást telepíts, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Nfty](https://ntfy.sh/) alkalmazást.
+        A telepítés után a Beállításokban válaszd ki a használni kívánt alkalmazást.
+    </string>
 </resources>
