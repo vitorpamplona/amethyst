@@ -32,14 +32,8 @@ class Amethyst : Application() {
             )
             StrictMode.setVmPolicy(
                 VmPolicy.Builder()
-                    .detectActivityLeaks()
-                    .detectFileUriExposure()
-                    .detectContentUriWithoutPermission()
-                    .detectLeakedClosableObjects()
-                    .detectLeakedRegistrationObjects()
-                    .detectLeakedSqlLiteObjects()
+                    .detectAll()
                     .penaltyLog()
-                    // .penaltyDeath()
                     .build()
             )
         }
