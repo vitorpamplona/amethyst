@@ -14,6 +14,7 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -913,6 +914,29 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                 .toImmutableList()
 
             onReady(newSortedMentions)
+        }
+    }
+
+    fun tryBoost(baseNote: Note, onMore: () -> Unit) {
+        if (isWriteable()) {
+            if (hasBoosted(baseNote)) {
+                deleteBoostsTo(baseNote)
+            } else {
+                onMore()
+            }
+        } else {
+            if (loggedInWithExternalSigner()) {
+                if (hasBoosted(baseNote)) {
+                    deleteBoostsTo(baseNote)
+                } else {
+                    onMore()
+                }
+            } else {
+                toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_boost_posts
+                )
+            }
         }
     }
 }

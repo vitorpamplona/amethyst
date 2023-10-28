@@ -645,25 +645,8 @@ fun BoostReaction(
     IconButton(
         modifier = iconButtonModifier,
         onClick = {
-            if (accountViewModel.isWriteable()) {
-                if (accountViewModel.hasBoosted(baseNote)) {
-                    accountViewModel.deleteBoostsTo(baseNote)
-                } else {
-                    wantsToBoost = true
-                }
-            } else {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    if (accountViewModel.hasBoosted(baseNote)) {
-                        accountViewModel.deleteBoostsTo(baseNote)
-                    } else {
-                        wantsToBoost = true
-                    }
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_boost_posts
-                    )
-                }
+            accountViewModel.tryBoost(baseNote) {
+                wantsToBoost = true
             }
         }
     ) {
@@ -697,7 +680,9 @@ fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountV
         baseNote.live().boosts.map {
             if (it.note.isBoostedBy(accountViewModel.userProfile())) Color.Unspecified else grayTint
         }.distinctUntilChanged()
-    }.observeAsState(grayTint)
+    }.observeAsState(
+        if (baseNote.isBoostedBy(accountViewModel.userProfile())) Color.Unspecified else grayTint
+    )
 
     val iconModifier = remember {
         Modifier.size(iconSize)
