@@ -25,6 +25,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
@@ -177,6 +178,9 @@ val RichTextDefaults = RichTextStyle().resolveDefaults()
 val MarkDownStyleOnDark = RichTextDefaults.copy(
     paragraphSpacing = DefaultParagraphSpacing,
     headingStyle = DefaultHeadingStyle,
+    listStyle = RichTextDefaults.listStyle?.copy(
+        itemSpacing = 10.sp
+    ),
     codeBlockStyle = RichTextDefaults.codeBlockStyle?.copy(
         textStyle = TextStyle(
             fontFamily = FontFamily.Monospace,
@@ -208,6 +212,9 @@ val MarkDownStyleOnDark = RichTextDefaults.copy(
 val MarkDownStyleOnLight = RichTextDefaults.copy(
     paragraphSpacing = DefaultParagraphSpacing,
     headingStyle = DefaultHeadingStyle,
+    listStyle = RichTextDefaults.listStyle?.copy(
+        itemSpacing = 10.sp
+    ),
     codeBlockStyle = RichTextDefaults.codeBlockStyle?.copy(
         textStyle = TextStyle(
             fontFamily = FontFamily.Monospace,

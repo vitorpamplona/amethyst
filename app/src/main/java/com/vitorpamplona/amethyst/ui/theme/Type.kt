@@ -36,33 +36,32 @@ val Font17SP = 17.sp
 
 val MarkdownTextStyle = TextStyle(lineHeight = 1.30.em)
 
-val DefaultParagraphSpacing: TextUnit = 12.sp
+val DefaultParagraphSpacing: TextUnit = 16.sp
 
 internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
     when (level) {
-        0 -> textStyle.copy(
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Light
+        0 -> Typography.displayLarge.copy(
+            fontSize = 32.sp,
+            lineHeight = 40.sp
         )
-        1 -> textStyle.copy(
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Light
+        1 -> Typography.displayMedium.copy(
+            fontSize = 28.sp,
+            lineHeight = 36.sp
         )
-        2 -> textStyle.copy(
+        2 -> Typography.displaySmall.copy(
+            fontSize = 24.sp,
+            lineHeight = 32.sp
+        )
+        3 -> Typography.headlineLarge.copy(
             fontSize = 22.sp,
-            fontWeight = FontWeight.Light
+            lineHeight = 26.sp
         )
-        3 -> textStyle.copy(
+        4 -> Typography.headlineMedium.copy(
             fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            lineHeight = 24.sp
         )
-        4 -> textStyle.copy(
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        5 -> textStyle.copy(
-            fontWeight = FontWeight.Bold
-        )
+        5 -> Typography.headlineSmall
+        6 -> Typography.titleLarge
         else -> textStyle
     }
 }

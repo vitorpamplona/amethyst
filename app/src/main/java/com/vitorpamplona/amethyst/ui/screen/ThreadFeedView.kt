@@ -637,7 +637,7 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
                 Text(
                     text = it,
                     fontSize = 28.sp,
-                    fontWeight = FontWeight.Light,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
