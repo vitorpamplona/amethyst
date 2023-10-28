@@ -458,7 +458,6 @@ private fun WritePermissionButtons(
     nav: (String) -> Unit,
     navScrollToTop: (Route, Boolean) -> Unit
 ) {
-    println("AAAA - WritePermissionButtons")
     val currentRoute by remember(navEntryState.value) {
         derivedStateOf {
             navEntryState.value?.destination?.route?.substringBefore("?")
