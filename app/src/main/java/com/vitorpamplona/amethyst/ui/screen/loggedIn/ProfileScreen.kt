@@ -476,6 +476,8 @@ private fun CreateAndRenderPages(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    UpdateThreadsAndRepliesWhenBlockUnblock(baseUser, threadsViewModel, repliesViewModel, accountViewModel)
+
     when (page) {
         0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
         1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
@@ -486,6 +488,18 @@ private fun CreateAndRenderPages(
         6 -> TabFollowedTags(baseUser, accountViewModel, nav)
         7 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
         8 -> TabRelays(baseUser, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun UpdateThreadsAndRepliesWhenBlockUnblock(baseUser: User, threadsViewModel: NostrUserProfileNewThreadsFeedViewModel, repliesViewModel: NostrUserProfileConversationsFeedViewModel, accountViewModel: AccountViewModel) {
+    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+        it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
+    }.observeAsState(accountViewModel.account.isHidden(baseUser))
+
+    LaunchedEffect(key1 = isHidden) {
+        threadsViewModel.invalidateData()
+        repliesViewModel.invalidateData()
     }
 }
 
@@ -1417,10 +1431,6 @@ fun DrawBanner(baseUser: User, accountViewModel: AccountViewModel) {
 
 @Composable
 fun TabNotesNewThreads(feedViewModel: NostrUserProfileNewThreadsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    LaunchedEffect(Unit) {
-        feedViewModel.invalidateData()
-    }
-
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
@@ -1438,10 +1448,6 @@ fun TabNotesNewThreads(feedViewModel: NostrUserProfileNewThreadsFeedViewModel, a
 
 @Composable
 fun TabNotesConversations(feedViewModel: NostrUserProfileConversationsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    LaunchedEffect(Unit) {
-        feedViewModel.invalidateData()
-    }
-
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier = Modifier.padding(vertical = 0.dp)
