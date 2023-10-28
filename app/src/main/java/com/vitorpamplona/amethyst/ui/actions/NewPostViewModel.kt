@@ -151,7 +151,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         quote?.let {
-            message = TextFieldValue(message.text + "\n\nnostr:${it.toNEvent()}")
+            message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
             urlPreview = findUrlInMessage()
         }
 
@@ -337,7 +337,7 @@ open class NewPostViewModel() : ViewModel() {
                                         createNIP94Record(imageUrl, mimeType, alt, sensitiveContent)
                                     } else {
                                         isUploadingImage = false
-                                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                                        message = TextFieldValue(message.text + "\n" + imageUrl)
                                         urlPreview = findUrlInMessage()
                                     }
                                 },
@@ -561,9 +561,9 @@ open class NewPostViewModel() : ViewModel() {
                     isUploadingImage = false
 
                     if (note == null) {
-                        message = TextFieldValue(message.text + "\n\n" + imageUrl)
+                        message = TextFieldValue(message.text + "\n" + imageUrl)
                     } else {
-                        message = TextFieldValue(message.text + "\n\nnostr:" + note.toNEvent())
+                        message = TextFieldValue(message.text + "\nnostr:" + note.toNEvent())
                     }
 
                     urlPreview = findUrlInMessage()
@@ -593,7 +593,7 @@ open class NewPostViewModel() : ViewModel() {
                     isUploadingImage = false
 
                     note?.let {
-                        message = TextFieldValue(message.text + "\n\nnostr:" + it.toNEvent())
+                        message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent())
                     }
 
                     urlPreview = findUrlInMessage()
