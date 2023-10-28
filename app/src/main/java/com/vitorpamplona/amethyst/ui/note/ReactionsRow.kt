@@ -156,11 +156,14 @@ private fun InnerReactionRow(
                 verticalArrangement = Arrangement.Center,
                 modifier = ReactionRowExpandButton
             ) {
-                Row(verticalAlignment = CenterVertically) {
-                    WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
-                        RenderShowIndividualReactionsButton(wantsToSeeReactions)
+                val (value, elapsed) = measureTimedValue {
+                    Row(verticalAlignment = CenterVertically) {
+                        WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
+                            RenderShowIndividualReactionsButton(wantsToSeeReactions)
+                        }
                     }
                 }
+                Log.d("Rendering Metrics", "Reactions Button: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
             }
         }
 
@@ -324,10 +327,8 @@ private fun WatchReactionsZapsBoostsAndDisplayIfExists(baseNote: Note, content: 
             baseNote.reactions.isNotEmpty()
     )
 
-    Crossfade(targetState = hasReactions) {
-        if (it) {
-            content()
-        }
+    if (hasReactions) {
+        content()
     }
 }
 
