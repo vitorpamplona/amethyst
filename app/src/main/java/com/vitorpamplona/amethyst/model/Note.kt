@@ -809,6 +809,7 @@ class NoteLiveSet(u: Note) {
     }
 }
 
+@Stable
 class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
@@ -837,6 +838,7 @@ class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteSta
     }
 }
 
+@Stable
 class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveData<Y>(initialValue) {
     override fun onActive() {
         super.onActive()

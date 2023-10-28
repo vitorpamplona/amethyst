@@ -32,21 +32,22 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
-public fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     val relayList by baseNote.live().relayInfo.observeAsState(persistentListOf())
-    val shortRelayList by remember {
-        derivedStateOf {
-            relayList.take(3).toImmutableList()
-        }
-    }
 
     Spacer(DoubleVertSpacer)
 
     if (expanded) {
         VerticalRelayPanelWithFlow(relayList, accountViewModel, nav)
     } else {
+        val shortRelayList by remember {
+            derivedStateOf {
+                relayList.take(3).toImmutableList()
+            }
+        }
+
         VerticalRelayPanelWithFlow(shortRelayList, accountViewModel, nav)
     }
 

@@ -21,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -120,7 +119,6 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
     }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     val interactionSource = remember { MutableInteractionSource() }
     val ripple = rememberRipple(bounded = false, radius = Size15dp)
