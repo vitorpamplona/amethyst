@@ -106,9 +106,11 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -1262,7 +1264,7 @@ fun ReactionChoicePopup(
     val account = accountState?.account ?: return
 
     val toRemove = remember {
-        baseNote.reactedBy(account.userProfile()).toSet()
+        baseNote.reactedBy(account.userProfile()).toImmutableSet()
     }
 
     val iconSizePx = with(LocalDensity.current) {
@@ -1297,7 +1299,7 @@ private fun ActionableReactionButton(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
-    toRemove: Set<String>
+    toRemove: ImmutableSet<String>
 ) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),

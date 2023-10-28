@@ -59,4 +59,5 @@ class AudioTrackEvent(
     }
 }
 
+@Immutable
 data class Participant(val key: String, val role: String?)

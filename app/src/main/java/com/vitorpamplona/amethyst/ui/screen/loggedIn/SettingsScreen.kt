@@ -11,17 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,11 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -43,7 +34,6 @@ import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -265,65 +255,4 @@ fun SettingsRow(
                 .weight(1f)
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DropDownSettings(
-    selectedItem: MutableState<String>,
-    listItems: Array<String>,
-    title: String
-) {
-    var expanded by remember {
-        mutableStateOf(false)
-    }
-    ExposedDropdownMenuBox(
-        modifier = Modifier.padding(8.dp),
-        expanded = expanded,
-        onExpandedChange = {
-            expanded = !expanded
-        }
-    ) {
-        TextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = selectedItem.value,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(text = title) },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(
-                    expanded = expanded
-                )
-            },
-            colors = ExposedDropdownMenuDefaults.textFieldColors()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            listItems.forEach { selectedOption ->
-                DropdownMenuItem(
-                    text = {
-                        Text(text = selectedOption)
-                    },
-                    onClick = {
-                        selectedItem.value = selectedOption
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun Section(text: String) {
-    Spacer(modifier = DoubleVertSpacer)
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        fontSize = 20.sp
-    )
-    Spacer(modifier = DoubleVertSpacer)
 }

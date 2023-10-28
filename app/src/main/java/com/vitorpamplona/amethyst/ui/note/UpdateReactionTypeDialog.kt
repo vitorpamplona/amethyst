@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
@@ -321,8 +322,10 @@ private fun EmojiSelector(accountViewModel: AccountViewModel, nav: (String) -> U
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by usersEmojiList.live().metadata.map {
-                (it.note.event as? EmojiPackSelectionEvent)?.taggedAddresses()
-            }.distinctUntilChanged().observeAsState((usersEmojiList.event as? EmojiPackSelectionEvent)?.taggedAddresses())
+                (it.note.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList()
+            }.distinctUntilChanged().observeAsState(
+                (usersEmojiList.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList()
+            )
 
             collections?.let {
                 EmojiCollectionGallery(it, accountViewModel, nav, onClick)
@@ -332,7 +335,7 @@ private fun EmojiSelector(accountViewModel: AccountViewModel, nav: (String) -> U
 }
 
 @Composable
-fun EmojiCollectionGallery(emojiCollections: List<ATag>, accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: ((EmojiUrl) -> Unit)? = null) {
+fun EmojiCollectionGallery(emojiCollections: ImmutableList<ATag>, accountViewModel: AccountViewModel, nav: (String) -> Unit, onClick: ((EmojiUrl) -> Unit)? = null) {
     val color = MaterialTheme.colorScheme.background
     val bgColor = remember { mutableStateOf(color) }
 
