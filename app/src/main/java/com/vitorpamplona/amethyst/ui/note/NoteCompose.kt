@@ -608,9 +608,9 @@ fun LongCommunityHeader(
 
             if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
                 if (rules == null) {
-                    "## $subject\n$body"
+                    "### $subject\n$body"
                 } else {
-                    "## $subject\n$body\n\n## $rulesLabel\n\n$rules"
+                    "### $subject\n$body\n\n### $rulesLabel\n\n$rules"
                 }
             } else {
                 if (rules == null) {
@@ -1327,7 +1327,7 @@ fun RenderTextEvent(
         val body = accountViewModel.decrypt(note)
 
         if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
-            "## $subject\n$body"
+            "### $subject\n$body"
         } else {
             body
         }
@@ -3566,7 +3566,7 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
         val body = accountViewModel.decrypt(note)
 
         if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
-            "## $subject\n$body"
+            "### $subject\n$body"
         } else {
             body
         }
