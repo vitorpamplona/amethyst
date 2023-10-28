@@ -81,7 +81,9 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeWriteRelays()
+    var relayList = remember {
+        accountViewModel.account.activeWriteRelays().toImmutableList()
+    }
 
     Dialog(
         onDismissRequest = { onClose() },

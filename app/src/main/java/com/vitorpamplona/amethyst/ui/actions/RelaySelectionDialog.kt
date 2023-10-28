@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 
 data class RelayList(
     val relay: Relay,
@@ -46,9 +48,9 @@ data class RelayInfoDialog(
 
 @Composable
 fun RelaySelectionDialog(
-    preSelectedList: List<Relay>,
+    preSelectedList: ImmutableList<Relay>,
     onClose: () -> Unit,
-    onPost: (list: List<Relay>) -> Unit,
+    onPost: (list: ImmutableList<Relay>) -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -124,7 +126,7 @@ fun RelaySelectionDialog(
                     SaveButton(
                         onPost = {
                             val selectedRelays = relays.filter { it.isSelected }
-                            onPost(selectedRelays.map { it.relay })
+                            onPost(selectedRelays.map { it.relay }.toImmutableList())
                             onClose()
                         },
                         isActive = hasSelectedRelay

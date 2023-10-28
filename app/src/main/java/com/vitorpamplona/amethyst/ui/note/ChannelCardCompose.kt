@@ -819,7 +819,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Gallery(users: List<User>, accountViewModel: AccountViewModel) {
+fun Gallery(users: ImmutableList<User>, accountViewModel: AccountViewModel) {
     FlowRow(verticalArrangement = Arrangement.Center) {
         users.take(6).forEach {
             ClickableUserPicture(it, Size35dp, accountViewModel)

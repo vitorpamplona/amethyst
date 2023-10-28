@@ -172,8 +172,6 @@ fun NewPostView(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val account = remember(accountViewModel) { accountViewModel.account }
-
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
 
@@ -184,7 +182,9 @@ fun NewPostView(
     var showRelaysDialog by remember {
         mutableStateOf(false)
     }
-    var relayList = account.activeWriteRelays()
+    var relayList = remember {
+        accountViewModel.account.activeWriteRelays().toImmutableList()
+    }
 
     LaunchedEffect(Unit) {
         postViewModel.load(accountViewModel, baseReplyTo, quote)
@@ -387,10 +387,10 @@ fun NewPostView(
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                         ImageVideoDescription(
                                             url,
-                                            account.defaultFileServer,
+                                            accountViewModel.account.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent ->
                                                 postViewModel.upload(url, alt, sensitiveContent, server, context, relayList)
-                                                account.changeDefaultFileServer(server)
+                                                accountViewModel.account.changeDefaultFileServer(server)
                                             },
                                             onCancel = {
                                                 postViewModel.contentToAddUrl = null
@@ -414,7 +414,7 @@ fun NewPostView(
                                             InvoiceRequest(
                                                 lud16,
                                                 user.pubkeyHex,
-                                                account,
+                                                accountViewModel.account,
                                                 stringResource(id = R.string.lightning_invoice),
                                                 stringResource(id = R.string.lightning_create_and_add_invoice),
                                                 onSuccess = {
