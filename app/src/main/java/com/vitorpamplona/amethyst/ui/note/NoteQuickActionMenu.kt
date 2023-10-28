@@ -99,7 +99,7 @@ val externalLinkForNote = { note: Note ->
         if (note.event is FileHeaderEvent) {
             "https://filestr.vercel.app/e/${note.toNEvent()}"
         } else {
-            "https://snort.social/e/${note.toNEvent()}"
+            "https://njump.me/${note.toNEvent()}"
         }
     }
 }
