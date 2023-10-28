@@ -193,6 +193,8 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     val todaysReactionCount = _reactions.map { showCount(it[today()]) }.distinctUntilChanged()
     val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }.distinctUntilChanged()
 
+    var shouldShowDecimalsInAxis = false
+
     fun formatDate(createAt: Long): String {
         return sdf.format(
             Instant.ofEpochSecond(createAt)
@@ -334,8 +336,26 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
         val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
 
+        this.shouldShowDecimalsInAxis = shouldShowDecimals(chartEntryModelProducer2.minY, chartEntryModelProducer2.maxY)
+
         this._axisLabels.emit(listOf(6, 5, 4, 3, 2, 1, 0).map { displayAxisFormatter.format(now.minusSeconds(day * it)) })
         this._chartModel.emit(chartEntryModelProducer1.plus(chartEntryModelProducer2))
+    }
+
+    // determine if the min max are so close that they render to the same number.
+    fun shouldShowDecimals(min: Float, max: Float): Boolean {
+        val step = (max - min) / 8
+
+        var previous = showAmountAxis(min.toBigDecimal())
+        for (i in 1..7) {
+            val current = showAmountAxis((min + (i * step)).toBigDecimal())
+            if (previous == current) {
+                return true
+            }
+            previous = current
+        }
+
+        return false
     }
 
     var collectorJob: Job? = null

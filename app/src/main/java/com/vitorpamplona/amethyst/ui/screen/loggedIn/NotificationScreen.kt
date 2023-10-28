@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.note.OneKilo
 import com.vitorpamplona.amethyst.ui.note.OneMega
 import com.vitorpamplona.amethyst.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
@@ -224,6 +225,7 @@ private fun ObserveAndShowChart(
 ) {
     val axisModel = model.axisLabels.collectAsStateWithLifecycle()
     val chartModel by model.chartModel.collectAsStateWithLifecycle()
+
     chartModel?.let {
         Chart(
             chart = remember(lineChartCount, lineChartZaps) {
@@ -235,7 +237,7 @@ private fun ObserveAndShowChart(
             ),
             endAxis = rememberEndAxis(
                 label = axisLabelComponent(color = BitcoinOrange),
-                valueFormatter = AmountAxisValueFormatter()
+                valueFormatter = AmountAxisValueFormatter(model.shouldShowDecimalsInAxis)
             ),
             bottomAxis = rememberBottomAxis(
                 valueFormatter = LabelValueFormatter(axisModel)
@@ -265,12 +267,16 @@ class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start
 }
 
 @Stable
-class AmountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.End> {
+class AmountAxisValueFormatter(val showDecimals: Boolean) : AxisValueFormatter<AxisPosition.Vertical.End> {
     override fun formatValue(
         value: Float,
         chartValues: ChartValues
     ): String {
-        return showAmountAxis(value.toBigDecimal())
+        return if (showDecimals) {
+            showAmount(value.toBigDecimal())
+        } else {
+            showAmountAxis(value.toBigDecimal())
+        }
     }
 }
 
