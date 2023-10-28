@@ -283,6 +283,8 @@ open class NewPostViewModel() : ViewModel() {
                     (originalNote?.event as? TextNoteEvent)?.root() // if it has a marker as root
                         ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }?.idHex // if it has loaded events with zero replies in the reply list
                         ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+                        ?: originalNote?.idHex
+
                 val replyId = originalNote?.idHex
 
                 account?.sendPost(

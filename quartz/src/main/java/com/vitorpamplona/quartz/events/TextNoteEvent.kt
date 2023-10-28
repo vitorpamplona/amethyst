@@ -43,10 +43,10 @@ class TextNoteEvent(
         ): TextNoteEvent {
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
-                if (it == replyingTo) {
-                    tags.add(listOf("e", it, "", "reply"))
-                } else if (it == root) {
+                if (it == root) {
                     tags.add(listOf("e", it, "", "root"))
+                } else if (it == replyingTo) {
+                    tags.add(listOf("e", it, "", "reply"))
                 } else if (it in directMentions) {
                     tags.add(listOf("e", it, "", "mention"))
                 } else {
@@ -62,10 +62,10 @@ class TextNoteEvent(
             }
             addresses?.forEach {
                 val aTag = it.toTag()
-                if (aTag == replyingTo) {
-                    tags.add(listOf("a", aTag, "", "reply"))
-                } else if (aTag == root) {
+                if (aTag == root) {
                     tags.add(listOf("a", aTag, "", "root"))
+                } else if (aTag == replyingTo) {
+                    tags.add(listOf("a", aTag, "", "reply"))
                 } else if (aTag in directMentions) {
                     tags.add(listOf("a", aTag, "", "mention"))
                 } else {
