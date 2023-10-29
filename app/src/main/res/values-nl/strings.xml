@@ -59,7 +59,7 @@
     <string name="show_more">Meer</string>
     <string name="lightning_invoice">Lightning invoice</string>
     <string name="pay">Betalen</string>
-    <string name="lightning_tips">Lighnting tips</string>
+    <string name="lightning_tips">Lightning tips</string>
     <string name="note_to_receiver">Note aan ontvanger</string>
     <string name="thank_you_so_much">Hartelijk bedankt!</string>
     <string name="amount_in_sats">Bedrag in sats</string>
@@ -110,7 +110,7 @@
     <string name="join">Lid worden</string>
     <string name="known">Bekend</string>
     <string name="new_requests">Nieuw verzoek</string>
-    <string name="blocked_users">Geblokeerde gebruikers</string>
+    <string name="blocked_users">Geblokkeerde gebruikers</string>
     <string name="new_threads">Nieuwe notes</string>
     <string name="conversations">Gesprekken</string>
     <string name="notes">Notes</string>
@@ -234,7 +234,7 @@
     <string name="report_dialog_spam">Spam of oplichting</string>
     <string name="report_dialog_profanity">Godslastering of haatdragend gedrag</string>
     <string name="report_dialog_impersonation">Kwaadwillige imitatie</string>
-    <string name="report_dialog_nudity">Naaktheid of grafische inhoud</string>
+    <string name="report_dialog_nudity">Naaktheid of gevoelige inhoud</string>
     <string name="report_dialog_illegal">Illegaal gedrag</string>
     <string name="report_dialog_blocking_a_user">Als u een gebruiker blokkeert, wordt zijn inhoud in uw app verborgen. Uw notes zijn nog steeds publiekelijk zichtbaar, ook voor mensen die u blokkeert. Geblokkeerde gebruikers worden vermeld in het scherm Beveiligingsfilters.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokkeer & verberg gebruiker]]></string>
@@ -312,7 +312,7 @@
     <string name="upload_server_nostrimg">nostrimg.com - vertrouwd</string>
     <string name="upload_server_nostrimg_explainer">NostrImg kan het bestand aanpassen</string>
     <string name="upload_server_nostrbuild">nostr.build - vertrouwd</string>
-    <string name="upload_server_nostrbuild_explainer">Nostr.build kan het bestand aanpassen</string>
+    <string name="upload_server_nostrbuild_explainer">Nostr.build kan mogelijk het bestand aanpassen</string>
     <string name="upload_server_nostrfilesdev">nostrfiles.dev - vertrouwd</string>
     <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev kan het bestand aanpassen</string>
     <string name="upload_server_nostrcheckme">nostrcheck.me - vertrouwd</string>
@@ -365,7 +365,7 @@
     <string name="channel_list_join_channel">Deelnemen</string>
     <string name="today">Vandaag</string>
     <string name="content_warning">Content waarschuwing</string>
-    <string name="content_warning_explanation">Dit bericht bevat gevoelige inhoud die sommige mensen beledigend of verontrustend kunnen vinden</string>
+    <string name="content_warning_explanation">Dit bericht bevat mogelijk beledigend of verontrustend, gevoelige inhoud</string>
     <string name="content_warning_hide_all_sensitive_content">Verberg altijd gevoelige inhoud</string>
     <string name="content_warning_show_all_sensitive_content">Toon altijd gevoelige inhoud</string>
     <string name="content_warning_see_warnings">Toon altijd content waarshuwingen</string>
