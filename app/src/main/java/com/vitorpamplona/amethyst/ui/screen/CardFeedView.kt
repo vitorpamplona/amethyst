@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
@@ -34,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefresheableCardView(
@@ -117,7 +116,7 @@ fun RenderCardFeed(
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
     Crossfade(
-        modifier = remember { Modifier.fillMaxSize() },
+        modifier = Modifier.fillMaxSize(),
         targetState = feedState,
         animationSpec = tween(durationMillis = 100)
     ) { state ->
@@ -158,13 +157,8 @@ private fun FeedLoaded(
     nav: (String) -> Unit
 ) {
     LazyColumn(
-        modifier = remember { Modifier.fillMaxSize() },
-        contentPadding = remember {
-            PaddingValues(
-                top = 10.dp,
-                bottom = 10.dp
-            )
-        },
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = FeedPadding,
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->

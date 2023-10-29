@@ -33,7 +33,7 @@ class AccountStateViewModel() : ViewModel() {
 
     fun tryLoginExistingAccountAsync() {
         // pulls account from storage.
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             tryLoginExistingAccount()
         }
     }
@@ -124,7 +124,7 @@ class AccountStateViewModel() : ViewModel() {
         loginWithExternalSigner: Boolean = false,
         onError: () -> Unit
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner)
             } catch (e: Exception) {
@@ -135,7 +135,7 @@ class AccountStateViewModel() : ViewModel() {
     }
 
     fun newKey(useProxy: Boolean, proxyPort: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
             val account = Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
             // saves to local preferences
@@ -145,7 +145,7 @@ class AccountStateViewModel() : ViewModel() {
     }
 
     fun switchUser(accountInfo: AccountInfo) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prepareLogoutOrSwitch()
             LocalPreferences.switchToAccount(accountInfo)
             tryLoginExistingAccount()
@@ -153,7 +153,7 @@ class AccountStateViewModel() : ViewModel() {
     }
 
     fun logOff(accountInfo: AccountInfo) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prepareLogoutOrSwitch()
             LocalPreferences.updatePrefsForLogout(accountInfo)
             tryLoginExistingAccount()

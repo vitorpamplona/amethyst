@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.theme
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -142,3 +143,8 @@ val EditFieldTrailingIconModifier = Modifier
 val EditFieldLeadingIconModifier = Modifier
     .height(32.dp)
     .padding(start = 2.dp)
+
+val FeedPadding = PaddingValues(
+    top = 10.dp,
+    bottom = 10.dp
+)
