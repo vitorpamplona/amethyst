@@ -138,6 +138,9 @@ class AccountStateViewModel() : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
             val account = Account(KeyPair(), proxy = proxy, proxyPort = proxyPort)
+
+            account.follow(account.userProfile())
+
             // saves to local preferences
             LocalPreferences.updatePrefsForLogin(account)
             startUI(account)
