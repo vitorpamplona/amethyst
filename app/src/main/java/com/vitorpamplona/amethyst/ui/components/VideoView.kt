@@ -301,43 +301,45 @@ fun GetVideoController(
                     nostrUriCallback,
                     context
                 ) {
-                    // REQUIRED TO BE RUN IN THE MAIN THREAD
+                    scope.launch(Dispatchers.Main) {
+                        // REQUIRED TO BE RUN IN THE MAIN THREAD
 
-                    // checks again because of race conditions.
-                    if (controller.value == null) { // still prone to race conditions.
-                        controller.value = it
+                        // checks again because of race conditions.
+                        if (controller.value == null) { // still prone to race conditions.
+                            controller.value = it
 
-                        if (!it.isPlaying) {
-                            if (keepPlayingMutex?.isPlaying == true) {
-                                // There is a video playing, start this one on mute.
-                                controller.value?.volume = 0f
-                            } else {
-                                // There is no other video playing. Use the default mute state to
-                                // decide if sound is on or not.
-                                controller.value?.volume = if (defaultToStart) 0f else 1f
-                            }
-                        }
-
-                        controller.value?.setMediaItem(mediaItem.value)
-                        controller.value?.prepare()
-                    } else if (controller.value != it) {
-                        // discards the new controller because there is an existing one
-                        it.stop()
-                        it.release()
-
-                        controller.value?.let {
-                            if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                                if (it.isPlaying) {
+                            if (!it.isPlaying) {
+                                if (keepPlayingMutex?.isPlaying == true) {
                                     // There is a video playing, start this one on mute.
-                                    it.volume = 0f
+                                    controller.value?.volume = 0f
                                 } else {
                                     // There is no other video playing. Use the default mute state to
                                     // decide if sound is on or not.
-                                    it.volume = if (defaultToStart) 0f else 1f
+                                    controller.value?.volume = if (defaultToStart) 0f else 1f
                                 }
+                            }
 
-                                it.setMediaItem(mediaItem.value)
-                                it.prepare()
+                            controller.value?.setMediaItem(mediaItem.value)
+                            controller.value?.prepare()
+                        } else if (controller.value != it) {
+                            // discards the new controller because there is an existing one
+                            it.stop()
+                            it.release()
+
+                            controller.value?.let {
+                                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                                    if (it.isPlaying) {
+                                        // There is a video playing, start this one on mute.
+                                        it.volume = 0f
+                                    } else {
+                                        // There is no other video playing. Use the default mute state to
+                                        // decide if sound is on or not.
+                                        it.volume = if (defaultToStart) 0f else 1f
+                                    }
+
+                                    it.setMediaItem(mediaItem.value)
+                                    it.prepare()
+                                }
                             }
                         }
                     }
@@ -345,18 +347,20 @@ fun GetVideoController(
             }
         } else {
             controller.value?.let {
-                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                    if (it.isPlaying) {
-                        // There is a video playing, start this one on mute.
-                        it.volume = 0f
-                    } else {
-                        // There is no other video playing. Use the default mute state to
-                        // decide if sound is on or not.
-                        it.volume = if (defaultToStart) 0f else 1f
-                    }
+                scope.launch(Dispatchers.Main) {
+                    if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                        if (it.isPlaying) {
+                            // There is a video playing, start this one on mute.
+                            it.volume = 0f
+                        } else {
+                            // There is no other video playing. Use the default mute state to
+                            // decide if sound is on or not.
+                            it.volume = if (defaultToStart) 0f else 1f
+                        }
 
-                    it.setMediaItem(mediaItem.value)
-                    it.prepare()
+                        it.setMediaItem(mediaItem.value)
+                        it.prepare()
+                    }
                 }
             }
         }
@@ -386,29 +390,32 @@ fun GetVideoController(
                             nostrUriCallback,
                             context
                         ) {
-                            // REQUIRED TO BE RUN IN THE MAIN THREAD
+                            scope.launch(Dispatchers.Main) {
+                                // REQUIRED TO BE RUN IN THE MAIN THREAD
 
-                            // checks again to make sure no other thread has created a controller.
-                            if (controller.value == null) {
-                                controller.value = it
+                                // checks again to make sure no other thread has created a controller.
+                                if (controller.value == null) {
+                                    controller.value = it
 
-                                if (!it.isPlaying) {
-                                    if (keepPlayingMutex?.isPlaying == true) {
-                                        // There is a video playing, start this one on mute.
-                                        controller.value?.volume = 0f
-                                    } else {
-                                        // There is no other video playing. Use the default mute state to
-                                        // decide if sound is on or not.
-                                        controller.value?.volume = if (defaultToStart) 0f else 1f
+                                    if (!it.isPlaying) {
+                                        if (keepPlayingMutex?.isPlaying == true) {
+                                            // There is a video playing, start this one on mute.
+                                            controller.value?.volume = 0f
+                                        } else {
+                                            // There is no other video playing. Use the default mute state to
+                                            // decide if sound is on or not.
+                                            controller.value?.volume =
+                                                if (defaultToStart) 0f else 1f
+                                        }
                                     }
-                                }
 
-                                controller.value?.setMediaItem(mediaItem.value)
-                                controller.value?.prepare()
-                            } else if (controller.value != it) {
-                                // discards the new controller because there is an existing one
-                                it.stop()
-                                it.release()
+                                    controller.value?.setMediaItem(mediaItem.value)
+                                    controller.value?.prepare()
+                                } else if (controller.value != it) {
+                                    // discards the new controller because there is an existing one
+                                    it.stop()
+                                    it.release()
+                                }
                             }
                         }
                     }
