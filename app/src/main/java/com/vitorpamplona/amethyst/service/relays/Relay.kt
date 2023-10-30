@@ -226,19 +226,19 @@ class Relay(
             }
             "OK" -> listeners.forEach {
                 val eventId = msgArray[1].asText()
-                val sucess = msgArray[2].asBoolean()
+                val success = msgArray[2].asBoolean()
                 val message = msgArray[3].asText()
 
                 if (authResponse.containsKey(eventId)) {
                     val wasAlreadyAuthenticated = authResponse.get(eventId)
-                    authResponse.put(eventId, sucess)
-                    if (wasAlreadyAuthenticated != true && sucess) {
+                    authResponse.put(eventId, success)
+                    if (wasAlreadyAuthenticated != true && success) {
                         renewFilters()
                     }
                 }
 
-                Log.w("Relay", "Relay on OK $url, $eventId, $sucess, $message")
-                it.onSendResponse(this@Relay, eventId, sucess, message)
+                Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
+                it.onSendResponse(this@Relay, eventId, success, message)
             }
             "AUTH" -> listeners.forEach {
                 // Log.w("Relay", "Relay$url, ${msg[1].asString}")
