@@ -209,7 +209,7 @@ fun VideoViewInner(
     if (!automaticallyStartPlayback.value) {
         ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
     } else {
-        VideoPlayerActiveMutex(videoUri) { activeOnScreen ->
+        VideoPlayerActiveMutex(videoUri) { modifier, activeOnScreen ->
             val mediaItem = remember(videoUri) {
                 mutableStateOf(
                     MediaItem.Builder()
@@ -251,6 +251,7 @@ fun VideoViewInner(
                     keepPlaying = keepPlaying,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     activeOnScreen = activeOnScreen,
+                    modifier = modifier,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog
                 )
@@ -450,7 +451,7 @@ class VisibilityData() {
  * the screen wins the mutex.
  */
 @Composable
-fun VideoPlayerActiveMutex(videoUri: String, inner: @Composable (MutableState<Boolean>) -> Unit) {
+fun VideoPlayerActiveMutex(videoUri: String, inner: @Composable (Modifier, MutableState<Boolean>) -> Unit) {
     val myCache = remember(videoUri) {
         VisibilityData()
     }
@@ -499,9 +500,7 @@ fun VideoPlayerActiveMutex(videoUri: String, inner: @Composable (MutableState<Bo
             }
     }
 
-    Box(modifier = myModifier) {
-        inner(active)
-    }
+    inner(myModifier, active)
 }
 
 @Stable
@@ -520,6 +519,7 @@ private fun RenderVideoPlayer(
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: State<Boolean>,
     activeOnScreen: MutableState<Boolean>,
+    modifier: Modifier,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)?
 ) {
@@ -552,11 +552,13 @@ private fun RenderVideoPlayer(
 
             val myModifier = remember {
                 if (roundedCorner) {
-                    borders
-                        .defaultMinSize(minHeight = 100.dp)
-                        .align(Alignment.Center)
+                    modifier.then(
+                        borders
+                            .defaultMinSize(minHeight = 100.dp)
+                            .align(Alignment.Center)
+                    )
                 } else {
-                    Modifier
+                    modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 100.dp)
                         .align(Alignment.Center)
@@ -607,7 +609,7 @@ private fun RenderVideoPlayer(
                 controller.volume < 0.001
             }
 
-            val spaceModifier =
+            val spaceModifier = remember {
                 if (topPaddingForControllers.isSpecified && videoPlaybackSize.value.height > 0) {
                     val space = (abs(parentVideoPlaybackSize.value.height - videoPlaybackSize.value.height) / 2).dp
                     if (space > topPaddingForControllers) {
@@ -618,6 +620,7 @@ private fun RenderVideoPlayer(
                 } else {
                     Modifier
                 }
+            }
 
             MuteButton(
                 controllerVisible,
