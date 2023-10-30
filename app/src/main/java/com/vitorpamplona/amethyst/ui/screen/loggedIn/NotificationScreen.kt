@@ -97,21 +97,17 @@ fun NotificationScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            SummaryBar(
-                model = userReactionsStatsModel
-            )
+        SummaryBar(
+            model = userReactionsStatsModel
+        )
 
-            RefresheableCardView(
-                viewModel = notifFeedViewModel,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                routeForLastRead = Route.Notification.base,
-                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN
-            )
-        }
+        RefresheableCardView(
+            viewModel = notifFeedViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            routeForLastRead = Route.Notification.base,
+            scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN
+        )
     }
 }
 

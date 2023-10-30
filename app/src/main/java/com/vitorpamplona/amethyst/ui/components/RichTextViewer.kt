@@ -556,32 +556,32 @@ private fun RenderHashtag(
     nav: (String) -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
     val hashtagIcon = remember(segment.hashtag) {
         checkForHashtagWithIcon(segment.hashtag, primary)
     }
 
-    val regularText =
-        SpanStyle(color = MaterialTheme.colorScheme.onBackground)
+    val regularText = remember { SpanStyle(color = background) }
+    val clickableTextStyle = remember { SpanStyle(color = primary) }
 
-    val clickableTextStyle =
-        SpanStyle(color = primary)
-
-    val annotatedTermsString = buildAnnotatedString {
-        withStyle(clickableTextStyle) {
-            pushStringAnnotation("routeToHashtag", "")
-            append("#${segment.hashtag}")
-        }
-
-        if (hashtagIcon != null) {
+    val annotatedTermsString = remember {
+        buildAnnotatedString {
             withStyle(clickableTextStyle) {
                 pushStringAnnotation("routeToHashtag", "")
-                appendInlineContent("inlineContent", "[icon]")
+                append("#${segment.hashtag}")
             }
-        }
 
-        segment.extras?.ifBlank { "" }?.let {
-            withStyle(regularText) {
-                append(it)
+            if (hashtagIcon != null) {
+                withStyle(clickableTextStyle) {
+                    pushStringAnnotation("routeToHashtag", "")
+                    appendInlineContent("inlineContent", "[icon]")
+                }
+            }
+
+            segment.extras?.ifBlank { "" }?.let {
+                withStyle(regularText) {
+                    append(it)
+                }
             }
         }
     }
@@ -592,8 +592,10 @@ private fun RenderHashtag(
         emptyMap()
     }
 
-    val pressIndicator = Modifier.clickable {
-        nav("Hashtag/${segment.hashtag}")
+    val pressIndicator = remember {
+        Modifier.clickable {
+            nav("Hashtag/${segment.hashtag}")
+        }
     }
 
     Text(

@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,15 +54,13 @@ fun RefresheableCardView(
     )
 
     val modifier = if (enablePullRefresh) {
-        Modifier.pullRefresh(pullRefreshState)
+        Modifier.fillMaxSize().pullRefresh(pullRefreshState)
     } else {
-        Modifier
+        Modifier.fillMaxSize()
     }
 
     Box(modifier) {
-        Column {
-            SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
-        }
+        SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
 
         if (enablePullRefresh) {
             PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))

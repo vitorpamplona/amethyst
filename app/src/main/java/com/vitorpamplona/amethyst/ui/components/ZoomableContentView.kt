@@ -41,7 +41,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -62,11 +61,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
@@ -305,7 +306,9 @@ private fun LocalImageView(
             }
 
             val verifierModifier = if (topPaddingForControllers.isSpecified) {
-                Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
+                Modifier
+                    .padding(top = topPaddingForControllers)
+                    .align(Alignment.TopEnd)
             } else {
                 Modifier.align(Alignment.TopEnd)
             }
@@ -373,7 +376,9 @@ private fun UrlImageView(
         }
 
         val verifierModifier = if (topPaddingForControllers.isSpecified) {
-            Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
+            Modifier
+                .padding(top = topPaddingForControllers)
+                .align(Alignment.TopEnd)
         } else {
             Modifier.align(Alignment.TopEnd)
         }
@@ -405,11 +410,58 @@ private fun UrlImageView(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ImageUrlWithDownloadButton(url: String, showImage: MutableState<Boolean>) {
-    FlowRow() {
-        ClickableUrl(urlText = url, url = url)
+    val uri = LocalUriHandler.current
+
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
+
+    val regularText = remember { SpanStyle(color = background) }
+    val clickableTextStyle = remember { SpanStyle(color = primary) }
+
+    val annotatedTermsString = remember {
+        buildAnnotatedString {
+            withStyle(clickableTextStyle) {
+                pushStringAnnotation("routeToImage", "")
+                append("$url ")
+            }
+
+            withStyle(clickableTextStyle) {
+                pushStringAnnotation("routeToImage", "")
+                appendInlineContent("inlineContent", "[icon]")
+            }
+
+            withStyle(regularText) {
+                append(" ")
+            }
+        }
+    }
+
+    val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
+
+    val pressIndicator = remember {
+        Modifier.clickable {
+            runCatching { uri.openUri(url) }
+        }
+    }
+
+    Text(
+        text = annotatedTermsString,
+        modifier = pressIndicator,
+        inlineContent = inlineContent
+    )
+}
+
+@Composable
+private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
+    InlineTextContent(
+        Placeholder(
+            width = Font17SP,
+            height = Font17SP,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+        )
+    ) {
         IconButton(
             modifier = Modifier.size(Size20dp),
             onClick = { showImage.value = true }
@@ -417,7 +469,6 @@ fun ImageUrlWithDownloadButton(url: String, showImage: MutableState<Boolean>) {
             DownloadForOfflineIcon(Size24dp)
         }
     }
-}
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
@@ -548,42 +599,68 @@ private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
 
 @Composable
 private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
-    if (content is ZoomableUrlContent) {
-        ClickableUrl(urlText = remember { "${content.url} " }, url = content.url)
-    } else {
-        Text("Loading content... ")
-    }
+    val uri = LocalUriHandler.current
 
-    val myId = "inlineContent"
-    val emptytext = buildAnnotatedString {
-        withStyle(
-            LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary).toSpanStyle()
-        ) {
-            append("")
-            appendInlineContent(myId, "[icon]")
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
+
+    val regularText = remember { SpanStyle(color = background) }
+    val clickableTextStyle = remember { SpanStyle(color = primary) }
+
+    val annotatedTermsString = remember {
+        buildAnnotatedString {
+            if (content is ZoomableUrlContent) {
+                withStyle(clickableTextStyle) {
+                    pushStringAnnotation("routeToImage", "")
+                    append(content.url + " ")
+                }
+            } else {
+                withStyle(regularText) {
+                    append("Loading content...")
+                }
+            }
+
+            withStyle(clickableTextStyle) {
+                pushStringAnnotation("routeToImage", "")
+                appendInlineContent("inlineContent", "[icon]")
+            }
+
+            withStyle(regularText) {
+                append(" ")
+            }
         }
     }
-    val inlineContent = mapOf(
-        Pair(
-            myId,
-            InlineTextContent(
-                Placeholder(
-                    width = Font17SP,
-                    height = Font17SP,
-                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                )
-            ) {
-                LoadingAnimation()
-            }
-        )
-    )
 
-    // Empty Text for Size of Icon
+    val inlineContent = mapOf("inlineContent" to InlineLoadingIcon())
+
+    val pressIndicator = remember {
+        if (content is ZoomableUrlContent) {
+            Modifier.clickable {
+                runCatching { uri.openUri(content.url) }
+            }
+        } else {
+            Modifier
+        }
+    }
+
     Text(
-        text = emptytext,
+        text = annotatedTermsString,
+        modifier = pressIndicator,
         inlineContent = inlineContent
     )
 }
+
+@Composable
+private fun InlineLoadingIcon() =
+    InlineTextContent(
+        Placeholder(
+            width = Font17SP,
+            height = Font17SP,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+        )
+    ) {
+        LoadingAnimation()
+    }
 
 @Composable
 private fun DisplayBlurHash(

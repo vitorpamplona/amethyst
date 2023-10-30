@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -109,78 +108,76 @@ fun HiddenUsersScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
-            val pagerState = rememberPagerState() { 3 }
-            val coroutineScope = rememberCoroutineScope()
-            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.warnAboutPostsWithReports) }
-            var filterSpam by remember { mutableStateOf(accountViewModel.account.filterSpamFromStrangers) }
+        val pagerState = rememberPagerState() { 3 }
+        val coroutineScope = rememberCoroutineScope()
+        var warnAboutReports by remember { mutableStateOf(accountViewModel.account.warnAboutPostsWithReports) }
+        var filterSpam by remember { mutableStateOf(accountViewModel.account.filterSpamFromStrangers) }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = warnAboutReports,
-                    onCheckedChange = {
-                        warnAboutReports = it
-                        accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
-                    }
-                )
-
-                Text(stringResource(R.string.warn_when_posts_have_reports_from_your_follows))
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = filterSpam,
-                    onCheckedChange = {
-                        filterSpam = it
-                        accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
-                    }
-                )
-
-                Text(stringResource(R.string.filter_spam_from_strangers))
-            }
-
-            ScrollableTabRow(
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                edgePadding = 8.dp,
-                selectedTabIndex = pagerState.currentPage,
-                modifier = TabRowHeight,
-                divider = {
-                    Divider(thickness = DividerThickness)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = warnAboutReports,
+                onCheckedChange = {
+                    warnAboutReports = it
+                    accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
                 }
-            ) {
-                Tab(
-                    selected = pagerState.currentPage == 0,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = {
-                        Text(text = stringResource(R.string.blocked_users))
-                    }
-                )
-                Tab(
-                    selected = pagerState.currentPage == 1,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = {
-                        Text(text = stringResource(R.string.spamming_users))
-                    }
-                )
-                Tab(
-                    selected = pagerState.currentPage == 2,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                    text = {
-                        Text(text = stringResource(R.string.hidden_words))
-                    }
-                )
-            }
-            HorizontalPager(state = pagerState) { page ->
-                when (page) {
-                    0 -> RefreshingUserFeedView(hiddenFeedViewModel, accountViewModel) {
-                        RefreshingFeedUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
-                    }
-                    1 -> RefreshingUserFeedView(spammerFeedViewModel, accountViewModel) {
-                        RefreshingFeedUserFeedView(spammerFeedViewModel, accountViewModel, nav)
-                    }
-                    2 -> HiddenWordsFeed(hiddenWordsViewModel, accountViewModel)
+            )
+
+            Text(stringResource(R.string.warn_when_posts_have_reports_from_your_follows))
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = filterSpam,
+                onCheckedChange = {
+                    filterSpam = it
+                    accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
                 }
+            )
+
+            Text(stringResource(R.string.filter_spam_from_strangers))
+        }
+
+        ScrollableTabRow(
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            edgePadding = 8.dp,
+            selectedTabIndex = pagerState.currentPage,
+            modifier = TabRowHeight,
+            divider = {
+                Divider(thickness = DividerThickness)
+            }
+        ) {
+            Tab(
+                selected = pagerState.currentPage == 0,
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                text = {
+                    Text(text = stringResource(R.string.blocked_users))
+                }
+            )
+            Tab(
+                selected = pagerState.currentPage == 1,
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                text = {
+                    Text(text = stringResource(R.string.spamming_users))
+                }
+            )
+            Tab(
+                selected = pagerState.currentPage == 2,
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                text = {
+                    Text(text = stringResource(R.string.hidden_words))
+                }
+            )
+        }
+        HorizontalPager(state = pagerState) { page ->
+            when (page) {
+                0 -> RefreshingUserFeedView(hiddenFeedViewModel, accountViewModel) {
+                    RefreshingFeedUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
+                }
+                1 -> RefreshingUserFeedView(spammerFeedViewModel, accountViewModel) {
+                    RefreshingFeedUserFeedView(spammerFeedViewModel, accountViewModel, nav)
+                }
+                2 -> HiddenWordsFeed(hiddenWordsViewModel, accountViewModel)
             }
         }
     }
@@ -203,7 +200,7 @@ private fun HiddenWordsFeed(
 
 @Composable
 private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
-    Row(modifier = Modifier.padding(vertical = Size10dp)) {
+    Row() {
         val currentWordToAdd = remember {
             mutableStateOf("")
         }
@@ -217,7 +214,7 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
             value = currentWordToAdd.value,
             onValueChange = { currentWordToAdd.value = it },
             label = { Text(text = stringResource(R.string.hide_new_word_label)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
             placeholder = {
                 Text(
                     text = stringResource(R.string.hide_new_word_label),

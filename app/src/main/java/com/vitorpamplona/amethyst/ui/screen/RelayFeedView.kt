@@ -2,7 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -126,27 +126,25 @@ fun RelayFeedView(
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
     val modifier = if (enablePullRefresh) {
-        Modifier.pullRefresh(pullRefreshState)
+        Modifier.fillMaxSize().pullRefresh(pullRefreshState)
     } else {
-        Modifier
+        Modifier.fillMaxSize()
     }
 
     Box(modifier) {
-        Column() {
-            val listState = rememberLazyListState()
+        val listState = rememberLazyListState()
 
-            LazyColumn(
-                contentPadding = FeedPadding,
-                state = listState
-            ) {
-                itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
-                    RelayCompose(
-                        item,
-                        accountViewModel = accountViewModel,
-                        onAddRelay = { wantsToAddRelay = item.url },
-                        onRemoveRelay = { wantsToAddRelay = item.url }
-                    )
-                }
+        LazyColumn(
+            contentPadding = FeedPadding,
+            state = listState
+        ) {
+            itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
+                RelayCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    onAddRelay = { wantsToAddRelay = item.url },
+                    onRemoveRelay = { wantsToAddRelay = item.url }
+                )
             }
         }
 

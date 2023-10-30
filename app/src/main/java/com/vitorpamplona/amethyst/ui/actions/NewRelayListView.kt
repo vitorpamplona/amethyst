@@ -103,8 +103,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
                 TopAppBar(
                     title = {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {

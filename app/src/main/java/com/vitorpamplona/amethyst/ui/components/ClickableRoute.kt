@@ -685,15 +685,17 @@ fun InLineIconRenderer(
         }
     }.associate { it.first to it.second }
 
-    val annotatedText = buildAnnotatedString {
-        wordsInOrder.forEachIndexed { idx, value ->
-            withStyle(
-                style
-            ) {
-                if (value is TextType) {
-                    append(value.text)
-                } else if (value is ImageUrlType) {
-                    appendInlineContent("inlineContent$idx", "[icon]")
+    val annotatedText = remember {
+        buildAnnotatedString {
+            wordsInOrder.forEachIndexed { idx, value ->
+                withStyle(
+                    style
+                ) {
+                    if (value is TextType) {
+                        append(value.text)
+                    } else if (value is ImageUrlType) {
+                        appendInlineContent("inlineContent$idx", "[icon]")
+                    }
                 }
             }
         }
