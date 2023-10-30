@@ -146,6 +146,7 @@
     <string name="login">Connexion</string>
     <string name="generate_a_new_key">Générer une nouvelle clé</string>
     <string name="loading_feed">Chargement du flux</string>
+    <string name="loading_account">Chargement du compte</string>
     <string name="error_loading_replies">"Erreur lors du chargement des réponses : "</string>
     <string name="try_again">Essayer à nouveau</string>
     <string name="feed_is_empty">Le flux est vide.</string>
@@ -519,7 +520,9 @@
     <string name="error_dialog_pay_invoice_error">Impossible de payer la facture</string>
     <string name="error_dialog_pay_withdraw_error">Impossible de retirer</string>
     <string name="error_parsing_nip47_title">Impossible de configurer Wallet Connect</string>
+    <string name="cashu_sucessful_redemption">Cashu reçu</string>
     <string name="cashu_sucessful_redemption_explainer">%1$s sats ont été envoyés à votre portefeuille. (Frais : %2$s sats)</string>
+    <string name="error_unable_to_fetch_invoice">Impossible de récupérer la facture depuis les serveurs du destinataire</string>
     <string name="could_not_connect_to_tor">Impossible de se connecter à Tor</string>
     <string name="unable_to_download_relay_document">Téléchargement du document relais indisponible</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Impossible d\'assembler LNUrl à partir de l\'adresse Lightning \"%1$s\". Vérifiez la configuration de l\'utilisateur</string>
@@ -534,4 +537,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Impossible de créer une facture lightning avant d\'envoyer le zap. Élément pr introuvable dans le JSON résultant.</string>
     <string name="read_only_user">Utilisateur en lecture seule</string>
     <string name="no_reactions_setup">Aucune réaction configurée</string>
+    <string name="select_push_server">Sélectionnez une application UnifiedPush</string>
+    <string name="push_server_title">Notification Push</string>
+    <string name="push_server_explainer">Depuis les applications UnifiedPush installées</string>
+    <string name="push_server_none">Aucun</string>
+    <string name="push_server_none_explainer">Désactive les Notifications Push</string>
+    <string name="push_server_uses_app_explainer">Utilise l\'application %1$s</string>
+    <string name="push_server_install_app">Configuration des Notifications Push</string>
+    <string name="push_server_install_app_description">        Pour recevoir des notifications push, installez n\'importe quelle application qui supporte les [Unified Push](https://unifiedpush.org/), tel que [Nfty](https://ntfy.sh/).
+        Après installation, sélectionnez l\'application que vous voulez utiliser dans les Paramètres.
+    </string>
 </resources>
