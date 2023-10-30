@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
@@ -117,7 +116,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import kotlin.math.roundToInt
-import kotlin.time.measureTimedValue
 
 @Composable
 fun ReactionsRow(
@@ -152,20 +150,59 @@ private fun InnerReactionRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    GenericInnerReactionRow(
+        showReactionDetail = showReactionDetail,
+        one = {
+            WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
+                RenderShowIndividualReactionsButton(wantsToSeeReactions)
+            }
+        },
+        two = {
+            ReplyReactionWithDialog(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+        },
+        three = {
+            BoostWithDialog(
+                baseNote,
+                MaterialTheme.colorScheme.placeholderText,
+                accountViewModel,
+                nav
+            )
+        },
+        four = {
+            LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+        },
+        five = {
+            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+        },
+        six = {
+            ViewCountReaction(
+                note = baseNote,
+                grayTint = MaterialTheme.colorScheme.placeholderText,
+                viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter
+            )
+        }
+    )
+}
+
+@Composable
+private fun GenericInnerReactionRow(
+    showReactionDetail: Boolean,
+    one: @Composable () -> Unit,
+    two: @Composable () -> Unit,
+    three: @Composable () -> Unit,
+    four: @Composable () -> Unit,
+    five: @Composable () -> Unit,
+    six: @Composable () -> Unit
+) {
     Row(verticalAlignment = CenterVertically, modifier = ReactionRowHeight) {
         if (showReactionDetail) {
             Column(
                 verticalArrangement = Arrangement.Center,
                 modifier = ReactionRowExpandButton
             ) {
-                val (value, elapsed) = measureTimedValue {
-                    Row(verticalAlignment = CenterVertically) {
-                        WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
-                            RenderShowIndividualReactionsButton(wantsToSeeReactions)
-                        }
-                    }
+                Row(verticalAlignment = CenterVertically) {
+                    one()
                 }
-                Log.d("Rendering Metrics", "Reactions Button: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
             }
         }
 
@@ -173,69 +210,45 @@ private fun InnerReactionRow(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            val (value, elapsed) = measureTimedValue {
-                Row(verticalAlignment = CenterVertically) {
-                    ReplyReactionWithDialog(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-                }
+            Row(verticalAlignment = CenterVertically) {
+                two()
             }
-            Log.d("Rendering Metrics", "Reaction Reply: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            val (value, elapsed) = measureTimedValue {
-                Row(verticalAlignment = CenterVertically) {
-                    BoostWithDialog(
-                        baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel,
-                        nav
-                    )
-                }
+            Row(verticalAlignment = CenterVertically) {
+                three()
             }
-            Log.d("Rendering Metrics", "Reaction Boost: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            val (value, elapsed) = measureTimedValue {
-                Row(verticalAlignment = CenterVertically) {
-                    LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-                }
+            Row(verticalAlignment = CenterVertically) {
+                four()
             }
-            Log.d("Rendering Metrics", "Reaction Likes: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            val (value, elapsed) = measureTimedValue {
-                Row(verticalAlignment = CenterVertically) {
-                    ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-                }
+            Row(verticalAlignment = CenterVertically) {
+                five()
             }
-            Log.d("Rendering Metrics", "Reaction Zaps:  ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
 
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = remember { Modifier.weight(1f) }
         ) {
-            val (value, elapsed) = measureTimedValue {
-                Row(verticalAlignment = CenterVertically) {
-                    ViewCountReaction(
-                        note = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                        viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter
-                    )
-                }
+            Row(verticalAlignment = CenterVertically) {
+                six()
             }
-            Log.d("Rendering Metrics", "Reaction Views: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
         }
     }
 }
@@ -292,9 +305,11 @@ fun RenderZapRaiser(baseNote: Note, zapraiserAmount: Long, details: Boolean, acc
     }
 
     LinearProgressIndicator(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(if (details) 24.dp else 4.dp),
+        modifier = remember(details) {
+            Modifier
+                .fillMaxWidth()
+                .height(if (details) 24.dp else 4.dp)
+        },
         color = color,
         progress = zapraiserStatus.progress
     )
@@ -374,7 +389,7 @@ private fun RenderShowIndividualReactionsButton(wantsToSeeReactions: MutableStat
         },
         modifier = Size20Modifier
     ) {
-        Crossfade(targetState = wantsToSeeReactions.value) {
+        Crossfade(targetState = wantsToSeeReactions.value, label = "RenderShowIndividualReactionsButton") {
             if (it) {
                 ExpandLessIcon(modifier = Size22Modifier)
             } else {
