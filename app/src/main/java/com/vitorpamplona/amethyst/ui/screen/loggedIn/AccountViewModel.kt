@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.Dao
+import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.components.MarkdownParser
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -862,6 +863,13 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     private var collectorJob: Job? = null
     val notificationDots = HasNotificationDot(bottomNavigationItems, account)
+    private val bundlerInsert = BundledInsert<Set<Note>>(3000, Dispatchers.IO)
+
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) {
+            updateNotificationDots(it.flatten().toSet())
+        }
+    }
 
     suspend fun updateNotificationDots(newNotes: Set<Note> = emptySet()) {
         val (value, elapsed) = measureTimedValue {
@@ -875,8 +883,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         collectorJob = viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Notification Dots Calculation refresh ${this@AccountViewModel}")
-
-                updateNotificationDots(newNotes)
+                invalidateInsertData(newNotes)
             }
         }
     }
