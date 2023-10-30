@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
@@ -52,16 +50,65 @@ fun HomeScreen(
     nav: (String) -> Unit,
     nip47: String? = null
 ) {
-    var wantsToAddNip47 by remember(nip47) { mutableStateOf(nip47) }
-
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
+    ResolveNIP47(nip47, accountViewModel)
 
     WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, accountViewModel)
+
+    WatchLifeCycleChanges()
+
+    AssembleHomeTabs(homeFeedViewModel, repliesFeedViewModel) { pagerState, tabItems ->
+        AssembleHomePage(pagerState, tabItems, accountViewModel, nav)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AssembleHomeTabs(
+    homeFeedViewModel: NostrHomeFeedViewModel,
+    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    inner: @Composable (PagerState, ImmutableList<TabItem>) -> Unit
+) {
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
+
+    val tabs by remember(homeFeedViewModel, repliesFeedViewModel) {
+        mutableStateOf(
+            listOf(
+                TabItem(R.string.new_threads, homeFeedViewModel, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS),
+                TabItem(R.string.conversations, repliesFeedViewModel, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES)
+            ).toImmutableList()
+        )
+    }
+
+    inner(pagerState, tabs)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AssembleHomePage(
+    pagerState: PagerState,
+    tabs: ImmutableList<TabItem>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    Column(Modifier.fillMaxHeight()) {
+        HomePages(pagerState, tabs, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun ResolveNIP47(
+    nip47: String?,
+    accountViewModel: AccountViewModel
+) {
+    var wantsToAddNip47 by remember(nip47) { mutableStateOf(nip47) }
 
     if (wantsToAddNip47 != null) {
         UpdateZapAmountDialog({ wantsToAddNip47 = null }, wantsToAddNip47, accountViewModel)
     }
+}
 
+@Composable
+private fun WatchLifeCycleChanges() {
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -73,23 +120,6 @@ fun HomeScreen(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    val tabs by remember(homeFeedViewModel, repliesFeedViewModel) {
-        mutableStateOf(
-            listOf(
-                TabItem(R.string.new_threads, homeFeedViewModel, Route.Home.base + "Follows", ScrollStateKeys.HOME_FOLLOWS),
-                TabItem(R.string.conversations, repliesFeedViewModel, Route.Home.base + "FollowsReplies", ScrollStateKeys.HOME_REPLIES)
-            ).toImmutableList()
-        )
-    }
-
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            HomePages(pagerState, tabs, accountViewModel, nav)
         }
     }
 }

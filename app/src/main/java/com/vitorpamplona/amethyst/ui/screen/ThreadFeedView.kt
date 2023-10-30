@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,7 +90,9 @@ import com.vitorpamplona.amethyst.ui.note.Reward
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -172,10 +173,7 @@ fun ThreadFeedView(noteId: String, viewModel: FeedViewModel, accountViewModel: A
                         }
 
                         LazyColumn(
-                            contentPadding = PaddingValues(
-                                top = 10.dp,
-                                bottom = 10.dp
-                            ),
+                            contentPadding = FeedPadding,
                             state = listState
                         ) {
                             itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
@@ -507,7 +505,7 @@ fun NoteMaster(
             ReactionsRow(note, true, accountViewModel, nav)
 
             Divider(
-                thickness = 0.25.dp
+                thickness = DividerThickness
             )
         }
 

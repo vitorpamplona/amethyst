@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.StringFeedView
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -291,7 +291,7 @@ fun MutedWordHeader(tag: String, modifier: Modifier = StdPadding, account: Accou
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }
@@ -347,7 +347,7 @@ fun HideWordButton(onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.block_only), color = Color.White)
     }
@@ -362,7 +362,7 @@ fun ShowWordButton(text: Int = R.string.unblock, onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
     }

@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
@@ -548,7 +549,7 @@ fun ChatroomHeader(
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }
@@ -592,7 +593,7 @@ fun GroupChatroomHeader(
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }

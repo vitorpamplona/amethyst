@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
@@ -114,7 +115,7 @@ fun DrawerContent(
                 nav
             )
             Divider(
-                thickness = 0.25.dp,
+                thickness = DividerThickness,
                 modifier = Modifier.padding(top = 20.dp)
             )
             ListContent(
@@ -761,7 +762,7 @@ fun BottomContent(user: User, drawerState: DrawerState, loadProfilePicture: Bool
     Column(modifier = Modifier) {
         Divider(
             modifier = Modifier.padding(top = 15.dp),
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
         Row(
             modifier = Modifier

@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.screen
 import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,10 +13,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -89,10 +88,7 @@ private fun FeedLoaded(
     }
 
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        contentPadding = FeedPadding,
         state = listState
     ) {
         itemsIndexed(

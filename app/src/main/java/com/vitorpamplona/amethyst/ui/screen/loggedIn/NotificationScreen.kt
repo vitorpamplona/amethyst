@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import com.vitorpamplona.amethyst.ui.theme.chartStyle
 import java.math.BigDecimal
@@ -213,7 +214,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
     }
 
     Divider(
-        thickness = 0.25.dp
+        thickness = DividerThickness
     )
 }
 

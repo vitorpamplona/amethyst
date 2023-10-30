@@ -4,7 +4,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +31,7 @@ import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -145,10 +145,7 @@ fun RelaySelectionDialog(
                 )
 
                 LazyColumn(
-                    contentPadding = PaddingValues(
-                        top = 10.dp,
-                        bottom = 10.dp
-                    )
+                    contentPadding = FeedPadding
                 ) {
                     itemsIndexed(
                         relays,

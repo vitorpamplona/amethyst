@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -64,6 +63,8 @@ import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -313,10 +314,7 @@ private fun RenderSearchResults(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxHeight(),
-                contentPadding = PaddingValues(
-                    top = 10.dp,
-                    bottom = 10.dp
-                ),
+                contentPadding = FeedPadding,
                 state = listState
             ) {
                 itemsIndexed(
@@ -411,7 +409,7 @@ fun UserComposeForChat(
 
         Divider(
             modifier = Modifier.padding(top = 10.dp),
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }

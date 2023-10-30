@@ -581,7 +581,7 @@ fun CommunityHeader(
 
         if (showBottomDiviser) {
             Divider(
-                thickness = 0.25.dp
+                thickness = DividerThickness
             )
         }
     }

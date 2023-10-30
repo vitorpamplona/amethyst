@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -22,6 +21,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import kotlinx.collections.immutable.ImmutableSet
 
@@ -50,7 +51,7 @@ fun BlankNote(modifier: Modifier = Modifier, showDivider: Boolean = false, idHex
                 if (!showDivider) {
                     Divider(
                         modifier = Modifier.padding(vertical = 10.dp),
-                        thickness = 0.25.dp
+                        thickness = DividerThickness
                     )
                 }
             }
@@ -110,7 +111,7 @@ fun HiddenNote(
                         .buttonColors(
                             contentColor = MaterialTheme.colorScheme.primary
                         ),
-                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+                    contentPadding = ButtonPadding
                 ) {
                     Text(text = stringResource(R.string.show_anyway), color = Color.White)
                 }
@@ -118,7 +119,7 @@ fun HiddenNote(
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }

@@ -30,14 +30,14 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
+import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import kotlinx.collections.immutable.persistentListOf
 
@@ -86,9 +86,18 @@ fun keyboardAsState(): State<Keyboard> {
 }
 
 @Composable
-fun AppBottomBar(accountViewModel: AccountViewModel, navEntryState: State<NavBackStackEntry?>, nav: (Route, Boolean) -> Unit) {
+fun IfKeyboardClosed(
+    inner: @Composable () -> Unit
+) {
     val isKeyboardOpen by keyboardAsState()
     if (isKeyboardOpen == Keyboard.Closed) {
+        inner()
+    }
+}
+
+@Composable
+fun AppBottomBar(accountViewModel: AccountViewModel, navEntryState: State<NavBackStackEntry?>, nav: (Route, Boolean) -> Unit) {
+    IfKeyboardClosed {
         RenderBottomMenu(accountViewModel, navEntryState, nav)
     }
 }
@@ -124,28 +133,28 @@ private fun RowScope.HasNewItemsIcon(
         }
     }
 
-    val size = remember {
-        if ("Home" == route.base) 25.dp else 23.dp
-    }
-    val iconSize = remember {
-        if ("Home" == route.base) 24.dp else 20.dp
-    }
-
     NavigationBarItem(
         icon = {
-            val hasNewItems = accountViewModel.notificationDots.hasNewItems[route]?.collectAsStateWithLifecycle()
-
-            NotifiableIcon(
-                route.icon,
-                size,
-                iconSize,
-                selected,
-                hasNewItems
-            )
+            ObserveNewItems(route, accountViewModel) { hasNewItems ->
+                NotifiableIcon(
+                    route.icon,
+                    route.notifSize,
+                    route.iconSize,
+                    selected,
+                    hasNewItems
+                )
+            }
         },
         selected = selected,
         onClick = { nav(route, selected) }
     )
+}
+
+@Composable
+fun ObserveNewItems(route: Route, accountViewModel: AccountViewModel, inner: @Composable (hasNewItems: State<Boolean>?) -> Unit) {
+    val hasNewItems = accountViewModel.notificationDots.hasNewItems[route]?.collectAsStateWithLifecycle()
+
+    inner(hasNewItems)
 }
 
 @Composable
@@ -177,9 +186,7 @@ private fun NotificationDotIcon(modifier: Modifier) {
     Box(modifier.size(Size10dp)) {
         Box(
             modifier = remember {
-                Modifier
-                    .size(Size10dp)
-                    .clip(shape = CircleShape)
+                Size10Modifier.clip(shape = CircleShape)
             }.background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.TopEnd
         ) {
@@ -187,7 +194,7 @@ private fun NotificationDotIcon(modifier: Modifier) {
                 "",
                 color = Color.White,
                 textAlign = TextAlign.Center,
-                fontSize = 12.sp,
+                fontSize = Font12SP,
                 modifier = remember {
                     Modifier
                         .wrapContentHeight()

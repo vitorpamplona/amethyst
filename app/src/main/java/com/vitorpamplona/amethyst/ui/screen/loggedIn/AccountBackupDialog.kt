@@ -10,7 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.quartz.encoders.toNsec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -131,7 +131,7 @@ private fun NSecCopyButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Icon(
             tint = MaterialTheme.colorScheme.onPrimary,

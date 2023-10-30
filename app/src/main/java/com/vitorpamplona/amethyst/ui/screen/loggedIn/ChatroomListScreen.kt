@@ -221,64 +221,60 @@ fun ChatroomListScreenOnlyList(
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxHeight()) {
-            Column(
-                modifier = Modifier.padding(vertical = 0.dp)
+    Column(
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Box(Modifier.fillMaxWidth()) {
+            TabRow(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                selectedTabIndex = pagerState.currentPage,
+                modifier = TabRowHeight
             ) {
-                Box(Modifier.fillMaxWidth()) {
-                    TabRow(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        contentColor = MaterialTheme.colorScheme.onBackground,
-                        selectedTabIndex = pagerState.currentPage,
-                        modifier = TabRowHeight
-                    ) {
-                        tabs.forEachIndexed { index, tab ->
-                            Tab(
-                                selected = pagerState.currentPage == index,
-                                text = {
-                                    Text(text = stringResource(tab.resource))
-                                },
-                                onClick = {
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                }
-                            )
+                tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        text = {
+                            Text(text = stringResource(tab.resource))
+                        },
+                        onClick = {
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
                         }
-                    }
-
-                    IconButton(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.CenterEnd),
-                        onClick = { moreActionsExpanded = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.placeholderText
-                        )
-
-                        ChatroomTabMenu(
-                            moreActionsExpanded,
-                            { moreActionsExpanded = false },
-                            { markKnownAsRead.value = true },
-                            { markNewAsRead.value = true }
-                        )
-                    }
-                }
-
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize()
-                ) { page ->
-                    ChatroomListFeedView(
-                        viewModel = tabs[page].viewModel,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        markAsRead = tabs[page].markAsRead
                     )
                 }
             }
+
+            IconButton(
+                modifier = Modifier
+                    .size(40.dp)
+                    .align(Alignment.CenterEnd),
+                onClick = { moreActionsExpanded = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.placeholderText
+                )
+
+                ChatroomTabMenu(
+                    moreActionsExpanded,
+                    { moreActionsExpanded = false },
+                    { markKnownAsRead.value = true },
+                    { markNewAsRead.value = true }
+                )
+            }
+        }
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            ChatroomListFeedView(
+                viewModel = tabs[page].viewModel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                markAsRead = tabs[page].markAsRead
+            )
         }
     }
 }

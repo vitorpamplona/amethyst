@@ -3,7 +3,6 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +26,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
@@ -114,7 +114,7 @@ fun ShowMoreButton(onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.secondaryButtonBackground
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.show_more), color = Color.White)
     }

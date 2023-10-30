@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import kotlinx.collections.immutable.ImmutableList
 
@@ -143,7 +144,7 @@ fun <T> SpinnerSelectionDialog(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        Divider(color = Color.LightGray, thickness = 0.25.dp)
+                        Divider(color = Color.LightGray, thickness = DividerThickness)
                     }
                 }
                 itemsIndexed(options) { index, item ->
@@ -160,7 +161,7 @@ fun <T> SpinnerSelectionDialog(
                         }
                     }
                     if (index < options.lastIndex) {
-                        Divider(color = Color.LightGray, thickness = 0.25.dp)
+                        Divider(color = Color.LightGray, thickness = DividerThickness)
                     }
                 }
             }

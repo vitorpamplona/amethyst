@@ -813,7 +813,7 @@ fun TopBarWithBackButton(caption: String, popBack: () -> Unit) {
             },
             actions = {}
         )
-        Divider(thickness = 0.25.dp)
+        Divider(thickness = DividerThickness)
     }
 }
 
@@ -835,7 +835,7 @@ fun FlexibleTopBarWithBackButton(
             actions = {}
         )
         Spacer(modifier = HalfVertSpacer)
-        Divider(thickness = 0.25.dp)
+        Divider(thickness = DividerThickness)
     }
 }
 

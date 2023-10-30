@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -16,9 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefreshingFeedStringFeedView(
@@ -99,10 +98,7 @@ private fun FeedLoaded(
     val listState = rememberLazyListState()
 
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        contentPadding = FeedPadding,
         state = listState
     ) {
         item {

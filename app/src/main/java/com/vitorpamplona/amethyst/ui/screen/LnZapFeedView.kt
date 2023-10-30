@@ -2,16 +2,15 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.ZapNoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun LnZapFeedView(
@@ -52,10 +51,7 @@ private fun LnZapFeedLoaded(
     val listState = rememberLazyListState()
 
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        contentPadding = FeedPadding,
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.zapEvent.idHex }) { _, item ->

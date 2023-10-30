@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
@@ -50,7 +51,7 @@ fun UserCompose(
 
         if (showDiviser) {
             Divider(
-                thickness = 0.25.dp
+                thickness = DividerThickness
             )
         }
     }

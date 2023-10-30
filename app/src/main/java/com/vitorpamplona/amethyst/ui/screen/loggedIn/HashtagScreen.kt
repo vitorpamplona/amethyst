@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
@@ -121,7 +122,7 @@ fun HashtagHeader(tag: String, modifier: Modifier = StdPadding, account: Account
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }

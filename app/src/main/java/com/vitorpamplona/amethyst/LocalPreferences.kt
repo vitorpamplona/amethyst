@@ -134,8 +134,6 @@ object LocalPreferences {
                         )
                     }
 
-                    println("AAA migrated:  $migrated")
-
                     _savedAccounts = migrated
                 }
             }

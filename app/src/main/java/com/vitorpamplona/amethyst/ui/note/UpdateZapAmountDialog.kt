@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.decodePublicKey
@@ -376,7 +377,7 @@ fun UpdateZapAmountDialog(
 
                         Divider(
                             modifier = Modifier.padding(vertical = 10.dp),
-                            thickness = 0.25.dp
+                            thickness = DividerThickness
                         )
 
                         var qrScanning by remember { mutableStateOf(false) }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +66,8 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
@@ -154,10 +155,7 @@ fun NewRelayListView(onClose: () -> Unit, accountViewModel: AccountViewModel, re
             ) {
                 Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     LazyColumn(
-                        contentPadding = PaddingValues(
-                            top = 10.dp,
-                            bottom = 10.dp
-                        )
+                        contentPadding = FeedPadding
                     ) {
                         itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
                             ServerConfig(
@@ -252,7 +250,7 @@ fun ServerConfigHeader() {
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }
@@ -409,7 +407,7 @@ fun ServerConfigClickableLine(
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }

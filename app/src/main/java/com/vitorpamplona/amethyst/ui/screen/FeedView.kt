@@ -7,7 +7,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,11 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
@@ -65,16 +64,14 @@ fun RefresheableView(
 
     val modifier = remember {
         if (enablePullRefresh) {
-            Modifier.pullRefresh(pullRefreshState)
+            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
         } else {
-            Modifier
+            Modifier.fillMaxSize()
         }
     }
 
     Box(modifier) {
-        Column(Modifier.fillMaxSize()) {
-            content()
-        }
+        content()
 
         if (enablePullRefresh) {
             PullRefreshIndicator(
@@ -191,10 +188,7 @@ private fun FeedLoaded(
     }
 
     LazyColumn(
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        contentPadding = FeedPadding,
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->

@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +26,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.time.Instant
 import java.time.ZoneId
@@ -86,7 +87,7 @@ fun RelayCompose(
 
         Divider(
             modifier = Modifier.padding(top = 10.dp),
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }
@@ -120,7 +121,7 @@ fun AddRelayButton(onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(id = R.string.add), color = Color.White)
     }
@@ -135,7 +136,7 @@ fun RemoveRelayButton(onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.remove), color = Color.White)
     }

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -124,7 +125,7 @@ fun GeoHashHeader(tag: String, modifier: Modifier = StdPadding, account: Account
         }
 
         Divider(
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }

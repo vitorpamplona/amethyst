@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.Dp
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
@@ -21,6 +22,10 @@ import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveNowFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size23dp
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -30,16 +35,18 @@ import kotlinx.collections.immutable.toImmutableList
 @Immutable
 sealed class Route(
     val route: String,
+    val base: String = route.substringBefore("?"),
     val icon: Int,
+    val notifSize: Dp = Size23dp,
+    val iconSize: Dp = Size20dp,
     val hasNewItems: (Account, Set<com.vitorpamplona.amethyst.model.Note>) -> Boolean = { _, _ -> false },
     val arguments: ImmutableList<NamedNavArgument> = persistentListOf()
 ) {
-    val base: String
-        get() = route.substringBefore("?")
-
     object Home : Route(
         route = "Home?nip47={nip47}",
         icon = R.drawable.ic_home,
+        notifSize = Size25dp,
+        iconSize = Size24dp,
         arguments = listOf(
             navArgument("nip47") { type = NavType.StringType; nullable = true; defaultValue = null }
         ).toImmutableList(),

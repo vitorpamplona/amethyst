@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -134,6 +133,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -1697,7 +1697,7 @@ private fun InnerEditButton(onClick: () -> Unit) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = onClick,
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = ZeroPadding
     ) {
         Icon(
             tint = Color.White,
@@ -1716,7 +1716,7 @@ fun UnfollowButton(onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.unfollow), color = Color.White)
     }
@@ -1731,7 +1731,7 @@ fun FollowButton(text: Int = R.string.follow, onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
     }
@@ -1746,7 +1746,7 @@ fun ShowUserButton(onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.unblock), color = Color.White)
     }

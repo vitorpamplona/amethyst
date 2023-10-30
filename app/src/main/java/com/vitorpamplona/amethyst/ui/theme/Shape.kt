@@ -58,6 +58,7 @@ val Size18dp = 18.dp
 val Size19dp = 19.dp
 val Size20dp = 20.dp
 val Size22dp = 22.dp
+val Size23dp = 23.dp
 val Size24dp = 24.dp
 val Size25dp = 25.dp
 val Size30dp = 30.dp
@@ -144,9 +145,6 @@ val EditFieldLeadingIconModifier = Modifier
     .height(32.dp)
     .padding(start = 2.dp)
 
-val FeedPadding = PaddingValues(
-    top = 10.dp,
-    bottom = 10.dp
-)
-
 val ZeroPadding = PaddingValues(0.dp)
+val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
+val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)

@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -76,7 +77,7 @@ fun ZapNoteCompose(baseReqResponse: ZapReqResponse, accountViewModel: AccountVie
 
             Divider(
                 modifier = Modifier.padding(top = 10.dp),
-                thickness = 0.25.dp
+                thickness = DividerThickness
             )
         }
     }

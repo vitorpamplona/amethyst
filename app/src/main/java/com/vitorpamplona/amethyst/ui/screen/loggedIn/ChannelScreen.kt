@@ -8,7 +8,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -117,6 +116,8 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -616,7 +617,7 @@ fun ChannelHeader(
 
         if (showBottomDiviser) {
             Divider(
-                thickness = 0.25.dp
+                thickness = DividerThickness
             )
         }
     }
@@ -1139,7 +1140,7 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
                 accountViewModel.account.follow(channel)
             }
         },
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.join), color = Color.White)
     }
@@ -1156,7 +1157,7 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
                 accountViewModel.account.unfollow(channel)
             }
         },
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.leave), color = Color.White)
     }
@@ -1177,7 +1178,7 @@ fun JoinCommunityButton(accountViewModel: AccountViewModel, note: AddressableNot
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.join), color = Color.White)
     }
@@ -1198,7 +1199,7 @@ fun LeaveCommunityButton(accountViewModel: AccountViewModel, note: AddressableNo
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+        contentPadding = ButtonPadding
     ) {
         Text(text = stringResource(R.string.leave), color = Color.White)
     }

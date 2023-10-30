@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -65,6 +64,8 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.findHashtags
@@ -353,10 +354,7 @@ private fun DisplaySearchResults(
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
-        contentPadding = PaddingValues(
-            top = 10.dp,
-            bottom = 10.dp
-        ),
+        contentPadding = FeedPadding,
         state = listState
     ) {
         itemsIndexed(
@@ -438,7 +436,7 @@ fun HashtagLine(tag: String, onClick: () -> Unit) {
 
         Divider(
             modifier = Modifier.padding(top = 10.dp),
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }
@@ -479,7 +477,7 @@ fun UserLine(
 
         Divider(
             modifier = Modifier.padding(top = 10.dp),
-            thickness = 0.25.dp
+            thickness = DividerThickness
         )
     }
 }
