@@ -821,13 +821,16 @@ private fun RenderReactionType(
     iconSize: Dp = Size20dp,
     iconFontSize: TextUnit
 ) {
-    if (reactionType.startsWith(":")) {
-        val noStartColon = reactionType.removePrefix(":")
-        val url = noStartColon.substringAfter(":")
+    val isCustom = remember(reactionType) {
+        reactionType.startsWith(":")
+    }
 
-        val renderable = listOf(
-            ImageUrlType(url)
-        ).toImmutableList()
+    if (isCustom) {
+        val renderable = remember(reactionType) {
+            listOf(
+                ImageUrlType(reactionType.removePrefix(":").substringAfter(":"))
+            ).toImmutableList()
+        }
 
         InLineIconRenderer(
             renderable,
