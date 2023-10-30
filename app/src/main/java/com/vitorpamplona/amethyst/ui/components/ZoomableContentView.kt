@@ -726,8 +726,8 @@ private fun DialogContent(
 
     AnimatedVisibility(
         visible = holdOn.value || controllerVisible.value,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() }
     ) {
         Row(
             modifier = Modifier

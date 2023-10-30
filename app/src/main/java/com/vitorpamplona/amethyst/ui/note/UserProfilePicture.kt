@@ -80,7 +80,7 @@ fun NoteAuthorPicture(
 ) {
     val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
 
-    Crossfade(targetState = author) {
+    Crossfade(targetState = author, label = "NoteAuthorPicture") {
         if (it == null) {
             DisplayBlankAuthor(size, modifier)
         } else {
@@ -351,8 +351,8 @@ fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewMod
     WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
         AnimatedVisibility(
             visible = newFollowingState,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = remember { fadeIn() },
+            exit = remember { fadeOut() }
         ) {
             Box(contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(iconSize)

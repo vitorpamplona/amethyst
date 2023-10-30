@@ -840,8 +840,8 @@ private fun MuteButton(
     AnimatedVisibility(
         visible = holdOn.value || controllerVisible.value,
         modifier = modifier,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() }
     ) {
         Box(modifier = VolumeBottomIconSize) {
             Box(
@@ -881,8 +881,8 @@ private fun KeepPlayingButton(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = alignment,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() }
     ) {
         Box(modifier = PinBottomIconSize) {
             Box(

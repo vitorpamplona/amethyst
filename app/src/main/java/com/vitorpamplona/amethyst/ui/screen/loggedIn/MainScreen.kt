@@ -331,8 +331,8 @@ fun MainScreen(
                 floatingActionButton = {
                     AnimatedVisibility(
                         visible = shouldShow.value,
-                        enter = scaleIn(),
-                        exit = scaleOut()
+                        enter = remember { scaleIn() },
+                        exit = remember { scaleOut() }
                     ) {
                         Box(
                             Size55Modifier

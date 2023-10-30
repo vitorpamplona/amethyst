@@ -53,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomEnd
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +71,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -2861,27 +2863,55 @@ private fun RepostNoteAuthorPicture(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    Box(modifier = Size55Modifier) {
-        Box(Size35Modifier.align(Alignment.TopStart)) {
+    GenericRepostSection(
+        baseAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseNote,
                 nav = nav,
                 accountViewModel = accountViewModel,
                 size = Size34dp
             )
-        }
-
-        Box(Size18Modifier.align(Alignment.BottomStart).padding(1.dp)) {
-            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colorScheme.placeholderText)
-        }
-
-        Box(Size35Modifier.align(Alignment.BottomEnd)) {
+        },
+        repostAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseRepost,
                 nav = nav,
                 accountViewModel = accountViewModel,
                 size = Size34dp
             )
+        }
+    )
+}
+
+@Composable
+@Preview
+private fun GenericRepostSectionPreview() {
+    GenericRepostSection(
+        baseAuthorPicture = {
+            Text("ab")
+        },
+        repostAuthorPicture = {
+            Text("cd")
+        }
+    )
+}
+
+@Composable
+private fun GenericRepostSection(
+    baseAuthorPicture: @Composable () -> Unit,
+    repostAuthorPicture: @Composable () -> Unit
+) {
+    Box(modifier = Size55Modifier) {
+        Box(remember { Size35Modifier.align(Alignment.TopStart) }) {
+            baseAuthorPicture()
+        }
+
+        Box(remember { Size18Modifier.align(Alignment.BottomStart).padding(1.dp) }) {
+            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colorScheme.placeholderText)
+        }
+
+        Box(remember { Size35Modifier.align(Alignment.BottomEnd) }, contentAlignment = BottomEnd) {
+            repostAuthorPicture()
         }
     }
 }
