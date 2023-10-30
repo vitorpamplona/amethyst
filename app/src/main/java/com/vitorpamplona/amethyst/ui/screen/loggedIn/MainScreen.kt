@@ -3,10 +3,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -76,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -324,13 +329,23 @@ fun MainScreen(
                     }
                 },
                 floatingActionButton = {
-                    FloatingButtons(
-                        navState,
-                        accountViewModel,
-                        accountStateViewModel,
-                        nav,
-                        navBottomRow
-                    )
+                    AnimatedVisibility(
+                        visible = shouldShow.value,
+                        enter = scaleIn(),
+                        exit = scaleOut()
+                    ) {
+                        Box(
+                            Size55Modifier
+                        ) {
+                            FloatingButtons(
+                                navState,
+                                accountViewModel,
+                                accountStateViewModel,
+                                nav,
+                                navBottomRow
+                            )
+                        }
+                    }
                 }
             ) {
                 Column(
