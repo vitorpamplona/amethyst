@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -417,14 +418,12 @@ fun payViaIntent(invoice: String, context: Context, onError: (String) -> Unit) {
 fun PayButton(isActive: Boolean, modifier: Modifier = Modifier, onPost: () -> Unit = {}) {
     Button(
         modifier = modifier,
-        onClick = {
-            onPost()
-        },
+        onClick = onPost,
         shape = ButtonBorder,
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
         ),
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = ZeroPadding
     ) {
         if (isActive) {
             Text(text = stringResource(R.string.pay), color = Color.White)

@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.buttons
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
 fun NewChannelButton(accountViewModel: AccountViewModel) {
@@ -34,10 +35,10 @@ fun NewChannelButton(accountViewModel: AccountViewModel) {
 
     OutlinedButton(
         onClick = { wantsToPost = true },
-        modifier = Modifier.size(55.dp),
+        modifier = Size55Modifier,
         shape = CircleShape,
         colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primary),
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = ZeroPadding
     ) {
         Icon(
             imageVector = Icons.Outlined.Add,

@@ -137,6 +137,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
@@ -691,7 +692,7 @@ private fun ProfileHeader(
                     .buttonColors(
                         containerColor = MaterialTheme.colorScheme.background
                     ),
-                contentPadding = PaddingValues(0.dp)
+                contentPadding = ZeroPadding
             ) {
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
@@ -1659,11 +1660,7 @@ private fun MessageButton(user: User, accountViewModel: AccountViewModel, nav: (
                 }
             }
         },
-        shape = ButtonBorder,
-        contentPadding = PaddingValues(0.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.placeholderText
-        )
+        contentPadding = ZeroPadding
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_dm),
@@ -1700,11 +1697,7 @@ private fun InnerEditButton(onClick: () -> Unit) {
             .padding(horizontal = 3.dp)
             .width(50.dp),
         onClick = onClick,
-        shape = ButtonBorder,
-        contentPadding = PaddingValues(0.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        )
+        contentPadding = PaddingValues(0.dp)
     ) {
         Icon(
             tint = Color.White,

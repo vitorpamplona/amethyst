@@ -148,3 +148,5 @@ val FeedPadding = PaddingValues(
     top = 10.dp,
     bottom = 10.dp
 )
+
+val ZeroPadding = PaddingValues(0.dp)

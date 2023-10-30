@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
@@ -1115,14 +1116,9 @@ private fun EditButton(accountViewModel: AccountViewModel, channel: PublicChatCh
     }
 
     Button(
-        modifier = Modifier
-            .padding(horizontal = 3.dp)
-            .width(50.dp),
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { wantsToPost = true },
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        )
+        contentPadding = ZeroPadding
     ) {
         Icon(
             tint = Color.White,
@@ -1143,10 +1139,6 @@ fun JoinChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (S
                 accountViewModel.account.follow(channel)
             }
         },
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.join), color = Color.White)
@@ -1164,10 +1156,6 @@ fun LeaveChatButton(accountViewModel: AccountViewModel, channel: Channel, nav: (
                 accountViewModel.account.unfollow(channel)
             }
         },
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
         contentPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
     ) {
         Text(text = stringResource(R.string.leave), color = Color.White)
