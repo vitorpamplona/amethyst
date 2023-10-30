@@ -210,6 +210,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     }
 
     override fun markAsSeenOnRelay(eventId: String, relay: Relay) {
+        checkNotInMainThread()
+
         super.markAsSeenOnRelay(eventId, relay)
 
         val note = LocalCache.getNoteIfExists(eventId) ?: return
