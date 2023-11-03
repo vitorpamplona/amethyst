@@ -27,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
+import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
@@ -166,7 +167,11 @@ private fun HomePages(
 
 @Composable
 fun CheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnline: @Composable () -> Unit) {
-    var online by remember { mutableStateOf(false) }
+    var online by remember {
+        mutableStateOf(
+            OnlineChecker.isOnlineCached(url)
+        )
+    }
 
     LaunchedEffect(key1 = url) {
         accountViewModel.checkIsOnline(url) { isOnline ->
@@ -176,7 +181,10 @@ fun CheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnli
         }
     }
 
-    Crossfade(targetState = online) {
+    Crossfade(
+        targetState = online,
+        label = "CheckIfUrlIsOnline"
+    ) {
         if (it) {
             whenOnline()
         }
