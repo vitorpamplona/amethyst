@@ -1,2 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools"></resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="group_picture">Hình ảnh nhóm</string>
+    <string name="illegal_behavior">Hành vi trái pháp luật</string>
+    <string name="unknown">Không xác định</string>
+    <string name="request_deletion">Yêu cầu xóa</string>
+    <string name="view_count">Lượt xem</string>
+    <string name="add">Thêm</string>
+    <string name="and">" và "</string>
+    <string name="payment_successful">Thanh toán thành công</string>
+    <string name="pay">Thanh toán</string>
+    <string name="note_to_receiver">Lưu ý cho người nhận</string>
+    <string name="thank_you_so_much">Cảm ơn rất nhiều!</string>
+</resources>
