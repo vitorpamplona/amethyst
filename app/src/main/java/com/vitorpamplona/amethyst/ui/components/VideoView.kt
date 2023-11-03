@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,12 +45,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.unit.isSpecified
@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.note.MuteIcon
 import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
+import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
@@ -536,137 +537,132 @@ private fun RenderVideoPlayer(
         mutableStateOf(false)
     }
 
-    val parentVideoPlaybackSize = remember {
-        mutableStateOf<IntSize>(IntSize.Zero)
+    val videoPlaybackHeight = remember {
+        mutableStateOf<Dp>(Dp.Unspecified)
     }
 
-    val videoPlaybackSize = remember {
-        mutableStateOf<IntSize>(IntSize.Zero)
-    }
+    val localDensity = LocalDensity.current
 
     BoxWithConstraints(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize().onSizeChanged {
-            parentVideoPlaybackSize.value = it
-        }
+        modifier = Modifier
+            .onGloballyPositioned { coordinates ->
+                videoPlaybackHeight.value = with(localDensity) { coordinates.size.height.toDp() }
+            }
     ) {
-        BoxWithConstraints(
-            modifier = Modifier.onSizeChanged {
-                videoPlaybackSize.value = it
-            }
-        ) {
-            val borders = MaterialTheme.colorScheme.imageModifier
+        val borders = MaterialTheme.colorScheme.imageModifier
 
-            val myModifier = remember {
-                if (roundedCorner) {
-                    modifier.then(
-                        borders
-                            .defaultMinSize(minHeight = 100.dp)
-                            .align(Alignment.Center)
-                    )
-                } else {
-                    modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 100.dp)
+        val myModifier = remember {
+            if (roundedCorner) {
+                modifier.then(
+                    borders
+                        .defaultMinSize(minHeight = 75.dp)
                         .align(Alignment.Center)
-                }
+                )
+            } else {
+                modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 75.dp)
+                    .align(Alignment.Center)
             }
+        }
 
-            val factory = remember(controller) {
-                { context: Context ->
-                    PlayerView(context).apply {
-                        player = controller
-                        layoutParams = FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                        )
-                        controllerAutoShow = false
-                        thumbData?.thumb?.let { defaultArtwork = it }
-                        hideController()
-                        resizeMode =
-                            if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-                        onDialog?.let { innerOnDialog ->
-                            setFullscreenButtonClickListener {
-                                controller.pause()
-                                innerOnDialog(it)
+        val factory = remember(controller) {
+            { context: Context ->
+                PlayerView(context).apply {
+                    player = controller
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                    controllerAutoShow = false
+                    thumbData?.thumb?.let { defaultArtwork = it }
+                    hideController()
+                    resizeMode =
+                        if (maxHeight.isFinite) AspectRatioFrameLayout.RESIZE_MODE_FIT else AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                    onDialog?.let { innerOnDialog ->
+                        setFullscreenButtonClickListener {
+                            controller.pause()
+                            innerOnDialog(it)
+                        }
+                    }
+                    setControllerVisibilityListener(
+                        PlayerView.ControllerVisibilityListener { visible ->
+                            controllerVisible.value = visible == View.VISIBLE
+                            onControllerVisibilityChanged?.let { callback ->
+                                callback(visible == View.VISIBLE)
                             }
                         }
-                        setControllerVisibilityListener(
-                            PlayerView.ControllerVisibilityListener { visible ->
-                                controllerVisible.value = visible == View.VISIBLE
-                                onControllerVisibilityChanged?.let { callback ->
-                                    callback(visible == View.VISIBLE)
-                                }
-                            }
-                        )
-                    }
+                    )
                 }
             }
+        }
 
-            AndroidView(
-                modifier = myModifier,
-                factory = factory
-            )
+        AndroidView(
+            modifier = myModifier,
+            factory = factory
+        )
 
-            waveform?.let {
-                Waveform(it, controller, remember { Modifier.align(Alignment.Center) })
-            }
+        waveform?.let {
+            Waveform(it, controller, remember { Modifier.align(Alignment.Center) })
+        }
 
-            val startingMuteState = remember(controller) {
-                controller.volume < 0.001
-            }
+        val startingMuteState = remember(controller) {
+            controller.volume < 0.001
+        }
 
-            val spaceModifier = remember {
-                if (topPaddingForControllers.isSpecified && videoPlaybackSize.value.height > 0) {
-                    val space = (abs(parentVideoPlaybackSize.value.height - videoPlaybackSize.value.height) / 2).dp
+        val topPadding = remember {
+            derivedStateOf {
+                if (topPaddingForControllers.isSpecified && videoPlaybackHeight.value.value > 0) {
+                    val space = (abs(this.maxHeight.value - videoPlaybackHeight.value.value) / 2).dp
                     if (space > topPaddingForControllers) {
-                        Modifier
+                        Size0dp
                     } else {
-                        Modifier.padding(top = topPaddingForControllers - space)
+                        topPaddingForControllers - space
                     }
                 } else {
-                    Modifier
+                    Size0dp
                 }
             }
+        }
 
-            MuteButton(
-                controllerVisible,
-                startingMuteState,
-                spaceModifier
-            ) { mute: Boolean ->
-                // makes the new setting the default for new creations.
-                DefaultMutedSetting.value = mute
+        MuteButton(
+            controllerVisible,
+            startingMuteState,
+            topPadding
+        ) { mute: Boolean ->
+            // makes the new setting the default for new creations.
+            DefaultMutedSetting.value = mute
 
-                // if the user unmutes a video and it's not the current playing, switches to that one.
-                if (!mute && keepPlayingMutex != null && keepPlayingMutex != controller) {
+            // if the user unmutes a video and it's not the current playing, switches to that one.
+            if (!mute && keepPlayingMutex != null && keepPlayingMutex != controller) {
+                keepPlayingMutex?.stop()
+                keepPlayingMutex?.release()
+                keepPlayingMutex = null
+            }
+
+            controller.volume = if (mute) 0f else 1f
+        }
+
+        KeepPlayingButton(
+            keepPlaying,
+            controllerVisible,
+            topPadding,
+            Modifier.align(Alignment.TopEnd)
+        ) { newKeepPlaying: Boolean ->
+            // If something else is playing and the user marks this video to keep playing, stops the other one.
+            if (newKeepPlaying) {
+                if (keepPlayingMutex != null && keepPlayingMutex != controller) {
                     keepPlayingMutex?.stop()
                     keepPlayingMutex?.release()
+                }
+                keepPlayingMutex = controller
+            } else {
+                if (keepPlayingMutex == controller) {
                     keepPlayingMutex = null
                 }
-
-                controller.volume = if (mute) 0f else 1f
             }
 
-            KeepPlayingButton(
-                keepPlaying,
-                controllerVisible,
-                spaceModifier.align(Alignment.TopEnd)
-            ) { newKeepPlaying: Boolean ->
-                // If something else is playing and the user marks this video to keep playing, stops the other one.
-                if (newKeepPlaying) {
-                    if (keepPlayingMutex != null && keepPlayingMutex != controller) {
-                        keepPlayingMutex?.stop()
-                        keepPlayingMutex?.release()
-                    }
-                    keepPlayingMutex = controller
-                } else {
-                    if (keepPlayingMutex == controller) {
-                        keepPlayingMutex = null
-                    }
-                }
-
-                keepPlaying.value = newKeepPlaying
-            }
+            keepPlaying.value = newKeepPlaying
         }
     }
 }
@@ -826,7 +822,7 @@ fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
 private fun MuteButton(
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
-    modifier: Modifier,
+    topPadding: State<Dp>,
     toggle: (Boolean) -> Unit
 ) {
     val holdOn = remember {
@@ -846,7 +842,7 @@ private fun MuteButton(
 
     AnimatedVisibility(
         visible = holdOn.value || controllerVisible.value,
-        modifier = modifier,
+        modifier = Modifier.padding(top = topPadding.value),
         enter = remember { fadeIn() },
         exit = remember { fadeOut() }
     ) {
@@ -880,6 +876,7 @@ private fun MuteButton(
 private fun KeepPlayingButton(
     keepPlayingStart: MutableState<Boolean>,
     controllerVisible: MutableState<Boolean>,
+    topPadding: State<Dp>,
     alignment: Modifier,
     toggle: (Boolean) -> Unit
 ) {
@@ -887,7 +884,7 @@ private fun KeepPlayingButton(
 
     AnimatedVisibility(
         visible = controllerVisible.value,
-        modifier = alignment,
+        modifier = alignment.padding(top = topPadding.value),
         enter = remember { fadeIn() },
         exit = remember { fadeOut() }
     ) {
