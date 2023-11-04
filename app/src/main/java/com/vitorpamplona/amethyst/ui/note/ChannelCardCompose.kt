@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.CheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
@@ -418,16 +419,6 @@ fun RenderLiveActivityThumb(
         )
     )
 
-    var isOnline by remember { mutableStateOf(false) }
-
-    LaunchedEffect(key1 = card.media) {
-        accountViewModel.checkIsOnline(card.media) { newIsOnline ->
-            if (isOnline != newIsOnline) {
-                isOnline = newIsOnline
-            }
-        }
-    }
-
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -453,15 +444,20 @@ fun RenderLiveActivityThumb(
             }
 
             Box(Modifier.padding(10.dp)) {
-                Crossfade(targetState = card.status) {
+                Crossfade(targetState = card.status, label = "RenderLiveActivityThumb") {
                     when (it) {
                         STATUS_LIVE -> {
-                            if (card.media.isNullOrBlank()) {
-                                LiveFlag()
-                            } else if (isOnline) {
+                            val url = card.media
+                            if (url.isNullOrBlank()) {
                                 LiveFlag()
                             } else {
-                                OfflineFlag()
+                                CheckIfUrlIsOnline(url, accountViewModel) { isOnline ->
+                                    if (isOnline) {
+                                        LiveFlag()
+                                    } else {
+                                        OfflineFlag()
+                                    }
+                                }
                             }
                         }
                         STATUS_ENDED -> {

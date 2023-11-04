@@ -654,7 +654,7 @@ fun ShowVideoStreaming(
                 }
 
                 url?.let {
-                    CheckIfUrlIsOnline(url, accountViewModel) {
+                    CrossfadeCheckIfUrlIsOnline(url, accountViewModel) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = remember { Modifier.heightIn(max = 300.dp) }

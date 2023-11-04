@@ -115,6 +115,8 @@ import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.CheckIfUrlIsOnline
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.CrossfadeCheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
@@ -188,6 +190,7 @@ import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
@@ -626,7 +629,7 @@ fun LongCommunityHeader(
         Column(
             Modifier.weight(1f)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = CenterVertically) {
                 val defaultBackground = MaterialTheme.colorScheme.background
                 val background = remember {
                     mutableStateOf(defaultBackground)
@@ -656,7 +659,7 @@ fun LongCommunityHeader(
 
     Row(
         lineModifier,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = CenterVertically
     ) {
         Text(
             text = stringResource(id = R.string.owner),
@@ -693,7 +696,7 @@ fun LongCommunityHeader(
             lineModifier.clickable {
                 nav("User/${it.second.pubkeyHex}")
             },
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = CenterVertically
         ) {
             it.first.role?.let { it1 ->
                 Text(
@@ -712,7 +715,7 @@ fun LongCommunityHeader(
 
     Row(
         lineModifier,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = CenterVertically
     ) {
         Text(
             text = stringResource(id = R.string.created_at),
@@ -735,7 +738,7 @@ fun ShortCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountVie
         accountViewModel.settings.showProfilePictures.value
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = CenterVertically) {
         noteEvent.image()?.let {
             RobohashAsyncImageProxy(
                 robot = baseNote.idHex,
@@ -754,7 +757,7 @@ fun ShortCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountVie
                 .weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = CenterVertically) {
                 Text(
                     text = remember(noteState) { noteEvent.dTag() },
                     maxLines = 1,
@@ -767,7 +770,7 @@ fun ShortCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountVie
             modifier = Modifier
                 .height(Size35dp)
                 .padding(start = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = CenterVertically
         ) {
             ShortCommunityActionOptions(baseNote, accountViewModel, nav)
         }
@@ -1549,7 +1552,7 @@ fun RenderAppDefinition(
 
                 val website = remember(it) { it.website }
                 if (!website.isNullOrEmpty()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = CenterVertically) {
                         LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
 
                         ClickableText(
@@ -1770,7 +1773,7 @@ fun DisplayRelaySet(
 
         if (relays.size > 3 && !expanded) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -1874,7 +1877,7 @@ fun DisplayPeopleList(
 
         if (members.size > 3 && !expanded) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -1918,7 +1921,7 @@ private fun RenderBadgeAward(
                     .clickable {
                         nav("User/${user.pubkeyHex}")
                     },
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = CenterVertically
             ) {
                 ClickableUserPicture(
                     baseUser = user,
@@ -2186,7 +2189,7 @@ public fun RenderEmojiPack(
 
         if (allEmojis.size > 60 && !expanded) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -2336,7 +2339,7 @@ fun RenderPinListEvent(
 
         if (pins.size > 3 && !expanded) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -3212,7 +3215,7 @@ fun DisplayReward(
 
     Column() {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = CenterVertically,
             modifier = Modifier.clickable { popupExpanded = true }
         ) {
             ClickableText(
@@ -3519,7 +3522,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row() {
                 subject?.let {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
+                    Row(verticalAlignment = CenterVertically, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)) {
                         Text(
                             text = it,
                             fontWeight = FontWeight.Bold,
@@ -3533,7 +3536,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
 
             participantUsers.forEach {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = CenterVertically,
                     modifier = Modifier
                         .padding(top = 5.dp, start = 10.dp, end = 10.dp)
                         .clickable {
@@ -3556,7 +3559,7 @@ fun AudioTrackHeader(noteEvent: AudioTrackEvent, note: Note, accountViewModel: A
 
             media?.let { media ->
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = CenterVertically
                 ) {
                     cover?.let { cover ->
                         LoadThumbAndThenVideoView(
@@ -3607,7 +3610,7 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             media?.let { media ->
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = CenterVertically
                 ) {
                     VideoView(
                         videoUri = media,
@@ -3639,7 +3642,7 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
                 }
             }
 
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
                 val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
                 DisplayUncitedHashtags(hashtags, content ?: "", nav)
             }
@@ -3673,16 +3676,6 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
     val status = remember(eventUpdates) { noteEvent.status() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
 
-    var isOnline by remember { mutableStateOf(false) }
-
-    LaunchedEffect(key1 = media) {
-        accountViewModel.checkIsOnline(media) { newIsOnline ->
-            if (isOnline != newIsOnline) {
-                isOnline = newIsOnline
-            }
-        }
-    }
-
     Row(
         verticalAlignment = CenterVertically,
         modifier = Modifier
@@ -3701,11 +3694,13 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
 
         Spacer(modifier = StdHorzSpacer)
 
-        Crossfade(targetState = status) {
+        Crossfade(targetState = status, label = "RenderLiveActivityEventInner") {
             when (it) {
                 STATUS_LIVE -> {
-                    if (isOnline) {
-                        LiveFlag()
+                    media?.let {
+                        CrossfadeCheckIfUrlIsOnline(it, accountViewModel) {
+                            LiveFlag()
+                        }
                     }
                 }
                 STATUS_PLANNED -> {
@@ -3731,7 +3726,7 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
 
     participantUsers.forEach {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = CenterVertically,
             modifier = Modifier
                 .padding(top = 5.dp, start = 10.dp, end = 10.dp)
                 .clickable {
@@ -3754,37 +3749,39 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
 
     media?.let { media ->
         if (status == STATUS_LIVE) {
-            if (isOnline) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    VideoView(
-                        videoUri = media,
-                        title = subject,
-                        artworkUri = cover,
-                        authorName = baseNote.author?.toBestDisplayName(),
-                        roundedCorner = true,
-                        accountViewModel = accountViewModel,
-                        nostrUriCallback = "nostr:${baseNote.toNEvent()}"
-                    )
-                }
-            } else {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .height(100.dp)
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.live_stream_is_offline),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold
-                    )
+            CheckIfUrlIsOnline(media, accountViewModel) { isOnline ->
+                if (isOnline) {
+                    Row(
+                        verticalAlignment = CenterVertically
+                    ) {
+                        VideoView(
+                            videoUri = media,
+                            title = subject,
+                            artworkUri = cover,
+                            authorName = baseNote.author?.toBestDisplayName(),
+                            roundedCorner = true,
+                            accountViewModel = accountViewModel,
+                            nostrUriCallback = "nostr:${baseNote.toNEvent()}"
+                        )
+                    }
+                } else {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .height(100.dp)
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.live_stream_is_offline),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-        } else if (status == "ended") {
+        } else if (status == STATUS_ENDED) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = CenterVertically,
                 modifier = Modifier
                     .padding(10.dp)
                     .height(100.dp)
@@ -3892,7 +3889,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                 } ?: CreateImageHeader(note, accountViewModel)
             }
 
-            Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp), verticalAlignment = CenterVertically) {
                 title?.let {
                     Text(
                         text = it,
@@ -3929,7 +3926,7 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
             }
 
             if (summary != null || location != null) {
-                Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp), verticalAlignment = CenterVertically) {
                     summary?.let {
                         Text(
                             text = it,

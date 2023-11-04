@@ -166,7 +166,26 @@ private fun HomePages(
 }
 
 @Composable
-fun CheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnline: @Composable () -> Unit) {
+fun CheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnline: @Composable (Boolean) -> Unit) {
+    var online by remember {
+        mutableStateOf(
+            OnlineChecker.isOnlineCached(url)
+        )
+    }
+
+    LaunchedEffect(key1 = url) {
+        accountViewModel.checkIsOnline(url) { isOnline ->
+            if (online != isOnline) {
+                online = isOnline
+            }
+        }
+    }
+
+    whenOnline(online)
+}
+
+@Composable
+fun CrossfadeCheckIfUrlIsOnline(url: String, accountViewModel: AccountViewModel, whenOnline: @Composable () -> Unit) {
     var online by remember {
         mutableStateOf(
             OnlineChecker.isOnlineCached(url)
