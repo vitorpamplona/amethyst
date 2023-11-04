@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -104,16 +103,12 @@ fun VideoScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            SaveableFeedState(
-                videoFeedView = videoFeedView,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                scrollStateKey = ScrollStateKeys.VIDEO_SCREEN
-            )
-        }
+        RenderPage(
+            videoFeedView = videoFeedView,
+            pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
+            accountViewModel = accountViewModel,
+            nav = nav
+        )
     }
 }
 
@@ -125,16 +120,6 @@ fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountVi
         NostrVideoDataSource.resetFilters()
         videoFeedView.checkKeysInvalidateDataAndSendToTop()
     }
-}
-
-@Composable
-private fun SaveableFeedState(
-    videoFeedView: NostrVideoFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    scrollStateKey: String? = null
-) {
-    RenderPage(videoFeedView, accountViewModel, scrollStateKey, nav)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -153,39 +138,35 @@ public fun WatchScrollToTop(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RenderPage(
     videoFeedView: NostrVideoFeedViewModel,
-    accountViewModel: AccountViewModel,
     pagerStateKey: String?,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
     val feedState by videoFeedView.feedContent.collectAsStateWithLifecycle()
 
-    Box() {
-        Column {
-            Crossfade(
-                targetState = feedState,
-                animationSpec = tween(durationMillis = 100)
-            ) { state ->
-                when (state) {
-                    is FeedState.Empty -> {
-                        FeedEmpty {}
-                    }
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100),
+        label = "RenderPage"
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty {}
+            }
 
-                    is FeedState.FeedError -> {
-                        FeedError(state.errorMessage) {}
-                    }
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) {}
+            }
 
-                    is FeedState.Loaded -> {
-                        LoadedState(state, pagerStateKey, videoFeedView, accountViewModel, nav)
-                    }
+            is FeedState.Loaded -> {
+                LoadedState(state, pagerStateKey, videoFeedView, accountViewModel, nav)
+            }
 
-                    is FeedState.Loading -> {
-                        LoadingFeed()
-                    }
-                }
+            is FeedState.Loading -> {
+                LoadingFeed()
             }
         }
     }

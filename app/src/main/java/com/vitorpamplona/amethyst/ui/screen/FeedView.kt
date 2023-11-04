@@ -183,10 +183,6 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val baseModifier = remember {
-        Modifier
-    }
-
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState
@@ -201,7 +197,7 @@ private fun FeedLoaded(
                     NoteCompose(
                         item,
                         routeForLastRead = routeForLastRead,
-                        modifier = baseModifier,
+                        modifier = Modifier,
                         isBoostedNote = false,
                         showHidden = state.showHidden.value,
                         accountViewModel = accountViewModel,
