@@ -24,7 +24,7 @@ data class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    var executorService = Executors.newScheduledThreadPool(3)
+    var executorService = Executors.newScheduledThreadPool(5)
 
     private val options = LanguageIdentificationOptions.Builder().setExecutor(executorService).setConfidenceThreshold(0.6f).build()
     private val languageIdentification = LanguageIdentification.getClient(options)
@@ -157,7 +157,7 @@ object LanguageTranslatorService {
 
     fun autoTranslate(text: String, dontTranslateFrom: Set<String>, translateTo: String): Task<ResultOrError> {
         return identifyLanguage(text).onSuccessTask(executorService) {
-            if (it == translateTo) {
+            if (it.equals(translateTo, true)) {
                 Tasks.forCanceled()
             } else if (it != "und" && !dontTranslateFrom.contains(it)) {
                 translate(text, it, translateTo)
