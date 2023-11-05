@@ -278,7 +278,7 @@ private fun RenderWordWithPreview(
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-        is LinkSegment -> UrlPreview(word.segmentText, word.segmentText, accountViewModel)
+        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText)

@@ -12,7 +12,7 @@ import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel) {
+fun LoadUrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel) {
     val automaticallyShowUrlPreview = remember {
         accountViewModel.settings.showUrlPreview.value
     }
@@ -37,11 +37,12 @@ fun UrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel)
 
         Crossfade(
             targetState = urlPreviewState,
-            animationSpec = tween(durationMillis = 100)
+            animationSpec = tween(durationMillis = 100),
+            label = "UrlPreview"
         ) { state ->
             when (state) {
                 is UrlPreviewState.Loaded -> {
-                    UrlPreviewCard(url, state.previewInfo, accountViewModel)
+                    UrlPreviewCard(url, state.previewInfo)
                 }
 
                 else -> {

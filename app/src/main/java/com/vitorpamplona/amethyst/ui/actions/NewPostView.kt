@@ -119,7 +119,7 @@ import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
-import com.vitorpamplona.amethyst.ui.components.UrlPreview
+import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
@@ -465,7 +465,7 @@ fun NewPostView(
                                             } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                                 VideoView(myUrlPreview, roundedCorner = true, accountViewModel = accountViewModel)
                                             } else {
-                                                UrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
+                                                LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
                                             }
                                         } else if (startsWithNIP19Scheme(myUrlPreview)) {
                                             val bgColor = MaterialTheme.colorScheme.background
@@ -481,7 +481,7 @@ fun NewPostView(
                                                 nav
                                             )
                                         } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
-                                            UrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
+                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
                                         }
                                     }
                                 }
