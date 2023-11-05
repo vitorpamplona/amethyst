@@ -287,31 +287,39 @@ fun BaseUserPicture(
     innerModifier: Modifier = Modifier,
     outerModifier: Modifier = remember { Modifier.size(size) }
 ) {
+    val myIconSize by remember(size) {
+        derivedStateOf {
+            size.div(3.5f)
+        }
+    }
+
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        InnerBaseUserPicture(baseUser, size, accountViewModel, innerModifier)
+        LoadUserProfilePicture(baseUser) { userProfilePicture ->
+            InnerUserPicture(
+                userHex = baseUser.pubkeyHex,
+                userPicture = userProfilePicture,
+                size = size,
+                modifier = innerModifier,
+                accountViewModel = accountViewModel
+            )
+        }
+
+        ObserveAndDisplayFollowingMark(baseUser.pubkeyHex, myIconSize, accountViewModel)
     }
 }
 
 @Composable
-fun InnerBaseUserPicture(
+fun LoadUserProfilePicture(
     baseUser: User,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier
+    innerContent: @Composable (String?) -> Unit
 ) {
     val userProfile by baseUser.live().profilePictureChanges.observeAsState(baseUser.profilePicture())
 
-    PictureAndFollowingMark(
-        userHex = baseUser.pubkeyHex,
-        userPicture = userProfile,
-        size = size,
-        modifier = modifier,
-        accountViewModel = accountViewModel
-    )
+    innerContent(userProfile)
 }
 
 @Composable
-fun PictureAndFollowingMark(
+fun InnerUserPicture(
     userHex: String,
     userPicture: String?,
     size: Dp,
@@ -338,12 +346,6 @@ fun PictureAndFollowingMark(
         contentScale = ContentScale.Crop,
         loadProfilePicture = automaticallyShowProfilePicture
     )
-    val myIconSize by remember(size) {
-        derivedStateOf {
-            size.div(3.5f)
-        }
-    }
-    ObserveAndDisplayFollowingMark(userHex, myIconSize, accountViewModel)
 }
 
 @Composable
@@ -354,9 +356,7 @@ fun ObserveAndDisplayFollowingMark(userHex: String, iconSize: Dp, accountViewMod
             enter = remember { fadeIn() },
             exit = remember { fadeOut() }
         ) {
-            Box(contentAlignment = Alignment.TopEnd) {
-                FollowingIcon(iconSize)
-            }
+            FollowingIcon(iconSize)
         }
     }
 }
