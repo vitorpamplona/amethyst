@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -22,6 +23,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -62,7 +64,7 @@ public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewMo
 fun RenderRelayList(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val noteRelays by baseNote.live().relayInfo.observeAsState()
 
-    FlowRow(StdStartPadding) {
+    FlowRow(StdStartPadding, verticalArrangement = Arrangement.Center) {
         val relaysToDisplay = remember(noteRelays, expanded.value) {
             if (expanded.value) noteRelays else noteRelays?.take(3)?.toImmutableList()
         }
@@ -160,7 +162,8 @@ fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: 
     }
 
     Box(
-        modifier = clickableModifier
+        modifier = clickableModifier,
+        contentAlignment = Alignment.Center
     ) {
         RenderRelayIcon(relay.favIcon, automaticallyShowProfilePicture)
     }

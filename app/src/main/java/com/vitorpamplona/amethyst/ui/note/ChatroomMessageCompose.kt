@@ -58,8 +58,11 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -305,8 +308,8 @@ fun NormalChatNote(
             Row(
                 horizontalArrangement = alignment,
                 modifier = modif2.onSizeChanged {
-                    if (availableBubbleSize.value != it.width) {
-                        availableBubbleSize.value = it.width
+                    if (availableBubbleSize.intValue != it.width) {
+                        availableBubbleSize.intValue = it.width
                     }
                 }
             ) {
@@ -359,8 +362,8 @@ private fun RenderBubble(
         Modifier
             .padding(start = 10.dp, end = 5.dp, bottom = 5.dp)
             .onSizeChanged {
-                if (bubbleSize.value != it.width) {
-                    bubbleSize.value = it.width
+                if (bubbleSize.intValue != it.width) {
+                    bubbleSize.intValue = it.width
                 }
             }
     }
@@ -430,15 +433,30 @@ private fun MessageBubbleLines(
 
     ConstrainedStatusRow(
         bubbleSize = bubbleSize,
-        availableBubbleSize = availableBubbleSize
-    ) {
-        StatusRow(
-            baseNote = baseNote,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            onWantsToReply = onWantsToReply
-        )
-    }
+        availableBubbleSize = availableBubbleSize,
+        firstColumn = {
+            IncognitoBadge(baseNote)
+            ChatTimeAgo(baseNote)
+            RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
+            Spacer(modifier = DoubleHorzSpacer)
+        },
+        secondColumn = {
+            LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+            Spacer(modifier = DoubleHorzSpacer)
+            ReplyReaction(
+                baseNote = baseNote,
+                grayTint = MaterialTheme.colorScheme.placeholderText,
+                accountViewModel = accountViewModel,
+                showCounter = false,
+                iconSize = Size15dp
+            ) {
+                onWantsToReply(baseNote)
+            }
+            Spacer(modifier = StdHorzSpacer)
+        }
+    )
 }
 
 @Composable
@@ -524,58 +542,38 @@ private fun NoteRow(
 private fun ConstrainedStatusRow(
     bubbleSize: MutableState<Int>,
     availableBubbleSize: MutableState<Int>,
-    content: @Composable () -> Unit
+    firstColumn: @Composable () -> Unit,
+    secondColumn: @Composable () -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = with(LocalDensity.current) {
             Modifier
-                .height(26.dp)
-                .padding(top = 5.dp)
+                .padding(top = Size5dp)
+                .height(Size20dp)
                 .widthIn(
                     bubbleSize.value.toDp(),
                     availableBubbleSize.value.toDp()
                 )
         }
     ) {
-        content()
-    }
-}
-
-@Composable
-private fun StatusRow(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    onWantsToReply: (Note) -> Unit
-) {
-    Column(modifier = ReactionRowHeightChat) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
-            IncognitoBadge(baseNote)
-            Spacer(modifier = StdHorzSpacer)
-            ChatTimeAgo(baseNote)
-            RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
-            Spacer(modifier = DoubleHorzSpacer)
-        }
-    }
-
-    Column(modifier = ReactionRowHeightChat) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat) {
-            LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-            Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-            Spacer(modifier = DoubleHorzSpacer)
-            ReplyReaction(
-                baseNote = baseNote,
-                grayTint = MaterialTheme.colorScheme.placeholderText,
-                accountViewModel = accountViewModel,
-                showCounter = false,
-                iconSize = Size15dp
+        Column(modifier = ReactionRowHeightChat) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = ReactionRowHeightChat
             ) {
-                onWantsToReply(baseNote)
+                firstColumn()
             }
-            Spacer(modifier = StdHorzSpacer)
+        }
+
+        Column(modifier = ReactionRowHeightChat) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = ReactionRowHeightChat
+            ) {
+                secondColumn()
+            }
         }
     }
 }
@@ -591,6 +589,7 @@ fun IncognitoBadge(baseNote: Note) {
                 .size(14.dp),
             tint = MaterialTheme.colorScheme.placeholderText
         )
+        Spacer(modifier = StdHorzSpacer)
     } else if (baseNote.event is PrivateDmEvent) {
         Icon(
             painter = painterResource(id = R.drawable.incognito_off),
@@ -600,6 +599,7 @@ fun IncognitoBadge(baseNote: Note) {
                 .size(14.dp),
             tint = MaterialTheme.colorScheme.placeholderText
         )
+        Spacer(modifier = StdHorzSpacer)
     }
 }
 
@@ -719,7 +719,7 @@ private fun DrawAuthorInfo(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = alignment,
-        modifier = Modifier.padding(top = 5.dp)
+        modifier = Modifier.padding(top = Size10dp)
     ) {
         DisplayAndWatchNoteAuthor(baseNote, loadProfilePicture, nav)
     }
