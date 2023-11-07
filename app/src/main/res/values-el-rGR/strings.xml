@@ -387,4 +387,9 @@
     <string name="contact">Επικοινωνία</string>
     <string name="supports">Υποστηριζόμενα NIPs (Nostr Improvement Proposals)</string>
     <string name="admission_fees">Κόστος Εγγραφής</string>
+    <string name="payments_url">Διεύθυνση πληρωμής url</string>
+    <string name="limitations">Περιορισμοί</string>
+    <string name="countries">Χώρες</string>
+    <string name="languages">Γλώσσες</string>
+    <string name="tags">Ετικέτες</string>
 </resources>
