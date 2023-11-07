@@ -121,7 +121,7 @@ object LocalCache {
 
     fun getUserIfExists(key: String): User? {
         if (key.isEmpty()) return null
-        return users.get(key)
+        return users[key]
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? {
