@@ -111,12 +111,8 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
 
     val columnModifier = remember(backgroundColor.value) {
         Modifier
+            .fillMaxWidth()
             .background(backgroundColor.value)
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp
-            )
             .combinedClickable(
                 onClick = {
                     scope.launch {
@@ -125,7 +121,11 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
                 },
                 onLongClick = enablePopup
             )
-            .fillMaxWidth()
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 10.dp
+            )
     }
 
     Column(modifier = columnModifier) {
