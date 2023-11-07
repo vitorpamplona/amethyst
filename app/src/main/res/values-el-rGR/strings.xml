@@ -386,4 +386,5 @@
     <string name="software">Λογισμικό</string>
     <string name="contact">Επικοινωνία</string>
     <string name="supports">Υποστηριζόμενα NIPs (Nostr Improvement Proposals)</string>
+    <string name="admission_fees">Κόστος Εγγραφής</string>
 </resources>
