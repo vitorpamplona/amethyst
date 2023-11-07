@@ -627,8 +627,7 @@ private suspend fun enableTor(
     account.proxyPort = portNumber.value.toInt()
     account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
     LocalPreferences.saveToEncryptedStorage(account)
-    ServiceManager.pause()
-    ServiceManager.start()
+    ServiceManager.forceRestart()
 }
 
 @Composable

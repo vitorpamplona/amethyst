@@ -1278,7 +1278,7 @@ object LocalCache {
                 childrenToBeRemoved.addAll(it.removeAllChildNotes())
             }
 
-            removeChildrenOf(childrenToBeRemoved)
+            removeFromCache(childrenToBeRemoved)
 
             if (toBeRemoved.size > 100 || it.value.notes.size > 100) {
                 println("PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size} kept")
@@ -1297,7 +1297,7 @@ object LocalCache {
                     childrenToBeRemoved.addAll(it.removeAllChildNotes())
                 }
 
-                removeChildrenOf(childrenToBeRemoved)
+                removeFromCache(childrenToBeRemoved)
 
                 if (toBeRemoved.size > 1) {
                     println("PRUNE: ${toBeRemoved.size} private messages with ${userPair.value.toBestDisplayName()} removed. ${it.roomMessages.size} kept")
@@ -1328,7 +1328,7 @@ object LocalCache {
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
-        removeChildrenOf(childrenToBeRemoved)
+        removeFromCache(childrenToBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} old version of addressables removed.")
@@ -1357,7 +1357,7 @@ object LocalCache {
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
-        removeChildrenOf(childrenToBeRemoved)
+        removeFromCache(childrenToBeRemoved)
 
         toBeRemoved.forEach {
             it.replyTo?.forEach { masterNote ->
@@ -1380,22 +1380,24 @@ object LocalCache {
             masterNote.clearEOSE() // allows reloading of these events if needed
         }
 
-        if (note.event is LnZapEvent) {
-            (note.event as LnZapEvent).zappedAuthor().mapNotNull {
+        val noteEvent = note.event
+
+        if (noteEvent is LnZapEvent) {
+            noteEvent.zappedAuthor().forEach {
                 val author = getUserIfExists(it)
                 author?.removeZap(note)
                 author?.clearEOSE()
             }
         }
-        if (note.event is LnZapRequestEvent) {
-            (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull {
+        if (noteEvent is LnZapRequestEvent) {
+            noteEvent.zappedAuthor().mapNotNull {
                 val author = getUserIfExists(it)
                 author?.removeZap(note)
                 author?.clearEOSE()
             }
         }
-        if (note.event is ReportEvent) {
-            (note.event as ReportEvent).reportedAuthor().mapNotNull {
+        if (noteEvent is ReportEvent) {
+            noteEvent.reportedAuthor().mapNotNull {
                 val author = getUserIfExists(it.key)
                 author?.removeReport(note)
                 author?.clearEOSE()
@@ -1405,31 +1407,7 @@ object LocalCache {
         notes.remove(note.idHex)
     }
 
-    fun removeAuthorLinkTo(note: Note) {
-        if (note.event is LnZapEvent) {
-            (note.event as LnZapEvent).zappedAuthor().mapNotNull {
-                val author = getUserIfExists(it)
-                author?.removeZap(note)
-                author?.clearEOSE()
-            }
-        }
-        if (note.event is LnZapRequestEvent) {
-            (note.event as LnZapRequestEvent).zappedAuthor().mapNotNull {
-                val author = getUserIfExists(it)
-                author?.removeZap(note)
-                author?.clearEOSE()
-            }
-        }
-        if (note.event is ReportEvent) {
-            (note.event as ReportEvent).reportedAuthor().mapNotNull {
-                val author = getUserIfExists(it.key)
-                author?.removeReport(note)
-                author?.clearEOSE()
-            }
-        }
-    }
-
-    fun removeChildrenOf(nextToBeRemoved: List<Note>) {
+    fun removeFromCache(nextToBeRemoved: List<Note>) {
         nextToBeRemoved.forEach { note ->
             removeFromCache(note)
         }
@@ -1449,7 +1427,7 @@ object LocalCache {
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
-        removeChildrenOf(childrenToBeRemoved)
+        removeFromCache(childrenToBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} thread replies removed.")
@@ -1476,7 +1454,7 @@ object LocalCache {
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
-        removeChildrenOf(childrenToBeRemoved)
+        removeFromCache(childrenToBeRemoved)
 
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }

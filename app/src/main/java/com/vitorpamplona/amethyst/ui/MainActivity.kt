@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         // Only starts after login
         if (ServiceManager.shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.start()
+                ServiceManager.justStart()
             }
         }
 
@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
 
         if (ServiceManager.shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pause()
+                ServiceManager.pauseForGood()
             }
         }
 

@@ -49,8 +49,7 @@ object ServiceManager {
         start()
     }
 
-    @Synchronized
-    fun start() {
+    private fun start() {
         Log.d("ServiceManager", "Pre Starting Relay Services $isStarted $account")
         if (isStarted && account != null) {
             return
@@ -105,7 +104,7 @@ object ServiceManager {
         }
     }
 
-    fun pause() {
+    private fun pause() {
         Log.d("ServiceManager", "Pausing Relay Services")
 
         NostrAccountDataSource.stop()
@@ -153,18 +152,41 @@ object ServiceManager {
         }
     }
 
+    // This method keeps the pause/start in a Syncronized block to
+    // avoid concurrent pauses and starts.
+    @Synchronized
+    fun forceRestart(account: Account? = null, start: Boolean = true, pause: Boolean = true) {
+        if (pause) {
+            pause()
+        }
+
+        if (start) {
+            if (account != null) {
+                start(account)
+            } else {
+                start()
+            }
+        }
+    }
+
     fun restartIfDifferentAccount(account: Account) {
         if (this.account != account) {
-            pause()
-            start(account)
+            forceRestart(account, true, true)
         }
     }
 
     fun forceRestartIfItShould() {
         if (shouldPauseService) {
-            pause()
-            start()
+            forceRestart(null, true, true)
         }
+    }
+
+    fun justStart() {
+        forceRestart(null, true, false)
+    }
+
+    fun pauseForGood() {
+        forceRestart(null, false, true)
     }
 }
 
