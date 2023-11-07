@@ -446,55 +446,6 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun publicZapAuthors(): Set<User> {
-        // Zaps who the requester was the user
-        return zaps.mapNotNull {
-            it.key.author
-        }.toSet()
-    }
-
-    fun publicZapAuthorHexes(): Set<HexKey> {
-        // Zaps who the requester was the user
-        return zaps.mapNotNull {
-            it.key.author?.pubkeyHex
-        }.toSet()
-    }
-
-    fun reactionAuthors(): Set<User> {
-        // Zaps who the requester was the user
-        return reactions.values.map {
-            it.mapNotNull { it.author }
-        }.flatten().toSet()
-    }
-
-    fun reactionAuthorHexes(): Set<HexKey> {
-        // Zaps who the requester was the user
-        return reactions.values.map {
-            it.mapNotNull { it.author?.pubkeyHex }
-        }.flatten().toSet()
-    }
-
-    fun replyAuthorHexes(): Set<HexKey> {
-        // Zaps who the requester was the user
-        return replies.mapNotNull {
-            it.author?.pubkeyHex
-        }.toSet()
-    }
-
-    fun replyAuthors(): Set<User> {
-        // Zaps who the requester was the user
-        return replies.mapNotNull {
-            it.author
-        }.toSet()
-    }
-
-    fun boostAuthors(): Set<User> {
-        // Zaps who the requester was the user
-        return boosts.mapNotNull {
-            it.author
-        }.toSet()
-    }
-
     fun getReactionBy(user: User): String? {
         return reactions.firstNotNullOfOrNull {
             if (it.value.any { it.author?.pubkeyHex == user.pubkeyHex }) {
