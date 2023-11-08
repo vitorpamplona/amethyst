@@ -3058,6 +3058,14 @@ class Account(
     }
 
     fun isAcceptable(user: User): Boolean {
+        if (userProfile().pubkeyHex == user.pubkeyHex) {
+            return true
+        }
+
+        if (user.pubkeyHex in followingKeySet()) {
+            return true
+        }
+
         if (!warnAboutPostsWithReports) {
             return !isHidden(user) && // if user hasn't hided this author
                 user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
