@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 
 /** based on litecoinj */
 object LnInvoiceUtil {
-    private val invoicePattern = Pattern.compile("lnbc((?<amount>\\d+)(?<multiplier>[munp])?)?1[^1\\s]+", Pattern.CASE_INSENSITIVE)
+    private val invoicePattern = Pattern.compile("lnbc((\\d+)([munp])?)?1[^1\\s]+", Pattern.CASE_INSENSITIVE)
 
     /** The Bech32 character set for encoding.  */
     private const val CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
@@ -107,8 +107,8 @@ object LnInvoiceUtil {
 
         val matcher = invoicePattern.matcher(invoice)
         require(matcher.matches()) { "Failed to match HRP pattern" }
-        val amountGroup = matcher.group("amount")
-        val multiplierGroup = matcher.group("multiplier")
+        val amountGroup = matcher.group(2)
+        val multiplierGroup = matcher.group(3)
         if (amountGroup == null) {
             return BigDecimal.ZERO
         }
@@ -120,16 +120,22 @@ object LnInvoiceUtil {
         return amount.multiply(multiplier(multiplierGroup))
     }
 
+    val OneHundredK = BigDecimal(100000000)
+    val OneMili = BigDecimal("0.001")
+    val OneMicro = BigDecimal("0.000001")
+    val OneNano = BigDecimal("0.000000001")
+    val OnePico = BigDecimal("0.000000000001")
+
     fun getAmountInSats(invoice: String): BigDecimal {
-        return getAmount(invoice).multiply(BigDecimal(100000000))
+        return getAmount(invoice).multiply(OneHundredK)
     }
 
     private fun multiplier(multiplier: String): BigDecimal {
         return when (multiplier.lowercase()) {
-            "m" -> BigDecimal("0.001")
-            "u" -> BigDecimal("0.000001")
-            "n" -> BigDecimal("0.000000001")
-            "p" -> BigDecimal("0.000000000001")
+            "m" -> OneMili
+            "u" -> OneMicro
+            "n" -> OneNano
+            "p" -> OnePico
             else -> throw IllegalArgumentException("Invalid multiplier: $multiplier")
         }
     }
