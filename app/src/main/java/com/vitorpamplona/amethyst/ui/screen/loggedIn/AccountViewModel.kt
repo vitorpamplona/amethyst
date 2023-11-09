@@ -201,9 +201,13 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         return account.calculateZappedAmount(zappedNote)
     }
 
-    fun calculateZapAmount(zappedNote: Note, onZapAmount: (String) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            onZapAmount(showAmount(account.calculateZappedAmount(zappedNote)))
+    suspend fun calculateZapAmount(zappedNote: Note, onZapAmount: suspend (String) -> Unit) {
+        if (zappedNote.zapPayments.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                onZapAmount(showAmount(account.calculateZappedAmount(zappedNote)))
+            }
+        } else {
+            onZapAmount(showAmount(zappedNote.zapsAmount))
         }
     }
 

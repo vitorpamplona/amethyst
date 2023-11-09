@@ -437,6 +437,6 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
         }
         LikeReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
         ZapReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp, nav = nav)
-        ViewCountReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, barChartSize = 39.dp, viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter)
+        ViewCountReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, barChartModifier = Modifier.size(39.dp), viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter)
     }
 }

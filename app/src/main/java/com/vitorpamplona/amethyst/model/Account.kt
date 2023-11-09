@@ -581,7 +581,7 @@ class Account(
     fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
         val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
         val pubKey = zapPaymentRequest?.pubKeyHex?.hexToByteArray()
-        return zappedNote?.zappedAmount(privKey, pubKey) ?: BigDecimal.ZERO
+        return zappedNote?.zappedAmountWithNWCPayments(privKey, pubKey) ?: BigDecimal.ZERO
     }
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {

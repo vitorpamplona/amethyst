@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.with
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -44,6 +45,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -112,6 +114,7 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -195,60 +198,35 @@ private fun GenericInnerReactionRow(
     six: @Composable () -> Unit
 ) {
     Row(verticalAlignment = CenterVertically, modifier = ReactionRowHeight) {
+        val fullWeight = remember { Modifier.weight(1f) }
+
         if (showReactionDetail) {
-            Column(
-                verticalArrangement = Arrangement.Center,
-                modifier = ReactionRowExpandButton
+            Row(
+                verticalAlignment = CenterVertically,
+                modifier = remember { ReactionRowExpandButton.then(fullWeight) }
             ) {
-                Row(verticalAlignment = CenterVertically) {
-                    one()
-                }
+                one()
             }
         }
 
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = remember { Modifier.weight(1f) }
-        ) {
-            Row(verticalAlignment = CenterVertically) {
-                two()
-            }
+        Row(verticalAlignment = CenterVertically, modifier = fullWeight) {
+            two()
         }
 
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = remember { Modifier.weight(1f) }
-        ) {
-            Row(verticalAlignment = CenterVertically) {
-                three()
-            }
+        Row(verticalAlignment = CenterVertically, modifier = fullWeight) {
+            three()
         }
 
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = remember { Modifier.weight(1f) }
-        ) {
-            Row(verticalAlignment = CenterVertically) {
-                four()
-            }
+        Row(verticalAlignment = CenterVertically, modifier = fullWeight) {
+            four()
         }
 
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = remember { Modifier.weight(1f) }
-        ) {
-            Row(verticalAlignment = CenterVertically) {
-                five()
-            }
+        Row(verticalAlignment = CenterVertically, modifier = fullWeight) {
+            five()
         }
 
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = remember { Modifier.weight(1f) }
-        ) {
-            Row(verticalAlignment = CenterVertically) {
-                six()
-            }
+        Row(verticalAlignment = CenterVertically, modifier = fullWeight) {
+            six()
         }
     }
 }
@@ -591,16 +569,11 @@ fun ReplyCounter(baseNote: Note, textColor: Color) {
 }
 
 @Composable
-private fun SlidingAnimationCount(baseCount: MutableState<Int>, textColor: Color) {
-    SlidingAnimationCount(baseCount.value, textColor)
-}
-
-@OptIn(ExperimentalAnimationApi::class)
-@Composable
 private fun SlidingAnimationCount(baseCount: Int, textColor: Color) {
     AnimatedContent<Int>(
         targetState = baseCount,
-        transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec,
+        label = "SlidingAnimationCount"
     ) { count ->
         TextCount(count, textColor)
     }
@@ -612,11 +585,16 @@ private fun <S> AnimatedContentTransitionScope<S>.transitionSpec(): ContentTrans
 }
 
 @ExperimentalAnimationApi
-val slideAnimation: ContentTransform = slideInVertically(animationSpec = tween(durationMillis = 100)) { height -> height } + fadeIn(
-    animationSpec = tween(durationMillis = 100)
-) with slideOutVertically(animationSpec = tween(durationMillis = 100)) { height -> -height } + fadeOut(
-    animationSpec = tween(durationMillis = 100)
-)
+val slideAnimation: ContentTransform =
+    (
+        slideInVertically(animationSpec = tween(durationMillis = 100)) { height -> height } + fadeIn(
+            animationSpec = tween(durationMillis = 100)
+        )
+        ).togetherWith(
+        slideOutVertically(animationSpec = tween(durationMillis = 100)) { height -> -height } + fadeOut(
+            animationSpec = tween(durationMillis = 100)
+        )
+    )
 
 @Composable
 private fun TextCount(count: Int, textColor: Color) {
@@ -630,11 +608,11 @@ private fun TextCount(count: Int, textColor: Color) {
 }
 
 @Composable
-@OptIn(ExperimentalAnimationApi::class)
 private fun SlidingAnimationAmount(amount: MutableState<String>, textColor: Color) {
     AnimatedContent(
         targetState = amount.value,
-        transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec
+        transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
+        label = "SlidingAnimationAmount"
     ) { count ->
         Text(
             text = count,
@@ -667,7 +645,9 @@ fun BoostReaction(
             }
         }
     ) {
-        BoostIcon(baseNote, iconSize, grayTint, accountViewModel)
+        ObserveBoostIcon(baseNote, accountViewModel) { hasBoosted ->
+            RepostedIcon(iconButtonModifier, if (hasBoosted) Color.Unspecified else grayTint)
+        }
 
         if (wantsToBoost) {
             BoostTypeChoicePopup(
@@ -692,20 +672,16 @@ fun BoostReaction(
 }
 
 @Composable
-fun BoostIcon(baseNote: Note, iconSize: Dp = Size20dp, grayTint: Color, accountViewModel: AccountViewModel) {
-    val iconTint by remember(baseNote) {
+fun ObserveBoostIcon(baseNote: Note, accountViewModel: AccountViewModel, inner: @Composable (Boolean) -> Unit) {
+    val hasBoosted by remember(baseNote) {
         baseNote.live().boosts.map {
-            if (it.note.isBoostedBy(accountViewModel.userProfile())) Color.Unspecified else grayTint
+            it.note.isBoostedBy(accountViewModel.userProfile())
         }.distinctUntilChanged()
     }.observeAsState(
-        if (baseNote.isBoostedBy(accountViewModel.userProfile())) Color.Unspecified else grayTint
+        baseNote.isBoostedBy(accountViewModel.userProfile())
     )
 
-    val iconModifier = remember {
-        Modifier.size(iconSize)
-    }
-
-    RepostedIcon(iconModifier, iconTint)
+    inner(hasBoosted)
 }
 
 @Composable
@@ -760,10 +736,20 @@ fun LikeReaction(
             }
         )
     ) {
-        LikeIcon(baseNote, iconFontSize, heartSize, grayTint, accountViewModel)
+        ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
+            Crossfade(targetState = reactionType.value, label = "LikeIcon") {
+                if (it != null) {
+                    RenderReactionType(it, heartSize, iconFontSize)
+                } else {
+                    LikeIcon(heartSize, grayTint)
+                }
+            }
+        }
     }
 
-    LikeText(baseNote, grayTint)
+    ObserveLikeText(baseNote) { reactionCount ->
+        SlidingAnimationCount(reactionCount, grayTint)
+    }
 
     if (wantsToChangeReactionSymbol) {
         UpdateReactionTypeDialog(
@@ -790,44 +776,26 @@ fun LikeReaction(
 }
 
 @Composable
-fun LikeIcon(
+fun ObserveLikeIcon(
     baseNote: Note,
-    iconFontSize: TextUnit = Font14SP,
-    iconSize: Dp = Size20dp,
-    grayTint: Color,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    inner: @Composable (MutableState<String?>) -> Unit
 ) {
     val reactionType = remember(baseNote) {
         mutableStateOf<String?>(null)
     }
 
-    val scope = rememberCoroutineScope()
+    val reactionsState by baseNote.live().reactions.observeAsState()
 
-    WatchReactionTypeForNote(baseNote, accountViewModel) { newReactionType ->
-        if (reactionType.value != newReactionType) {
-            scope.launch(Dispatchers.Main) {
+    LaunchedEffect(key1 = reactionsState) {
+        accountViewModel.loadReactionTo(reactionsState?.note) { newReactionType ->
+            if (reactionType.value != newReactionType) {
                 reactionType.value = newReactionType
             }
         }
     }
 
-    Crossfade(targetState = reactionType) {
-        val value = it.value
-        if (value != null) {
-            RenderReactionType(value, iconSize, iconFontSize)
-        } else {
-            LikeIcon(iconSize, grayTint)
-        }
-    }
-}
-
-@Composable
-private fun WatchReactionTypeForNote(baseNote: Note, accountViewModel: AccountViewModel, onNewReactionType: (String?) -> Unit) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
-
-    LaunchedEffect(key1 = reactionsState) {
-        accountViewModel.loadReactionTo(reactionsState?.note, onNewReactionType)
-    }
+    inner(reactionType)
 }
 
 @Composable
@@ -863,10 +831,10 @@ private fun RenderReactionType(
 }
 
 @Composable
-fun LikeText(baseNote: Note, grayTint: Color) {
+fun ObserveLikeText(baseNote: Note, inner: @Composable (Int) -> Unit) {
     val reactionCount by baseNote.live().reactionCount.observeAsState(0)
 
-    SlidingAnimationCount(reactionCount, grayTint)
+    inner(reactionCount)
 }
 
 private fun likeClick(
@@ -919,7 +887,7 @@ fun ZapReaction(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var zappingProgress by remember { mutableStateOf(0f) }
+    var zappingProgress by remember { mutableFloatStateOf(0f) }
 
     Row(
         verticalAlignment = CenterVertically,
@@ -942,7 +910,7 @@ fun ZapReaction(
                         onMultipleChoices = {
                             wantsToZap = true
                         },
-                        onError = { title, message ->
+                        onError = { _, message ->
                             scope.launch {
                                 zappingProgress = 0f
                                 showErrorMessageDialog = message
@@ -973,7 +941,7 @@ fun ZapReaction(
                     wantsToZap = false
                     wantsToChangeZapAmount = true
                 },
-                onError = { title, message ->
+                onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
                         showErrorMessageDialog = message
@@ -1033,7 +1001,7 @@ fun ZapReaction(
         if (wantsToSetCustomZap) {
             ZapCustomDialog(
                 onClose = { wantsToSetCustomZap = false },
-                onError = { title, message ->
+                onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
                         showErrorMessageDialog = message
@@ -1058,22 +1026,31 @@ fun ZapReaction(
             CircularProgressIndicator(
                 progress = animateFloatAsState(
                     targetValue = zappingProgress,
-                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                    label = "ZapIconIndicator"
                 ).value,
                 modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp
             )
         } else {
-            ZapIcon(
+            ObserveZapIcon(
                 baseNote,
-                iconSize,
-                grayTint,
                 accountViewModel
-            )
+            ) { wasZappedByLoggedInUser ->
+                Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
+                    if (it) {
+                        ZappedIcon(iconSize)
+                    } else {
+                        ZapIcon(iconSize, grayTint)
+                    }
+                }
+            }
         }
     }
 
-    ZapAmountText(baseNote, grayTint, accountViewModel)
+    ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
+        SlidingAnimationAmount(zapAmountTxt, grayTint)
+    }
 }
 
 private fun zapClick(
@@ -1115,97 +1092,71 @@ private fun zapClick(
 }
 
 @Composable
-private fun ZapIcon(
+private fun ObserveZapIcon(
     baseNote: Note,
-    iconSize: Dp,
-    grayTint: Color,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    inner: @Composable (MutableState<Boolean>) -> Unit
 ) {
     val wasZappedByLoggedInUser = remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope()
-
     if (!wasZappedByLoggedInUser.value) {
-        WatchZapsForNote(baseNote, accountViewModel) { newWasZapped ->
-            if (wasZappedByLoggedInUser.value != newWasZapped) {
-                scope.launch(Dispatchers.Main) {
+        val zapsState by baseNote.live().zaps.observeAsState()
+
+        LaunchedEffect(key1 = zapsState) {
+            accountViewModel.calculateIfNoteWasZappedByAccount(baseNote) { newWasZapped ->
+                if (wasZappedByLoggedInUser.value != newWasZapped) {
                     wasZappedByLoggedInUser.value = newWasZapped
                 }
             }
         }
     }
 
-    Crossfade(targetState = wasZappedByLoggedInUser) {
-        if (it.value) {
-            ZappedIcon(iconSize)
-        } else {
-            ZapIcon(iconSize, grayTint)
-        }
-    }
+    inner(wasZappedByLoggedInUser)
 }
 
 @Composable
-private fun WatchZapsForNote(baseNote: Note, accountViewModel: AccountViewModel, onWasZapped: (Boolean) -> Unit) {
+private fun ObserveZapAmountText(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    inner: @Composable (MutableState<String>) -> Unit
+) {
+    val zapAmountTxt = remember(baseNote) {
+        mutableStateOf(showAmount(baseNote.zapsAmount))
+    }
     val zapsState by baseNote.live().zaps.observeAsState()
 
     LaunchedEffect(key1 = zapsState) {
-        accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, onWasZapped)
-    }
-}
-
-@Composable
-private fun ZapAmountText(
-    baseNote: Note,
-    grayTint: Color,
-    accountViewModel: AccountViewModel
-) {
-    val zapAmountTxt = remember(baseNote) { mutableStateOf("") }
-
-    val scope = rememberCoroutineScope()
-
-    WatchZapAmountsForNote(baseNote, accountViewModel) { newZapAmount ->
-        if (zapAmountTxt.value != newZapAmount) {
-            scope.launch(Dispatchers.Main) {
-                zapAmountTxt.value = newZapAmount
+        accountViewModel.calculateZapAmount(baseNote) { newZapAmount ->
+            if (zapAmountTxt.value != newZapAmount) {
+                withContext(Dispatchers.Main) {
+                    zapAmountTxt.value = newZapAmount
+                }
             }
         }
     }
 
-    SlidingAnimationAmount(zapAmountTxt, grayTint)
-}
-
-@Composable
-fun WatchZapAmountsForNote(baseNote: Note, accountViewModel: AccountViewModel, onZapAmount: (String) -> Unit) {
-    val zapsState by baseNote.live().zaps.observeAsState()
-
-    LaunchedEffect(key1 = zapsState) {
-        accountViewModel.calculateZapAmount(baseNote, onZapAmount)
-    }
+    inner(zapAmountTxt)
 }
 
 @Composable
 fun ViewCountReaction(
     note: Note,
     grayTint: Color,
-    barChartSize: Dp = Size19dp,
-    numberSize: Dp = Size24dp,
+    barChartModifier: Modifier = Modifier.size(Size19dp),
+    numberSizeModifier: Modifier = Modifier.height(Size24dp),
     viewCountColorFilter: ColorFilter
 ) {
-    ViewCountIcon(barChartSize, grayTint)
-    DrawViewCount(note, numberSize, viewCountColorFilter)
+    ViewCountIcon(barChartModifier, grayTint)
+    DrawViewCount(note, numberSizeModifier, viewCountColorFilter)
 }
 
 @Composable
 private fun DrawViewCount(
     note: Note,
-    numberSize: Dp = Size24dp,
+    iconModifier: Modifier = Modifier,
     viewCountColorFilter: ColorFilter
 ) {
     val context = LocalContext.current
-
-    val iconModifier = remember {
-        Modifier.height(numberSize)
-    }
 
     AsyncImage(
         model = remember(note) {

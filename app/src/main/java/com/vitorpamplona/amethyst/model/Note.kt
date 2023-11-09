@@ -86,6 +86,8 @@ open class Note(val idHex: String) {
         private set
     var zaps = mapOf<Note, Note?>()
         private set
+    var zapsAmount: BigDecimal = BigDecimal.ZERO
+
     var zapPayments = mapOf<Note, Note?>()
         private set
 
@@ -265,6 +267,7 @@ open class Note(val idHex: String) {
         reports = mapOf<User, List<Note>>()
         zaps = mapOf<Note, Note?>()
         zapPayments = mapOf<Note, Note?>()
+        zapsAmount = BigDecimal.ZERO
         relays = listOf<String>()
         lastReactionsDownloadTime = emptyMap()
 
@@ -311,9 +314,11 @@ open class Note(val idHex: String) {
     fun removeZap(note: Note) {
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
+            updateZapTotal()
             liveSet?.innerZaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
             zaps = zaps.filterValues { it != note }
+            updateZapTotal()
             liveSet?.innerZaps?.invalidateData()
         }
     }
@@ -354,11 +359,13 @@ open class Note(val idHex: String) {
         if (zapRequest !in zaps.keys) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
+                updateZapTotal()
                 liveSet?.innerZaps?.invalidateData()
             }
         } else if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
+                updateZapTotal()
                 liveSet?.innerZaps?.invalidateData()
             }
         }
@@ -478,44 +485,63 @@ open class Note(val idHex: String) {
         }.flatten()
     }
 
-    fun zappedAmount(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
-        // Regular Zap Receipts
-        val completedZaps = zaps.asSequence()
-            .mapNotNull { it.value?.event }
-            .filterIsInstance<LnZapEvent>()
-            .filter { it.amount != null }
-            .associate {
-                it.lnInvoice() to it.amount
-            }
-            .toMap()
+    private fun updateZapTotal() {
+        var sumOfAmounts = BigDecimal.ZERO
 
-        val completedPayments = if (privKey != null && walletServicePubkey != null) {
-            // Payments confirmed by the User's Wallet
-            zapPayments
-                .asSequence()
-                .filter {
-                    val response = (it.value?.event as? LnZapPaymentResponseEvent)?.response(privKey, walletServicePubkey)
-                    response is PayInvoiceSuccessResponse
-                }
-                .associate {
-                    val lnInvoice = (it.key.event as? LnZapPaymentRequestEvent)?.lnInvoice(privKey, walletServicePubkey)
+        // Regular Zap Receipts
+        zaps.values.forEach {
+            val noteEvent = it?.event
+            if (noteEvent is LnZapEvent) {
+                sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
+            }
+        }
+
+        zapsAmount = sumOfAmounts
+    }
+
+    fun zappedAmountWithNWCPayments(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
+        if (zapPayments.isEmpty()) return zapsAmount
+
+        var sumOfAmounts = zapsAmount
+
+        val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
+        zaps.forEach {
+            (it.value as? LnZapEvent)?.lnInvoice()?.let {
+                invoiceSet.add(it)
+            }
+        }
+
+        if (privKey != null && walletServicePubkey != null) {
+            zapPayments.forEach {
+                val noteEvent = (it.value?.event as? LnZapPaymentResponseEvent)?.response(
+                    privKey,
+                    walletServicePubkey
+                )
+                if (noteEvent is PayInvoiceSuccessResponse) {
+                    val invoice = (it.key.event as? LnZapPaymentRequestEvent)?.lnInvoice(
+                        privKey,
+                        walletServicePubkey
+                    )
+
                     val amount = try {
-                        if (lnInvoice == null) {
+                        if (invoice == null) {
                             null
                         } else {
-                            LnInvoiceUtil.getAmountInSats(lnInvoice)
+                            LnInvoiceUtil.getAmountInSats(invoice)
                         }
                     } catch (e: java.lang.Exception) {
                         null
                     }
-                    lnInvoice to amount
+
+                    if (invoice != null && amount != null && !invoiceSet.contains(invoice)) {
+                        invoiceSet.add(invoice)
+                        sumOfAmounts += amount
+                    }
                 }
-                .toMap()
-        } else {
-            emptyMap()
+            }
         }
 
-        return (completedZaps + completedPayments).values.filterNotNull().sumOf { it }
+        return sumOfAmounts
     }
 
     fun hasPledgeBy(user: User): Boolean {
@@ -626,6 +652,7 @@ open class Note(val idHex: String) {
         boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
+        zapsAmount = BigDecimal.ZERO
     }
 
     fun clearEOSE() {

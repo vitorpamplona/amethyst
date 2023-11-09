@@ -206,11 +206,6 @@ fun CommentIcon(iconSize: Dp, tint: Color) {
 }
 
 @Composable
-fun ViewCountIcon(iconSize: Dp, tint: Color = Color.Unspecified) {
-    ViewCountIcon(remember { Modifier.size(iconSize) }, tint)
-}
-
-@Composable
 fun ViewCountIcon(modifier: Modifier, tint: Color = Color.Unspecified) {
     Icon(
         imageVector = Icons.Outlined.BarChart,
