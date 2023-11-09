@@ -634,17 +634,30 @@ open class Note(val idHex: String) {
 
     var liveSet: NoteLiveSet? = null
 
+    @Synchronized
+    fun createOrDestroyLiveSync(create: Boolean) {
+        if (create) {
+            if (liveSet == null) {
+                liveSet = NoteLiveSet(this)
+            }
+        } else {
+            if (liveSet != null && liveSet?.isInUse() == false) {
+                liveSet?.destroy()
+                liveSet = null
+            }
+        }
+    }
+
     fun live(): NoteLiveSet {
         if (liveSet == null) {
-            liveSet = NoteLiveSet(this)
+            createOrDestroyLiveSync(true)
         }
         return liveSet!!
     }
 
     fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
-            liveSet?.destroy()
-            liveSet = null
+            createOrDestroyLiveSync(false)
         }
     }
 

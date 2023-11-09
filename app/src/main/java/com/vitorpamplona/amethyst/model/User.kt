@@ -359,15 +359,28 @@ class User(val pubkeyHex: String) {
 
     fun live(): UserLiveSet {
         if (liveSet == null) {
-            liveSet = UserLiveSet(this)
+            createOrDestroyLiveSync(true)
         }
         return liveSet!!
     }
 
     fun clearLive() {
         if (liveSet != null && liveSet?.isInUse() == false) {
-            liveSet?.destroy()
-            liveSet = null
+            createOrDestroyLiveSync(false)
+        }
+    }
+
+    @Synchronized
+    fun createOrDestroyLiveSync(create: Boolean) {
+        if (create) {
+            if (liveSet == null) {
+                liveSet = UserLiveSet(this)
+            }
+        } else {
+            if (liveSet != null && liveSet?.isInUse() == false) {
+                liveSet?.destroy()
+                liveSet = null
+            }
         }
     }
 }
