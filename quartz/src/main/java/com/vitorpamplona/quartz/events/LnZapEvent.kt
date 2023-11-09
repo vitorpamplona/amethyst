@@ -49,7 +49,7 @@ class LnZapEvent(
         try {
             lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
         } catch (e: Exception) {
-            Log.e("LnZapEvent", "Failed to Parse LnInvoice ${description()}", e)
+            Log.e("LnZapEvent", "Failed to Parse LnInvoice ${lnInvoice()}", e)
             null
         }
     }
