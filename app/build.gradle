@@ -243,7 +243,7 @@ dependencies {
     playImplementation 'com.google.mlkit:language-id:17.0.4'
 
     // Google services model the translate text
-    playImplementation 'com.google.mlkit:translate:17.0.1'
+    playImplementation 'com.google.mlkit:translate:17.0.2'
 
     // PushNotifications
     playImplementation platform('com.google.firebase:firebase-bom:32.4.1')

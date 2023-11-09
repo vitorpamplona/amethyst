@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     ext {
-        fragment_version = "1.6.1"
+        fragment_version = "1.6.2"
         lifecycle_version = '2.6.2'
         compose_ui_version = '1.5.4'
         nav_version = '2.7.4'
