@@ -1,22 +1,33 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
+import android.content.Context
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
 import android.util.Log
 import coil.ImageLoader
+import coil.disk.DiskCache
 import com.vitorpamplona.amethyst.service.playback.VideoCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.time.measureTimedValue
 
 class Amethyst : Application() {
     val videoCache: VideoCache by lazy {
         val newCache = VideoCache()
-        newCache.initFileCache(instance)
+        newCache.initFileCache(this)
         newCache
+    }
+
+    private val imageCache: DiskCache by lazy {
+        DiskCache.Builder()
+            .directory(applicationContext.safeCacheDir.resolve("image_cache"))
+            .maxSizePercent(0.2)
+            .maximumMaxSizeBytes(500L * 1024 * 1024) // 250MB
+            .build()
     }
 
     override fun onCreate() {
@@ -48,9 +59,7 @@ class Amethyst : Application() {
     }
 
     fun imageLoaderBuilder(): ImageLoader.Builder {
-        return ImageLoader.Builder(applicationContext).diskCache {
-            SingletonDiskCache.get(applicationContext)
-        }
+        return ImageLoader.Builder(applicationContext).diskCache { imageCache }
     }
 
     companion object {
@@ -58,3 +67,9 @@ class Amethyst : Application() {
             private set
     }
 }
+
+internal val Context.safeCacheDir: File
+    get() {
+        val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
+        return cacheDir.apply { mkdirs() }
+    }

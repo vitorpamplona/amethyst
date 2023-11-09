@@ -189,28 +189,3 @@ object ServiceManager {
         forceRestart(null, false, true)
     }
 }
-
-object SingletonDiskCache {
-
-    private const val DIRECTORY = "image_cache"
-    private var instance: DiskCache? = null
-
-    @Synchronized
-    fun get(context: Context): DiskCache {
-        return instance ?: run {
-            // Create the singleton disk cache instance.
-            DiskCache.Builder()
-                .directory(context.safeCacheDir.resolve(DIRECTORY))
-                .maxSizePercent(0.2)
-                .maximumMaxSizeBytes(500L * 1024 * 1024) // 250MB
-                .build()
-                .also { instance = it }
-        }
-    }
-}
-
-internal val Context.safeCacheDir: File
-    get() {
-        val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
-        return cacheDir.apply { mkdirs() }
-    }

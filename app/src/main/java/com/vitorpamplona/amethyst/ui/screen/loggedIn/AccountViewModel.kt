@@ -5,7 +5,7 @@ import android.graphics.drawable.Drawable
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -85,7 +85,7 @@ class ResourceToastMsg(val titleResId: Int, val resourceId: Int) : ToastMsg()
 class AccountViewModel(val account: Account, val settings: SettingsState) : ViewModel(), Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
-    val accountMarkAsReadUpdates = mutableStateOf(0)
+    val accountMarkAsReadUpdates = mutableIntStateOf(0)
 
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
