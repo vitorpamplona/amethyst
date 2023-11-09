@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -78,15 +77,11 @@ class AccountStateViewModel() : ViewModel() {
         startUI(account)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     suspend fun startUI(account: Account) = withContext(Dispatchers.Main) {
         if (account.keyPair.privKey != null) {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
-        }
-        GlobalScope.launch(Dispatchers.IO) {
-            ServiceManager.restartIfDifferentAccount(account)
         }
 
         account.saveable.observeForever(saveListener)

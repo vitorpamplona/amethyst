@@ -54,6 +54,9 @@ import java.nio.charset.StandardCharsets
 class MainActivity : AppCompatActivity() {
     private val isOnMobileDataState = mutableStateOf(false)
 
+    // Service Manager is only active when the activity is active.
+    private val serviceManager = ServiceManager()
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,7 +91,7 @@ class MainActivity : AppCompatActivity() {
                         accountStateViewModel.tryLoginExistingAccountAsync()
                     }
 
-                    AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
+                    AccountScreen(accountStateViewModel, sharedPreferencesViewModel, serviceManager)
                 }
             }
         }
@@ -102,9 +105,9 @@ class MainActivity : AppCompatActivity() {
         DefaultMutedSetting.value = true
 
         // Only starts after login
-        if (ServiceManager.shouldPauseService) {
+        if (serviceManager.shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.justStart()
+                serviceManager.justStart()
             }
         }
 
@@ -117,7 +120,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         LanguageTranslatorService.clear()
-        ServiceManager.cleanObservers()
+        serviceManager.cleanObservers()
 
         // if (BuildConfig.DEBUG) {
         GlobalScope.launch(Dispatchers.IO) {
@@ -125,9 +128,9 @@ class MainActivity : AppCompatActivity() {
         }
         // }
 
-        if (ServiceManager.shouldPauseService) {
+        if (serviceManager.shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.pauseForGood()
+                serviceManager.pauseForGood()
             }
         }
 
@@ -153,7 +156,7 @@ class MainActivity : AppCompatActivity() {
         super.onTrimMemory(level)
         println("Trim Memory $level")
         GlobalScope.launch(Dispatchers.Default) {
-            ServiceManager.trimMemory()
+            serviceManager.trimMemory()
         }
     }
 
@@ -163,7 +166,7 @@ class MainActivity : AppCompatActivity() {
             super.onAvailable(network)
 
             GlobalScope.launch(Dispatchers.IO) {
-                ServiceManager.forceRestartIfItShould()
+                serviceManager.forceRestartIfItShould()
             }
         }
 
@@ -182,7 +185,7 @@ class MainActivity : AppCompatActivity() {
                 if (isOnMobileDataState.value != isOnMobileData) {
                     isOnMobileDataState.value = isOnMobileData
 
-                    ServiceManager.forceRestartIfItShould()
+                    serviceManager.forceRestartIfItShould()
                 }
             }
         }

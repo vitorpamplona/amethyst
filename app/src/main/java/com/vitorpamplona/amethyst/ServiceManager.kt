@@ -1,14 +1,11 @@
 package com.vitorpamplona.amethyst
 
-import android.content.Context
 import android.os.Build
 import android.util.Log
 import coil.Coil
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
-import coil.disk.DiskCache
-import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.ExternalSignerUtils
@@ -36,9 +33,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
-object ServiceManager {
+class ServiceManager {
     var shouldPauseService: Boolean = true // to not open amber in a loop trying to use auth relays and registering for notifications
     private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
@@ -69,7 +65,7 @@ object ServiceManager {
                     add(GifDecoder.Factory())
                 }
                 add(SvgDecoder.Factory())
-            }.logger(DebugLogger())
+            } // .logger(DebugLogger())
                 .okHttpClient { HttpClient.getHttpClient() }
                 .respectCacheHeaders(false)
                 .build()

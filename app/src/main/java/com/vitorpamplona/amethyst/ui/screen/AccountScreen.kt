@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
@@ -27,44 +29,55 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
 @Composable
 fun AccountScreen(
     accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    serviceManager: ServiceManager
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
-    Column() {
-        Crossfade(
-            targetState = accountState,
-            animationSpec = tween(durationMillis = 100),
-            label = "AccountState"
-        ) { state ->
-            when (state) {
-                is AccountState.Loading -> {
-                    LoadingAccounts()
+    Crossfade(
+        targetState = accountState,
+        animationSpec = tween(durationMillis = 100),
+        label = "AccountState"
+    ) { state ->
+        when (state) {
+            is AccountState.Loading -> {
+                LoadingAccounts()
+            }
+            is AccountState.LoggedOff -> {
+                LaunchedEffect(key1 = accountState) {
+                    serviceManager.pauseForGood()
                 }
-                is AccountState.LoggedOff -> {
-                    LoginPage(accountStateViewModel, isFirstLogin = true)
+
+                LoginPage(accountStateViewModel, isFirstLogin = true)
+            }
+            is AccountState.LoggedIn -> {
+                LaunchedEffect(key1 = accountState) {
+                    serviceManager.restartIfDifferentAccount(state.account)
                 }
-                is AccountState.LoggedIn -> {
-                    CompositionLocalProvider(
-                        LocalViewModelStoreOwner provides state.currentViewModelStore
-                    ) {
-                        LoggedInPage(
-                            state.account,
-                            accountStateViewModel,
-                            sharedPreferencesViewModel
-                        )
-                    }
+
+                CompositionLocalProvider(
+                    LocalViewModelStoreOwner provides state.currentViewModelStore
+                ) {
+                    LoggedInPage(
+                        state.account,
+                        accountStateViewModel,
+                        sharedPreferencesViewModel
+                    )
                 }
-                is AccountState.LoggedInViewOnly -> {
-                    CompositionLocalProvider(
-                        LocalViewModelStoreOwner provides state.currentViewModelStore
-                    ) {
-                        LoggedInPage(
-                            state.account,
-                            accountStateViewModel,
-                            sharedPreferencesViewModel
-                        )
-                    }
+            }
+            is AccountState.LoggedInViewOnly -> {
+                LaunchedEffect(key1 = accountState) {
+                    serviceManager.restartIfDifferentAccount(state.account)
+                }
+
+                CompositionLocalProvider(
+                    LocalViewModelStoreOwner provides state.currentViewModelStore
+                ) {
+                    LoggedInPage(
+                        state.account,
+                        accountStateViewModel,
+                        sharedPreferencesViewModel
+                    )
                 }
             }
         }
@@ -78,7 +91,7 @@ fun LoggedInPage(
     sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
     val accountViewModel: AccountViewModel = viewModel(
-        key = "AccountStateViewModel",
+        key = "AccountViewModel",
         factory = AccountViewModel.Factory(
             account,
             sharedPreferencesViewModel.sharedPrefs
