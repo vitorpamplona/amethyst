@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.ExternalSigner
 import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.service.SignerType
@@ -141,7 +142,7 @@ fun LoginPage(
 
     LaunchedEffect(loginWithExternalSigner) {
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(
+            ExternalSigner("").openSigner(
                 "",
                 SignerType.GET_PUBLIC_KEY,
                 activity,
@@ -400,7 +401,7 @@ fun LoginPage(
                                 return@Button
                             }
 
-                            val result = ExternalSignerUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
+                            val result = ExternalSigner("").getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
                             if (result == null) {
                                 loginWithExternalSigner = true
                                 return@Button

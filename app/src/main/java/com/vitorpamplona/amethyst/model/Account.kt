@@ -8,6 +8,7 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.OptOutFromFilters
+import com.vitorpamplona.amethyst.service.ExternalSigner
 import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -25,6 +26,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -139,6 +141,7 @@ class Account(
     val live: AccountLiveData = AccountLiveData(this)
     val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
+    lateinit var externalSigner: ExternalSigner
 
     @Immutable
     data class LiveHiddenUsers(
@@ -158,7 +161,7 @@ class Account(
                         GlobalScope.launch(Dispatchers.IO) {
                             val content = blockList.content
                             if (content.isEmpty()) return@launch
-                            ExternalSignerUtils.decryptBlockList(
+                            externalSigner.decryptBlockList(
                                 content,
                                 keyPair.pubKey.toHexKey(),
                                 blockList.id()
@@ -244,7 +247,7 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val content = ExternalSignerUtils.content[event.id] ?: ""
                 if (content.isBlank()) {
                     return
@@ -266,9 +269,9 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val content = ExternalSignerUtils.content[event.id]
-                if (content.isBlank()) {
+                if (content.isNullOrBlank()) {
                     return
                 }
                 event = ContactListEvent.create(event, content)
@@ -285,9 +288,9 @@ class Account(
 
         var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val content = ExternalSignerUtils.content[event.id]
-            if (content.isBlank()) {
+            if (content.isNullOrBlank()) {
                 return
             }
             event = MetadataEvent.create(event, content)
@@ -339,23 +342,23 @@ class Account(
                                 keyPair
                             )
 
-                            ExternalSignerUtils.openSigner(senderReaction)
+                            externalSigner.openSigner(senderReaction)
                             val reactionContent = ExternalSignerUtils.content[event.id]
-                            if (reactionContent.isBlank()) return
+                            if (reactionContent.isNullOrBlank()) return
                             senderReaction = ReactionEvent.create(senderReaction, reactionContent)
 
                             val giftWraps = users.plus(senderPublicKey).map {
                                 val gossip = Gossip.create(senderReaction)
                                 val content = Gossip.toJson(gossip)
-                                ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                                externalSigner.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
                                 val encryptedContent = ExternalSignerUtils.content[gossip.id]
-                                if (encryptedContent.isBlank()) return
+                                if (encryptedContent.isNullOrBlank()) return
 
                                 var sealedEvent = SealedGossipEvent.create(
                                     encryptedContent = encryptedContent,
                                     pubKey = senderPublicKey
                                 )
-                                ExternalSignerUtils.openSigner(sealedEvent)
+                                externalSigner.openSigner(sealedEvent)
                                 val eventContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
                                 if (eventContent.isBlank()) return
                                 sealedEvent = SealedGossipEvent.create(sealedEvent, eventContent)
@@ -392,7 +395,7 @@ class Account(
                         keyPair
                     )
 
-                    ExternalSignerUtils.openSigner(senderReaction)
+                    externalSigner.openSigner(senderReaction)
                     val reactionContent = ExternalSignerUtils.content[senderReaction.id] ?: ""
                     if (reactionContent.isBlank()) return
                     senderReaction = ReactionEvent.create(senderReaction, reactionContent)
@@ -401,15 +404,15 @@ class Account(
                     newUsers.forEach {
                         val gossip = Gossip.create(senderReaction)
                         val content = Gossip.toJson(gossip)
-                        ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                        externalSigner.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
                         val encryptedContent = ExternalSignerUtils.content[gossip.id]
-                        if (encryptedContent.isBlank()) return
+                        if (encryptedContent.isNullOrBlank()) return
 
                         var sealedEvent = SealedGossipEvent.create(
                             encryptedContent = encryptedContent,
                             pubKey = senderPublicKey
                         )
-                        ExternalSignerUtils.openSigner(sealedEvent)
+                        externalSigner.openSigner(sealedEvent)
                         val sealedContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
                         if (sealedContent.isBlank()) return
                         sealedEvent = SealedGossipEvent.create(sealedEvent, sealedContent)
@@ -440,7 +443,7 @@ class Account(
                     note.event?.let {
                         var event = ReactionEvent.create(emojiUrl, it, keyPair)
                         if (loginWithExternalSigner) {
-                            ExternalSignerUtils.openSigner(event)
+                            externalSigner.openSigner(event)
                             val content = ExternalSignerUtils.content[event.id] ?: ""
                             if (content.isBlank()) {
                                 return
@@ -458,7 +461,7 @@ class Account(
             note.event?.let {
                 var event = ReactionEvent.create(reaction, it, keyPair)
                 if (loginWithExternalSigner) {
-                    ExternalSignerUtils.openSigner(event)
+                    externalSigner.openSigner(event)
                     val content = ExternalSignerUtils.content[event.id] ?: ""
                     if (content.isBlank()) {
                         return
@@ -497,7 +500,7 @@ class Account(
                             message,
                             toUser?.pubkeyHex
                         )
-                        ExternalSignerUtils.openSigner(unsignedEvent)
+                        externalSigner.openSigner(unsignedEvent)
                         val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                         if (content.isBlank()) return null
 
@@ -517,7 +520,7 @@ class Account(
                             message,
                             toUser?.pubkeyHex
                         )
-                        ExternalSignerUtils.openSigner(unsignedEvent, "event")
+                        externalSigner.openSigner(unsignedEvent, "event")
                         val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                         if (content.isBlank()) return null
 
@@ -568,7 +571,7 @@ class Account(
 
         if (privKey != null) return zapResponseEvent.response(privKey, pubKey)
 
-        ExternalSignerUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
+        externalSigner.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
         val decryptedContent = ExternalSignerUtils.content[zapResponseEvent.id] ?: ""
         if (decryptedContent.isBlank()) return null
         return zapResponseEvent.response(decryptedContent)
@@ -638,7 +641,7 @@ class Account(
                         keyPair.pubKey.toHexKey(),
                         message
                     )
-                    ExternalSignerUtils.openSigner(unsignedEvent)
+                    externalSigner.openSigner(unsignedEvent)
                     val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                     if (content.isBlank()) return null
 
@@ -656,7 +659,7 @@ class Account(
                         keyPair.pubKey.toHexKey(),
                         message
                     )
-                    ExternalSignerUtils.openSigner(unsignedEvent, "event")
+                    externalSigner.openSigner(unsignedEvent, "event")
                     val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                     if (content.isBlank()) return null
 
@@ -687,7 +690,7 @@ class Account(
         note.event?.let {
             var event = ReactionEvent.createWarning(it, keyPair)
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = ReactionEvent(
@@ -706,7 +709,7 @@ class Account(
         note.event?.let {
             var event = ReportEvent.create(it, type, keyPair, content = content)
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = ReportEvent(
@@ -733,7 +736,7 @@ class Account(
 
         var event = ReportEvent.create(user.pubkeyHex, type, keyPair)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
             event = ReportEvent(
@@ -761,7 +764,7 @@ class Account(
         if (myNotes.isNotEmpty()) {
             var event = DeletionEvent.create(myNotes, keyPair)
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = DeletionEvent(
@@ -783,7 +786,7 @@ class Account(
 
         var event = HTTPAuthorizationEvent.create(url, method, body, keyPair)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return null
@@ -805,7 +808,7 @@ class Account(
             if (it.kind() == 1) {
                 var event = RepostEvent.create(it, keyPair)
                 if (loginWithExternalSigner) {
-                    ExternalSignerUtils.openSigner(event)
+                    externalSigner.openSigner(event)
                     val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                     if (eventContent.isBlank()) return
                     event = RepostEvent(
@@ -822,7 +825,7 @@ class Account(
             } else {
                 var event = GenericRepostEvent.create(it, keyPair)
                 if (loginWithExternalSigner) {
-                    ExternalSignerUtils.openSigner(event)
+                    externalSigner.openSigner(event)
                     val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                     if (eventContent.isBlank()) return
                     event = GenericRepostEvent(
@@ -866,7 +869,7 @@ class Account(
                             it,
                             keyPair
                         )
-                        ExternalSignerUtils.openSigner(unsignedEvent)
+                        externalSigner.openSigner(unsignedEvent)
                         val eventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
                         returningContactList = if (eventContent.isBlank()) {
                             latestContactList
@@ -915,7 +918,7 @@ class Account(
         }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -947,7 +950,7 @@ class Account(
         }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -980,7 +983,7 @@ class Account(
         }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1016,7 +1019,7 @@ class Account(
         }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1052,7 +1055,7 @@ class Account(
         }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1077,7 +1080,7 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
@@ -1103,7 +1106,7 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
@@ -1129,7 +1132,7 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
@@ -1155,7 +1158,7 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
@@ -1181,7 +1184,7 @@ class Account(
             )
 
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) {
                     return
@@ -1204,7 +1207,7 @@ class Account(
                 pubKey = keyPair.pubKey.toHexKey()
             )
 
-            ExternalSignerUtils.openSigner(unsignedData)
+            externalSigner.openSigner(unsignedData)
             val eventContent = ExternalSignerUtils.content[unsignedData.id] ?: ""
             if (eventContent.isBlank()) return null
             val data = FileStorageEvent(
@@ -1228,7 +1231,7 @@ class Account(
                 pubKey = keyPair.pubKey.toHexKey()
             )
 
-            ExternalSignerUtils.openSigner(unsignedEvent)
+            externalSigner.openSigner(unsignedEvent)
             val unsignedEventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
             if (unsignedEventContent.isBlank()) return null
             val signedEvent = FileStorageHeaderEvent(
@@ -1298,7 +1301,7 @@ class Account(
                 sensitiveContent = headerInfo.sensitiveContent,
                 keyPair = keyPair
             )
-            ExternalSignerUtils.openSigner(unsignedEvent)
+            externalSigner.openSigner(unsignedEvent)
             val eventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
             if (eventContent.isBlank()) return null
             val signedEvent = FileHeaderEvent(
@@ -1365,7 +1368,7 @@ class Account(
         )
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
+            externalSigner.openSigner(signedEvent)
             val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1435,7 +1438,7 @@ class Account(
         // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
+            externalSigner.openSigner(signedEvent)
             val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1478,7 +1481,7 @@ class Account(
         )
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
+            externalSigner.openSigner(signedEvent)
             val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1510,7 +1513,7 @@ class Account(
         )
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
+            externalSigner.openSigner(signedEvent)
             val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1533,7 +1536,7 @@ class Account(
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.encrypt(message, toUser, "encrypt")
+            externalSigner.encrypt(message, toUser, "encrypt")
             val eventContent = ExternalSignerUtils.content["encrypt"] ?: ""
             if (eventContent.isBlank()) return
             ExternalSignerUtils.content.remove("encrypt")
@@ -1551,7 +1554,7 @@ class Account(
                 advertiseNip18 = false
             )
 
-            ExternalSignerUtils.openSigner(unsignedEvent)
+            externalSigner.openSigner(unsignedEvent)
             val signature = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
             if (signature.isBlank()) {
                 return
@@ -1609,7 +1612,7 @@ class Account(
                 geohash = geohash
             )
 
-            ExternalSignerUtils.openSigner(chatMessageEvent)
+            externalSigner.openSigner(chatMessageEvent)
             val eventContent = ExternalSignerUtils.content[chatMessageEvent.id] ?: ""
             if (eventContent.isBlank()) return
             chatMessageEvent = ChatMessageEvent.create(chatMessageEvent, eventContent)
@@ -1617,14 +1620,14 @@ class Account(
             toUsers.plus(senderPublicKey).toSet().forEach {
                 val gossip = Gossip.create(chatMessageEvent)
                 val content = Gossip.toJson(gossip)
-                ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
+                externalSigner.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
                 val gossipContent = ExternalSignerUtils.content[gossip.id] ?: ""
                 if (gossipContent.isNotBlank()) {
                     var sealedEvent = SealedGossipEvent.create(
                         encryptedContent = gossipContent,
                         pubKey = senderPublicKey
                     )
-                    ExternalSignerUtils.openSigner(sealedEvent)
+                    externalSigner.openSigner(sealedEvent)
                     val sealedEventContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
                     if (sealedEventContent.isBlank()) return
                     sealedEvent = SealedGossipEvent.create(sealedEvent, sealedEventContent)
@@ -1662,12 +1665,12 @@ class Account(
         mine.forEach {
             // Only keep in cache the GiftWrap for the account.
             if (loginWithExternalSigner) {
-                ExternalSignerUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
+                externalSigner.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
                 val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[it.id] ?: ""
                 if (decryptedContent.isEmpty()) return
                 it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
                     if (cached is SealedGossipEvent) {
-                        ExternalSignerUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
+                        externalSigner.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
                         val localDecryptedContent = ExternalSignerUtils.cachedDecryptedContent[cached.id] ?: ""
                         if (localDecryptedContent.isEmpty()) return
                         cached.cachedGossip(keyPair.pubKey, localDecryptedContent)?.let { gossip ->
@@ -1720,7 +1723,7 @@ class Account(
         )
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1742,7 +1745,7 @@ class Account(
 
         var event = StatusEvent.update(oldEvent, newStatus, keyPair)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1758,7 +1761,7 @@ class Account(
 
         var event = StatusEvent.create(newStatus, "general", expiration = null, keyPair)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1775,7 +1778,7 @@ class Account(
 
         var event = StatusEvent.clear(oldEvent, keyPair)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1787,7 +1790,7 @@ class Account(
 
         var event2 = DeletionEvent.create(listOf(event.id), keyPair)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event2)
+            externalSigner.openSigner(event2)
             val event2Content = ExternalSignerUtils.content[event2.id] ?: ""
             if (event2Content.isBlank()) {
                 return
@@ -1812,7 +1815,7 @@ class Account(
         )
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1849,7 +1852,7 @@ class Account(
         }
 
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return
@@ -1888,7 +1891,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
         val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
         ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
@@ -1906,7 +1909,7 @@ class Account(
             keyPair.pubKey.toHexKey()
         )
 
-        ExternalSignerUtils.openSigner(event)
+        externalSigner.openSigner(event)
         val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
@@ -1944,7 +1947,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
         val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
         ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
@@ -1962,7 +1965,7 @@ class Account(
             keyPair.pubKey.toHexKey()
         )
 
-        ExternalSignerUtils.openSigner(event)
+        externalSigner.openSigner(event)
         val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
@@ -2030,7 +2033,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
         val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
         ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
@@ -2056,7 +2059,7 @@ class Account(
                 keyPair.pubKey.toHexKey()
             )
         }
-        ExternalSignerUtils.openSigner(event)
+        externalSigner.openSigner(event)
         val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
@@ -2150,7 +2153,7 @@ class Account(
 
         var event = RelayAuthEvent.create(relayUrl, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) {
                 return null
@@ -2218,7 +2221,7 @@ class Account(
         }
         val msg = Event.mapper.writeValueAsString(privTags)
 
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
+        externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
         val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
         ExternalSignerUtils.content.remove("encrypt")
         if (encryptedContent.isBlank()) {
@@ -2245,7 +2248,7 @@ class Account(
             )
         }
 
-        ExternalSignerUtils.openSigner(event)
+        externalSigner.openSigner(event)
         val eventContent = ExternalSignerUtils.content[event.id] ?: ""
         if (eventContent.isBlank()) {
             return
@@ -2323,7 +2326,7 @@ class Account(
                 val privateTags = listOf(listOf("word", word))
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
+                externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
                 val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
                 ExternalSignerUtils.content.remove("encrypted")
                 if (encryptedContent.isBlank()) return
@@ -2331,7 +2334,7 @@ class Account(
             } else {
                 var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
                 if (decryptedContent == null) {
-                    ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
+                    externalSigner.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
                     val content = ExternalSignerUtils.content[id] ?: ""
                     if (content.isBlank()) return
                     decryptedContent = content
@@ -2339,7 +2342,7 @@ class Account(
 
                 val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("word", word))
                 val msg = Event.mapper.writeValueAsString(privateTags)
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
+                externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), id)
                 val eventContent = ExternalSignerUtils.content[id] ?: ""
                 if (eventContent.isBlank()) return
                 eventContent
@@ -2363,7 +2366,7 @@ class Account(
                 )
             }
 
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
 
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
@@ -2413,21 +2416,21 @@ class Account(
                     val privateTags = listOf(listOf("word", word))
                     val msg = Event.mapper.writeValueAsString(privateTags)
 
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
                     val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                     if (eventContent.isBlank()) return
                     eventContent
                 } else {
                     var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
                     if (decryptedContent == null) {
-                        ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
+                        externalSigner.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
                         val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                         if (eventContent.isBlank()) return
                         decryptedContent = eventContent
                     }
                     val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("word", word))
                     val msg = Event.mapper.writeValueAsString(privateTags)
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
                     val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                     if (eventContent.isBlank()) return
                     eventContent
@@ -2441,7 +2444,7 @@ class Account(
                     encryptedContent
                 )
 
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = PeopleListEvent.create(event, eventContent)
@@ -2474,7 +2477,7 @@ class Account(
                 val privateTags = listOf(listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
 
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
+                externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
                 val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
                 ExternalSignerUtils.content.remove("encrypted")
                 if (encryptedContent.isBlank()) return
@@ -2482,7 +2485,7 @@ class Account(
             } else {
                 var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
                 if (decryptedContent == null) {
-                    ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
+                    externalSigner.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
                     val content = ExternalSignerUtils.content[id] ?: ""
                     if (content.isBlank()) return
                     decryptedContent = content
@@ -2490,7 +2493,7 @@ class Account(
 
                 val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", pubkeyHex))
                 val msg = Event.mapper.writeValueAsString(privateTags)
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
+                externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), id)
                 val eventContent = ExternalSignerUtils.content[id] ?: ""
                 if (eventContent.isBlank()) return
                 eventContent
@@ -2514,7 +2517,7 @@ class Account(
                 )
             }
 
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
             event = PeopleListEvent(
@@ -2563,21 +2566,21 @@ class Account(
                     val privateTags = listOf(listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
 
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
                     val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                     if (eventContent.isBlank()) return
                     eventContent
                 } else {
                     var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
                     if (decryptedContent == null) {
-                        ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
+                        externalSigner.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
                         val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                         if (eventContent.isBlank()) return
                         decryptedContent = eventContent
                     }
                     val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("p", pubkeyHex))
                     val msg = Event.mapper.writeValueAsString(privateTags)
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
+                    externalSigner.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
                     val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
                     if (eventContent.isBlank()) return
                     eventContent
@@ -2591,7 +2594,7 @@ class Account(
                     encryptedContent
                 )
 
-                ExternalSignerUtils.openSigner(event)
+                externalSigner.openSigner(event)
                 val eventContent = ExternalSignerUtils.content[event.id] ?: ""
                 if (eventContent.isBlank()) return
                 event = PeopleListEvent.create(event, eventContent)
@@ -2782,7 +2785,7 @@ class Account(
             keyPair = keyPair
         )
         if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
+            externalSigner.openSigner(event)
             val eventContent = ExternalSignerUtils.content[event.id] ?: ""
             if (eventContent.isBlank()) return
             event = ChannelMetadataEvent.create(event, eventContent)
@@ -2800,7 +2803,7 @@ class Account(
         if (loginWithExternalSigner) {
             var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
             if (decryptedContent == null) {
-                ExternalSignerUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+                externalSigner.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
             }
             decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
             if (decryptedContent.isEmpty()) return null
@@ -2816,7 +2819,7 @@ class Account(
         if (loginWithExternalSigner) {
             var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
             if (decryptedContent == null) {
-                ExternalSignerUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
+                externalSigner.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
             }
             decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
             if (decryptedContent.isEmpty()) return null
@@ -2851,7 +2854,7 @@ class Account(
         return when (event) {
             is PrivateDmEvent -> {
                 if (ExternalSignerUtils.cachedDecryptedContent[event.id] == null) {
-                    ExternalSignerUtils.decryptDM(
+                    externalSigner.decryptDM(
                         event.content,
                         event.talkingWith(userProfile().pubkeyHex),
                         event.id
@@ -2883,7 +2886,7 @@ class Account(
                     null
                 }
             }
-            ExternalSignerUtils.decryptZapEvent(event)
+            externalSigner.decryptZapEvent(event)
             return null
         }
 
@@ -3194,6 +3197,7 @@ class Account(
 
     init {
         Log.d("Init", "Account")
+        externalSigner = ExternalSigner(keyPair.pubKey.toNpub())
         backupContactList?.let {
             println("Loading saved contacts ${it.toJson()}")
 

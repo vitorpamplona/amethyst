@@ -166,7 +166,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 } else if (account.loginWithExternalSigner) {
                     var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        ExternalSignerUtils.decrypt(
+                        account.externalSigner.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,
@@ -189,7 +189,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 } else if (account.loginWithExternalSigner) {
                     var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        ExternalSignerUtils.decrypt(
+                        account.externalSigner.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,

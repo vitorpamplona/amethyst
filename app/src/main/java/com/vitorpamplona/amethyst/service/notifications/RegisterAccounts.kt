@@ -4,7 +4,6 @@ import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.Dispatchers
@@ -25,10 +24,6 @@ class RegisterAccounts(
         return accounts.mapNotNull {
             val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
             if (acc != null && (acc.isWriteable() || acc.loginWithExternalSigner)) {
-                if (acc.loginWithExternalSigner) {
-                    ExternalSignerUtils.account = acc
-                }
-
                 val readRelays = acc.userProfile().latestContactList?.relays() ?: acc.backupContactList?.relays()
 
                 val relayToUse = readRelays?.firstNotNullOfOrNull { if (it.value.read) it.key else null }

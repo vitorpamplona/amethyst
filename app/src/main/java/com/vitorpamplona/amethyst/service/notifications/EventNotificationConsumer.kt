@@ -44,10 +44,9 @@ class EventNotificationConsumer(private val applicationContext: Context) {
     private suspend fun consumeIfMatchesAccount(pushWrappedEvent: GiftWrapEvent, account: Account) {
         val key = account.keyPair.privKey
         if (account.loginWithExternalSigner) {
-            ExternalSignerUtils.account = account
             var cached = ExternalSignerUtils.cachedDecryptedContent[pushWrappedEvent.id]
             if (cached == null) {
-                ExternalSignerUtils.decrypt(
+                account.externalSigner.decrypt(
                     pushWrappedEvent.content,
                     pushWrappedEvent.pubKey,
                     pushWrappedEvent.id,
@@ -101,7 +100,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                 } else if (account.loginWithExternalSigner) {
                     var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        ExternalSignerUtils.decrypt(
+                        account.externalSigner.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,
@@ -127,7 +126,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                 } else if (account.loginWithExternalSigner) {
                     var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
                     if (cached == null) {
-                        ExternalSignerUtils.decrypt(
+                        account.externalSigner.decrypt(
                             event.content,
                             event.pubKey,
                             event.id,

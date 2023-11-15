@@ -11,7 +11,6 @@ import coil.disk.DiskCache
 import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -45,7 +44,6 @@ object ServiceManager {
 
     private fun start(account: Account) {
         this.account = account
-        ExternalSignerUtils.account = account
         start()
     }
 

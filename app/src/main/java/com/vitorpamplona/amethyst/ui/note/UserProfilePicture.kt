@@ -504,7 +504,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
+                            accountViewModel.account.externalSigner.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
@@ -527,7 +527,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
+                            accountViewModel.account.externalSigner.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
@@ -551,7 +551,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
+                            accountViewModel.account.externalSigner.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""
@@ -577,7 +577,7 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     scope.launch(Dispatchers.IO) {
                         if (accountViewModel.loggedInWithExternalSigner()) {
                             val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
+                            accountViewModel.account.externalSigner.decrypt(
                                 bookmarks?.content ?: "",
                                 accountViewModel.account.keyPair.pubKey.toHexKey(),
                                 bookmarks?.id ?: ""

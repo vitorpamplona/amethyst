@@ -21,7 +21,7 @@ object BookmarkPrivateFeedFilter : FeedFilter<Note>() {
             if (id != null) {
                 val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
                 if (decryptedContent == null) {
-                    ExternalSignerUtils.decryptBookmark(
+                    account.externalSigner.decryptBookmark(
                         bookmarks.content,
                         account.keyPair.pubKey.toHexKey(),
                         id
