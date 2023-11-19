@@ -1427,13 +1427,14 @@ fun showCount(count: Int?): String {
     return when {
         count >= 1000000000 -> "${(count / 1000000000f).roundToInt()}G"
         count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
-        count >= 1000 -> "${(count / 1000f).roundToInt()}k"
+        count >= 10000 -> "${(count / 1000f).roundToInt()}k"
         else -> "$count"
     }
 }
 
 val OneGiga = BigDecimal(1000000000)
 val OneMega = BigDecimal(1000000)
+val TenKilo = BigDecimal(10000)
 val OneKilo = BigDecimal(1000)
 
 var dfG: DecimalFormat = DecimalFormat("#.0G")
@@ -1446,9 +1447,9 @@ fun showAmount(amount: BigDecimal?): String {
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(1, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(1, RoundingMode.HALF_UP))
-        amount >= OneKilo -> dfK.format(amount.div(OneKilo).setScale(1, RoundingMode.HALF_UP))
+        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
         else -> dfN.format(amount)
     }
 }

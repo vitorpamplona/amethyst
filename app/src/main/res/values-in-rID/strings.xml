@@ -40,8 +40,8 @@
     <string name="login_with_a_private_key_to_be_able_to_show_word">Anda memakai kunci publik dan kunci publik hanya dapat membaca saja. Silahkan login dengan kunci privat agar dapat menampilkan kata atau kalimat</string>
     <string name="zaps">Zap</string>
     <string name="view_count">Lihat jumlah</string>
-    <string name="boost">Kirim</string>
-    <string name="boosted">terkirim</string>
+    <string name="boost">Sebarkan</string>
+    <string name="boosted">disebarkan</string>
     <string name="quote">Kutip</string>
     <string name="new_amount_in_sats">Jumlah baru dalam sat</string>
     <string name="add">Tambah</string>
@@ -185,11 +185,11 @@
     <string name="mark_all_new_as_read">Tandai semua yang baru sebagai telah dibaca</string>
     <string name="mark_all_as_read">Tandai semua sebagai telah dibaca</string>
     <string name="backup_keys">Kunci Cadangan</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Cadangan kunci dan tips
-        \n\nAkun anda diamankan dengan kunci rahasia. Kunci ini adalah teks acak yang diawali dengan **nsec1**. Siapapun yang memiliki kunci rahasia anda bisa publikasikan konten menggunakan identitas Anda.
-        \n\n- **Jangan** simpan kunci rahasia anda di situs atau aplikasi yang tidak anda kenali
-        \n- Pengembang Amethyst **tidak akan pernah** meminta kunci rahasiamu.
-        \n- **Simpan** kunci rahasia anda dengan aman untuk pemulihan akun. Kami merekomendasikan menggunakan pengelola kata sandi.
+    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Kiat Pencadangan dan Keamanan Kunci
+        \n\nAkun Anda diamankan dengan kunci rahasia. Kunci ini berupa string acak panjang yang dimulai dengan **nsec1**. Siapa pun yang memiliki akses ke kunci rahasia Anda dapat mempublikasikan konten menggunakan identitas Anda.
+        \n\n- **Jangan** memasukkan kunci rahasia Anda ke situs web atau aplikasi apa pun yang tidak Anda percayai.
+        \n- Pengembang Amethyst **tidak akan pernah** meminta kunci rahasia Anda.
+        \n- **Simpanlah** cadangan kunci rahasia Anda dengan aman untuk pemulihan akun. Kami sarankan menggunakan aplikasi pengelola kata sandi.
     </string>
     <string name="secret_key_copied_to_clipboard">Kunci rahasia (nsec) telah disalin ke papan klip</string>
     <string name="copy_my_secret_key">Salin kunci rahasia saya</string>

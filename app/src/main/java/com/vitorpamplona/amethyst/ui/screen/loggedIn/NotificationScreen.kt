@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.OneGiga
 import com.vitorpamplona.amethyst.ui.note.OneKilo
 import com.vitorpamplona.amethyst.ui.note.OneMega
+import com.vitorpamplona.amethyst.ui.note.TenKilo
 import com.vitorpamplona.amethyst.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -288,7 +289,7 @@ fun showAmountAxis(amount: BigDecimal?): String {
     return when {
         amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
         amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
         else -> dfN.format(amount)
     }
 }
