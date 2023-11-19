@@ -152,7 +152,7 @@ class ExternalSignerLauncher(
     }
 
     fun decrypt(encryptedContent: String, pubKey: HexKey, signerType: SignerType = SignerType.NIP04_DECRYPT, onReady: (String)-> Unit) {
-        val id = (encryptedContent + pubKey).hashCode().toString()
+        val id = (encryptedContent + pubKey + onReady.toString()).hashCode().toString()
         val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
         if (result == null) {
             openSignerApp(
@@ -168,7 +168,7 @@ class ExternalSignerLauncher(
     }
 
     fun encrypt(decryptedContent: String, pubKey: HexKey, signerType: SignerType = SignerType.NIP04_ENCRYPT, onReady: (String)-> Unit) {
-        val id = (decryptedContent + pubKey).hashCode().toString()
+        val id = (decryptedContent + pubKey + onReady.toString()).hashCode().toString()
         val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
         if (result == null) {
             openSignerApp(

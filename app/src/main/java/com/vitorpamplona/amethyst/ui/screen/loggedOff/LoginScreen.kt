@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.SignerType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -108,6 +109,7 @@ fun LoginPage(
 
     if (loginWithExternalSigner) {
         val externalSignerLauncher = remember { ExternalSignerLauncher("") }
+        val id = remember { UUID.randomUUID().toString() }
 
         val launcher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult(),
@@ -159,8 +161,9 @@ fun LoginPage(
                 "",
                 SignerType.GET_PUBLIC_KEY,
                 "",
-                ""
+                id
             ) { pubkey ->
+                println("AAAA- COME BACK")
                 key.value = TextFieldValue(pubkey)
                 if (!acceptedTerms.value) {
                     termsAcceptanceIsRequired =
