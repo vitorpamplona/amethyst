@@ -11,6 +11,8 @@ import com.vitorpamplona.quartz.crypto.Nip44Version
 import com.vitorpamplona.quartz.crypto.decodeNIP44
 import com.vitorpamplona.quartz.crypto.encodeNIP44
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
+import java.util.UUID
 
 @Immutable
 class SealedGossipEvent(
@@ -24,68 +26,37 @@ class SealedGossipEvent(
     @Transient
     private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
-    fun cachedGossip(privKey: ByteArray): Event? {
-        val hex = privKey.toHexKey()
-        if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
-
-        val gossip = unseal(privKey = privKey)
-        val event = gossip?.mergeWith(this)
-        if (event is WrappedEvent) {
-            event.host = host ?: this
+    fun cachedGossip(signer: NostrSigner, onReady: (Event) -> Unit) {
+        cachedInnerEvent[signer.pubKey]?.let {
+            onReady(it)
+            return
         }
 
-        cachedInnerEvent = cachedInnerEvent + Pair(hex, event)
-        return event
-    }
+        unseal(signer) { gossip ->
+            val event = gossip.mergeWith(this)
+            if (event is WrappedEvent) {
+                event.host = host ?: this
+            }
 
-    fun cachedGossip(pubKey: ByteArray, decryptedContent: String): Event? {
-        val hex = pubKey.toHexKey()
-        if (cachedInnerEvent.contains(hex)) return cachedInnerEvent[hex]
-
-        val gossip = unseal(decryptedContent)
-        val event = gossip?.mergeWith(this)
-        if (event is WrappedEvent) {
-            event.host = host ?: this
+            cachedInnerEvent = cachedInnerEvent + Pair(signer.pubKey, event)
+            onReady(event)
         }
-
-        cachedInnerEvent = cachedInnerEvent + Pair(hex, event)
-        return event
     }
 
-    fun unseal(privKey: ByteArray): Gossip? = try {
-        plainContent(privKey)?.let { Gossip.fromJson(it) }
-    } catch (e: Exception) {
-        Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
-        null
-    }
-
-    fun unseal(decryptedContent: String): Gossip? = try {
-        plainContent(decryptedContent)?.let { Gossip.fromJson(it) }
-    } catch (e: Exception) {
-        Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
-        null
-    }
-
-    private fun plainContent(decryptedContent: String): String? {
-        if (decryptedContent.isEmpty()) return null
-        return decryptedContent
-    }
-
-    private fun plainContent(privKey: ByteArray): String? {
-        if (content.isEmpty()) return null
-
-        return try {
-            val toDecrypt = decodeNIP44(content) ?: return null
-
-            return when (toDecrypt.v) {
-                Nip44Version.NIP04.versionCode -> CryptoUtils.decryptNIP04(toDecrypt, privKey, pubKey.hexToByteArray())
-                Nip44Version.NIP44.versionCode -> CryptoUtils.decryptNIP44(toDecrypt, privKey, pubKey.hexToByteArray())
-                else -> null
+    private fun unseal(signer: NostrSigner, onReady: (Gossip) -> Unit) {
+        try {
+            plainContent(signer) {
+                onReady(Gossip.fromJson(it))
             }
         } catch (e: Exception) {
-            Log.w("GossipEvent", "Error decrypting the message ${e.message}")
-            null
+            Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
         }
+    }
+
+    private fun plainContent(signer: NostrSigner, onReady: (String) -> Unit) {
+        if (content.isEmpty()) return
+
+        signer.nip44Decrypt(content, pubKey, onReady)
     }
 
     companion object {
@@ -94,49 +65,27 @@ class SealedGossipEvent(
         fun create(
             event: Event,
             encryptTo: HexKey,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): SealedGossipEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (SealedGossipEvent) -> Unit
+        ) {
             val gossip = Gossip.create(event)
-            return create(gossip, encryptTo, privateKey, createdAt)
+            create(gossip, encryptTo, signer, createdAt, onReady)
         }
 
         fun create(
             gossip: Gossip,
             encryptTo: HexKey,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.randomWithinAWeek()
-        ): SealedGossipEvent {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP44(privateKey, encryptTo.hexToByteArray())
-
-            val content = encodeNIP44(
-                CryptoUtils.encryptNIP44(
-                    Gossip.toJson(gossip),
-                    sharedSecret
-                )
-            )
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.randomWithinAWeek(),
+            onReady: (SealedGossipEvent) -> Unit
+        ) {
+            val msg = Gossip.toJson(gossip)
             val tags = listOf<List<String>>()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return SealedGossipEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
-        }
 
-        fun create(
-            encryptedContent: String,
-            pubKey: HexKey,
-            createdAt: Long = TimeUtils.randomWithinAWeek()
-        ): SealedGossipEvent {
-            val tags = listOf<List<String>>()
-            val id = generateId(pubKey, createdAt, kind, tags, encryptedContent)
-            return SealedGossipEvent(id.toHexKey(), pubKey, createdAt, tags, encryptedContent, "")
-        }
-
-        fun create(
-            unsignedEvent: SealedGossipEvent,
-            signature: String
-        ): SealedGossipEvent {
-            return SealedGossipEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.nip44Encrypt(msg, encryptTo) { content ->
+                signer.sign(createdAt, kind, tags, content, onReady)
+            }
         }
     }
 }

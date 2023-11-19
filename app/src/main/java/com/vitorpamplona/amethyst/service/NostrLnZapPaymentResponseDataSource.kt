@@ -7,12 +7,13 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 class NostrLnZapPaymentResponseDataSource(
     private val fromServiceHex: String,
     private val toUserHex: String,
     private val replyingToHex: String,
-    private val authSigningKey: ByteArray
+    private val authSigner: NostrSigner
 ) : NostrDataSource("LnZapPaymentResponseFeed") {
 
     val feedTypes = setOf(FeedType.WALLET_CONNECT)
@@ -44,10 +45,11 @@ class NostrLnZapPaymentResponseDataSource(
     override fun auth(relay: Relay, challenge: String) {
         super.auth(relay, challenge)
 
-        val event = RelayAuthEvent.create(relay.url, challenge, "", authSigningKey)
-        Client.send(
-            event,
-            relay.url
-        )
+        RelayAuthEvent.create(relay.url, challenge, authSigner) {
+            Client.send(
+                it,
+                relay.url
+            )
+        }
     }
 }

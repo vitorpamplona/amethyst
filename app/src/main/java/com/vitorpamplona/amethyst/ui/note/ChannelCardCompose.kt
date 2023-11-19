@@ -45,7 +45,6 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
@@ -626,11 +625,11 @@ fun LoadModerators(
                 }
             }
 
-            val followingKeySet = accountViewModel.account.selectedUsersFollowList(accountViewModel.account.defaultDiscoveryFollowList)
+            val followingKeySet = accountViewModel.account.liveDiscoveryFollowLists.value?.users
             val allParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
 
             val newParticipantUsers = if (followingKeySet == null) {
-                val allFollows = accountViewModel.account.selectedUsersFollowList(KIND3_FOLLOWS)
+                val allFollows = accountViewModel.account.userProfile().cachedFollowingKeySet()
                 val followingParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hosts)
 
                 (hosts + followingParticipants + (allParticipants - followingParticipants)).toImmutableList()
@@ -676,11 +675,12 @@ private fun LoadParticipants(
                 } ?: emptyList<User>()
                 )
 
-            val followingKeySet = accountViewModel.account.selectedUsersFollowList(accountViewModel.account.defaultDiscoveryFollowList)
+            val followingKeySet = accountViewModel.account.liveDiscoveryFollowLists.value?.users
+
             val allParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hostsAuthor)
 
             val newParticipantUsers = if (followingKeySet == null) {
-                val allFollows = accountViewModel.account.selectedUsersFollowList(KIND3_FOLLOWS)
+                val allFollows = accountViewModel.account.userProfile().cachedFollowingKeySet()
                 val followingParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hostsAuthor)
 
                 (hosts + followingParticipants + (allParticipants - followingParticipants)).toImmutableList()
@@ -726,11 +726,11 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
 
     LaunchedEffect(key1 = channelUpdates) {
         launch(Dispatchers.IO) {
-            val followingKeySet = accountViewModel.account.selectedUsersFollowList(accountViewModel.account.defaultDiscoveryFollowList)
+            val followingKeySet = accountViewModel.account.liveDiscoveryFollowLists.value?.users
             val allParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).toImmutableList()
 
             val newParticipantUsers = if (followingKeySet == null) {
-                val allFollows = accountViewModel.account.selectedUsersFollowList(KIND3_FOLLOWS)
+                val allFollows = accountViewModel.account.userProfile().cachedFollowingKeySet()
                 val followingParticipants = ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).toList()
 
                 (followingParticipants + (allParticipants - followingParticipants)).toImmutableList()

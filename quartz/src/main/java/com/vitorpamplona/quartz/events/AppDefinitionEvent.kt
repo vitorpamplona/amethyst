@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.TimeUtils
 import java.io.ByteArrayInputStream
 
 @Immutable
@@ -46,5 +48,14 @@ class AppDefinitionEvent(
 
     companion object {
         const val kind = 31990
+
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AppDefinitionEvent) -> Unit
+        ) {
+            val tags = mutableListOf<List<String>>()
+            signer.sign(createdAt, kind, tags, "", onReady)
+        }
     }
 }

@@ -9,13 +9,23 @@ import android.util.Log
 import coil.ImageLoader
 import coil.disk.DiskCache
 import com.vitorpamplona.amethyst.service.playback.VideoCache
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.time.measureTimedValue
 
 class Amethyst : Application() {
+    val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    override fun onTerminate() {
+        super.onTerminate()
+        applicationIOScope.cancel()
+    }
+
     val videoCache: VideoCache by lazy {
         val newCache = VideoCache()
         newCache.initFileCache(this)

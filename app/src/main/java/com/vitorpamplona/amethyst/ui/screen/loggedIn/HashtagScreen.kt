@@ -142,14 +142,10 @@ fun HashtagActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    accountViewModel.unfollowHashtag(tag)
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_unfollow
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_unfollow
+                )
             } else {
                 accountViewModel.unfollowHashtag(tag)
             }
@@ -157,14 +153,10 @@ fun HashtagActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    accountViewModel.followHashtag(tag)
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_follow
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_follow
+                )
             } else {
                 accountViewModel.followHashtag(tag)
             }

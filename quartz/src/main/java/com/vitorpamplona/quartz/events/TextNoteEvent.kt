@@ -9,6 +9,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class TextNoteEvent(
@@ -38,9 +39,10 @@ class TextNoteEvent(
             root: String?,
             directMentions: Set<HexKey>,
             geohash: String? = null,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): TextNoteEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (TextNoteEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 if (it == root) {
@@ -95,17 +97,7 @@ class TextNoteEvent(
                 tags.add(listOf("g", it))
             }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return TextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: TextNoteEvent, signature: String
-        ): TextNoteEvent {
-
-            return TextNoteEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
     }
 }

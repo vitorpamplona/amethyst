@@ -305,14 +305,10 @@ fun MutedWordActionOptions(
     if (isMutedWord == true) {
         ShowWordButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    accountViewModel.showWord(word)
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_show_word
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_show_word
+                )
             } else {
                 accountViewModel.showWord(word)
             }
@@ -320,14 +316,10 @@ fun MutedWordActionOptions(
     } else {
         HideWordButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    accountViewModel.hideWord(word)
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_hide_word
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_hide_word
+                )
             } else {
                 accountViewModel.hideWord(word)
             }

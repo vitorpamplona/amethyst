@@ -114,9 +114,9 @@ fun VideoScreen(
 
 @Composable
 fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountViewModel: AccountViewModel) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, accountState?.account?.defaultStoriesFollowList) {
+    LaunchedEffect(accountViewModel, listState) {
         NostrVideoDataSource.resetFilters()
         videoFeedView.checkKeysInvalidateDataAndSendToTop()
     }

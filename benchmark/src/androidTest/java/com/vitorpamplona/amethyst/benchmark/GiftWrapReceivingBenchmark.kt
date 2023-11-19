@@ -13,6 +13,7 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.Gossip
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import junit.framework.TestCase.assertNotNull
 import org.junit.Rule
 import org.junit.Test
@@ -43,7 +44,7 @@ class GiftWrapReceivingBenchmark {
             markAsSensitive = true,
             zapRaiserAmount = 10000,
             geohash = null,
-            keyPair = sender
+            signer = NostrSignerInternal(keyPair = sender)
         )
     }
 

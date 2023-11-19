@@ -409,7 +409,9 @@ class UserLiveSet(u: User) {
     val relays = innerRelays.map { it }
     val relayInfo = innerRelayInfo.map { it }
     val zaps = innerZaps.map { it }
-    val bookmarks = innerBookmarks.map { it }
+    val bookmarks = innerBookmarks.map {
+        it
+    }
     val statuses = innerStatuses.map { it }
 
     val profilePictureChanges = innerMetadata.map {

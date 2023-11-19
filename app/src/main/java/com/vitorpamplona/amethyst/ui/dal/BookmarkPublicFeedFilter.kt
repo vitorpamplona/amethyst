@@ -4,11 +4,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 
-object BookmarkPublicFeedFilter : FeedFilter<Note>() {
-    lateinit var account: Account
-
+class BookmarkPublicFeedFilter(val account: Account) : FeedFilter<Note>() {
     override fun feedKey(): String {
-        return BookmarkPrivateFeedFilter.account.userProfile().latestBookmarkList?.id ?: ""
+        return account.userProfile().latestBookmarkList?.id ?: ""
     }
     override fun feed(): List<Note> {
         val bookmarks = account.userProfile().latestBookmarkList

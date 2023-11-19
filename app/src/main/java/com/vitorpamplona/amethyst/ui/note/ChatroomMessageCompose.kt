@@ -630,17 +630,28 @@ private fun RenderRegularTextNote(
     nav: (String) -> Unit
 ) {
     val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
-    val eventContent by remember { mutableStateOf(accountViewModel.decrypt(note)) }
     val modifier = remember { Modifier.padding(top = 5.dp) }
 
-    if (eventContent != null) {
-        SensitivityWarning(
-            note = note,
-            accountViewModel = accountViewModel
-        ) {
+    LoadDecryptedContentOrNull(note = note, accountViewModel = accountViewModel) { eventContent ->
+        if (eventContent != null) {
+            SensitivityWarning(
+                note = note,
+                accountViewModel = accountViewModel
+            ) {
+                TranslatableRichTextViewer(
+                    content = eventContent!!,
+                    canPreview = canPreview,
+                    modifier = modifier,
+                    tags = tags,
+                    backgroundColor = backgroundBubbleColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+        } else {
             TranslatableRichTextViewer(
-                content = eventContent!!,
-                canPreview = canPreview,
+                content = stringResource(id = R.string.could_not_decrypt_the_message),
+                canPreview = true,
                 modifier = modifier,
                 tags = tags,
                 backgroundColor = backgroundBubbleColor,
@@ -648,16 +659,6 @@ private fun RenderRegularTextNote(
                 nav = nav
             )
         }
-    } else {
-        TranslatableRichTextViewer(
-            content = stringResource(id = R.string.could_not_decrypt_the_message),
-            canPreview = true,
-            modifier = modifier,
-            tags = tags,
-            backgroundColor = backgroundBubbleColor,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
     }
 }
 

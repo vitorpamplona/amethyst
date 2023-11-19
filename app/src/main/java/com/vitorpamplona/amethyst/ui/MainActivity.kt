@@ -25,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
@@ -53,15 +52,15 @@ import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
     private val isOnMobileDataState = mutableStateOf(false)
+    private val isOnWifiDataState = mutableStateOf(false)
 
     // Service Manager is only active when the activity is active.
-    private val serviceManager = ServiceManager()
+    val serviceManager = ServiceManager()
+    private var shouldPauseService = true
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
-        ExternalSignerUtils.start(this)
-
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -97,6 +96,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun prepareToLaunchSigner() {
+        shouldPauseService = false
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
@@ -104,8 +107,8 @@ class MainActivity : AppCompatActivity() {
         // starts muted every time
         DefaultMutedSetting.value = true
 
-        // Only starts after login
-        if (serviceManager.shouldPauseService) {
+        // Keep connection alive if it's calling the signer app
+        if (shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
                 serviceManager.justStart()
             }
@@ -116,6 +119,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         (getSystemService(ConnectivityManager::class.java) as ConnectivityManager).registerDefaultNetworkCallback(networkCallback)
+
+        // resets state until next External Signer Call
+        shouldPauseService = true
     }
 
     override fun onPause() {
@@ -128,7 +134,7 @@ class MainActivity : AppCompatActivity() {
         }
         // }
 
-        if (serviceManager.shouldPauseService) {
+        if (shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
                 serviceManager.pauseForGood()
             }
@@ -166,7 +172,7 @@ class MainActivity : AppCompatActivity() {
             super.onAvailable(network)
 
             GlobalScope.launch(Dispatchers.IO) {
-                serviceManager.forceRestartIfItShould()
+                serviceManager.forceRestart()
             }
         }
 
@@ -182,10 +188,24 @@ class MainActivity : AppCompatActivity() {
                 val isOnWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                 Log.d("ServiceManager NetworkCallback", "onCapabilitiesChanged: ${network.networkHandle} hasMobileData $isOnMobileData hasWifi $isOnWifi")
 
+                var changedNetwork = false
+
                 if (isOnMobileDataState.value != isOnMobileData) {
                     isOnMobileDataState.value = isOnMobileData
 
-                    serviceManager.forceRestartIfItShould()
+                    changedNetwork = true
+                }
+
+                if (isOnWifiDataState.value != isOnWifi) {
+                    isOnWifiDataState.value = isOnWifi
+
+                    changedNetwork = true
+                }
+
+                if (changedNetwork) {
+                    GlobalScope.launch(Dispatchers.IO) {
+                        serviceManager.forceRestart()
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 const val POLL_OPTION = "poll_option"
 const val VALUE_MAXIMUM = "value_maximum"
@@ -48,8 +49,7 @@ class PollNoteEvent(
             replyTos: List<String>?,
             mentions: List<String>?,
             addresses: List<ATag>?,
-            pubKey: HexKey,
-            privateKey: ByteArray?,
+            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             pollOptions: Map<Int, String>,
             valueMaximum: Int?,
@@ -59,8 +59,9 @@ class PollNoteEvent(
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
-            geohash: String? = null
-        ): PollNoteEvent {
+            geohash: String? = null,
+            onReady: (PollNoteEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 tags.add(listOf("e", it))
@@ -99,15 +100,7 @@ class PollNoteEvent(
                 tags.add(listOf("g", it))
             }
 
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
-            return PollNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: PollNoteEvent, signature: String
-        ): PollNoteEvent {
-            return PollNoteEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
     }
 }

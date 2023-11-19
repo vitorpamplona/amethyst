@@ -7,6 +7,7 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 abstract class GeneralListEvent(
@@ -18,6 +19,9 @@ abstract class GeneralListEvent(
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    @Transient
+    private var privateTagsCache: List<List<String>>? = null
+
     fun category() = dTag()
     fun bookmarkedPosts() = taggedEvents()
     fun bookmarkedPeople() = taggedUsers()
@@ -26,80 +30,73 @@ abstract class GeneralListEvent(
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
     fun nameOrTitle() = name() ?: title()
 
-    fun plainContent(privKey: ByteArray): String? {
-        if (content.isBlank()) return null
-
-        return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey.hexToByteArray())
-
-            return CryptoUtils.decryptNIP04(content, sharedSecret)
-        } catch (e: Exception) {
-            Log.w("GeneralList", "Error decrypting the message ${e.message} for ${dTag()}")
-            null
-        }
-    }
-
-    @Transient
-    private var privateTagsCache: List<List<String>>? = null
-
-    fun privateTags(privKey: ByteArray): List<List<String>>? {
-        if (privateTagsCache != null) {
-            return privateTagsCache
-        }
-
-        privateTagsCache = try {
-            plainContent(privKey)?.let { mapper.readValue<List<List<String>>>(it) }
-        } catch (e: Throwable) {
-            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
-            null
-        }
+    fun cachedPrivateTags(): List<List<String>>? {
         return privateTagsCache
     }
 
-    fun privateTags(content: String): List<List<String>>? {
-        if (privateTagsCache != null) {
-            return privateTagsCache
+    fun privateTags(signer: NostrSigner, onReady: (List<List<String>>) -> Unit) {
+        if (content.isBlank()) return
+
+        privateTagsCache?.let {
+            onReady(it)
+            return
         }
 
-        privateTagsCache = try {
-            content.let { mapper.readValue<List<List<String>>>(it) }
+        try {
+            signer.nip04Decrypt(content, pubKey) {
+                privateTagsCache = mapper.readValue<List<List<String>>>(it)
+                privateTagsCache?.let {
+                    onReady(it)
+                }
+            }
         } catch (e: Throwable) {
             Log.w("GeneralList", "Error parsing the JSON ${e.message}")
-            null
         }
-        return privateTagsCache
     }
 
-    fun privateTagsOrEmpty(privKey: ByteArray?): List<List<String>> {
-        if (privKey == null) return emptyList()
-        return privateTags(privKey) ?: emptyList()
+    fun privateTagsOrEmpty(signer: NostrSigner, onReady: (List<List<String>>) -> Unit) {
+        privateTags(signer, onReady)
     }
 
-    fun privateTagsOrEmpty(content: String): List<List<String>> {
-        return privateTags(content) ?: emptyList()
+    fun privateTaggedUsers(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(filterUsers(it))
+    }
+    fun privateHashtags(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(filterHashtags(it))
+    }
+    fun privateGeohashes(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(filterGeohashes(it))
+    }
+    fun privateTaggedEvents(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(filterEvents(it))
+    }
+    fun privateTaggedAddresses(signer: NostrSigner, onReady: (List<ATag>) -> Unit) = privateTags(signer) {
+        onReady(filterAddresses(it))
     }
 
-    fun privateTaggedUsers(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "p" }?.map { it[1] }
-    fun privateTaggedUsers(content: String) = privateTags(content)?.filter { it.size > 1 && it[0] == "p" }?.map { it[1] }
-    fun privateHashtags(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }
-    fun privateHashtags(content: String) = privateTags(content)?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }
-    fun privateGeohashes(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "g" }?.map { it[1] }
-    fun privateGeohashes(content: String) = privateTags(content)?.filter { it.size > 1 && it[0] == "g" }?.map { it[1] }
-    fun privateTaggedEvents(privKey: ByteArray) = privateTags(privKey)?.filter { it.size > 1 && it[0] == "e" }?.map { it[1] }
-    fun privateTaggedEvents(content: String) = privateTags(content)?.filter { it.size > 1 && it[0] == "e" }?.map { it[1] }
-
-    fun privateTaggedAddresses(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
-        val aTagValue = it.getOrNull(1)
-        val relay = it.getOrNull(2)
-
-        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    fun filterUsers(tags: List<List<String>>): List<String> {
+        return tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     }
 
-    fun privateTaggedAddresses(content: String) = privateTags(content)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
-        val aTagValue = it.getOrNull(1)
-        val relay = it.getOrNull(2)
+    fun filterHashtags(tags: List<List<String>>): List<String> {
+        return tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
+    }
 
-        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    fun filterGeohashes(tags: List<List<String>>): List<String> {
+        return tags.filter { it.size > 1 && it[0] == "g" }.map { it[1] }
+    }
+
+    fun filterEvents(tags: List<List<String>>): List<String> {
+        return tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    }
+
+    fun filterAddresses(tags: List<List<String>>): List<ATag> {
+        return tags.filter { it.firstOrNull() == "a" }.mapNotNull {
+            val aTagValue = it.getOrNull(1)
+            val relay = it.getOrNull(2)
+
+            if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+        }
     }
 
     companion object {
@@ -108,9 +105,9 @@ abstract class GeneralListEvent(
             privUsers: List<String>? = null,
             privAddresses: List<ATag>? = null,
 
-            privateKey: ByteArray,
-            pubKey: ByteArray
-        ): String {
+            signer: NostrSigner,
+            onReady: (String) -> Unit
+        ) {
             val privTags = mutableListOf<List<String>>()
             privEvents?.forEach {
                 privTags.add(listOf("e", it))
@@ -121,23 +118,21 @@ abstract class GeneralListEvent(
             privAddresses?.forEach {
                 privTags.add(listOf("a", it.toTag()))
             }
-            val msg = mapper.writeValueAsString(privTags)
 
-            return CryptoUtils.encryptNIP04(
-                msg,
-                privateKey,
-                pubKey
-            )
+            return encryptTags(privTags, signer, onReady)
         }
 
         fun encryptTags(
             privateTags: List<List<String>>? = null,
-            privateKey: ByteArray
-        ): String {
-            return CryptoUtils.encryptNIP04(
-                msg = mapper.writeValueAsString(privateTags),
-                privateKey = privateKey,
-                pubKey = CryptoUtils.pubkeyCreate(privateKey)
+            signer: NostrSigner,
+            onReady: (String) -> Unit
+        ) {
+            val msg = mapper.writeValueAsString(privateTags)
+
+            signer.nip04Encrypt(
+                msg,
+                signer.pubKey,
+                onReady
             )
         }
     }

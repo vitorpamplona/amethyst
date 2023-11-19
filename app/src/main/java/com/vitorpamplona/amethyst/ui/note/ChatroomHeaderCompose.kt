@@ -262,11 +262,6 @@ private fun UserRoomCompose(
             note.createdAt()
         }
     }
-    val content by remember(note) {
-        mutableStateOf(
-            accountViewModel.decrypt(note)
-        )
-    }
 
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
@@ -274,22 +269,24 @@ private fun UserRoomCompose(
         }
     }
 
-    ChannelName(
-        channelPicture = {
-            NonClickableUserPictures(
-                users = room.users,
-                accountViewModel = accountViewModel,
-                size = Size55dp
-            )
-        },
-        channelTitle = {
-            RoomNameDisplay(room, it, accountViewModel)
-        },
-        channelLastTime = createAt,
-        channelLastContent = content,
-        hasNewMessages = hasNewMessages,
-        onClick = { nav(route) }
-    )
+    LoadDecryptedContentOrNull(note, accountViewModel) { content ->
+        ChannelName(
+            channelPicture = {
+                NonClickableUserPictures(
+                    users = room.users,
+                    accountViewModel = accountViewModel,
+                    size = Size55dp
+                )
+            },
+            channelTitle = {
+                RoomNameDisplay(room, it, accountViewModel)
+            },
+            channelLastTime = createAt,
+            channelLastContent = content,
+            hasNewMessages = hasNewMessages,
+            onClick = { nav(route) }
+        )
+    }
 }
 
 @Composable

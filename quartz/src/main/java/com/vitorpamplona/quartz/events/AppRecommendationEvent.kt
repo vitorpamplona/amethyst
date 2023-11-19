@@ -3,6 +3,8 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class AppRecommendationEvent(
@@ -19,5 +21,14 @@ class AppRecommendationEvent(
 
     companion object {
         const val kind = 31989
+
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AppRecommendationEvent) -> Unit
+        ) {
+            val tags = mutableListOf<List<String>>()
+            signer.sign(createdAt, kind, tags, "", onReady)
+        }
     }
 }

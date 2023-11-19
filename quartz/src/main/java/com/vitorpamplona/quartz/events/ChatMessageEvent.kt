@@ -3,10 +3,8 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -62,10 +60,10 @@ class ChatMessageEvent(
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
             geohash: String? = null,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): ChatMessageEvent {
-            val content = msg
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChatMessageEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             to?.forEach {
                 tags.add(listOf("p", it))
@@ -92,17 +90,7 @@ class ChatMessageEvent(
                 tags.add(listOf("subject", it))
             }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, ClassifiedsEvent.kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return ChatMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: ChatMessageEvent,
-            signature: String
-        ): ChatMessageEvent {
-            return ChatMessageEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
     }
 }

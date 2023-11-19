@@ -4,7 +4,7 @@ import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.Dispatchers
@@ -16,24 +16,39 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class RegisterAccounts(
     private val accounts: List<AccountInfo>
 ) {
+    private fun recursiveAuthCreation(
+        notificationToken: String,
+        remainingTos: List<Pair<Account, String>>,
+        output: MutableList<RelayAuthEvent>,
+        onReady: (List<RelayAuthEvent>) -> Unit
+    ) {
+        if (remainingTos.isEmpty()) {
+            onReady(output)
+            return
+        }
+
+        val next = remainingTos.first()
+
+        next.first.createAuthEvent(next.second, notificationToken) {
+            output.add(it)
+            recursiveAuthCreation(notificationToken, remainingTos.filter { next != it }, output, onReady)
+        }
+    }
 
     // creates proof that it controls all accounts
     private suspend fun signEventsToProveControlOfAccounts(
         accounts: List<AccountInfo>,
-        notificationToken: String
-    ): List<RelayAuthEvent> {
-        return accounts.mapNotNull {
+        notificationToken: String,
+        onReady: (List<RelayAuthEvent>) -> Unit
+    ) {
+        val readyToSend = accounts.mapNotNull {
             val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
-            if (acc != null && (acc.isWriteable() || acc.loginWithExternalSigner)) {
-                if (acc.loginWithExternalSigner) {
-                    ExternalSignerUtils.account = acc
-                }
-
+            if (acc != null && acc.isWriteable()) {
                 val readRelays = acc.userProfile().latestContactList?.relays() ?: acc.backupContactList?.relays()
 
                 val relayToUse = readRelays?.firstNotNullOfOrNull { if (it.value.read) it.key else null }
                 if (relayToUse != null) {
-                    acc.createAuthEvent(relayToUse, notificationToken)
+                    Pair(acc, relayToUse)
                 } else {
                     null
                 }
@@ -41,6 +56,14 @@ class RegisterAccounts(
                 null
             }
         }
+
+        val listOfAuthEvents = mutableListOf<RelayAuthEvent>()
+        recursiveAuthCreation(
+            notificationToken,
+            readyToSend,
+            listOfAuthEvents,
+            onReady
+        )
     }
 
     fun postRegistrationEvent(events: List<RelayAuthEvent>) {
@@ -75,9 +98,10 @@ class RegisterAccounts(
     }
 
     suspend fun go(notificationToken: String) = withContext(Dispatchers.IO) {
-        postRegistrationEvent(
-            signEventsToProveControlOfAccounts(accounts, notificationToken)
-        )
+        signEventsToProveControlOfAccounts(accounts, notificationToken) {
+            postRegistrationEvent(it)
+        }
+
         PushNotificationUtils.hasInit = true
     }
 }

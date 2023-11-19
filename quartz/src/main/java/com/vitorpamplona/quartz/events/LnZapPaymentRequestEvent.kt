@@ -11,6 +11,7 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class LnZapPaymentRequestEvent(
@@ -28,24 +29,28 @@ class LnZapPaymentRequestEvent(
 
     fun walletServicePubKey() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun lnInvoice(privKey: ByteArray, pubkey: ByteArray): String? {
-        if (lnInvoice != null) {
-            return lnInvoice
+    fun talkingWith(oneSideHex: String): HexKey {
+        return if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
+    }
+
+    fun lnInvoice(signer: NostrSigner, onReady: (String) -> Unit) {
+        lnInvoice?.let {
+            onReady(it)
+            return
         }
 
-        return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubkey)
+        try {
+            signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
+                val payInvoiceMethod = mapper.readValue(jsonText, Request::class.java)
 
-            val jsonText = CryptoUtils.decryptNIP04(content, sharedSecret)
+                lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
 
-            val payInvoiceMethod = mapper.readValue(jsonText, Request::class.java)
-
-            lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
-
-            return lnInvoice
+                lnInvoice?.let {
+                    onReady(it)
+                }
+            }
         } catch (e: Exception) {
             Log.w("BookmarkList", "Error decrypting the message ${e.message}")
-            null
         }
     }
 
@@ -55,24 +60,21 @@ class LnZapPaymentRequestEvent(
         fun create(
             lnInvoice: String,
             walletServicePubkey: String,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): LnZapPaymentRequestEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (LnZapPaymentRequestEvent) -> Unit
+        ) {
             val serializedRequest = mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
-
-            val content = CryptoUtils.encryptNIP04(
-                serializedRequest,
-                privateKey,
-                walletServicePubkey.hexToByteArray()
-            )
 
             val tags = mutableListOf<List<String>>()
             tags.add(listOf("p", walletServicePubkey))
 
-            val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return LnZapPaymentRequestEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
+            signer.nip04Encrypt(
+                serializedRequest,
+                walletServicePubkey
+            ) { content ->
+                signer.sign(createdAt, kind, tags, content, onReady)
+            }
         }
     }
 }

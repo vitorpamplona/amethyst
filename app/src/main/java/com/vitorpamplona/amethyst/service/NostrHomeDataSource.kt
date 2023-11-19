@@ -1,7 +1,7 @@
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
@@ -19,42 +19,35 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     lateinit var account: Account
 
+    val scope = Amethyst.instance.applicationIOScope
     val latestEOSEs = EOSEAccount()
 
-    private val cacheListener: (UserState) -> Unit = {
-        invalidateFilters()
-    }
+    var job: Job? = null
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun start() {
-        if (this::account.isInitialized) {
-            GlobalScope.launch(Dispatchers.Main) {
-                account.userProfile().live().follows.observeForever(cacheListener)
+        job?.cancel()
+        job = account.scope.launch(Dispatchers.IO) {
+            account.liveHomeFollowLists.collect {
+                invalidateFilters()
             }
         }
         super.start()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun stop() {
         super.stop()
-        if (this::account.isInitialized) {
-            GlobalScope.launch(Dispatchers.Main) {
-                account.userProfile().live().follows.removeObserver(cacheListener)
-            }
-        }
+        job?.cancel()
     }
 
     fun createFollowAccountsFilter(): TypedFilter {
-        val follows = account.selectedUsersFollowList(account.defaultHomeFollowList)
+        val follows = account.liveHomeFollowLists.value?.users
         val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
 
         return TypedFilter(
@@ -76,13 +69,13 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                 ),
                 authors = followSet,
                 limit = 400,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList.value)?.relayList
             )
         )
     }
 
     fun createFollowTagsFilter(): TypedFilter? {
-        val hashToLoad = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val hashToLoad = account.liveHomeFollowLists.value?.hashtags ?: return null
 
         if (hashToLoad.isEmpty()) return null
 
@@ -96,13 +89,13 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     }.flatten()
                 ),
                 limit = 100,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList.value)?.relayList
             )
         )
     }
 
     fun createFollowGeohashesFilter(): TypedFilter? {
-        val hashToLoad = account.selectedGeohashesFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val hashToLoad = account.liveHomeFollowLists.value?.geotags ?: return null
 
         if (hashToLoad.isEmpty()) return null
 
@@ -116,13 +109,13 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     }.flatten()
                 ),
                 limit = 100,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList.value)?.relayList
             )
         )
     }
 
     fun createFollowCommunitiesFilter(): TypedFilter? {
-        val communitiesToLoad = account.selectedCommunitiesFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val communitiesToLoad = account.liveHomeFollowLists.value?.communities ?: return null
 
         if (communitiesToLoad.isEmpty()) return null
 
@@ -143,13 +136,13 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     "a" to communitiesToLoad.toList()
                 ),
                 limit = 100,
-                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList)?.relayList
+                since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultHomeFollowList.value)?.relayList
             )
         )
     }
 
     val followAccountChannel = requestNewChannel { time, relayUrl ->
-        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultHomeFollowList, relayUrl, time)
+        latestEOSEs.addOrUpdate(account.userProfile(), account.defaultHomeFollowList.value, relayUrl, time)
     }
 
     override fun updateChannelFilters() {

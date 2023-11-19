@@ -335,7 +335,7 @@ fun ZapVote(
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(bounded = false, radius = 24.dp),
             onClick = {
-                if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
+                if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
                         R.string.read_only_user,
                         R.string.login_with_a_private_key_to_be_able_to_send_zaps

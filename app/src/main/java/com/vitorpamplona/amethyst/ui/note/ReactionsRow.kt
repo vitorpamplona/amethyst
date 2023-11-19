@@ -114,7 +114,6 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -542,14 +541,10 @@ fun ReplyReaction(
             if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    onPress()
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_reply
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_reply
+                )
             }
         }
     ) {
@@ -849,14 +844,10 @@ private fun likeClick(
             R.string.no_reaction_type_setup_long_press_to_change
         )
     } else if (!accountViewModel.isWriteable()) {
-        if (accountViewModel.loggedInWithExternalSigner()) {
-            onWantsToSignReaction()
-        } else {
-            accountViewModel.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_like_posts
-            )
-        }
+        accountViewModel.toast(
+            R.string.read_only_user,
+            R.string.login_with_a_private_key_to_like_posts
+        )
     } else if (accountViewModel.account.reactionChoices.size == 1) {
         accountViewModel.reactToOrDelete(baseNote)
     } else if (accountViewModel.account.reactionChoices.size > 1) {
@@ -1067,7 +1058,7 @@ private fun zapClick(
             context.getString(R.string.error_dialog_zap_error),
             context.getString(R.string.no_zap_amount_setup_long_press_to_change)
         )
-    } else if (!accountViewModel.isWriteable() && !accountViewModel.loggedInWithExternalSigner()) {
+    } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toast(
             context.getString(R.string.error_dialog_zap_error),
             context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps)
@@ -1128,9 +1119,7 @@ private fun ObserveZapAmountText(
     LaunchedEffect(key1 = zapsState) {
         accountViewModel.calculateZapAmount(baseNote) { newZapAmount ->
             if (zapAmountTxt.value != newZapAmount) {
-                withContext(Dispatchers.Main) {
-                    zapAmountTxt.value = newZapAmount
-                }
+                zapAmountTxt.value = newZapAmount
             }
         }
     }

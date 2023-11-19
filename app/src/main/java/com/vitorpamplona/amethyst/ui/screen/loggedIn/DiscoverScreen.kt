@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -173,7 +172,8 @@ private fun RenderDiscoverFeed(
 
     Crossfade(
         targetState = feedState,
-        animationSpec = tween(durationMillis = 100)
+        animationSpec = tween(durationMillis = 100),
+        label = "RenderDiscoverFeed"
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
@@ -213,9 +213,9 @@ fun WatchAccountForDiscoveryScreen(
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, accountState?.account?.defaultDiscoveryFollowList) {
+    LaunchedEffect(accountViewModel, listState) {
         NostrDiscoveryDataSource.resetFilters()
         discoveryLiveFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoveryCommunityFeedViewModel.checkKeysInvalidateDataAndSendToTop()

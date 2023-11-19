@@ -2,13 +2,13 @@ package com.vitorpamplona.amethyst
 
 import android.os.Build
 import android.util.Log
+import androidx.compose.runtime.Stable
 import coil.Coil
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -27,21 +27,19 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.actions.ImageUploader
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@Stable
 class ServiceManager {
-    var shouldPauseService: Boolean = true // to not open amber in a loop trying to use auth relays and registering for notifications
     private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
 
     private fun start(account: Account) {
         this.account = account
-        ExternalSignerUtils.account = account
         start()
     }
 
@@ -55,7 +53,7 @@ class ServiceManager {
         val myAccount = account
 
         // Resets Proxy Use
-        HttpClient.start(account)
+        HttpClient.start(account?.proxy)
         OptOutFromFilters.start(account?.warnAboutPostsWithReports ?: true, account?.filterSpamFromStrangers ?: true)
         Coil.setImageLoader {
             Amethyst.instance.imageLoaderBuilder().components {
@@ -80,7 +78,6 @@ class ServiceManager {
             NostrChatroomListDataSource.account = myAccount
             NostrVideoDataSource.account = myAccount
             NostrDiscoveryDataSource.account = myAccount
-            ImageUploader.account = myAccount
 
             // Notification Elements
             NostrHomeDataSource.start()
@@ -171,10 +168,8 @@ class ServiceManager {
         }
     }
 
-    fun forceRestartIfItShould() {
-        if (shouldPauseService) {
-            forceRestart(null, true, true)
-        }
+    fun forceRestart() {
+        forceRestart(null, true, true)
     }
 
     fun justStart() {

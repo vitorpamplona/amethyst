@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class LongTextNoteEvent(
@@ -33,8 +34,14 @@ class LongTextNoteEvent(
     companion object {
         const val kind = 30023
 
-        fun create(msg: String, replyTos: List<String>?, mentions: List<String>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): LongTextNoteEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+        fun create(
+            msg: String,
+            replyTos: List<String>?,
+            mentions: List<String>?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (LongTextNoteEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             replyTos?.forEach {
                 tags.add(listOf("e", it))
@@ -42,9 +49,7 @@ class LongTextNoteEvent(
             mentions?.forEach {
                 tags.add(listOf("p", it))
             }
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return LongTextNoteEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
     }
 }

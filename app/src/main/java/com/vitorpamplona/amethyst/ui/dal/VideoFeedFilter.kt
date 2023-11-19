@@ -11,11 +11,11 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList
+        return account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList.value
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultStoriesFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {
@@ -30,12 +30,12 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
-        val isGlobal = account.defaultStoriesFollowList == GLOBAL_FOLLOWS
-        val isHiddenList = account.defaultStoriesFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        val isGlobal = account.defaultStoriesFollowList.value == GLOBAL_FOLLOWS
+        val isHiddenList = account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
 
-        val followingKeySet = account.selectedUsersFollowList(account.defaultStoriesFollowList) ?: emptySet()
-        val followingTagSet = account.selectedTagsFollowList(account.defaultStoriesFollowList) ?: emptySet()
-        val followingGeohashSet = account.selectedGeohashesFollowList(account.defaultStoriesFollowList) ?: emptySet()
+        val followingKeySet = account.liveStoriesFollowLists.value?.users ?: emptySet()
+        val followingTagSet = account.liveStoriesFollowLists.value?.hashtags ?: emptySet()
+        val followingGeohashSet = account.liveStoriesFollowLists.value?.geotags ?: emptySet()
 
         return collection
             .asSequence()

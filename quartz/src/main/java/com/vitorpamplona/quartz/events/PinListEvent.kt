@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class PinListEvent(
@@ -24,18 +25,16 @@ class PinListEvent(
 
         fun create(
             pins: List<String>,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): PinListEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PinListEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             pins.forEach {
                 tags.add(listOf("pin", it))
             }
 
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = CryptoUtils.sign(id, privateKey)
-            return PinListEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            signer.sign(createdAt, kind, tags, "", onReady)
         }
     }
 }

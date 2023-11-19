@@ -19,6 +19,7 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
 import java.util.*
@@ -403,11 +404,8 @@ open class Event(
             return CryptoUtils.sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
         }
 
-        fun create(privateKey: ByteArray, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = TimeUtils.now()): Event {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = Companion.generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey).toHexKey()
-            return Event(id.toHexKey(), pubKey, createdAt, kind, tags, content, sig)
+        fun create(signer: NostrSigner, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = TimeUtils.now(), onReady: (Event) -> Unit) {
+            return signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

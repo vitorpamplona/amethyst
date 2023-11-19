@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class BookmarkListEvent(
@@ -16,36 +17,156 @@ class BookmarkListEvent(
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient
-    var decryptedContent = ""
-
     companion object {
         const val kind = 30001
 
+        fun addEvent(
+            earlierVersion: BookmarkListEvent?,
+            eventId: HexKey,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) = addTag(earlierVersion, "e", eventId, isPrivate, signer, createdAt, onReady)
+
+        fun addReplaceable(
+            earlierVersion: BookmarkListEvent?,
+            aTag: ATag,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) = addTag(earlierVersion, "a", aTag.toTag(), isPrivate, signer, createdAt, onReady)
+
+        fun addTag(
+            earlierVersion: BookmarkListEvent?,
+            tagName: String,
+            tagValue: HexKey,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) {
+            add(
+                earlierVersion,
+                listOf(listOf(tagName, tagValue)),
+                isPrivate,
+                signer,
+                createdAt,
+                onReady
+            )
+        }
+
+        fun add(
+            earlierVersion: BookmarkListEvent?,
+            listNewTags: List<List<String>>,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) {
+            if (isPrivate) {
+                if (earlierVersion != null) {
+                    earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
+                        encryptTags(
+                            privateTags = privateTags.plus(listNewTags),
+                            signer = signer
+                        ) { encryptedTags ->
+                            create(
+                                content = encryptedTags,
+                                tags = earlierVersion.tags,
+                                signer = signer,
+                                createdAt = createdAt,
+                                onReady = onReady
+                            )
+                        }
+                    }
+                } else {
+                    encryptTags(
+                        privateTags = listNewTags,
+                        signer = signer
+                    ) { encryptedTags ->
+                        create(
+                            content = encryptedTags,
+                            tags = emptyList(),
+                            signer = signer,
+                            createdAt = createdAt,
+                            onReady = onReady
+                        )
+                    }
+                }
+            } else {
+                create(
+                    content = earlierVersion?.content ?: "",
+                    tags = (earlierVersion?.tags ?: emptyList()).plus(listNewTags),
+                    signer = signer,
+                    createdAt = createdAt,
+                    onReady = onReady
+                )
+            }
+        }
+
+        fun removeEvent(
+            earlierVersion: BookmarkListEvent,
+            eventId: HexKey,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) = removeTag(earlierVersion, "e", eventId, isPrivate, signer, createdAt, onReady)
+
+        fun removeReplaceable(
+            earlierVersion: BookmarkListEvent,
+            aTag: ATag,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) = removeTag(earlierVersion, "a", aTag.toTag(), isPrivate, signer, createdAt, onReady)
+
+        private fun removeTag(
+            earlierVersion: BookmarkListEvent,
+            tagName: String,
+            tagValue: HexKey,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) {
+            if (isPrivate) {
+                earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
+                    encryptTags(
+                        privateTags = privateTags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) },
+                        signer = signer
+                    ) { encryptedTags ->
+                        create(
+                            content = encryptedTags,
+                            tags = earlierVersion.tags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) },
+                            signer = signer,
+                            createdAt = createdAt,
+                            onReady = onReady
+                        )
+                    }
+                }
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) },
+                    signer = signer,
+                    createdAt = createdAt,
+                    onReady = onReady
+                )
+            }
+        }
+
         fun create(
-            name: String = "",
-            events: List<String>? = null,
-            users: List<String>? = null,
-            addresses: List<ATag>? = null,
             content: String,
-            pubKey: HexKey,
-            createdAt: Long = TimeUtils.now()
-        ): BookmarkListEvent {
-            val tags = mutableListOf<List<String>>()
-            tags.add(listOf("d", name))
-
-            events?.forEach {
-                tags.add(listOf("e", it))
-            }
-            users?.forEach {
-                tags.add(listOf("p", it))
-            }
-            addresses?.forEach {
-                tags.add(listOf("a", it.toTag()))
-            }
-
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            return BookmarkListEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
+            tags: List<List<String>>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) {
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
 
         fun create(
@@ -59,12 +180,10 @@ class BookmarkListEvent(
             privUsers: List<String>? = null,
             privAddresses: List<ATag>? = null,
 
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): BookmarkListEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
-            val content = createPrivateTags(privEvents, privUsers, privAddresses, privateKey, pubKey)
-
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (BookmarkListEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             tags.add(listOf("d", name))
 
@@ -78,15 +197,9 @@ class BookmarkListEvent(
                 tags.add(listOf("a", it.toTag()))
             }
 
-            val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return BookmarkListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
-        }
-
-        fun create(
-            unsignedEvent: BookmarkListEvent, signature: String
-        ): BookmarkListEvent {
-            return BookmarkListEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            createPrivateTags(privEvents, privUsers, privAddresses, signer) { content ->
+                signer.sign(createdAt, kind, tags, content, onReady)
+            }
         }
     }
 }

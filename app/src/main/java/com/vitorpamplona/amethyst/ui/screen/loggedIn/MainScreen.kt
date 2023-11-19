@@ -453,9 +453,7 @@ fun FloatingButtons(
         }
 
         is AccountState.LoggedInViewOnly -> {
-            if (accountViewModel.loggedInWithExternalSigner()) {
-                WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
-            }
+            WritePermissionButtons(navEntryState, accountViewModel, nav, navScrollToTop)
         }
         is AccountState.LoggedOff -> {
             // Does nothing.

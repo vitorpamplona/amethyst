@@ -39,9 +39,11 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
+import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
@@ -152,6 +154,7 @@ open class Note(val idHex: String) {
             this.replyTo = replyTo
 
             liveSet?.innerMetadata?.invalidateData()
+            flowSet?.metadata?.invalidateData()
         }
     }
 
@@ -438,19 +441,68 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isZappedBy(user: User, account: Account): Boolean {
-        // Zaps who the requester was the user
-        return zaps.any {
-            it.key.author?.pubkeyHex == user.pubkeyHex || account.decryptZapContentAuthor(it.key)?.pubKey == user.pubkeyHex
-        } || zapPayments.any {
-            val zapResponseEvent = it.value?.event as? LnZapPaymentResponseEvent
-            val response = if (zapResponseEvent != null) {
-                account.decryptZapPaymentResponseEvent(zapResponseEvent)
-            } else {
-                null
-            }
-            response is PayInvoiceSuccessResponse && account.isNIP47Author(zapResponseEvent?.requestAuthor())
+    private fun recursiveIsPaidByCalculation(
+        account: Account,
+        remainingZapPayments: List<Pair<Note, Note?>>,
+        onWasZappedByAuthor: () -> Unit
+    ) {
+        if (remainingZapPayments.isEmpty()) {
+            return
         }
+
+        val next = remainingZapPayments.first()
+
+        val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
+        if (zapResponseEvent != null) {
+            account.decryptZapPaymentResponseEvent(zapResponseEvent) { response ->
+                if (response is PayInvoiceSuccessResponse && account.isNIP47Author(zapResponseEvent.requestAuthor())) {
+                    onWasZappedByAuthor()
+                } else {
+                    recursiveIsPaidByCalculation(
+                        account,
+                        remainingZapPayments.minus(next),
+                        onWasZappedByAuthor
+                    )
+                }
+            }
+        }
+    }
+
+    private fun recursiveIsZappedByCalculation(
+        option: Int?,
+        user: User,
+        account: Account,
+        remainingZapEvents: List<Pair<Note, Note?>>,
+        onWasZappedByAuthor: () -> Unit
+    ) {
+        if (remainingZapEvents.isEmpty()) {
+            return
+        }
+
+        val next = remainingZapEvents.first()
+
+        if (next.first.author?.pubkeyHex == user.pubkeyHex) {
+            onWasZappedByAuthor()
+        } else {
+            account.decryptZapContentAuthor(next.first) {
+                if (it.pubKey == user.pubkeyHex && (option == null || option == (it as? LnZapEvent)?.zappedPollOption())) {
+                    onWasZappedByAuthor()
+                } else {
+                    recursiveIsZappedByCalculation(option, user, account, remainingZapEvents.minus(next), onWasZappedByAuthor)
+                }
+            }
+        }
+    }
+
+    fun isZappedBy(user: User, account: Account, onWasZappedByAuthor: () -> Unit) {
+        recursiveIsZappedByCalculation(null, user, account, zaps.toList(), onWasZappedByAuthor)
+        if (account.userProfile() == user) {
+            recursiveIsPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
+        }
+    }
+
+    fun isZappedBy(option: Int?, user: User, account: Account, onWasZappedByAuthor: () -> Unit) {
+        recursiveIsZappedByCalculation(option, user, account, zaps.toList(), onWasZappedByAuthor)
     }
 
     fun getReactionBy(user: User): String? {
@@ -499,49 +551,67 @@ open class Note(val idHex: String) {
         zapsAmount = sumOfAmounts
     }
 
-    fun zappedAmountWithNWCPayments(privKey: ByteArray?, walletServicePubkey: ByteArray?): BigDecimal {
-        if (zapPayments.isEmpty()) return zapsAmount
-
-        var sumOfAmounts = zapsAmount
-
-        val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
-        zaps.forEach {
-            (it.value as? LnZapEvent)?.lnInvoice()?.let {
-                invoiceSet.add(it)
-            }
+    private fun recursiveZappedAmountCalculation(
+        invoiceSet: LinkedHashSet<String>,
+        remainingZapPayments: List<Pair<Note, Note?>>,
+        signer: NostrSigner,
+        output: BigDecimal,
+        onReady: (BigDecimal) -> Unit
+    ) {
+        if (remainingZapPayments.isEmpty()) {
+            onReady(output)
+            return
         }
 
-        if (privKey != null && walletServicePubkey != null) {
-            zapPayments.forEach {
-                val noteEvent = (it.value?.event as? LnZapPaymentResponseEvent)?.response(
-                    privKey,
-                    walletServicePubkey
-                )
-                if (noteEvent is PayInvoiceSuccessResponse) {
-                    val invoice = (it.key.event as? LnZapPaymentRequestEvent)?.lnInvoice(
-                        privKey,
-                        walletServicePubkey
-                    )
+        val next = remainingZapPayments.first()
 
+        (next.second?.event as? LnZapPaymentResponseEvent)?.response(signer) { noteEvent ->
+            if (noteEvent is PayInvoiceSuccessResponse) {
+                (next.first.event as? LnZapPaymentRequestEvent)?.lnInvoice(signer) { invoice ->
                     val amount = try {
-                        if (invoice == null) {
-                            null
-                        } else {
-                            LnInvoiceUtil.getAmountInSats(invoice)
-                        }
+                        LnInvoiceUtil.getAmountInSats(invoice)
                     } catch (e: java.lang.Exception) {
                         null
                     }
 
-                    if (invoice != null && amount != null && !invoiceSet.contains(invoice)) {
+                    var newAmount = output
+
+                    if (amount != null && !invoiceSet.contains(invoice)) {
                         invoiceSet.add(invoice)
-                        sumOfAmounts += amount
+                        newAmount += amount
                     }
+
+                    recursiveZappedAmountCalculation(
+                        invoiceSet,
+                        remainingZapPayments.minus(next),
+                        signer,
+                        newAmount,
+                        onReady
+                    )
                 }
             }
         }
+    }
 
-        return sumOfAmounts
+    fun zappedAmountWithNWCPayments(signer: NostrSigner, onReady: (BigDecimal) -> Unit) {
+        if (zapPayments.isEmpty()) {
+            onReady(zapsAmount)
+        }
+
+        val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
+        zaps.forEach {
+            (it.value?.event as? LnZapEvent)?.lnInvoice()?.let {
+                invoiceSet.add(it)
+            }
+        }
+
+        recursiveZappedAmountCalculation(
+            invoiceSet,
+            zapPayments.toList(),
+            signer,
+            zapsAmount,
+            onReady
+        )
     }
 
     fun hasPledgeBy(user: User): Boolean {
@@ -659,7 +729,32 @@ open class Note(val idHex: String) {
         lastReactionsDownloadTime = emptyMap()
     }
 
+    fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
+        val thisEvent = event ?: return false
+
+        val isBoostedNoteHidden = if (thisEvent is GenericRepostEvent || thisEvent is RepostEvent || thisEvent is CommunityPostApprovalEvent) {
+            replyTo?.lastOrNull()?.isHiddenFor(accountChoices) ?: false
+        } else {
+            false
+        }
+
+        val isHiddenByWord = if (thisEvent is BaseTextNoteEvent) {
+            accountChoices.hiddenWords.any {
+                thisEvent.content.contains(it, true)
+            }
+        } else {
+            false
+        }
+
+        val isSensitive = thisEvent.isSensitive()
+        return isBoostedNoteHidden || isHiddenByWord ||
+            accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
+            accountChoices.spammers.contains(author?.pubkeyHex) ||
+            (isSensitive && accountChoices.showSensitiveContent == false)
+    }
+
     var liveSet: NoteLiveSet? = null
+    var flowSet: NoteFlowSet? = null
 
     @Synchronized
     fun createOrDestroyLiveSync(create: Boolean) {
@@ -688,28 +783,45 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
-        val thisEvent = event ?: return false
-
-        val isBoostedNoteHidden = if (thisEvent is GenericRepostEvent || thisEvent is RepostEvent || thisEvent is CommunityPostApprovalEvent) {
-            replyTo?.lastOrNull()?.isHiddenFor(accountChoices) ?: false
-        } else {
-            false
-        }
-
-        val isHiddenByWord = if (thisEvent is BaseTextNoteEvent) {
-            accountChoices.hiddenWords.any {
-                thisEvent.content.contains(it, true)
+    @Synchronized
+    fun createOrDestroyFlowSync(create: Boolean) {
+        if (create) {
+            if (flowSet == null) {
+                flowSet = NoteFlowSet(this)
             }
         } else {
-            false
+            if (flowSet != null && flowSet?.isInUse() == false) {
+                flowSet?.destroy()
+                flowSet = null
+            }
         }
+    }
 
-        val isSensitive = thisEvent.isSensitive()
-        return isBoostedNoteHidden || isHiddenByWord ||
-            accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
-            accountChoices.spammers.contains(author?.pubkeyHex) ||
-            (isSensitive && accountChoices.showSensitiveContent == false)
+    fun flow(): NoteFlowSet {
+        if (flowSet == null) {
+            createOrDestroyFlowSync(true)
+        }
+        return flowSet!!
+    }
+
+    fun clearFlow() {
+        if (flowSet != null && flowSet?.isInUse() == false) {
+            createOrDestroyFlowSync(false)
+        }
+    }
+}
+
+@Stable
+class NoteFlowSet(u: Note) {
+    // Observers line up here.
+    val metadata = NoteBundledRefresherFlow(u)
+
+    fun isInUse(): Boolean {
+        return metadata.stateFlow.subscriptionCount.value > 0
+    }
+
+    fun destroy() {
+        metadata.destroy()
     }
 }
 
@@ -797,6 +909,27 @@ class NoteLiveSet(u: Note) {
         innerReports.destroy()
         innerRelays.destroy()
         innerZaps.destroy()
+    }
+}
+
+@Stable
+class NoteBundledRefresherFlow(val note: Note) {
+    // Refreshes observers in batches.
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
+    val stateFlow = MutableStateFlow(NoteState(note))
+
+    fun destroy() {
+        bundler.cancel()
+    }
+
+    fun invalidateData() {
+        checkNotInMainThread()
+
+        bundler.invalidate() {
+            checkNotInMainThread()
+
+            stateFlow.emit(NoteState(note))
+        }
     }
 }
 

@@ -7,6 +7,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class ChannelMetadataEvent(
@@ -30,7 +31,33 @@ class ChannelMetadataEvent(
     companion object {
         const val kind = 41
 
-        fun create(newChannelInfo: ChannelCreateEvent.ChannelData?, originalChannelIdHex: String, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ChannelMetadataEvent {
+        fun create(
+            name: String?,
+            about: String?,
+            picture: String?,
+            originalChannelIdHex: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelMetadataEvent) -> Unit
+        ) {
+            create(
+                ChannelCreateEvent.ChannelData(
+                    name, about, picture
+                ),
+                originalChannelIdHex,
+                signer,
+                createdAt,
+                onReady
+            )
+        }
+
+        fun create(
+            newChannelInfo: ChannelCreateEvent.ChannelData?,
+            originalChannelIdHex: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelMetadataEvent) -> Unit
+        ) {
             val content =
                 if (newChannelInfo != null) {
                     mapper.writeValueAsString(newChannelInfo)
@@ -38,15 +65,8 @@ class ChannelMetadataEvent(
                     ""
                 }
 
-            val pubKey = keyPair.pubKey.toHexKey()
             val tags = listOf(listOf("e", originalChannelIdHex, "", "root"))
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return ChannelMetadataEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(unsignedEvent: ChannelMetadataEvent, signature: String): ChannelMetadataEvent {
-            return ChannelMetadataEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

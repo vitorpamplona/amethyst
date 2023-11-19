@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class HTTPAuthorizationEvent(
@@ -24,9 +25,10 @@ class HTTPAuthorizationEvent(
             url: String,
             method: String,
             body: String? = null,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): HTTPAuthorizationEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (HTTPAuthorizationEvent) -> Unit
+        ) {
             var hash = ""
             body?.let {
                 hash = CryptoUtils.sha256(it.toByteArray()).toHexKey()
@@ -38,16 +40,7 @@ class HTTPAuthorizationEvent(
                 listOf("payload", hash)
             )
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return HTTPAuthorizationEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: HTTPAuthorizationEvent, signature: String
-        ): HTTPAuthorizationEvent {
-            return HTTPAuthorizationEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, "", onReady)
         }
     }
 }

@@ -9,7 +9,10 @@ import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
 import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.hexToByteArray
+import com.vitorpamplona.quartz.signers.NostrSigner
 import kotlinx.collections.immutable.persistentSetOf
+import java.util.UUID
 
 @Immutable
 class PrivateDmEvent(
@@ -20,6 +23,9 @@ class PrivateDmEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
+    @Transient
+    private var decryptedContent: Map<HexKey, String> = mapOf()
+
     /**
      * This may or may not be the actual recipient's pub key. The event is intended to look like a
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used
@@ -59,20 +65,26 @@ class PrivateDmEvent(
             tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
     }
 
-    fun plainContent(privKey: ByteArray, pubKey: ByteArray): String? {
-        return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey)
+    fun cachedContentFor(signer: NostrSigner): String? {
+        return decryptedContent[signer.pubKey]
+    }
 
-            val retVal = CryptoUtils.decryptNIP04(content, sharedSecret)
+    fun plainContent(signer: NostrSigner, onReady: (String) -> Unit) {
+        decryptedContent[signer.pubKey]?.let {
+            onReady(it)
+            return
+        }
 
-            if (retVal.startsWith(nip18Advertisement)) {
+        signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { retVal ->
+            val content = if (retVal.startsWith(nip18Advertisement)) {
                 retVal.substring(16)
             } else {
                 retVal
             }
-        } catch (e: Exception) {
-            Log.w("PrivateDM", "Error decrypting the message ${e.message}")
-            null
+
+            decryptedContent = decryptedContent + Pair(signer.pubKey, content)
+
+            onReady(content)
         }
     }
 
@@ -82,28 +94,24 @@ class PrivateDmEvent(
         const val nip18Advertisement = "[//]: # (nip18)\n"
 
         fun create(
-            recipientPubKey: ByteArray,
+            recipientPubKey: HexKey,
             msg: String,
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
-            keyPair: KeyPair,
+            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            publishedRecipientPubKey: ByteArray? = null,
+            publishedRecipientPubKey: HexKey? = null,
             advertiseNip18: Boolean = true,
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
-            geohash: String? = null
-        ): PrivateDmEvent {
+            geohash: String? = null,
+            onReady: (PrivateDmEvent) -> Unit
+        ) {
             val message = if (advertiseNip18) { nip18Advertisement } else { "" } + msg
-            val content = if (keyPair.privKey == null) message else CryptoUtils.encryptNIP04(
-                message,
-                keyPair.privKey,
-                recipientPubKey
-            )
             val tags = mutableListOf<List<String>>()
             publishedRecipientPubKey?.let {
-                tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
+                tags.add(listOf("p", publishedRecipientPubKey))
             }
             replyTos?.forEach {
                 tags.add(listOf("e", it))
@@ -124,60 +132,9 @@ class PrivateDmEvent(
                 tags.add(listOf("g", it))
             }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun createWithoutSignature(
-            msg: String,
-            replyTos: List<String>? = null,
-            mentions: List<String>? = null,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now(),
-            publishedRecipientPubKey: ByteArray? = null,
-            advertiseNip18: Boolean = true,
-            markAsSensitive: Boolean,
-            zapRaiserAmount: Long?,
-            geohash: String? = null
-        ): PrivateDmEvent {
-            val message = if (advertiseNip18) { nip18Advertisement } else { "" } + msg
-            val content = message
-            val tags = mutableListOf<List<String>>()
-            publishedRecipientPubKey?.let {
-                tags.add(listOf("p", publishedRecipientPubKey.toHexKey()))
+            signer.nip04Encrypt(message, recipientPubKey) { content ->
+                signer.sign(createdAt, kind, tags, content, onReady)
             }
-            replyTos?.forEach {
-                tags.add(listOf("e", it))
-            }
-            mentions?.forEach {
-                tags.add(listOf("p", it))
-            }
-            zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-            }
-            if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
-            }
-            zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
-            }
-            geohash?.let {
-                tags.add(listOf("g", it))
-            }
-
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            return PrivateDmEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
-        }
-
-        fun create(
-            unsignedEvent: PrivateDmEvent,
-            signature: String,
-        ): PrivateDmEvent {
-            return PrivateDmEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
         }
     }
 }

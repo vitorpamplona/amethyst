@@ -5,6 +5,7 @@ import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.HexValidator
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -36,7 +37,13 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
         }
 
         val hexToWatch = try {
-            Nip19.uriToRoute(mySearchString)?.hex ?: Hex.decode(mySearchString).toHexKey()
+            val isAStraightHex = if (HexValidator.isHex(mySearchString)) {
+                Hex.decode(mySearchString).toHexKey()
+            } else {
+                null
+            }
+
+            Nip19.uriToRoute(mySearchString)?.hex ?: isAStraightHex
         } catch (e: Exception) {
             null
         }
@@ -108,11 +115,14 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
     }
 
     fun search(searchString: String) {
+        println("DataSource: ${this.javaClass.simpleName} Search for $searchString")
         this.searchString = searchString
         invalidateFilters()
     }
 
     fun clear() {
+        println("DataSource: ${this.javaClass.simpleName} Clear")
         searchString = null
+        invalidateFilters()
     }
 }

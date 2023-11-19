@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class ClassifiedsEvent(
@@ -41,9 +42,10 @@ class ClassifiedsEvent(
             price: Price?,
             location: String?,
             publishedAt: Long?,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): ClassifiedsEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ClassifiedsEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
 
             tags.add(listOf("d", dTag))
@@ -63,10 +65,7 @@ class ClassifiedsEvent(
             publishedAt?.let { tags.add(listOf("publishedAt", it.toString())) }
             title?.let { tags.add(listOf("title", it)) }
 
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = CryptoUtils.sign(id, privateKey)
-            return ClassifiedsEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            signer.sign(createdAt, kind, tags, "", onReady)
         }
     }
 }

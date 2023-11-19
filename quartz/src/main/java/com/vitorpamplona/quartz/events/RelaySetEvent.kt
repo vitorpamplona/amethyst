@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class RelaySetEvent(
@@ -24,18 +25,16 @@ class RelaySetEvent(
 
         fun create(
             relays: List<String>,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): RelaySetEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (RelaySetEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
             relays.forEach {
                 tags.add(listOf("r", it))
             }
 
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = CryptoUtils.sign(id, privateKey)
-            return RelaySetEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            signer.sign(createdAt, kind, tags, "", onReady)
         }
     }
 }

@@ -7,6 +7,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class CommunityPostApprovalEvent(
@@ -45,19 +46,23 @@ class CommunityPostApprovalEvent(
     companion object {
         const val kind = 4550
 
-        fun create(approvedPost: Event, community: CommunityDefinitionEvent, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): GenericRepostEvent {
+        fun create(
+            approvedPost: Event,
+            community: CommunityDefinitionEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CommunityPostApprovalEvent) -> Unit
+        ) {
             val content = approvedPost.toJson()
 
             val communities = listOf("a", community.address().toTag())
             val replyToPost = listOf("e", approvedPost.id())
             val replyToAuthor = listOf("p", approvedPost.pubKey())
-            val kind = listOf("k", "${approvedPost.kind()}")
+            val innerKind = listOf("k", "${approvedPost.kind()}")
 
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val tags: List<List<String>> = listOf(communities, replyToPost, replyToAuthor, kind)
-            val id = generateId(pubKey, createdAt, GenericRepostEvent.kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return GenericRepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            val tags: List<List<String>> = listOf(communities, replyToPost, replyToAuthor, innerKind)
+
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

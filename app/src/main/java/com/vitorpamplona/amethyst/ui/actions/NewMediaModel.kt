@@ -95,7 +95,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Uploading"
                         viewModelScope.launch(Dispatchers.IO) {
-                            ImageUploader.uploadImage(
+                            ImageUploader(account).uploadImage(
                                 uri = fileUri,
                                 contentType = contentType,
                                 size = size,
@@ -173,11 +173,12 @@ open class NewMediaModel : ViewModel() {
                     onReady = {
                         uploadingPercentage.value = 0.90f
                         uploadingDescription.value = "Sending"
-                        account?.sendHeader(it, relayList)
-                        uploadingPercentage.value = 1.00f
-                        isUploadingImage = false
-                        onceUploaded()
-                        cancel()
+                        account?.sendHeader(it, relayList) {
+                            uploadingPercentage.value = 1.00f
+                            isUploadingImage = false
+                            onceUploaded()
+                            cancel()
+                        }
                     },
                     onError = {
                         cancel()
@@ -216,18 +217,16 @@ open class NewMediaModel : ViewModel() {
                 onReady = {
                     uploadingDescription.value = "Signing"
                     uploadingPercentage.value = 0.40f
-                    val nip95 = account?.createNip95(bytes, headerInfo = it)
-
-                    if (nip95 != null) {
+                    account?.createNip95(bytes, headerInfo = it) { nip95 ->
                         uploadingDescription.value = "Sending"
                         uploadingPercentage.value = 0.60f
                         account?.sendNip95(nip95.first, nip95.second, relayList)
-                    }
 
-                    uploadingPercentage.value = 1.00f
-                    isUploadingImage = false
-                    onceUploaded()
-                    cancel()
+                        uploadingPercentage.value = 1.00f
+                        isUploadingImage = false
+                        onceUploaded()
+                        cancel()
+                    }
                 },
                 onError = {
                     uploadingDescription.value = null

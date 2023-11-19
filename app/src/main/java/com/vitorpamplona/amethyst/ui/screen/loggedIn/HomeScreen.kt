@@ -15,7 +15,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
@@ -216,10 +216,9 @@ fun WatchAccountForHomeScreen(
     repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
     accountViewModel: AccountViewModel
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val followState by accountViewModel.account.userProfile().live().follows.observeAsState()
+    val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, accountState?.account?.defaultHomeFollowList, followState) {
+    LaunchedEffect(accountViewModel, homeFollowList) {
         NostrHomeDataSource.invalidateFilters()
         homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()

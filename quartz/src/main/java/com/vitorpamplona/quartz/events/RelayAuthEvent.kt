@@ -5,6 +5,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class RelayAuthEvent(
@@ -21,20 +22,19 @@ class RelayAuthEvent(
     companion object {
         const val kind = 22242
 
-        fun create(relay: String, challenge: String, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): RelayAuthEvent {
+        fun create(
+            relay: String,
+            challenge: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (RelayAuthEvent) -> Unit
+        ) {
             val content = ""
             val tags = listOf(
                 listOf("relay", relay),
                 listOf("challenge", challenge)
             )
-            val localPubKey = if (pubKey.isBlank() && privateKey != null) CryptoUtils.pubkeyCreate(privateKey).toHexKey() else pubKey
-            val id = generateId(localPubKey, createdAt, kind, tags, content)
-            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
-            return RelayAuthEvent(id.toHexKey(), localPubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(unsignedEvent: RelayAuthEvent, signature: String): RelayAuthEvent {
-            return RelayAuthEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

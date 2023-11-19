@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class FileHeaderEvent(
@@ -56,9 +57,10 @@ class FileHeaderEvent(
             torrentInfoHash: String? = null,
             encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): FileHeaderEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (FileHeaderEvent) -> Unit
+        ) {
             val tags = listOfNotNull(
                 listOf(URL, url),
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
@@ -81,10 +83,7 @@ class FileHeaderEvent(
             )
 
             val content = alt ?: ""
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return FileHeaderEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

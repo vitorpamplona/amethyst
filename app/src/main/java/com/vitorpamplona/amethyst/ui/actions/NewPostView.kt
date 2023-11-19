@@ -199,8 +199,11 @@ fun NewPostView(
     }
 
     DisposableEffect(Unit) {
+        NostrSearchEventOrUserDataSource.start()
+
         onDispose {
             NostrSearchEventOrUserDataSource.clear()
+            NostrSearchEventOrUserDataSource.stop()
         }
     }
 

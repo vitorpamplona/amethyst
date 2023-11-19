@@ -191,8 +191,23 @@ class NostrHomeRepliesFeedViewModel(val account: Account) : FeedViewModel(HomeCo
     }
 }
 
-class NostrBookmarkPublicFeedViewModel : FeedViewModel(BookmarkPublicFeedFilter)
-class NostrBookmarkPrivateFeedViewModel : FeedViewModel(BookmarkPrivateFeedFilter)
+@Stable
+class NostrBookmarkPublicFeedViewModel(val account: Account) : FeedViewModel(BookmarkPublicFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrBookmarkPublicFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPublicFeedViewModel>): NostrBookmarkPublicFeedViewModel {
+            return NostrBookmarkPublicFeedViewModel(account) as NostrBookmarkPublicFeedViewModel
+        }
+    }
+}
+
+@Stable
+class NostrBookmarkPrivateFeedViewModel(val account: Account) : FeedViewModel(BookmarkPrivateFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrBookmarkPrivateFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPrivateFeedViewModel>): NostrBookmarkPrivateFeedViewModel {
+            return NostrBookmarkPrivateFeedViewModel(account) as NostrBookmarkPrivateFeedViewModel
+        }
+    }
+}
 
 class NostrUserAppRecommendationsFeedViewModel(val user: User) : FeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
     class Factory(val user: User) : ViewModelProvider.Factory {

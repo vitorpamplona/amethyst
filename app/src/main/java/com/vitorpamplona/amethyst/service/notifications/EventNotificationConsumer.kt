@@ -7,8 +7,6 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
-import com.vitorpamplona.amethyst.service.SignerType
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -42,110 +40,40 @@ class EventNotificationConsumer(private val applicationContext: Context) {
     }
 
     private suspend fun consumeIfMatchesAccount(pushWrappedEvent: GiftWrapEvent, account: Account) {
-        val key = account.keyPair.privKey
-        if (account.loginWithExternalSigner) {
-            ExternalSignerUtils.account = account
-            var cached = ExternalSignerUtils.cachedDecryptedContent[pushWrappedEvent.id]
-            if (cached == null) {
-                ExternalSignerUtils.decrypt(
-                    pushWrappedEvent.content,
-                    pushWrappedEvent.pubKey,
-                    pushWrappedEvent.id,
-                    SignerType.NIP44_DECRYPT
-                )
-                cached = ExternalSignerUtils.cachedDecryptedContent[pushWrappedEvent.id] ?: ""
-            }
-            pushWrappedEvent.unwrap(cached)?.let { notificationEvent ->
-                if (!LocalCache.justVerify(notificationEvent)) return // invalid event
-                if (LocalCache.notes[notificationEvent.id] != null) return // already processed
+        pushWrappedEvent.cachedGift(account.signer) { notificationEvent ->
+            LocalCache.justConsume(notificationEvent, null)
 
-                LocalCache.justConsume(notificationEvent, null)
-
-                unwrapAndConsume(notificationEvent, account)?.let { innerEvent ->
-                    if (innerEvent is PrivateDmEvent) {
-                        notify(innerEvent, account)
-                    } else if (innerEvent is LnZapEvent) {
-                        notify(innerEvent, account)
-                    } else if (innerEvent is ChatMessageEvent) {
-                        notify(innerEvent, account)
-                    }
-                }
-            }
-        } else if (key != null) {
-            pushWrappedEvent.unwrap(key)?.let { notificationEvent ->
-                LocalCache.justConsume(notificationEvent, null)
-
-                unwrapAndConsume(notificationEvent, account)?.let { innerEvent ->
-                    if (innerEvent is PrivateDmEvent) {
-                        notify(innerEvent, account)
-                    } else if (innerEvent is LnZapEvent) {
-                        notify(innerEvent, account)
-                    } else if (innerEvent is ChatMessageEvent) {
-                        notify(innerEvent, account)
-                    }
+            unwrapAndConsume(notificationEvent, account) { innerEvent ->
+                if (innerEvent is PrivateDmEvent) {
+                    notify(innerEvent, account)
+                } else if (innerEvent is LnZapEvent) {
+                    notify(innerEvent, account)
+                } else if (innerEvent is ChatMessageEvent) {
+                    notify(innerEvent, account)
                 }
             }
         }
     }
 
-    private fun unwrapAndConsume(event: Event, account: Account): Event? {
-        if (!LocalCache.justVerify(event)) return null
+    private fun unwrapAndConsume(event: Event, account: Account, onReady: (Event) -> Unit) {
+        if (!LocalCache.justVerify(event)) return
 
-        return when (event) {
+        when (event) {
             is GiftWrapEvent -> {
-                val key = account.keyPair.privKey
-                if (key != null) {
-                    event.cachedGift(key)?.let {
-                        unwrapAndConsume(it, account)
-                    }
-                } else if (account.loginWithExternalSigner) {
-                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
-                    if (cached == null) {
-                        ExternalSignerUtils.decrypt(
-                            event.content,
-                            event.pubKey,
-                            event.id,
-                            SignerType.NIP44_DECRYPT
-                        )
-                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
-                    }
-                    event.cachedGift(account.keyPair.pubKey, cached)?.let {
-                        unwrapAndConsume(it, account)
-                    }
-                } else {
-                    null
+                event.cachedGift(account.signer) {
+                    unwrapAndConsume(it, account, onReady)
                 }
             }
             is SealedGossipEvent -> {
-                val key = account.keyPair.privKey
-                if (key != null) {
-                    event.cachedGossip(key)?.let {
-                        // this is not verifiable
-                        LocalCache.justConsume(it, null)
-                        it
-                    }
-                } else if (account.loginWithExternalSigner) {
-                    var cached = ExternalSignerUtils.cachedDecryptedContent[event.id]
-                    if (cached == null) {
-                        ExternalSignerUtils.decrypt(
-                            event.content,
-                            event.pubKey,
-                            event.id,
-                            SignerType.NIP44_DECRYPT
-                        )
-                        cached = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
-                    }
-                    event.cachedGossip(account.keyPair.pubKey, cached)?.let {
-                        LocalCache.justConsume(it, null)
-                        it
-                    }
-                } else {
-                    null
+                event.cachedGossip(account.signer) {
+                    // this is not verifiable
+                    LocalCache.justConsume(it, null)
+                    onReady(it)
                 }
             }
             else -> {
                 LocalCache.justConsume(event, null)
-                event
+                onReady(event)
             }
         }
     }
@@ -200,11 +128,12 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
             note.author?.let {
                 if (ChatroomKey(persistentSetOf(it.pubkeyHex)) in knownChatrooms) {
-                    val content = acc.decryptContent(note) ?: ""
-                    val user = note.author?.toBestDisplayName() ?: ""
-                    val userPicture = note.author?.profilePicture()
-                    val noteUri = note.toNEvent()
-                    notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
+                    acc.decryptContent(note) { content ->
+                        val user = note.author?.toBestDisplayName() ?: ""
+                        val userPicture = note.author?.profilePicture()
+                        val noteUri = note.toNEvent()
+                        notificationManager().sendDMNotification(event.id, content, user, userPicture, noteUri, applicationContext)
+                    }
                 }
             }
         }
@@ -217,39 +146,35 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
 
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
-        val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) }
+        val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
 
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
         if (acc.userProfile().pubkeyHex == event.zappedAuthor().firstOrNull()) {
             val amount = showAmount(event.amount)
-            val senderInfo = (noteZapRequest.event as? LnZapRequestEvent)?.let {
-                val decryptedContent = acc.decryptZapContentAuthor(noteZapRequest)
-                if (decryptedContent != null) {
-                    val author = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    Pair(author, decryptedContent.content)
-                } else if (!noteZapRequest.event?.content().isNullOrBlank()) {
-                    Pair(noteZapRequest.author, noteZapRequest.event?.content())
-                } else {
-                    Pair(noteZapRequest.author, null)
+            (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
+                acc.decryptZapContentAuthor(noteZapRequest) {
+                    val author = LocalCache.getOrCreateUser(it.pubKey)
+                    val senderInfo = Pair(author, it.content.ifBlank { null })
+
+                    acc.decryptContent(noteZapped) {
+                        val zappedContent = it.split("\n").get(0)
+
+                        val user = senderInfo.first.toBestDisplayName()
+                        var title = applicationContext.getString(R.string.app_notification_zaps_channel_message, amount)
+                        senderInfo.second?.ifBlank { null }?.let {
+                            title += " ($it)"
+                        }
+                        var content = applicationContext.getString(R.string.app_notification_zaps_channel_message_from, user)
+                        zappedContent?.let {
+                            content += " " + applicationContext.getString(R.string.app_notification_zaps_channel_message_for, zappedContent)
+                        }
+                        val userPicture = senderInfo?.first?.profilePicture()
+                        val noteUri = "nostr:Notifications"
+                        notificationManager().sendZapNotification(event.id, content, title, userPicture, noteUri, applicationContext)
+                    }
                 }
             }
-
-            val zappedContent =
-                noteZapped?.let { it1 -> acc.decryptContent(it1)?.split("\n")?.get(0) }
-
-            val user = senderInfo?.first?.toBestDisplayName() ?: ""
-            var title = applicationContext.getString(R.string.app_notification_zaps_channel_message, amount)
-            senderInfo?.second?.ifBlank { null }?.let {
-                title += " ($it)"
-            }
-            var content = applicationContext.getString(R.string.app_notification_zaps_channel_message_from, user)
-            zappedContent?.let {
-                content += " " + applicationContext.getString(R.string.app_notification_zaps_channel_message_for, zappedContent)
-            }
-            val userPicture = senderInfo?.first?.profilePicture()
-            val noteUri = "nostr:Notifications"
-            notificationManager().sendZapNotification(event.id, content, title, userPicture, noteUri, applicationContext)
         }
     }
 

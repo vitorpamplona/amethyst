@@ -373,7 +373,7 @@ fun NoTopBar() {
 @Composable
 fun StoriesTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
-        val list by accountViewModel.storiesListLiveData.observeAsState(GLOBAL_FOLLOWS)
+        val list by accountViewModel.account.defaultStoriesFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
             followListsModel = followLists,
@@ -387,7 +387,7 @@ fun StoriesTopBar(followLists: FollowListViewModel, drawerState: DrawerState, ac
 @Composable
 fun HomeTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
-        val list by accountViewModel.homeListLiveData.observeAsState(KIND3_FOLLOWS)
+        val list by accountViewModel.account.defaultHomeFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
             followListsModel = followLists,
@@ -405,7 +405,7 @@ fun HomeTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accou
 @Composable
 fun NotificationTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
-        val list by accountViewModel.notificationListLiveData.observeAsState(GLOBAL_FOLLOWS)
+        val list by accountViewModel.account.defaultNotificationFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
             followListsModel = followLists,
@@ -419,7 +419,7 @@ fun NotificationTopBar(followLists: FollowListViewModel, drawerState: DrawerStat
 @Composable
 fun DiscoveryTopBar(followLists: FollowListViewModel, drawerState: DrawerState, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
-        val list by accountViewModel.discoveryListLiveData.observeAsState(GLOBAL_FOLLOWS)
+        val list by accountViewModel.account.defaultDiscoveryFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
             followListsModel = followLists,
@@ -693,7 +693,7 @@ fun SimpleTextSpinner(
         id = R.string.select_an_option
     )
 
-    var currentText by remember(placeholderCode) {
+    var currentText by remember(placeholderCode, options) {
         mutableStateOf(
             options.firstOrNull { it.code == placeholderCode }?.name?.name(context) ?: selectAnOption
         )

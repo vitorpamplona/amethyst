@@ -7,6 +7,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class StatusEvent(
@@ -25,51 +26,38 @@ class StatusEvent(
             msg: String,
             type: String,
             expiration: Long?,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): StatusEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (StatusEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
 
             tags.add(listOf("d", type))
             expiration?.let { tags.add(listOf("expiration", it.toString())) }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
 
         fun update(
             event: StatusEvent,
             newStatus: String,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): StatusEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (StatusEvent) -> Unit
+        ) {
             val tags = event.tags
-            val pubKey = event.pubKey()
-            val id = generateId(pubKey, createdAt, kind, tags, newStatus)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, newStatus, sig?.toHexKey() ?: "")
+            signer.sign(createdAt, kind, tags, newStatus, onReady)
         }
 
         fun clear(
             event: StatusEvent,
-            keyPair: KeyPair,
-            createdAt: Long = TimeUtils.now()
-        ): StatusEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (StatusEvent) -> Unit
+        ) {
             val msg = ""
             val tags = event.tags.filter { it.size > 1 && it[0] == "d" }
-            val pubKey = event.pubKey()
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return StatusEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: StatusEvent,
-            signature: String
-        ): StatusEvent {
-            return StatusEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
     }
 }

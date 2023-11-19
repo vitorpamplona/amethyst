@@ -124,6 +124,9 @@ open class NewPostViewModel() : ViewModel() {
     var nip24 by mutableStateOf(false)
 
     open fun load(accountViewModel: AccountViewModel, replyingTo: Note?, quote: Note?) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
             if (replyNote.event is BaseTextNoteEvent) {
@@ -167,9 +170,6 @@ open class NewPostViewModel() : ViewModel() {
         zapRaiserAmount = null
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
-
-        this.accountViewModel = accountViewModel
-        this.account = accountViewModel.account
     }
 
     fun sendPost(relayList: List<Relay>? = null) {
@@ -326,7 +326,7 @@ open class NewPostViewModel() : ViewModel() {
                         }
                     } else {
                         viewModelScope.launch(Dispatchers.IO) {
-                            ImageUploader.uploadImage(
+                            ImageUploader(account).uploadImage(
                                 uri = fileUri,
                                 contentType = contentType,
                                 size = size,
@@ -556,17 +556,13 @@ open class NewPostViewModel() : ViewModel() {
                 alt,
                 sensitiveContent,
                 onReady = {
-                    val note = account?.sendHeader(it, relayList = relayList)
+                    account?.sendHeader(it, relayList = relayList) { note ->
+                        isUploadingImage = false
 
-                    isUploadingImage = false
-
-                    if (note == null) {
-                        message = TextFieldValue(message.text + "\n" + imageUrl)
-                    } else {
                         message = TextFieldValue(message.text + "\nnostr:" + note.toNEvent())
-                    }
 
-                    urlPreview = findUrlInMessage()
+                        urlPreview = findUrlInMessage()
+                    }
                 },
                 onError = {
                     isUploadingImage = false
@@ -587,16 +583,17 @@ open class NewPostViewModel() : ViewModel() {
                 alt,
                 sensitiveContent,
                 onReady = {
-                    val nip95 = account?.createNip95(bytes, headerInfo = it)
-                    val note = nip95?.let { it1 -> account?.sendNip95(it1.first, it1.second, relayList = relayList) }
+                    account?.createNip95(bytes, headerInfo = it) { nip95 ->
+                        val note = nip95.let { it1 -> account?.sendNip95(it1.first, it1.second, relayList = relayList) }
 
-                    isUploadingImage = false
+                        isUploadingImage = false
 
-                    note?.let {
-                        message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent())
+                        note?.let {
+                            message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent())
+                        }
+
+                        urlPreview = findUrlInMessage()
                     }
-
-                    urlPreview = findUrlInMessage()
                 },
                 onError = {
                     isUploadingImage = false

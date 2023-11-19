@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
 import android.app.Activity
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,16 +70,17 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.PackageUtils
-import com.vitorpamplona.amethyst.service.SignerType
+import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
+import com.vitorpamplona.quartz.signers.SignerType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -103,24 +106,62 @@ fun LoginPage(
     val scope = rememberCoroutineScope()
     var loginWithExternalSigner by remember { mutableStateOf(false) }
 
-    val activity = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = {
-            loginWithExternalSigner = false
-            ExternalSignerUtils.isActivityRunning = false
-            ServiceManager.shouldPauseService = true
-            if (it.resultCode != Activity.RESULT_OK) {
-                scope.launch(Dispatchers.Main) {
-                    Toast.makeText(
-                        Amethyst.instance,
-                        "Sign request rejected",
-                        Toast.LENGTH_SHORT
-                    ).show()
+    if (loginWithExternalSigner) {
+        val externalSignerLauncher = remember { ExternalSignerLauncher("") }
+
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = { result ->
+                if (result.resultCode != Activity.RESULT_OK) {
+                    scope.launch(Dispatchers.Main) {
+                        Toast.makeText(
+                            Amethyst.instance,
+                            "Sign request rejected",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    result.data?.let {
+                        externalSignerLauncher.newResult(it)
+                    }
                 }
-                return@rememberLauncherForActivityResult
-            } else {
-                val event = it.data?.getStringExtra("signature") ?: ""
-                key.value = TextFieldValue(event)
+            }
+        )
+
+        val activity = getActivity() as MainActivity
+
+        DisposableEffect(launcher, activity, externalSignerLauncher) {
+            externalSignerLauncher.registerLauncher(
+                launcher = {
+                    try {
+                        activity.prepareToLaunchSigner()
+                        launcher.launch(it)
+                    } catch (e: Exception) {
+                        Log.e("Signer", "Error opening Signer app", e)
+                        scope.launch(Dispatchers.Main) {
+                            Toast.makeText(
+                                Amethyst.instance,
+                                R.string.error_opening_external_signer,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                },
+                contentResolver = { Amethyst.instance.contentResolver }
+            )
+            onDispose {
+                externalSignerLauncher.clearLauncher()
+            }
+        }
+
+        LaunchedEffect(loginWithExternalSigner, externalSignerLauncher) {
+            externalSignerLauncher.openSignerApp(
+                "",
+                SignerType.GET_PUBLIC_KEY,
+                "",
+                ""
+            ) { pubkey ->
+                key.value = TextFieldValue(pubkey)
                 if (!acceptedTerms.value) {
                     termsAcceptanceIsRequired =
                         context.getString(R.string.acceptance_of_terms_is_required)
@@ -136,18 +177,6 @@ fun LoginPage(
                     }
                 }
             }
-        }
-    )
-
-    LaunchedEffect(loginWithExternalSigner) {
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(
-                "",
-                SignerType.GET_PUBLIC_KEY,
-                activity,
-                "",
-                ""
-            )
         }
     }
 
@@ -400,7 +429,12 @@ fun LoginPage(
                                 return@Button
                             }
 
-                            val result = ExternalSignerUtils.getDataFromResolver(SignerType.GET_PUBLIC_KEY, arrayOf("login"))
+                            val result = ExternalSignerLauncher("").getDataFromResolver(
+                                SignerType.GET_PUBLIC_KEY,
+                                arrayOf("login"),
+                                contentResolver = Amethyst.instance.contentResolver
+                            )
+
                             if (result == null) {
                                 loginWithExternalSigner = true
                                 return@Button

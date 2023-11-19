@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class GenericRepostEvent(
@@ -29,13 +30,17 @@ class GenericRepostEvent(
     companion object {
         const val kind = 16
 
-        fun create(boostedPost: EventInterface, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): GenericRepostEvent {
+        fun create(
+            boostedPost: EventInterface,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (GenericRepostEvent) -> Unit
+        ) {
             val content = boostedPost.toJson()
 
             val replyToPost = listOf("e", boostedPost.id())
             val replyToAuthor = listOf("p", boostedPost.pubKey())
 
-            val pubKey = keyPair.pubKey.toHexKey()
             var tags: List<List<String>> = listOf(replyToPost, replyToAuthor)
 
             if (boostedPost is AddressableEvent) {
@@ -44,13 +49,7 @@ class GenericRepostEvent(
 
             tags = tags + listOf(listOf("k", "${boostedPost.kind()}"))
 
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return GenericRepostEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(unsignedEvent: GenericRepostEvent, signature: String): GenericRepostEvent {
-            return GenericRepostEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

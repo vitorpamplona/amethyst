@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,8 +44,6 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.quartz.events.ReportEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,8 +79,6 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                 )
             }
         ) { pad ->
-            val scope = rememberCoroutineScope()
-
             Column(
                 modifier = Modifier.padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding()),
                 verticalArrangement = Arrangement.SpaceAround
@@ -99,10 +94,8 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                     text = stringResource(R.string.report_dialog_block_hide_user_btn),
                     icon = Icons.Default.Block,
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            note.author?.let { accountViewModel.hide(it) }
-                            onDismiss()
-                        }
+                        note.author?.let { accountViewModel.hide(it) }
+                        onDismiss()
                     }
                 )
                 SpacerH16()
@@ -138,15 +131,13 @@ fun ReportNoteDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: 
                     icon = Icons.Default.Report,
                     enabled = selectedReason in 0..reportTypes.lastIndex,
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.report(
-                                note,
-                                reportTypes[selectedReason].first,
-                                additionalReason
-                            )
-                            note.author?.let { accountViewModel.hide(it) }
-                            onDismiss()
-                        }
+                        accountViewModel.report(
+                            note,
+                            reportTypes[selectedReason].first,
+                            additionalReason
+                        )
+                        note.author?.let { accountViewModel.hide(it) }
+                        onDismiss()
                     }
                 )
             }

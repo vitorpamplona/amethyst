@@ -6,20 +6,21 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.liveData
+import androidx.lifecycle.switchMap
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.OptOutFromFilters
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
-import com.vitorpamplona.amethyst.service.SignerType
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
-import com.vitorpamplona.amethyst.ui.note.combineWith
-import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -40,10 +41,8 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.GeneralListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.Gossip
 import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.events.IdentityClaim
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
@@ -66,17 +65,31 @@ import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
+import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.flattenMerge
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale
+import kotlin.coroutines.resume
 
 val DefaultChannels = setOf(
     "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", // -> Anigma's Nostr
@@ -103,10 +116,7 @@ val KIND3_FOLLOWS = " All Follows " // This has spaces to avoid mixing with a po
 @Stable
 class Account(
     val keyPair: KeyPair,
-
-    var followingChannels: Set<String> = DefaultChannels, // deprecated
-    var followingCommunities: Set<String> = setOf(), // deprecated
-    var hiddenUsers: Set<String> = setOf(), // deprecated
+    val signer: NostrSigner = NostrSignerInternal(keyPair),
 
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
@@ -116,10 +126,10 @@ class Account(
     var reactionChoices: List<String> = DefaultReactions,
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
     var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
-    var defaultHomeFollowList: String = KIND3_FOLLOWS,
-    var defaultStoriesFollowList: String = GLOBAL_FOLLOWS,
-    var defaultNotificationFollowList: String = GLOBAL_FOLLOWS,
-    var defaultDiscoveryFollowList: String = GLOBAL_FOLLOWS,
+    var defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
+    var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
+    var defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
+    var defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     var zapPaymentRequest: Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -130,15 +140,177 @@ class Account(
     var showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
-    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
-    var loginWithExternalSigner: Boolean = false
+    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>()
 ) {
+    // Uses a single scope for the entire application.
+    val scope = Amethyst.instance.applicationIOScope
+
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
     val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
+
+    @Immutable
+    data class LiveFollowLists(
+        val users: ImmutableSet<String> = persistentSetOf(),
+        val hashtags: ImmutableSet<String> = persistentSetOf(),
+        val geotags: ImmutableSet<String> = persistentSetOf(),
+        val communities: ImmutableSet<String> = persistentSetOf()
+    )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveKind3Follows: StateFlow<LiveFollowLists> by lazy {
+        userProfile().live().follows.asFlow().transformLatest {
+            emit(
+                LiveFollowLists(
+                    userProfile().cachedFollowingKeySet().toImmutableSet(),
+                    userProfile().cachedFollowingTagSet().toImmutableSet(),
+                    userProfile().cachedFollowingGeohashSet().toImmutableSet(),
+                    userProfile().cachedFollowingCommunitiesSet().toImmutableSet()
+                )
+            )
+        }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val liveHomeList: StateFlow<NoteState?> by lazy {
+        defaultHomeFollowList.transformLatest {
+            LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                emit(it)
+            }
+        }.flattenMerge()
+            .stateIn(scope, SharingStarted.Eagerly, null)
+    }
+
+    val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
+        combineTransform(defaultHomeFollowList, liveKind3Follows, liveHomeList) { listName, kind3Follows, peopleListFollows ->
+            if (listName == GLOBAL_FOLLOWS) {
+                emit(null)
+            } else if (listName == KIND3_FOLLOWS) {
+                emit(kind3Follows)
+            } else {
+                val result = withTimeoutOrNull(1000) {
+                    suspendCancellableCoroutine { continuation ->
+                        decryptLiveFollows(peopleListFollows) {
+                            continuation.resume(it)
+                        }
+                    }
+                }
+                result?.let {
+                    emit(it)
+                }
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val liveNotificationList: StateFlow<NoteState?> by lazy {
+        defaultNotificationFollowList.transformLatest {
+            LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                emit(it)
+            }
+        }.flattenMerge()
+            .stateIn(scope, SharingStarted.Eagerly, null)
+    }
+
+    val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
+        combineTransform(defaultNotificationFollowList, liveKind3Follows, liveNotificationList) { listName, kind3Follows, peopleListFollows ->
+            if (listName == GLOBAL_FOLLOWS) {
+                emit(null)
+            } else if (listName == KIND3_FOLLOWS) {
+                emit(kind3Follows)
+            } else {
+                val result = withTimeoutOrNull(1000) {
+                    suspendCancellableCoroutine { continuation ->
+                        decryptLiveFollows(peopleListFollows) {
+                            continuation.resume(it)
+                        }
+                    }
+                }
+                result?.let {
+                    emit(it)
+                }
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val liveStoriesList: StateFlow<NoteState?> by lazy {
+        defaultStoriesFollowList.transformLatest {
+            LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                emit(it)
+            }
+        }.flattenMerge()
+            .stateIn(scope, SharingStarted.Eagerly, null)
+    }
+
+    val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
+        combineTransform(defaultStoriesFollowList, liveKind3Follows, liveStoriesList) { listName, kind3Follows, peopleListFollows ->
+            if (listName == GLOBAL_FOLLOWS) {
+                emit(null)
+            } else if (listName == KIND3_FOLLOWS) {
+                emit(kind3Follows)
+            } else {
+                val result = withTimeoutOrNull(1000) {
+                    suspendCancellableCoroutine { continuation ->
+                        decryptLiveFollows(peopleListFollows) {
+                            continuation.resume(it)
+                        }
+                    }
+                }
+                result?.let {
+                    emit(it)
+                }
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val liveDiscoveryList: StateFlow<NoteState?> by lazy {
+        defaultDiscoveryFollowList.transformLatest {
+            LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                emit(it)
+            }
+        }.flattenMerge()
+            .stateIn(scope, SharingStarted.Eagerly, null)
+    }
+
+    val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
+        combineTransform(defaultDiscoveryFollowList, liveKind3Follows, liveDiscoveryList) { listName, kind3Follows, peopleListFollows ->
+            if (listName == GLOBAL_FOLLOWS) {
+                emit(null)
+            } else if (listName == KIND3_FOLLOWS) {
+                emit(kind3Follows)
+            } else {
+                val result = withTimeoutOrNull(1000) {
+                    suspendCancellableCoroutine { continuation ->
+                        decryptLiveFollows(peopleListFollows) {
+                            continuation.resume(it)
+                        }
+                    }
+                }
+                result?.let {
+                    emit(it)
+                }
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    private fun decryptLiveFollows(peopleListFollows: NoteState?, onReady: (LiveFollowLists) -> Unit) {
+        val listEvent = (peopleListFollows?.note?.event as? PeopleListEvent)
+        listEvent?.privateTags(signer) { privateTagList ->
+            onReady(
+                LiveFollowLists(
+                    users = (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toImmutableSet(),
+                    hashtags = (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toImmutableSet(),
+                    geotags = (listEvent.geohashes() + listEvent.filterGeohashes(privateTagList)).toImmutableSet(),
+                    communities = (listEvent.taggedAddresses() + listEvent.filterAddresses(privateTagList)).map { it.toTag() }.toImmutableSet()
+                )
+            )
+        }
+    }
 
     @Immutable
     data class LiveHiddenUsers(
@@ -148,62 +320,54 @@ class Account(
         val showSensitiveContent: Boolean?
     )
 
-    val liveHiddenUsers: LiveData<LiveHiddenUsers> by lazy {
-        live.combineWith(getBlockListNote().live().metadata) { localLive, liveMuteListEvent ->
-            val blockList = liveMuteListEvent?.note?.event as? PeopleListEvent
-            if (loginWithExternalSigner) {
-                val id = blockList?.id
-                if (id != null) {
-                    if (blockList.decryptedContent == null) {
-                        GlobalScope.launch(Dispatchers.IO) {
-                            val content = blockList.content
-                            if (content.isEmpty()) return@launch
-                            ExternalSignerUtils.decryptBlockList(
-                                content,
-                                keyPair.pubKey.toHexKey(),
-                                blockList.id()
-                            )
-                            blockList.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
-                            live.invalidateData()
-                        }
+    val flowHiddenUsers: StateFlow<LiveHiddenUsers> by lazy {
+        combineTransform(live.asFlow(), getBlockListNote().flow().metadata.stateFlow) { localLive, blockList ->
+            checkNotInMainThread()
 
-                        LiveHiddenUsers(
-                            hiddenUsers = persistentSetOf(),
-                            hiddenWords = persistentSetOf(),
-                            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-                            showSensitiveContent = showSensitiveContent
-                        )
-                    } else {
-                        blockList.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
-                        val liveBlockedUsers = blockList.publicAndPrivateUsers(blockList.decryptedContent ?: "")
-                        val liveBlockedWords = blockList.publicAndPrivateWords(blockList.decryptedContent ?: "")
-                        LiveHiddenUsers(
-                            hiddenUsers = liveBlockedUsers,
-                            hiddenWords = liveBlockedWords,
-                            spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-                            showSensitiveContent = showSensitiveContent
-                        )
+            val result = withTimeoutOrNull(1000) {
+                suspendCancellableCoroutine { continuation ->
+                    (blockList.note.event as? PeopleListEvent)?.publicAndPrivateUsersAndWords(signer) {
+                        continuation.resume(it)
                     }
-                } else {
-                    LiveHiddenUsers(
-                        hiddenUsers = persistentSetOf(),
-                        hiddenWords = persistentSetOf(),
-                        spammers = localLive?.account?.transientHiddenUsers
-                            ?: persistentSetOf(),
-                        showSensitiveContent = showSensitiveContent
-                    )
                 }
-            } else {
-                val liveBlockedUsers = blockList?.publicAndPrivateUsers(keyPair.privKey)
-                val liveBlockedWords = blockList?.publicAndPrivateWords(keyPair.privKey)
-                LiveHiddenUsers(
-                    hiddenUsers = liveBlockedUsers ?: persistentSetOf(),
-                    hiddenWords = liveBlockedWords ?: persistentSetOf(),
-                    spammers = localLive?.account?.transientHiddenUsers ?: persistentSetOf(),
-                    showSensitiveContent = showSensitiveContent
+            }
+
+            result?.let {
+                emit(
+                    LiveHiddenUsers(
+                        hiddenUsers = it.users,
+                        hiddenWords = it.words,
+                        spammers = localLive.account.transientHiddenUsers,
+                        showSensitiveContent = localLive.account.showSensitiveContent
+                    )
                 )
             }
-        }.distinctUntilChanged()
+        }.stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            LiveHiddenUsers(
+                hiddenUsers = persistentSetOf(),
+                hiddenWords = persistentSetOf(),
+                spammers = transientHiddenUsers,
+                showSensitiveContent = showSensitiveContent
+            )
+        )
+    }
+
+    val liveHiddenUsers = flowHiddenUsers.asLiveData()
+
+    val decryptBookmarks: LiveData<BookmarkListEvent> by lazy {
+        userProfile().live().innerBookmarks.switchMap { userState ->
+            liveData(Dispatchers.IO) {
+                userState.user.latestBookmarkList?.privateTags(signer) {
+                    scope.launch(Dispatchers.IO) {
+                        userState.user.latestBookmarkList?.let {
+                            emit(it)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     var userProfileCache: User? = null
@@ -228,72 +392,47 @@ class Account(
     }
 
     fun isWriteable(): Boolean {
-        return keyPair.privKey != null
+        return keyPair.privKey != null || signer is NostrSignerExternal
     }
 
     fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            var event = ContactListEvent.updateRelayList(
+            val event = ContactListEvent.updateRelayList(
                 earlierVersion = contactList,
                 relayUse = relays,
-                keyPair = keyPair
-            )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val content = ExternalSignerUtils.content[event.id] ?: ""
-                if (content.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, content)
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-
-            Client.send(event)
-            LocalCache.consume(event)
         } else {
-            var event = ContactListEvent.createFromScratch(
+            val event = ContactListEvent.createFromScratch(
                 followUsers = listOf(),
                 followTags = listOf(),
                 followGeohashes = listOf(),
                 followCommunities = listOf(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                keyPair = keyPair
-            )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val content = ExternalSignerUtils.content[event.id]
-                if (content.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, content)
+                signer = signer
+            ) {
+                // Keep this local to avoid erasing a good contact list.
+                // Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-
-            // Keep this local to avoid erasing a good contact list.
-            // Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
+        if (!isWriteable()) return
 
-        var event = MetadataEvent.create(toString, identities, keyPair.pubKey.toHexKey(), keyPair.privKey)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val content = ExternalSignerUtils.content[event.id]
-            if (content.isBlank()) {
-                return
-            }
-            event = MetadataEvent.create(event, content)
+        MetadataEvent.create(toString, identities, signer) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-        Client.send(event)
-        LocalCache.consume(event)
 
         return
     }
@@ -314,8 +453,8 @@ class Account(
         return note.hasReacted(userProfile(), reaction)
     }
 
-    fun reactTo(note: Note, reaction: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun reactTo(note: Note, reaction: String) {
+        if (!isWriteable()) return
 
         if (hasReacted(note, reaction)) {
             // has already liked this note
@@ -330,51 +469,13 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        if (loginWithExternalSigner) {
-                            val senderPublicKey = keyPair.pubKey.toHexKey()
-
-                            var senderReaction = ReactionEvent.create(
-                                emojiUrl,
-                                it,
-                                keyPair
-                            )
-
-                            ExternalSignerUtils.openSigner(senderReaction)
-                            val reactionContent = ExternalSignerUtils.content[event.id]
-                            if (reactionContent.isBlank()) return
-                            senderReaction = ReactionEvent.create(senderReaction, reactionContent)
-
-                            val giftWraps = users.plus(senderPublicKey).map {
-                                val gossip = Gossip.create(senderReaction)
-                                val content = Gossip.toJson(gossip)
-                                ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
-                                val encryptedContent = ExternalSignerUtils.content[gossip.id]
-                                if (encryptedContent.isBlank()) return
-
-                                var sealedEvent = SealedGossipEvent.create(
-                                    encryptedContent = encryptedContent,
-                                    pubKey = senderPublicKey
-                                )
-                                ExternalSignerUtils.openSigner(sealedEvent)
-                                val eventContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
-                                if (eventContent.isBlank()) return
-                                sealedEvent = SealedGossipEvent.create(sealedEvent, eventContent)
-
-                                GiftWrapEvent.create(
-                                    event = sealedEvent,
-                                    recipientPubKey = it
-                                )
-                            }
-
-                            broadcastPrivately(NIP24Factory.Result(senderReaction, giftWraps))
-                        } else {
-                            val giftWraps = NIP24Factory().createReactionWithinGroup(
-                                emojiUrl = emojiUrl,
-                                originalNote = it,
-                                to = users,
-                                from = keyPair
-                            )
-                            broadcastPrivately(giftWraps)
+                        NIP24Factory().createReactionWithinGroup(
+                            emojiUrl = emojiUrl,
+                            originalNote = it,
+                            to = users,
+                            signer = signer
+                        ) {
+                            broadcastPrivately(it)
                         }
                     }
 
@@ -383,53 +484,13 @@ class Account(
             }
 
             note.event?.let {
-                if (loginWithExternalSigner) {
-                    val senderPublicKey = keyPair.pubKey.toHexKey()
-
-                    var senderReaction = ReactionEvent.create(
-                        reaction,
-                        it,
-                        keyPair
-                    )
-
-                    ExternalSignerUtils.openSigner(senderReaction)
-                    val reactionContent = ExternalSignerUtils.content[senderReaction.id] ?: ""
-                    if (reactionContent.isBlank()) return
-                    senderReaction = ReactionEvent.create(senderReaction, reactionContent)
-
-                    val newUsers = users.plus(senderPublicKey)
-                    newUsers.forEach {
-                        val gossip = Gossip.create(senderReaction)
-                        val content = Gossip.toJson(gossip)
-                        ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
-                        val encryptedContent = ExternalSignerUtils.content[gossip.id]
-                        if (encryptedContent.isBlank()) return
-
-                        var sealedEvent = SealedGossipEvent.create(
-                            encryptedContent = encryptedContent,
-                            pubKey = senderPublicKey
-                        )
-                        ExternalSignerUtils.openSigner(sealedEvent)
-                        val sealedContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
-                        if (sealedContent.isBlank()) return
-                        sealedEvent = SealedGossipEvent.create(sealedEvent, sealedContent)
-
-                        val giftWraps = GiftWrapEvent.create(
-                            event = sealedEvent,
-                            recipientPubKey = it
-                        )
-
-                        broadcastPrivately(NIP24Factory.Result(senderReaction, listOf(giftWraps)))
-                    }
-                } else {
-                    val giftWraps = NIP24Factory().createReactionWithinGroup(
-                        content = reaction,
-                        originalNote = it,
-                        to = users,
-                        from = keyPair
-                    )
-
-                    broadcastPrivately(giftWraps)
+                NIP24Factory().createReactionWithinGroup(
+                    content = reaction,
+                    originalNote = it,
+                    to = users,
+                    signer = signer
+                ) {
+                    broadcastPrivately(it)
                 }
             }
             return
@@ -438,17 +499,10 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        var event = ReactionEvent.create(emojiUrl, it, keyPair)
-                        if (loginWithExternalSigner) {
-                            ExternalSignerUtils.openSigner(event)
-                            val content = ExternalSignerUtils.content[event.id] ?: ""
-                            if (content.isBlank()) {
-                                return
-                            }
-                            event = ReactionEvent.create(event, content)
+                        ReactionEvent.create(emojiUrl, it, signer) {
+                            Client.send(it)
+                            LocalCache.consume(it)
                         }
-                        Client.send(event)
-                        LocalCache.consume(event)
                     }
 
                     return
@@ -456,89 +510,30 @@ class Account(
             }
 
             note.event?.let {
-                var event = ReactionEvent.create(reaction, it, keyPair)
-                if (loginWithExternalSigner) {
-                    ExternalSignerUtils.openSigner(event)
-                    val content = ExternalSignerUtils.content[event.id] ?: ""
-                    if (content.isBlank()) {
-                        return
-                    }
-                    event = ReactionEvent.create(event, content)
+                ReactionEvent.create(reaction, it, signer) {
+                    Client.send(it)
+                    LocalCache.consume(it)
                 }
-                Client.send(event)
-                LocalCache.consume(event)
             }
         }
     }
 
-    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType, toUser: User?): LnZapRequestEvent? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
+    fun createZapRequestFor(note: Note, pollOption: Int?, message: String = "", zapType: LnZapEvent.ZapType, toUser: User?, onReady: (LnZapRequestEvent) -> Unit) {
+        if (!isWriteable()) return
 
         note.event?.let { event ->
-            if (loginWithExternalSigner) {
-                when (zapType) {
-                    LnZapEvent.ZapType.ANONYMOUS -> {
-                        return LnZapRequestEvent.createAnonymous(
-                            event,
-                            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                                ?: localRelays.map { it.url }.toSet(),
-                            pollOption,
-                            message,
-                            toUser?.pubkeyHex
-                        )
-                    }
-                    LnZapEvent.ZapType.PUBLIC -> {
-                        val unsignedEvent = LnZapRequestEvent.createPublic(
-                            event,
-                            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                                ?: localRelays.map { it.url }.toSet(),
-                            keyPair.pubKey.toHexKey(),
-                            pollOption,
-                            message,
-                            toUser?.pubkeyHex
-                        )
-                        ExternalSignerUtils.openSigner(unsignedEvent)
-                        val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-                        if (content.isBlank()) return null
-
-                        return LnZapRequestEvent.create(
-                            unsignedEvent,
-                            content
-                        )
-                    }
-
-                    LnZapEvent.ZapType.PRIVATE -> {
-                        val unsignedEvent = LnZapRequestEvent.createPrivateZap(
-                            event,
-                            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                                ?: localRelays.map { it.url }.toSet(),
-                            keyPair.pubKey.toHexKey(),
-                            pollOption,
-                            message,
-                            toUser?.pubkeyHex
-                        )
-                        ExternalSignerUtils.openSigner(unsignedEvent, "event")
-                        val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-                        if (content.isBlank()) return null
-
-                        return Event.fromJson(content) as LnZapRequestEvent
-                    }
-                    else -> null
-                }
-            } else {
-                return LnZapRequestEvent.create(
-                    event,
-                    userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                        ?: localRelays.map { it.url }.toSet(),
-                    keyPair.privKey!!,
-                    pollOption,
-                    message,
-                    zapType,
-                    toUser?.pubkeyHex
-                )
-            }
+            LnZapRequestEvent.create(
+                event,
+                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                    ?: localRelays.map { it.url }.toSet(),
+                signer,
+                pollOption,
+                message,
+                zapType,
+                toUser?.pubkeyHex,
+                onReady = onReady
+            )
         }
-        return null
     }
 
     fun hasWalletConnectSetup(): Boolean {
@@ -546,138 +541,71 @@ class Account(
     }
 
     fun isNIP47Author(pubkeyHex: String?): Boolean {
-        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
-
-        if (privKey == null && !loginWithExternalSigner) return false
-
-        if (privKey != null) {
-            val pubKey = CryptoUtils.pubkeyCreate(privKey).toHexKey()
-            return (pubKey == pubkeyHex)
-        }
-
-        return (keyPair.pubKey.toHexKey() == pubkeyHex)
+        return (getNIP47Signer().pubKey == pubkeyHex)
     }
 
-    fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent): Response? {
-        val myNip47 = zapPaymentRequest ?: return null
-
-        val privKey = myNip47.secret?.hexToByteArray() ?: keyPair.privKey
-        val pubKey = myNip47.pubKeyHex.hexToByteArray()
-
-        if (privKey == null && !loginWithExternalSigner) return null
-
-        if (privKey != null) return zapResponseEvent.response(privKey, pubKey)
-
-        ExternalSignerUtils.decrypt(zapResponseEvent.content, pubKey.toHexKey(), zapResponseEvent.id)
-        val decryptedContent = ExternalSignerUtils.content[zapResponseEvent.id] ?: ""
-        if (decryptedContent.isBlank()) return null
-        return zapResponseEvent.response(decryptedContent)
+    fun getNIP47Signer(): NostrSigner {
+        return zapPaymentRequest?.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
     }
 
-    fun calculateIfNoteWasZappedByAccount(zappedNote: Note?): Boolean {
-        return zappedNote?.isZappedBy(userProfile(), this) == true
+    fun decryptZapPaymentResponseEvent(zapResponseEvent: LnZapPaymentResponseEvent, onReady: (Response) -> Unit) {
+        val myNip47 = zapPaymentRequest ?: return
+
+        val signer = myNip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
+
+        zapResponseEvent.response(signer, onReady)
     }
 
-    fun calculateZappedAmount(zappedNote: Note?): BigDecimal {
-        val privKey = zapPaymentRequest?.secret?.hexToByteArray() ?: keyPair.privKey
-        val pubKey = zapPaymentRequest?.pubKeyHex?.hexToByteArray()
-        return zappedNote?.zappedAmountWithNWCPayments(privKey, pubKey) ?: BigDecimal.ZERO
+    fun calculateIfNoteWasZappedByAccount(zappedNote: Note?, onWasZapped: () -> Unit) {
+        zappedNote?.isZappedBy(userProfile(), this, onWasZapped)
+    }
+
+    fun calculateZappedAmount(zappedNote: Note?, onReady: (BigDecimal) -> Unit) {
+        zappedNote?.zappedAmountWithNWCPayments(getNIP47Signer(), onReady)
     }
 
     fun sendZapPaymentRequestFor(bolt11: String, zappedNote: Note?, onResponse: (Response?) -> Unit) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         zapPaymentRequest?.let { nip47 ->
-            val privateKey = if (loginWithExternalSigner) nip47.secret?.hexToByteArray() else nip47.secret?.hexToByteArray() ?: keyPair.privKey
-            if (privateKey == null) return
-            val event = LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, privateKey)
+            val signer = nip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
 
-            val wcListener = NostrLnZapPaymentResponseDataSource(
-                fromServiceHex = nip47.pubKeyHex,
-                toUserHex = event.pubKey,
-                replyingToHex = event.id,
-                authSigningKey = privateKey
-            )
-            wcListener.start()
+            LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, signer) { event ->
+                val wcListener = NostrLnZapPaymentResponseDataSource(
+                    fromServiceHex = nip47.pubKeyHex,
+                    toUserHex = event.pubKey,
+                    replyingToHex = event.id,
+                    authSigner = signer
+                )
+                wcListener.start()
 
-            LocalCache.consume(event, zappedNote) {
-                // After the response is received.
-                val privKey = nip47.secret?.hexToByteArray()
-                if (privKey != null) {
-                    onResponse(it.response(privKey, nip47.pubKeyHex.hexToByteArray()))
+                LocalCache.consume(event, zappedNote) {
+                    it.response(signer) {
+                        onResponse(it)
+                    }
                 }
-            }
 
-            Client.send(event, nip47.relayUri, wcListener.feedTypes) {
-                wcListener.destroy()
+                Client.send(event, nip47.relayUri, wcListener.feedTypes) {
+                    wcListener.destroy()
+                }
             }
         }
     }
 
-    fun createZapRequestFor(user: User): LnZapRequestEvent? {
-        return createZapRequestFor(user)
+    fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType, onReady: (LnZapRequestEvent) -> Unit) {
+        LnZapRequestEvent.create(
+            userPubKeyHex,
+            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                ?: localRelays.map { it.url }.toSet(),
+            signer,
+            message,
+            zapType,
+            onReady = onReady
+        )
     }
 
-    fun createZapRequestFor(userPubKeyHex: String, message: String = "", zapType: LnZapEvent.ZapType): LnZapRequestEvent? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
-        if (loginWithExternalSigner) {
-            return when (zapType) {
-                LnZapEvent.ZapType.ANONYMOUS -> {
-                    return LnZapRequestEvent.createAnonymous(
-                        userPubKeyHex,
-                        userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                            ?: localRelays.map { it.url }.toSet(),
-                        message
-                    )
-                }
-                LnZapEvent.ZapType.PUBLIC -> {
-                    val unsignedEvent = LnZapRequestEvent.createPublic(
-                        userPubKeyHex,
-                        userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                            ?: localRelays.map { it.url }.toSet(),
-                        keyPair.pubKey.toHexKey(),
-                        message
-                    )
-                    ExternalSignerUtils.openSigner(unsignedEvent)
-                    val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-                    if (content.isBlank()) return null
-
-                    return LnZapRequestEvent.create(
-                        unsignedEvent,
-                        content
-                    )
-                }
-
-                LnZapEvent.ZapType.PRIVATE -> {
-                    val unsignedEvent = LnZapRequestEvent.createPrivateZap(
-                        userPubKeyHex,
-                        userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                            ?: localRelays.map { it.url }.toSet(),
-                        keyPair.pubKey.toHexKey(),
-                        message
-                    )
-                    ExternalSignerUtils.openSigner(unsignedEvent, "event")
-                    val content = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-                    if (content.isBlank()) return null
-
-                    return Event.fromJson(content) as LnZapRequestEvent
-                }
-                else -> null
-            }
-        } else {
-            return LnZapRequestEvent.create(
-                userPubKeyHex,
-                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                    ?: localRelays.map { it.url }.toSet(),
-                keyPair.privKey!!,
-                message,
-                zapType
-            )
-        }
-    }
-
-    fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun report(note: Note, type: ReportEvent.ReportType, content: String = "") {
+        if (!isWriteable()) return
 
         if (note.hasReacted(userProfile(), "⚠️")) {
             // has already liked this note
@@ -685,116 +613,59 @@ class Account(
         }
 
         note.event?.let {
-            var event = ReactionEvent.createWarning(it, keyPair)
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) return
-                event = ReactionEvent(
-                    event.id,
-                    event.pubKey,
-                    event.createdAt,
-                    event.tags,
-                    event.content,
-                    eventContent
-                )
+            ReactionEvent.createWarning(it, signer) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            Client.send(event)
-            LocalCache.consume(event)
         }
 
         note.event?.let {
-            var event = ReportEvent.create(it, type, keyPair, content = content)
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) return
-                event = ReportEvent(
-                    event.id,
-                    event.pubKey,
-                    event.createdAt,
-                    event.tags,
-                    event.content,
-                    eventContent
-                )
+            ReportEvent.create(it, type, signer, content) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            Client.send(event)
-            LocalCache.consume(event, null)
         }
     }
 
-    fun report(user: User, type: ReportEvent.ReportType) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun report(user: User, type: ReportEvent.ReportType) {
+        if (!isWriteable()) return
 
         if (user.hasReport(userProfile(), type)) {
             // has already reported this note
             return
         }
 
-        var event = ReportEvent.create(user.pubkeyHex, type, keyPair)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) return
-            event = ReportEvent(
-                event.id,
-                event.pubKey,
-                event.createdAt,
-                event.tags,
-                event.content,
-                eventContent
-            )
+        ReportEvent.create(user.pubkeyHex, type, signer) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-        Client.send(event)
-        LocalCache.consume(event, null)
     }
 
-    fun delete(note: Note) {
+    suspend fun delete(note: Note) {
         return delete(listOf(note))
     }
 
-    fun delete(notes: List<Note>) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun delete(notes: List<Note>) {
+        if (!isWriteable()) return
 
         val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
 
         if (myNotes.isNotEmpty()) {
-            var event = DeletionEvent.create(myNotes, keyPair)
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) return
-                event = DeletionEvent(
-                    event.id,
-                    event.pubKey,
-                    event.createdAt,
-                    event.tags,
-                    event.content,
-                    eventContent
-                )
+            DeletionEvent.create(myNotes, signer) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun createHTTPAuthorization(url: String, method: String, body: String? = null): HTTPAuthorizationEvent? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
+    fun createHTTPAuthorization(url: String, method: String, body: String? = null, onReady: (HTTPAuthorizationEvent) -> Unit) {
+        if (!isWriteable()) return
 
-        var event = HTTPAuthorizationEvent.create(url, method, body, keyPair)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return null
-            }
-            event = HTTPAuthorizationEvent.create(event, eventContent)
-        }
-        return event
+        HTTPAuthorizationEvent.create(url, method, body, signer, onReady = onReady)
     }
 
-    fun boost(note: Note) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun boost(note: Note) {
+        if (!isWriteable()) return
 
         if (note.hasBoostedInTheLast5Minutes(userProfile())) {
             // has already bosted in the past 5mins
@@ -803,39 +674,15 @@ class Account(
 
         note.event?.let {
             if (it.kind() == 1) {
-                var event = RepostEvent.create(it, keyPair)
-                if (loginWithExternalSigner) {
-                    ExternalSignerUtils.openSigner(event)
-                    val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                    if (eventContent.isBlank()) return
-                    event = RepostEvent(
-                        event.id,
-                        event.pubKey,
-                        event.createdAt,
-                        event.tags,
-                        event.content,
-                        eventContent
-                    )
+                RepostEvent.create(it, signer) {
+                    Client.send(it)
+                    LocalCache.justConsume(it, null)
                 }
-                Client.send(event)
-                LocalCache.consume(event)
             } else {
-                var event = GenericRepostEvent.create(it, keyPair)
-                if (loginWithExternalSigner) {
-                    ExternalSignerUtils.openSigner(event)
-                    val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                    if (eventContent.isBlank()) return
-                    event = GenericRepostEvent(
-                        event.id,
-                        event.pubKey,
-                        event.createdAt,
-                        event.tags,
-                        event.content,
-                        eventContent
-                    )
+                GenericRepostEvent.create(it, signer) {
+                    Client.send(it)
+                    LocalCache.justConsume(it, null)
                 }
-                Client.send(event)
-                LocalCache.consume(event)
             }
         }
     }
@@ -852,56 +699,16 @@ class Account(
         }
     }
 
-    private fun migrateCommunitiesAndChannelsIfNeeded(latestContactList: ContactListEvent?): ContactListEvent? {
-        if (latestContactList == null) return latestContactList
+    fun follow(user: User) {
+        if (!isWriteable()) return
 
-        var returningContactList: ContactListEvent = latestContactList
+        val contactList = userProfile().latestContactList
 
-        if (followingCommunities.isNotEmpty()) {
-            followingCommunities.forEach {
-                ATag.parse(it, null)?.let {
-                    if (loginWithExternalSigner) {
-                        val unsignedEvent = ContactListEvent.followAddressableEvent(
-                            returningContactList,
-                            it,
-                            keyPair
-                        )
-                        ExternalSignerUtils.openSigner(unsignedEvent)
-                        val eventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-                        returningContactList = if (eventContent.isBlank()) {
-                            latestContactList
-                        } else {
-                            ContactListEvent.create(unsignedEvent, eventContent)
-                        }
-                    } else {
-                        returningContactList = ContactListEvent.followAddressableEvent(
-                            returningContactList,
-                            it,
-                            keyPair
-                        )
-                    }
-                }
+        if (contactList != null) {
+            ContactListEvent.followUser(contactList, user.pubkeyHex, signer) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            followingCommunities = emptySet()
-        }
-
-        if (followingChannels.isNotEmpty()) {
-            followingChannels.forEach {
-                returningContactList = ContactListEvent.followEvent(returningContactList, it, keyPair)
-            }
-            followingChannels = emptySet()
-        }
-
-        return returningContactList
-    }
-
-    suspend fun follow(user: User) {
-        if (!isWriteable() && !loginWithExternalSigner) return
-
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
-
-        var event = if (contactList != null) {
-            ContactListEvent.followUser(contactList, user.pubkeyHex, keyPair)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = listOf(Contact(user.pubkeyHex, null)),
@@ -910,30 +717,24 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                keyPair = keyPair
-            )
-        }
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            event = ContactListEvent.create(event, eventContent)
         }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
     fun follow(channel: Channel) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
-        var event = if (contactList != null) {
-            ContactListEvent.followEvent(contactList, channel.idHex, keyPair)
+        if (contactList != null) {
+            ContactListEvent.followEvent(contactList, channel.idHex, signer) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
@@ -942,30 +743,24 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList().plus(channel.idHex),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                keyPair = keyPair
-            )
-        }
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            event = ContactListEvent.create(event, eventContent)
         }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
     fun follow(community: AddressableNote) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
-        var event = if (contactList != null) {
-            ContactListEvent.followAddressableEvent(contactList, community.address, keyPair)
+        if (contactList != null) {
+            ContactListEvent.followAddressableEvent(contactList, community.address, signer) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         } else {
             val relays = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) }
             ContactListEvent.createFromScratch(
@@ -975,34 +770,28 @@ class Account(
                 followCommunities = listOf(community.address),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
-                keyPair = keyPair
-            )
-        }
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            event = ContactListEvent.create(event, eventContent)
         }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
     fun followHashtag(tag: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
-        var event = if (contactList != null) {
+        if (contactList != null) {
             ContactListEvent.followHashtag(
                 contactList,
                 tag,
-                keyPair
-            )
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = emptyList(),
@@ -1011,33 +800,25 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                keyPair = keyPair
-            )
-        }
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            event = ContactListEvent.create(event, eventContent)
         }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
     fun followGeohash(geohash: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
-        var event = if (contactList != null) {
+        if (contactList != null) {
             ContactListEvent.followGeohash(
                 contactList,
                 geohash,
-                keyPair
+                signer,
+                onReady = this::onNewEventCreated
             )
         } else {
             ContactListEvent.createFromScratch(
@@ -1047,176 +828,101 @@ class Account(
                 followCommunities = emptyList(),
                 followEvents = DefaultChannels.toList(),
                 relayUse = Constants.defaultRelays.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-                keyPair = keyPair
+                signer = signer,
+                onReady = this::onNewEventCreated
             )
         }
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            event = ContactListEvent.create(event, eventContent)
-        }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
-    suspend fun unfollow(user: User) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    fun onNewEventCreated(event: Event) {
+        Client.send(event)
+        LocalCache.justConsume(event, null)
+    }
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+    fun unfollow(user: User) {
+        if (!isWriteable()) return
+
+        val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            var event = ContactListEvent.unfollowUser(
+            ContactListEvent.unfollowUser(
                 contactList,
                 user.pubkeyHex,
-                keyPair
+                signer,
+                onReady = this::onNewEventCreated
             )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, eventContent)
-            }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun unfollowHashtag(tag: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun unfollowHashtag(tag: String) {
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            var event = ContactListEvent.unfollowHashtag(
+            ContactListEvent.unfollowHashtag(
                 contactList,
                 tag,
-                keyPair
+                signer,
+                onReady = this::onNewEventCreated
             )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, eventContent)
-            }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun unfollowGeohash(geohash: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun unfollowGeohash(geohash: String) {
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            var event = ContactListEvent.unfollowGeohash(
+            ContactListEvent.unfollowGeohash(
                 contactList,
                 geohash,
-                keyPair
+                signer,
+                onReady = this::onNewEventCreated
             )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, eventContent)
-            }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun unfollow(channel: Channel) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun unfollow(channel: Channel) {
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            var event = ContactListEvent.unfollowEvent(
+            ContactListEvent.unfollowEvent(
                 contactList,
                 channel.idHex,
-                keyPair
+                signer,
+                onReady = this::onNewEventCreated
             )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, eventContent)
-            }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun unfollow(community: AddressableNote) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+    suspend fun unfollow(community: AddressableNote) {
+        if (!isWriteable()) return
 
-        val contactList = migrateCommunitiesAndChannelsIfNeeded(userProfile().latestContactList)
+        val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            var event = ContactListEvent.unfollowAddressableEvent(
+            ContactListEvent.unfollowAddressableEvent(
                 contactList,
                 community.address,
-                keyPair
+                signer,
+                onReady = this::onNewEventCreated
             )
-
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) {
-                    return
-                }
-                event = ContactListEvent.create(event, eventContent)
-            }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
     }
 
-    fun createNip95(byteArray: ByteArray, headerInfo: FileHeader): Pair<FileStorageEvent, FileStorageHeaderEvent>? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
+    fun createNip95(byteArray: ByteArray, headerInfo: FileHeader, onReady: (Pair<FileStorageEvent, FileStorageHeaderEvent>) -> Unit) {
+        if (!isWriteable()) return
 
-        if (loginWithExternalSigner) {
-            val unsignedData = FileStorageEvent.create(
-                mimeType = headerInfo.mimeType ?: "",
-                data = byteArray,
-                pubKey = keyPair.pubKey.toHexKey()
-            )
-
-            ExternalSignerUtils.openSigner(unsignedData)
-            val eventContent = ExternalSignerUtils.content[unsignedData.id] ?: ""
-            if (eventContent.isBlank()) return null
-            val data = FileStorageEvent(
-                unsignedData.id,
-                unsignedData.pubKey,
-                unsignedData.createdAt,
-                unsignedData.tags,
-                unsignedData.content,
-                eventContent
-            )
-
-            val unsignedEvent = FileStorageHeaderEvent.create(
+        FileStorageEvent.create(
+            mimeType = headerInfo.mimeType ?: "",
+            data = byteArray,
+            signer = signer
+        ) { data ->
+            FileStorageHeaderEvent.create(
                 data,
                 mimeType = headerInfo.mimeType,
                 hash = headerInfo.hash,
@@ -1225,47 +931,17 @@ class Account(
                 blurhash = headerInfo.blurHash,
                 alt = headerInfo.alt,
                 sensitiveContent = headerInfo.sensitiveContent,
-                pubKey = keyPair.pubKey.toHexKey()
-            )
-
-            ExternalSignerUtils.openSigner(unsignedEvent)
-            val unsignedEventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-            if (unsignedEventContent.isBlank()) return null
-            val signedEvent = FileStorageHeaderEvent(
-                unsignedEvent.id,
-                unsignedEvent.pubKey,
-                unsignedEvent.createdAt,
-                unsignedEvent.tags,
-                unsignedEvent.content,
-                unsignedEventContent
-            )
-
-            return Pair(data, signedEvent)
-        } else {
-            val data = FileStorageEvent.create(
-                mimeType = headerInfo.mimeType ?: "",
-                data = byteArray,
-                privateKey = keyPair.privKey!!
-            )
-
-            val signedEvent = FileStorageHeaderEvent.create(
-                data,
-                mimeType = headerInfo.mimeType,
-                hash = headerInfo.hash,
-                size = headerInfo.size.toString(),
-                dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
-                alt = headerInfo.alt,
-                sensitiveContent = headerInfo.sensitiveContent,
-                privateKey = keyPair.privKey!!
-            )
-
-            return Pair(data, signedEvent)
+                signer = signer
+            ) { signedEvent ->
+                onReady(
+                    Pair(data, signedEvent)
+                )
+            }
         }
     }
 
     fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
+        if (!isWriteable()) return null
 
         Client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
@@ -1276,55 +952,30 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    private fun sendHeader(signedEvent: FileHeaderEvent, relayList: List<Relay>? = null): Note? {
+    private fun sendHeader(signedEvent: FileHeaderEvent, relayList: List<Relay>? = null, onReady: (Note) -> Unit) {
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
-        return LocalCache.notes[signedEvent.id]
+        LocalCache.notes[signedEvent.id]?.let {
+            onReady(it)
+        }
     }
 
-    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null): Note? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
+    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null, onReady: (Note) -> Unit) {
+        if (!isWriteable()) return
 
-        if (loginWithExternalSigner) {
-            val unsignedEvent = FileHeaderEvent.create(
-                url = headerInfo.url,
-                mimeType = headerInfo.mimeType,
-                hash = headerInfo.hash,
-                size = headerInfo.size.toString(),
-                dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
-                alt = headerInfo.alt,
-                sensitiveContent = headerInfo.sensitiveContent,
-                keyPair = keyPair
-            )
-            ExternalSignerUtils.openSigner(unsignedEvent)
-            val eventContent = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-            if (eventContent.isBlank()) return null
-            val signedEvent = FileHeaderEvent(
-                unsignedEvent.id,
-                unsignedEvent.pubKey,
-                unsignedEvent.createdAt,
-                unsignedEvent.tags,
-                unsignedEvent.content,
-                eventContent
-            )
-
-            return sendHeader(signedEvent, relayList = relayList)
-        } else {
-            val signedEvent = FileHeaderEvent.create(
-                url = headerInfo.url,
-                mimeType = headerInfo.mimeType,
-                hash = headerInfo.hash,
-                size = headerInfo.size.toString(),
-                dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
-                alt = headerInfo.alt,
-                sensitiveContent = headerInfo.sensitiveContent,
-                keyPair = keyPair
-            )
-
-            return sendHeader(signedEvent, relayList = relayList)
+        FileHeaderEvent.create(
+            url = headerInfo.url,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            alt = headerInfo.alt,
+            sensitiveContent = headerInfo.sensitiveContent,
+            signer = signer
+        ) { event ->
+            sendHeader(event, relayList = relayList, onReady)
         }
     }
 
@@ -1342,13 +993,13 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null
     ) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
         val addresses = replyTo?.mapNotNull { it.address() }
 
-        var signedEvent = TextNoteEvent.create(
+        TextNoteEvent.create(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
@@ -1361,35 +1012,26 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            keyPair = keyPair
-        )
+            signer = signer
+        ) {
+            Client.send(it, relayList = relayList)
+            LocalCache.justConsume(it, null)
 
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
-            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+            // broadcast replied notes
+            replyingTo?.let {
+                LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
             }
-            signedEvent = TextNoteEvent.create(signedEvent, eventContent)
-        }
-
-        Client.send(signedEvent, relayList = relayList)
-        LocalCache.consume(signedEvent)
-
-        // broadcast replied notes
-        replyingTo?.let {
-            LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                Client.send(it, relayList = relayList)
+            replyTo?.forEach {
+                it.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
             }
-        }
-        replyTo?.forEach {
-            it.event?.let {
-                Client.send(it, relayList = relayList)
-            }
-        }
-        addresses?.forEach {
-            LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                Client.send(it, relayList = relayList)
+            addresses?.forEach {
+                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
             }
         }
     }
@@ -1409,19 +1051,18 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null
     ) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
         val addresses = replyTo?.mapNotNull { it.address() }
 
-        var signedEvent = PollNoteEvent.create(
+        PollNoteEvent.create(
             msg = message,
             replyTos = repliesToHex,
             mentions = mentionsHex,
             addresses = addresses,
-            pubKey = keyPair.pubKey.toHexKey(),
-            privateKey = keyPair.privKey,
+            signer = signer,
             pollOptions = pollOptions,
             valueMaximum = valueMaximum,
             valueMinimum = valueMinimum,
@@ -1431,41 +1072,31 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash
-        )
-        // println("Sending new PollNoteEvent: %s".format(signedEvent.toJson()))
+        ) {
+            Client.send(it, relayList = relayList)
+            LocalCache.justConsume(it, null)
 
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
-            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+            // Rebroadcast replies and tags to the current relay set
+            replyTo?.forEach {
+                it.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
             }
-            signedEvent = PollNoteEvent.create(signedEvent, eventContent)
-        }
-
-        Client.send(signedEvent, relayList = relayList)
-        LocalCache.consume(signedEvent)
-
-        replyTo?.forEach {
-            it.event?.let {
-                Client.send(it, relayList = relayList)
-            }
-        }
-        addresses?.forEach {
-            LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                Client.send(it, relayList = relayList)
+            addresses?.forEach {
+                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
             }
         }
     }
 
     fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        var signedEvent = ChannelMessageEvent.create(
+        ChannelMessageEvent.create(
             message = message,
             channel = toChannel,
             replyTos = repliesToHex,
@@ -1474,30 +1105,21 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            keyPair = keyPair
-        )
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
-            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            signedEvent = ChannelMessageEvent.create(signedEvent, eventContent)
+            signer = signer
+        ) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-
-        Client.send(signedEvent)
-        LocalCache.consume(signedEvent, null)
     }
 
     fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val repliesToHex = replyTo?.map { it.idHex }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        var signedEvent = LiveActivitiesChatMessageEvent.create(
+        LiveActivitiesChatMessageEvent.create(
             message = message,
             activity = toChannel,
             replyTos = repliesToHex,
@@ -1506,20 +1128,11 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            keyPair = keyPair
-        )
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(signedEvent)
-            val eventContent = ExternalSignerUtils.content[signedEvent.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            signedEvent = LiveActivitiesChatMessageEvent.create(signedEvent, eventContent)
+            signer = signer
+        ) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-
-        Client.send(signedEvent)
-        LocalCache.consume(signedEvent, null)
     }
 
     fun sendPrivateMessage(message: String, toUser: User, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
@@ -1527,55 +1140,26 @@ class Account(
     }
 
     fun sendPrivateMessage(message: String, toUser: HexKey, replyingTo: Note? = null, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.encrypt(message, toUser, "encrypt")
-            val eventContent = ExternalSignerUtils.content["encrypt"] ?: ""
-            if (eventContent.isBlank()) return
-            ExternalSignerUtils.content.remove("encrypt")
-            val unsignedEvent = PrivateDmEvent.create(
-                recipientPubKey = toUser.hexToByteArray(),
-                publishedRecipientPubKey = toUser.hexToByteArray(),
-                msg = eventContent,
-                replyTos = repliesToHex,
-                mentions = mentionsHex,
-                zapReceiver = zapReceiver,
-                markAsSensitive = wantsToMarkAsSensitive,
-                zapRaiserAmount = zapRaiserAmount,
-                geohash = geohash,
-                keyPair = keyPair,
-                advertiseNip18 = false
-            )
-
-            ExternalSignerUtils.openSigner(unsignedEvent)
-            val signature = ExternalSignerUtils.content[unsignedEvent.id] ?: ""
-            if (signature.isBlank()) {
-                return
-            }
-            val signedEvent = PrivateDmEvent.create(unsignedEvent, signature)
-            Client.send(signedEvent)
-            LocalCache.consume(signedEvent, null)
-        } else {
-            val signedEvent = PrivateDmEvent.create(
-                recipientPubKey = toUser.hexToByteArray(),
-                publishedRecipientPubKey = toUser.hexToByteArray(),
-                msg = message,
-                replyTos = repliesToHex,
-                mentions = mentionsHex,
-                zapReceiver = zapReceiver,
-                markAsSensitive = wantsToMarkAsSensitive,
-                zapRaiserAmount = zapRaiserAmount,
-                geohash = geohash,
-                keyPair = keyPair,
-                advertiseNip18 = false
-            )
-
-            Client.send(signedEvent)
-            LocalCache.consume(signedEvent, null)
+        PrivateDmEvent.create(
+            recipientPubKey = toUser,
+            publishedRecipientPubKey = toUser,
+            msg = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            geohash = geohash,
+            signer = signer,
+            advertiseNip18 = false
+        ) {
+            Client.send(it)
+            LocalCache.consume(it, null)
         }
     }
 
@@ -1590,106 +1174,44 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null
     ) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        if (loginWithExternalSigner) {
-            var chatMessageEvent = ChatMessageEvent.create(
-                msg = message,
-                to = toUsers,
-                keyPair = keyPair,
-                subject = subject,
-                replyTos = repliesToHex,
-                mentions = mentionsHex,
-                zapReceiver = zapReceiver,
-                markAsSensitive = wantsToMarkAsSensitive,
-                zapRaiserAmount = zapRaiserAmount,
-                geohash = geohash
-            )
-
-            ExternalSignerUtils.openSigner(chatMessageEvent)
-            val eventContent = ExternalSignerUtils.content[chatMessageEvent.id] ?: ""
-            if (eventContent.isBlank()) return
-            chatMessageEvent = ChatMessageEvent.create(chatMessageEvent, eventContent)
-            val senderPublicKey = keyPair.pubKey.toHexKey()
-            toUsers.plus(senderPublicKey).toSet().forEach {
-                val gossip = Gossip.create(chatMessageEvent)
-                val content = Gossip.toJson(gossip)
-                ExternalSignerUtils.encrypt(content, it, gossip.id!!, SignerType.NIP44_ENCRYPT)
-                val gossipContent = ExternalSignerUtils.content[gossip.id] ?: ""
-                if (gossipContent.isNotBlank()) {
-                    var sealedEvent = SealedGossipEvent.create(
-                        encryptedContent = gossipContent,
-                        pubKey = senderPublicKey
-                    )
-                    ExternalSignerUtils.openSigner(sealedEvent)
-                    val sealedEventContent = ExternalSignerUtils.content[sealedEvent.id] ?: ""
-                    if (sealedEventContent.isBlank()) return
-                    sealedEvent = SealedGossipEvent.create(sealedEvent, sealedEventContent)
-
-                    val giftWraps = GiftWrapEvent.create(
-                        event = sealedEvent,
-                        recipientPubKey = it
-                    )
-                    broadcastPrivately(NIP24Factory.Result(chatMessageEvent, listOf(giftWraps)))
-                }
-            }
-        } else {
-            val signedEvents = NIP24Factory().createMsgNIP24(
-                msg = message,
-                to = toUsers,
-                subject = subject,
-                replyTos = repliesToHex,
-                mentions = mentionsHex,
-                zapReceiver = zapReceiver,
-                markAsSensitive = wantsToMarkAsSensitive,
-                zapRaiserAmount = zapRaiserAmount,
-                geohash = geohash,
-                keyPair = keyPair
-            )
-
-            broadcastPrivately(signedEvents)
+        NIP24Factory().createMsgNIP24(
+            msg = message,
+            to = toUsers,
+            subject = subject,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            geohash = geohash,
+            signer = signer
+        ) {
+            broadcastPrivately(it)
         }
     }
 
     fun broadcastPrivately(signedEvents: NIP24Factory.Result) {
         val mine = signedEvents.wraps.filter {
-            (it.recipientPubKey() == keyPair.pubKey.toHexKey())
+            (it.recipientPubKey() == signer.pubKey)
         }
 
-        mine.forEach {
-            // Only keep in cache the GiftWrap for the account.
-            if (loginWithExternalSigner) {
-                ExternalSignerUtils.decrypt(it.content, it.pubKey, it.id, SignerType.NIP44_DECRYPT)
-                val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[it.id] ?: ""
-                if (decryptedContent.isEmpty()) return
-                it.cachedGift(keyPair.pubKey, decryptedContent)?.let { cached ->
-                    if (cached is SealedGossipEvent) {
-                        ExternalSignerUtils.decrypt(cached.content, cached.pubKey, cached.id, SignerType.NIP44_DECRYPT)
-                        val localDecryptedContent = ExternalSignerUtils.cachedDecryptedContent[cached.id] ?: ""
-                        if (localDecryptedContent.isEmpty()) return
-                        cached.cachedGossip(keyPair.pubKey, localDecryptedContent)?.let { gossip ->
-                            LocalCache.justConsume(gossip, null)
-                        }
-                    } else {
-                        LocalCache.justConsume(it, null)
+        mine.forEach { giftWrap ->
+            giftWrap.cachedGift(signer) { gift ->
+                if (gift is SealedGossipEvent) {
+                    gift.cachedGossip(signer) { gossip ->
+                        LocalCache.justConsume(gossip, null)
                     }
-                }
-            } else {
-                it.cachedGift(keyPair.privKey!!)?.let {
-                    if (it is SealedGossipEvent) {
-                        it.cachedGossip(keyPair.privKey!!)?.let {
-                            LocalCache.justConsume(it, null)
-                        }
-                    } else {
-                        LocalCache.justConsume(it, null)
-                    }
+                } else {
+                    LocalCache.justConsume(gift, null)
                 }
             }
 
-            LocalCache.consume(it, null)
+            LocalCache.consume(giftWrap, null)
         }
 
         val id = mine.firstOrNull()?.id
@@ -1706,134 +1228,87 @@ class Account(
     }
 
     fun sendCreateNewChannel(name: String, about: String, picture: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        val metadata = ChannelCreateEvent.ChannelData(
-            name,
-            about,
-            picture
-        )
+        ChannelCreateEvent.create(
+            name = name,
+            about = about,
+            picture = picture,
+            signer = signer
+        ) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
 
-        var event = ChannelCreateEvent.create(
-            channelInfo = metadata,
-            keyPair = keyPair
-        )
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+            LocalCache.getChannelIfExists(it.id)?.let {
+                follow(it)
             }
-            event = ChannelCreateEvent.create(event, eventContent)
-        }
-
-        Client.send(event)
-        LocalCache.consume(event)
-
-        LocalCache.getChannelIfExists(event.id)?.let {
-            follow(it)
         }
     }
 
     fun updateStatus(oldStatus: AddressableNote, newStatus: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
-        var event = StatusEvent.update(oldEvent, newStatus, keyPair)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            event = StatusEvent.create(event, eventContent)
+        StatusEvent.update(oldEvent, newStatus, signer) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-        Client.send(event)
-        LocalCache.consume(event, null)
     }
 
     fun createStatus(newStatus: String) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        var event = StatusEvent.create(newStatus, "general", expiration = null, keyPair)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            event = StatusEvent.create(event, eventContent)
+        StatusEvent.create(newStatus, "general", expiration = null, signer) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-        Client.send(event)
-        LocalCache.consume(event, null)
     }
 
     fun deleteStatus(oldStatus: AddressableNote) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
-        var event = StatusEvent.clear(oldEvent, keyPair)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            event = StatusEvent.create(event, eventContent)
-        }
-        Client.send(event)
-        LocalCache.consume(event, null)
+        StatusEvent.clear(oldEvent, signer) { event ->
+            Client.send(event)
+            LocalCache.justConsume(event, null)
 
-        var event2 = DeletionEvent.create(listOf(event.id), keyPair)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event2)
-            val event2Content = ExternalSignerUtils.content[event2.id] ?: ""
-            if (event2Content.isBlank()) {
-                return
+            DeletionEvent.create(listOf(event.id), signer) { event2 ->
+                Client.send(event2)
+                LocalCache.justConsume(event2, null)
             }
-            event2 = DeletionEvent.create(event2, event2Content)
         }
-        Client.send(event2)
-        LocalCache.consume(event2)
     }
 
     fun removeEmojiPack(usersEmojiList: Note, emojiList: Note) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
         val noteEvent = usersEmojiList.event
         if (noteEvent !is EmojiPackSelectionEvent) return
         val emojiListEvent = emojiList.event
         if (emojiListEvent !is EmojiPackEvent) return
 
-        var event = EmojiPackSelectionEvent.create(
+        EmojiPackSelectionEvent.create(
             noteEvent.taggedAddresses().filter { it != emojiListEvent.address() },
-            keyPair
-        )
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
-            }
-            event = EmojiPackSelectionEvent.create(event, eventContent)
+            signer
+        ) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
         }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
     fun addEmojiPack(usersEmojiList: Note, emojiList: Note) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
         val emojiListEvent = emojiList.event
         if (emojiListEvent !is EmojiPackEvent) return
 
-        var event = if (usersEmojiList.event == null) {
+        if (usersEmojiList.event == null) {
             EmojiPackSelectionEvent.create(
                 listOf(emojiListEvent.address()),
-                keyPair
-            )
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         } else {
             val noteEvent = usersEmojiList.event
             if (noteEvent !is EmojiPackSelectionEvent) return
@@ -1844,442 +1319,94 @@ class Account(
 
             EmojiPackSelectionEvent.create(
                 noteEvent.taggedAddresses().plus(emojiListEvent.address()),
-                keyPair
-            )
-        }
-
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
-            event = EmojiPackSelectionEvent.create(event, eventContent)
         }
-
-        Client.send(event)
-        LocalCache.consume(event)
     }
 
-    fun addPrivateBookmark(note: Note, decryptedContent: String) {
-        val bookmarks = userProfile().latestBookmarkList
-        val privTags = mutableListOf<List<String>>()
-
-        val privEvents = if (note is AddressableNote) {
-            bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
-        } else {
-            bookmarks?.privateTaggedEvents(decryptedContent)?.plus(note.idHex) ?: listOf(note.idHex)
-        }
-        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
-        val privAddresses = if (note is AddressableNote) {
-            bookmarks?.privateTaggedAddresses(decryptedContent)?.plus(note.address) ?: listOf(note.address)
-        } else {
-            bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
-        }
-
-        privEvents.forEach {
-            privTags.add(listOf("e", it))
-        }
-        privUsers.forEach {
-            privTags.add(listOf("p", it))
-        }
-        privAddresses.forEach {
-            privTags.add(listOf("a", it.toTag()))
-        }
-        val msg = Event.mapper.writeValueAsString(privTags)
-
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
-        ExternalSignerUtils.content.remove("encrypt")
-        if (encryptedContent.isBlank()) {
-            return
-        }
-
-        var event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents() ?: emptyList(),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
-
-            encryptedContent,
-
-            keyPair.pubKey.toHexKey()
-        )
-
-        ExternalSignerUtils.openSigner(event)
-        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-        if (eventContent.isBlank()) {
-            return
-        }
-        event = BookmarkListEvent.create(event, eventContent)
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun removePrivateBookmark(note: Note, decryptedContent: String) {
-        val bookmarks = userProfile().latestBookmarkList
-        val privTags = mutableListOf<List<String>>()
-
-        val privEvents = if (note is AddressableNote) {
-            bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
-        } else {
-            bookmarks?.privateTaggedEvents(decryptedContent)?.minus(note.idHex) ?: listOf(note.idHex)
-        }
-        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
-        val privAddresses = if (note is AddressableNote) {
-            bookmarks?.privateTaggedAddresses(decryptedContent)?.minus(note.address) ?: listOf(note.address)
-        } else {
-            bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
-        }
-
-        privEvents.forEach {
-            privTags.add(listOf("e", it))
-        }
-        privUsers.forEach {
-            privTags.add(listOf("p", it))
-        }
-        privAddresses.forEach {
-            privTags.add(listOf("a", it.toTag()))
-        }
-        val msg = Event.mapper.writeValueAsString(privTags)
-
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
-        ExternalSignerUtils.content.remove("encrypt")
-        if (encryptedContent.isBlank()) {
-            return
-        }
-
-        var event = BookmarkListEvent.create(
-            "bookmark",
-            bookmarks?.taggedEvents() ?: emptyList(),
-            bookmarks?.taggedUsers() ?: emptyList(),
-            bookmarks?.taggedAddresses() ?: emptyList(),
-
-            encryptedContent,
-
-            keyPair.pubKey.toHexKey()
-        )
-
-        ExternalSignerUtils.openSigner(event)
-        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-        if (eventContent.isBlank()) {
-            return
-        }
-        event = BookmarkListEvent.create(event, eventContent)
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun addPrivateBookmark(note: Note) {
+    fun addBookmark(note: Note, isPrivate: Boolean) {
         if (!isWriteable()) return
 
-        val bookmarks = userProfile().latestBookmarkList
-
-        val event = if (note is AddressableNote) {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!)?.plus(note.address) ?: listOf(note.address),
-
-                keyPair.privKey!!
-            )
-        } else {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!)?.plus(note.idHex) ?: listOf(note.idHex),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
-
-                keyPair.privKey!!
-            )
-        }
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun addPublicBookmark(note: Note, decryptedContent: String) {
-        val bookmarks = userProfile().latestBookmarkList
-
-        val privTags = mutableListOf<List<String>>()
-
-        val privEvents = bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
-        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
-        val privAddresses = bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
-
-        privEvents.forEach {
-            privTags.add(listOf("e", it))
-        }
-        privUsers.forEach {
-            privTags.add(listOf("p", it))
-        }
-        privAddresses.forEach {
-            privTags.add(listOf("a", it.toTag()))
-        }
-        val msg = Event.mapper.writeValueAsString(privTags)
-
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
-        ExternalSignerUtils.content.remove("encrypt")
-        if (encryptedContent.isBlank()) {
-            return
-        }
-
-        var event = if (note is AddressableNote) {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
-                encryptedContent,
-                keyPair.pubKey.toHexKey()
-            )
-        } else {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-                encryptedContent,
-                keyPair.pubKey.toHexKey()
-            )
-        }
-        ExternalSignerUtils.openSigner(event)
-        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-        if (eventContent.isBlank()) {
-            return
-        }
-        event = BookmarkListEvent.create(event, encryptedContent)
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun addPublicBookmark(note: Note) {
-        if (!isWriteable()) return
-
-        val bookmarks = userProfile().latestBookmarkList
-
-        val event = if (note is AddressableNote) {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses()?.plus(note.address) ?: listOf(note.address),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
-
-                keyPair.privKey!!
-            )
-        } else {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents()?.plus(note.idHex) ?: listOf(note.idHex),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
-
-                keyPair.privKey!!
-            )
-        }
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun removePrivateBookmark(note: Note) {
-        if (!isWriteable()) return
-
-        val bookmarks = userProfile().latestBookmarkList
-
-        val event = if (note is AddressableNote) {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!)?.minus(note.address) ?: listOf(),
-
-                keyPair.privKey!!
-            )
-        } else {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!)?.minus(note.idHex) ?: listOf(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
-
-                keyPair.privKey!!
-            )
-        }
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun createAuthEvent(relay: Relay, challenge: String): RelayAuthEvent? {
-        return createAuthEvent(relay.url, challenge)
-    }
-
-    fun createAuthEvent(relayUrl: String, challenge: String): RelayAuthEvent? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
-
-        var event = RelayAuthEvent.create(relayUrl, challenge, keyPair.pubKey.toHexKey(), keyPair.privKey)
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) {
-                return null
-            }
-            event = RelayAuthEvent.create(event, eventContent)
-        }
-
-        return event
-    }
-
-    fun removePublicBookmark(note: Note) {
-        if (!isWriteable()) return
-
-        val bookmarks = userProfile().latestBookmarkList
-
-        val event = if (note is AddressableNote) {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents()?.minus(note.address.toTag()) ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses()?.minus(note.address),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
-
-                keyPair.privKey!!
-            )
-        } else {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents()?.minus(note.idHex),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-
-                bookmarks?.privateTaggedEvents(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedUsers(privKey = keyPair.privKey!!) ?: emptyList(),
-                bookmarks?.privateTaggedAddresses(privKey = keyPair.privKey!!) ?: emptyList(),
-
-                keyPair.privKey!!
-            )
-        }
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun removePublicBookmark(note: Note, decryptedContent: String) {
-        val bookmarks = userProfile().latestBookmarkList
-
-        val privTags = mutableListOf<List<String>>()
-
-        val privEvents = bookmarks?.privateTaggedEvents(decryptedContent) ?: emptyList()
-        val privUsers = bookmarks?.privateTaggedUsers(decryptedContent) ?: emptyList()
-        val privAddresses = bookmarks?.privateTaggedAddresses(decryptedContent) ?: emptyList()
-
-        privEvents.forEach {
-            privTags.add(listOf("e", it))
-        }
-        privUsers.forEach {
-            privTags.add(listOf("p", it))
-        }
-        privAddresses.forEach {
-            privTags.add(listOf("a", it.toTag()))
-        }
-        val msg = Event.mapper.writeValueAsString(privTags)
-
-        ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypt")
-        val encryptedContent = ExternalSignerUtils.content["encrypt"] ?: ""
-        ExternalSignerUtils.content.remove("encrypt")
-        if (encryptedContent.isBlank()) {
-            return
-        }
-
-        var event = if (note is AddressableNote) {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents() ?: emptyList(),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses()?.minus(note.address),
-                encryptedContent,
-                keyPair.pubKey.toHexKey()
-            )
-        } else {
-            BookmarkListEvent.create(
-                "bookmark",
-                bookmarks?.taggedEvents()?.minus(note.idHex),
-                bookmarks?.taggedUsers() ?: emptyList(),
-                bookmarks?.taggedAddresses() ?: emptyList(),
-                encryptedContent,
-                keyPair.pubKey.toHexKey()
-            )
-        }
-
-        ExternalSignerUtils.openSigner(event)
-        val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-        if (eventContent.isBlank()) {
-            return
-        }
-        event = BookmarkListEvent.create(event, eventContent)
-
-        Client.send(event)
-        LocalCache.consume(event)
-    }
-
-    fun isInPrivateBookmarks(note: Note): Boolean {
-        if (!isWriteable() && !loginWithExternalSigner) return false
-
-        if (loginWithExternalSigner) {
-            return if (note is AddressableNote) {
-                userProfile().latestBookmarkList?.privateTaggedAddresses(userProfile().latestBookmarkList?.decryptedContent ?: "")
-                    ?.contains(note.address) == true
-            } else {
-                userProfile().latestBookmarkList?.privateTaggedEvents(userProfile().latestBookmarkList?.decryptedContent ?: "")
-                    ?.contains(note.idHex) == true
+        if (note is AddressableNote) {
+            BookmarkListEvent.addReplaceable(
+                userProfile().latestBookmarkList,
+                note.address,
+                isPrivate,
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
             }
         } else {
-            return if (note is AddressableNote) {
-                userProfile().latestBookmarkList?.privateTaggedAddresses(keyPair.privKey!!)
-                    ?.contains(note.address) == true
-            } else {
-                userProfile().latestBookmarkList?.privateTaggedEvents(keyPair.privKey!!)
-                    ?.contains(note.idHex) == true
+            BookmarkListEvent.addEvent(
+                userProfile().latestBookmarkList,
+                note.idHex,
+                isPrivate,
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+            }
+        }
+    }
+
+    fun removeBookmark(note: Note, isPrivate: Boolean) {
+        if (!isWriteable()) return
+
+        val bookmarks = userProfile().latestBookmarkList ?: return
+
+        if (note is AddressableNote) {
+            BookmarkListEvent.removeReplaceable(
+                bookmarks,
+                note.address,
+                isPrivate,
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+            }
+        } else {
+            BookmarkListEvent.removeEvent(
+                bookmarks,
+                note.idHex,
+                isPrivate,
+                signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+            }
+        }
+    }
+
+    fun createAuthEvent(relay: Relay, challenge: String, onReady: (RelayAuthEvent) -> Unit) {
+        return createAuthEvent(relay.url, challenge, onReady = onReady)
+    }
+
+    fun createAuthEvent(relayUrl: String, challenge: String, onReady: (RelayAuthEvent) -> Unit) {
+        if (!isWriteable()) return
+
+        RelayAuthEvent.create(relayUrl, challenge, signer, onReady = onReady)
+    }
+
+    fun isInPrivateBookmarks(note: Note, onReady: (Boolean) -> Unit) {
+        if (!isWriteable()) return
+
+        if (note is AddressableNote) {
+            userProfile().latestBookmarkList?.privateTaggedAddresses(signer) {
+                onReady(it.contains(note.address))
+            }
+        } else {
+            userProfile().latestBookmarkList?.privateTaggedEvents(signer) {
+                onReady(it.contains(note.idHex))
             }
         }
     }
 
     fun isInPublicBookmarks(note: Note): Boolean {
-        if (!isWriteable() && !loginWithExternalSigner) return false
+        if (!isWriteable()) return false
 
         if (note is AddressableNote) {
             return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true
@@ -2302,318 +1429,107 @@ class Account(
         return getBlockListNote().event as? PeopleListEvent
     }
 
-    private fun migrateHiddenUsersIfNeeded(latestList: PeopleListEvent?): PeopleListEvent? {
-        if (latestList == null) return latestList
-
-        var returningList: PeopleListEvent = latestList
-
-        if (hiddenUsers.isNotEmpty()) {
-            returningList = PeopleListEvent.addUsers(returningList, hiddenUsers.toList(), true, keyPair.privKey!!)
-            hiddenUsers = emptySet()
-        }
-
-        return returningList
-    }
-
     fun hideWord(word: String) {
-        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
-        if (loginWithExternalSigner) {
-            val id = blockList?.id
-            val encryptedContent = if (id == null) {
-                val privateTags = listOf(listOf("word", word))
-                val msg = Event.mapper.writeValueAsString(privateTags)
+        val blockList = getBlockList()
 
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
-                val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
-                ExternalSignerUtils.content.remove("encrypted")
-                if (encryptedContent.isBlank()) return
-                encryptedContent
-            } else {
-                var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
-                if (decryptedContent == null) {
-                    ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
-                    val content = ExternalSignerUtils.content[id] ?: ""
-                    if (content.isBlank()) return
-                    decryptedContent = content
-                }
+        if (blockList != null) {
+            PeopleListEvent.addWord(
+                earlierVersion = blockList,
+                word = word,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
 
-                val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("word", word))
-                val msg = Event.mapper.writeValueAsString(privateTags)
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
-                val eventContent = ExternalSignerUtils.content[id] ?: ""
-                if (eventContent.isBlank()) return
-                eventContent
+                live.invalidateData()
+                saveable.invalidateData()
             }
-
-            var event = if (blockList != null) {
-                PeopleListEvent.addWord(
-                    earlierVersion = blockList,
-                    word = word,
-                    isPrivate = true,
-                    pubKey = keyPair.pubKey.toHexKey(),
-                    encryptedContent
-                )
-            } else {
-                PeopleListEvent.createListWithWord(
-                    name = PeopleListEvent.blockList,
-                    word = word,
-                    isPrivate = true,
-                    pubKey = keyPair.pubKey.toHexKey(),
-                    encryptedContent
-                )
-            }
-
-            ExternalSignerUtils.openSigner(event)
-
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) return
-            event = PeopleListEvent(
-                event.id,
-                event.pubKey,
-                event.createdAt,
-                event.tags,
-                event.content,
-                eventContent
-            )
-
-            Client.send(event)
-            LocalCache.consume(event)
         } else {
-            val event = if (blockList != null) {
-                PeopleListEvent.addWord(
-                    earlierVersion = blockList,
-                    word = word,
-                    isPrivate = true,
-                    privateKey = keyPair.privKey!!
-                )
-            } else {
-                PeopleListEvent.createListWithWord(
-                    name = PeopleListEvent.blockList,
-                    word = word,
-                    isPrivate = true,
-                    privateKey = keyPair.privKey!!
-                )
+            PeopleListEvent.createListWithWord(
+                name = PeopleListEvent.blockList,
+                word = word,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+
+                live.invalidateData()
+                saveable.invalidateData()
             }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
-
-        live.invalidateData()
-        saveable.invalidateData()
     }
 
     fun showWord(word: String) {
-        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+        val blockList = getBlockList()
 
         if (blockList != null) {
-            if (loginWithExternalSigner) {
-                val content = blockList.content
-                val encryptedContent = if (content.isBlank()) {
-                    val privateTags = listOf(listOf("word", word))
-                    val msg = Event.mapper.writeValueAsString(privateTags)
+            PeopleListEvent.removeWord(
+                earlierVersion = blockList,
+                word = word,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
 
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
-                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
-                    if (eventContent.isBlank()) return
-                    eventContent
-                } else {
-                    var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
-                    if (decryptedContent == null) {
-                        ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
-                        val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
-                        if (eventContent.isBlank()) return
-                        decryptedContent = eventContent
-                    }
-                    val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("word", word))
-                    val msg = Event.mapper.writeValueAsString(privateTags)
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
-                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
-                    if (eventContent.isBlank()) return
-                    eventContent
-                }
-
-                var event = PeopleListEvent.removeTag(
-                    earlierVersion = blockList,
-                    tag = word,
-                    isPrivate = true,
-                    pubKey = keyPair.pubKey.toHexKey(),
-                    encryptedContent
-                )
-
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) return
-                event = PeopleListEvent.create(event, eventContent)
-
-                Client.send(event)
-                LocalCache.consume(event)
-            } else {
-                val event = PeopleListEvent.removeWord(
-                    earlierVersion = blockList,
-                    word = word,
-                    isPrivate = true,
-                    privateKey = keyPair.privKey!!
-                )
-
-                Client.send(event)
-                LocalCache.consume(event)
+                live.invalidateData()
+                saveable.invalidateData()
             }
         }
-
-        transientHiddenUsers = (transientHiddenUsers - word).toImmutableSet()
-        live.invalidateData()
-        saveable.invalidateData()
     }
 
-    fun hideUser(pubkeyHex: String) {
-        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
-        if (loginWithExternalSigner) {
-            val id = blockList?.id
-            val encryptedContent = if (id == null) {
-                val privateTags = listOf(listOf("p", pubkeyHex))
-                val msg = Event.mapper.writeValueAsString(privateTags)
+    suspend fun hideUser(pubkeyHex: String) {
+        val blockList = getBlockList()
 
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), "encrypted")
-                val encryptedContent = ExternalSignerUtils.content["encrypted"] ?: ""
-                ExternalSignerUtils.content.remove("encrypted")
-                if (encryptedContent.isBlank()) return
-                encryptedContent
-            } else {
-                var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[id]
-                if (decryptedContent == null) {
-                    ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), id)
-                    val content = ExternalSignerUtils.content[id] ?: ""
-                    if (content.isBlank()) return
-                    decryptedContent = content
-                }
+        if (blockList != null) {
+            PeopleListEvent.addUser(
+                earlierVersion = blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
 
-                val privateTags = blockList.privateTagsOrEmpty(decryptedContent).plus(element = listOf("p", pubkeyHex))
-                val msg = Event.mapper.writeValueAsString(privateTags)
-                ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), id)
-                val eventContent = ExternalSignerUtils.content[id] ?: ""
-                if (eventContent.isBlank()) return
-                eventContent
+                live.invalidateData()
+                saveable.invalidateData()
             }
-
-            var event = if (blockList != null) {
-                PeopleListEvent.addUser(
-                    earlierVersion = blockList,
-                    pubKeyHex = pubkeyHex,
-                    isPrivate = true,
-                    pubKey = keyPair.pubKey.toHexKey(),
-                    encryptedContent
-                )
-            } else {
-                PeopleListEvent.createListWithUser(
-                    name = PeopleListEvent.blockList,
-                    pubKeyHex = pubkeyHex,
-                    isPrivate = true,
-                    pubKey = keyPair.pubKey.toHexKey(),
-                    encryptedContent
-                )
-            }
-
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) return
-            event = PeopleListEvent(
-                event.id,
-                event.pubKey,
-                event.createdAt,
-                event.tags,
-                event.content,
-                eventContent
-            )
-
-            Client.send(event)
-            LocalCache.consume(event)
         } else {
-            val event = if (blockList != null) {
-                PeopleListEvent.addUser(
-                    earlierVersion = blockList,
-                    pubKeyHex = pubkeyHex,
-                    isPrivate = true,
-                    privateKey = keyPair.privKey!!
-                )
-            } else {
-                PeopleListEvent.createListWithUser(
-                    name = PeopleListEvent.blockList,
-                    pubKeyHex = pubkeyHex,
-                    isPrivate = true,
-                    privateKey = keyPair.privKey!!
-                )
+            PeopleListEvent.createListWithUser(
+                name = PeopleListEvent.blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+
+                live.invalidateData()
+                saveable.invalidateData()
             }
-
-            Client.send(event)
-            LocalCache.consume(event)
         }
-
-        live.invalidateData()
-        saveable.invalidateData()
     }
 
-    fun showUser(pubkeyHex: String) {
-        val blockList = migrateHiddenUsersIfNeeded(getBlockList())
+    suspend fun showUser(pubkeyHex: String) {
+        val blockList = getBlockList()
 
         if (blockList != null) {
-            if (loginWithExternalSigner) {
-                val content = blockList.content
-                val encryptedContent = if (content.isBlank()) {
-                    val privateTags = listOf(listOf("p", pubkeyHex))
-                    val msg = Event.mapper.writeValueAsString(privateTags)
+            PeopleListEvent.removeUser(
+                earlierVersion = blockList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
 
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
-                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
-                    if (eventContent.isBlank()) return
-                    eventContent
-                } else {
-                    var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[blockList.id]
-                    if (decryptedContent == null) {
-                        ExternalSignerUtils.decrypt(blockList.content, keyPair.pubKey.toHexKey(), blockList.id)
-                        val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
-                        if (eventContent.isBlank()) return
-                        decryptedContent = eventContent
-                    }
-                    val privateTags = blockList.privateTagsOrEmpty(decryptedContent).minus(element = listOf("p", pubkeyHex))
-                    val msg = Event.mapper.writeValueAsString(privateTags)
-                    ExternalSignerUtils.encrypt(msg, keyPair.pubKey.toHexKey(), blockList.id)
-                    val eventContent = ExternalSignerUtils.content[blockList.id] ?: ""
-                    if (eventContent.isBlank()) return
-                    eventContent
-                }
-
-                var event = PeopleListEvent.removeTag(
-                    earlierVersion = blockList,
-                    tag = pubkeyHex,
-                    isPrivate = true,
-                    pubKey = keyPair.pubKey.toHexKey(),
-                    encryptedContent
-                )
-
-                ExternalSignerUtils.openSigner(event)
-                val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-                if (eventContent.isBlank()) return
-                event = PeopleListEvent.create(event, eventContent)
-
-                Client.send(event)
-                LocalCache.consume(event)
-            } else {
-                val event = PeopleListEvent.removeUser(
-                    earlierVersion = blockList,
-                    pubKeyHex = pubkeyHex,
-                    isPrivate = true,
-                    privateKey = keyPair.privKey!!
-                )
-
-                Client.send(event)
-                LocalCache.consume(event)
+                transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
+                live.invalidateData()
+                saveable.invalidateData()
             }
         }
-
-        transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
-        live.invalidateData()
-        saveable.invalidateData()
     }
 
     fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
@@ -2629,25 +1545,25 @@ class Account(
     }
 
     fun changeDefaultHomeFollowList(name: String) {
-        defaultHomeFollowList = name
+        defaultHomeFollowList.tryEmit(name)
         live.invalidateData()
         saveable.invalidateData()
     }
 
     fun changeDefaultStoriesFollowList(name: String) {
-        defaultStoriesFollowList = name
+        defaultStoriesFollowList.tryEmit(name)
         live.invalidateData()
         saveable.invalidateData()
     }
 
     fun changeDefaultNotificationFollowList(name: String) {
-        defaultNotificationFollowList = name
+        defaultNotificationFollowList.tryEmit(name)
         live.invalidateData()
         saveable.invalidateData()
     }
 
     fun changeDefaultDiscoveryFollowList(name: String) {
-        defaultDiscoveryFollowList = name
+        defaultDiscoveryFollowList.tryEmit(name)
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -2670,278 +1586,78 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun selectedUsersFollowList(listName: String?): Set<String>? {
-        if (listName == GLOBAL_FOLLOWS) return null
-        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingKeySet()
-
-        val privKey = keyPair.privKey
-
-        return if (listName != null) {
-            val list = LocalCache.addressables[listName]
-            if (list != null) {
-                val publicHexList = (list.event as? PeopleListEvent)?.bookmarkedPeople() ?: emptySet()
-                val privateHexList = privKey?.let {
-                    (list.event as? PeopleListEvent)?.privateTaggedUsers(it)
-                } ?: emptySet()
-
-                (publicHexList + privateHexList).toSet()
-            } else {
-                emptySet()
-            }
-        } else {
-            emptySet()
-        }
-    }
-
-    fun selectedTagsFollowList(listName: String?): Set<String>? {
-        if (listName == GLOBAL_FOLLOWS) return null
-        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingTagSet()
-
-        val privKey = keyPair.privKey
-
-        return if (listName != null) {
-            val list = LocalCache.addressables[listName]
-            if (list != null) {
-                val publicAddresses = list.event?.hashtags() ?: emptySet()
-                val privateAddresses = privKey?.let {
-                    (list.event as? GeneralListEvent)?.privateHashtags(it)
-                } ?: emptySet()
-
-                (publicAddresses + privateAddresses).toSet()
-            } else {
-                emptySet()
-            }
-        } else {
-            emptySet()
-        }
-    }
-
-    fun selectedGeohashesFollowList(listName: String?): Set<String>? {
-        if (listName == GLOBAL_FOLLOWS) return null
-        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingGeohashSet()
-
-        val privKey = keyPair.privKey
-
-        return if (listName != null) {
-            val list = LocalCache.addressables[listName]
-            if (list != null) {
-                val publicAddresses = list.event?.geohashes() ?: emptySet()
-                val privateAddresses = privKey?.let {
-                    (list.event as? GeneralListEvent)?.privateGeohashes(it)
-                } ?: emptySet()
-
-                (publicAddresses + privateAddresses).toSet()
-            } else {
-                emptySet()
-            }
-        } else {
-            emptySet()
-        }
-    }
-
-    fun selectedCommunitiesFollowList(listName: String?): Set<String>? {
-        if (listName == GLOBAL_FOLLOWS) return null
-        if (listName == KIND3_FOLLOWS) return userProfile().cachedFollowingCommunitiesSet()
-
-        val privKey = keyPair.privKey
-
-        return if (listName != null) {
-            val list = LocalCache.addressables[listName]
-            if (list != null) {
-                val publicAddresses = list.event?.taggedAddresses()?.map { it.toTag() } ?: emptySet()
-                val privateAddresses = privKey?.let {
-                    (list.event as? GeneralListEvent)?.privateTaggedAddresses(it)?.map { it.toTag() }
-                } ?: emptySet()
-
-                (publicAddresses + privateAddresses).toSet()
-            } else {
-                emptySet()
-            }
-        } else {
-            emptySet()
-        }
-    }
-
     fun selectedChatsFollowList(): Set<String> {
         val contactList = userProfile().latestContactList
         return contactList?.taggedEvents()?.toSet() ?: DefaultChannels
     }
 
     fun sendChangeChannel(name: String, about: String, picture: String, channel: Channel) {
-        if (!isWriteable() && !loginWithExternalSigner) return
+        if (!isWriteable()) return
 
-        val metadata = ChannelCreateEvent.ChannelData(
+        ChannelMetadataEvent.create(
             name,
             about,
-            picture
-        )
-
-        var event = ChannelMetadataEvent.create(
-            newChannelInfo = metadata,
+            picture,
             originalChannelIdHex = channel.idHex,
-            keyPair = keyPair
-        )
-        if (loginWithExternalSigner) {
-            ExternalSignerUtils.openSigner(event)
-            val eventContent = ExternalSignerUtils.content[event.id] ?: ""
-            if (eventContent.isBlank()) return
-            event = ChannelMetadataEvent.create(event, eventContent)
-        }
+            signer = signer
+        ) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
 
-        Client.send(event)
-        LocalCache.consume(event)
-
-        follow(channel)
-    }
-
-    fun unwrap(event: GiftWrapEvent): Event? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
-
-        if (loginWithExternalSigner) {
-            var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
-            if (decryptedContent == null) {
-                ExternalSignerUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
-            }
-            decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
-            if (decryptedContent.isEmpty()) return null
-            return event.cachedGift(keyPair.pubKey, decryptedContent)
-        }
-
-        return event.cachedGift(keyPair.privKey!!)
-    }
-
-    fun unseal(event: SealedGossipEvent): Event? {
-        if (!isWriteable() && !loginWithExternalSigner) return null
-
-        if (loginWithExternalSigner) {
-            var decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
-            if (decryptedContent == null) {
-                ExternalSignerUtils.decrypt(event.content, event.pubKey, event.id, SignerType.NIP44_DECRYPT)
-            }
-            decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id] ?: ""
-            if (decryptedContent.isEmpty()) return null
-            return event.cachedGossip(keyPair.pubKey, decryptedContent)
-        }
-
-        return event.cachedGossip(keyPair.privKey!!)
-    }
-
-    fun decryptContent(note: Note): String? {
-        return if (loginWithExternalSigner) {
-            decryptContentWithExternalSigner(note)
-        } else {
-            decryptContentInternalSigner(note)
+            follow(channel)
         }
     }
 
-    fun decryptContentInternalSigner(note: Note): String? {
-        val privKey = keyPair.privKey
+    fun unwrap(event: GiftWrapEvent, onReady: (Event) -> Unit) {
+        if (!isWriteable()) return
+
+        return event.cachedGift(signer, onReady)
+    }
+
+    fun unseal(event: SealedGossipEvent, onReady: (Event) -> Unit) {
+        if (!isWriteable()) return
+
+        return event.cachedGossip(signer, onReady)
+    }
+
+    fun cachedDecryptContent(note: Note): String? {
         val event = note.event
-        return if (event is PrivateDmEvent && privKey != null) {
-            event.plainContent(privKey, event.talkingWith(userProfile().pubkeyHex).hexToByteArray())
-        } else if (event is LnZapRequestEvent && privKey != null) {
-            decryptZapContentAuthor(note)?.content()
+        return if (event is PrivateDmEvent && isWriteable()) {
+            event.cachedContentFor(signer)
+        } else if (event is LnZapRequestEvent && event.isPrivateZap() && isWriteable()) {
+            event.cachedPrivateZap()?.content
         } else {
             event?.content()
         }
     }
 
-    fun decryptContentWithExternalSigner(note: Note): String? = with(Dispatchers.IO) {
+    fun decryptContent(note: Note, onReady: (String) -> Unit) {
         val event = note.event
-        return when (event) {
-            is PrivateDmEvent -> {
-                if (ExternalSignerUtils.cachedDecryptedContent[event.id] == null) {
-                    ExternalSignerUtils.decryptDM(
-                        event.content,
-                        event.talkingWith(userProfile().pubkeyHex),
-                        event.id
-                    )
-                    ExternalSignerUtils.cachedDecryptedContent[event.id]
-                } else {
-                    ExternalSignerUtils.cachedDecryptedContent[event.id]
-                }
+        if (event is PrivateDmEvent && isWriteable()) {
+            event.plainContent(signer, onReady)
+        } else if (event is LnZapRequestEvent) {
+            decryptZapContentAuthor(note) {
+                onReady(it.content)
             }
-            is LnZapRequestEvent -> {
-                decryptZapContentAuthor(note)?.content()
-            }
-            else -> {
-                event?.content()
+        } else {
+            event?.content()?.let {
+                onReady(it)
             }
         }
     }
 
-    fun decryptZapContentAuthor(note: Note): Event? {
+    fun decryptZapContentAuthor(note: Note, onReady: (Event) -> Unit) {
         val event = note.event
-        val loggedInPrivateKey = keyPair.privKey
-
-        if (loginWithExternalSigner && event is LnZapRequestEvent && event.isPrivateZap()) {
-            val decryptedContent = ExternalSignerUtils.cachedDecryptedContent[event.id]
-            if (decryptedContent != null) {
-                return try {
-                    Event.fromJson(decryptedContent)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            ExternalSignerUtils.decryptZapEvent(event)
-            return null
-        }
-
-        return if (event is LnZapRequestEvent && loggedInPrivateKey != null && event.isPrivateZap()) {
-            val recipientPK = event.zappedAuthor().firstOrNull()
-            val recipientPost = event.zappedPost().firstOrNull()
-            if (recipientPK == userProfile().pubkeyHex) {
-                // if the receiver is logged in, these are the params.
-                val privateKeyToUse = loggedInPrivateKey
-                val pubkeyToUse = event.pubKey
-
-                event.getPrivateZapEvent(privateKeyToUse, pubkeyToUse)
-            } else {
-                // if the sender is logged in, these are the params
-                val altPubkeyToUse = recipientPK
-                val altPrivateKeyToUse = if (recipientPost != null) {
-                    LnZapRequestEvent.createEncryptionPrivateKey(
-                        loggedInPrivateKey.toHexKey(),
-                        recipientPost,
-                        event.createdAt
-                    )
-                } else if (recipientPK != null) {
-                    LnZapRequestEvent.createEncryptionPrivateKey(
-                        loggedInPrivateKey.toHexKey(),
-                        recipientPK,
-                        event.createdAt
-                    )
-                } else {
-                    null
-                }
-
-                try {
-                    if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                        val altPubKeyFromPrivate = CryptoUtils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
-
-                        if (altPubKeyFromPrivate == event.pubKey) {
-                            val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
-
-                            if (result == null) {
-                                Log.w(
-                                    "Private ZAP Decrypt",
-                                    "Fail to decrypt Zap from ${note.author?.toBestDisplayName()} ${note.idNote()}"
-                                )
-                            }
-                            result
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
+        if (event is LnZapRequestEvent) {
+            if (event.isPrivateZap()) {
+                if (isWriteable()) {
+                    event.decryptPrivateZap(signer) {
+                        onReady(it)
                     }
-                } catch (e: Exception) {
-                    Log.e("Account", "Failed to create pubkey for ZapRequest ${event.id}", e)
-                    null
                 }
+            } else {
+                onReady(event)
             }
-        } else {
-            null
         }
     }
 
@@ -3039,14 +1755,7 @@ class Account(
     fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
     fun isHidden(userHex: String): Boolean {
-        val blockList = getBlockList()
-        val decryptedContent = blockList?.decryptedContent ?: ""
-
-        if (loginWithExternalSigner) {
-            if (decryptedContent.isBlank()) return false
-            return (blockList?.publicAndPrivateUsers(decryptedContent)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
-        }
-        return (blockList?.publicAndPrivateUsers(keyPair.privKey)?.contains(userHex) ?: false) || userHex in transientHiddenUsers
+        return flowHiddenUsers.value.hiddenUsers.contains(userHex) || flowHiddenUsers.value.spammers.contains(userHex)
     }
 
     fun followingKeySet(): Set<HexKey> {
@@ -3117,7 +1826,7 @@ class Account(
             ).toSet()
     }
 
-    fun saveRelayList(value: List<RelaySetupInfo>) {
+    suspend fun saveRelayList(value: List<RelaySetupInfo>) {
         try {
             localRelays = value.toSet()
             return sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) })

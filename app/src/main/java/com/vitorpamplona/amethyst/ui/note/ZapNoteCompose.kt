@@ -198,14 +198,10 @@ fun ShowFollowingOrUnfollowingButton(
     if (isFollowing) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    accountViewModel.unfollow(baseAuthor)
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_unfollow
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_unfollow
+                )
             } else {
                 accountViewModel.unfollow(baseAuthor)
             }
@@ -213,14 +209,10 @@ fun ShowFollowingOrUnfollowingButton(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                if (accountViewModel.loggedInWithExternalSigner()) {
-                    accountViewModel.follow(baseAuthor)
-                } else {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_follow
-                    )
-                }
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_follow
+                )
             } else {
                 accountViewModel.follow(baseAuthor)
             }

@@ -29,7 +29,10 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
@@ -164,7 +167,7 @@ object LocalPreferences {
         val accInfo = AccountInfo(
             npub,
             account.isWriteable(),
-            account.loginWithExternalSigner
+            account.signer is NostrSignerExternal
         )
         updateCurrentAccount(npub)
         addAccount(accInfo)
@@ -243,16 +246,13 @@ object LocalPreferences {
 
         val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
         prefs.edit().apply {
-            putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.loginWithExternalSigner)
-            if (account.loginWithExternalSigner) {
+            putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.signer is NostrSignerExternal)
+            if (account.signer is NostrSignerExternal) {
                 remove(PrefKeys.NOSTR_PRIVKEY)
             } else {
                 account.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
             }
             account.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
-            putStringSet(PrefKeys.FOLLOWING_CHANNELS, account.followingChannels)
-            putStringSet(PrefKeys.FOLLOWING_COMMUNITIES, account.followingCommunities)
-            putStringSet(PrefKeys.HIDDEN_USERS, account.hiddenUsers)
             putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(account.localRelays))
             putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
             putString(PrefKeys.LANGUAGE_PREFS, Event.mapper.writeValueAsString(account.languagePreferences))
@@ -261,10 +261,10 @@ object LocalPreferences {
             putString(PrefKeys.REACTION_CHOICES, Event.mapper.writeValueAsString(account.reactionChoices))
             putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.name)
             putString(PrefKeys.DEFAULT_FILE_SERVER, account.defaultFileServer.name)
-            putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList)
-            putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList)
-            putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, account.defaultNotificationFollowList)
-            putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, account.defaultDiscoveryFollowList)
+            putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList.value)
+            putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList.value)
+            putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, account.defaultNotificationFollowList.value)
+            putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, account.defaultDiscoveryFollowList.value)
             putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, Event.mapper.writeValueAsString(account.zapPaymentRequest))
             putString(PrefKeys.LATEST_CONTACT_LIST, Event.mapper.writeValueAsString(account.backupContactList))
             putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
@@ -382,6 +382,7 @@ object LocalPreferences {
             val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
             val loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
             val privKey = if (loginWithExternalSigner) null else getString(PrefKeys.NOSTR_PRIVKEY, null)
+
             val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
             val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
             val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
@@ -472,11 +473,16 @@ object LocalPreferences {
                 mapOf()
             }
 
+            val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
+            val signer = if (loginWithExternalSigner) {
+                NostrSignerExternal(pubKey)
+            } else {
+                NostrSignerInternal(keyPair)
+            }
+
             return@with Account(
-                keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray()),
-                followingChannels = followingChannels,
-                followingCommunities = followingCommunities,
-                hiddenUsers = hiddenUsers,
+                keyPair = keyPair,
+                signer = signer,
                 localRelays = localRelays,
                 dontTranslateFrom = dontTranslateFrom,
                 languagePreferences = languagePreferences,
@@ -485,10 +491,10 @@ object LocalPreferences {
                 reactionChoices = reactionChoices,
                 defaultZapType = defaultZapType,
                 defaultFileServer = defaultFileServer,
-                defaultHomeFollowList = defaultHomeFollowList,
-                defaultStoriesFollowList = defaultStoriesFollowList,
-                defaultNotificationFollowList = defaultNotificationFollowList,
-                defaultDiscoveryFollowList = defaultDiscoveryFollowList,
+                defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
+                defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
+                defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
+                defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
                 zapPaymentRequest = zapPaymentRequestServer,
                 hideDeleteRequestDialog = hideDeleteRequestDialog,
                 hideBlockAlertDialog = hideBlockAlertDialog,
@@ -499,8 +505,7 @@ object LocalPreferences {
                 showSensitiveContent = showSensitiveContent,
                 warnAboutPostsWithReports = warnAboutReports,
                 filterSpamFromStrangers = filterSpam,
-                lastReadPerRoute = lastReadPerRoute,
-                loginWithExternalSigner = loginWithExternalSigner
+                lastReadPerRoute = lastReadPerRoute
             )
         }
     }

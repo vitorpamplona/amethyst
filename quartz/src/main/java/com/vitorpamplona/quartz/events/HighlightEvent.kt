@@ -5,6 +5,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class HighlightEvent(
@@ -27,14 +28,11 @@ class HighlightEvent(
 
         fun create(
             msg: String,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): HighlightEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val tags = mutableListOf<List<String>>()
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return HighlightEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (HighlightEvent) -> Unit
+        ) {
+            signer.sign(createdAt, kind, emptyList(), msg, onReady)
         }
     }
 }

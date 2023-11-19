@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 data class ReportedKey(val key: String, val reportType: ReportEvent.ReportType)
@@ -57,35 +58,36 @@ class ReportEvent(
         fun create(
             reportedPost: EventInterface,
             type: ReportType,
-            keyPair: KeyPair,
+            signer: NostrSigner,
             content: String = "",
-            createdAt: Long = TimeUtils.now()
-        ): ReportEvent {
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ReportEvent) -> Unit
+        ) {
             val reportPostTag = listOf("e", reportedPost.id(), type.name.lowercase())
             val reportAuthorTag = listOf("p", reportedPost.pubKey(), type.name.lowercase())
 
-            val pubKey = keyPair.pubKey.toHexKey()
             var tags: List<List<String>> = listOf(reportPostTag, reportAuthorTag)
 
             if (reportedPost is AddressableEvent) {
                 tags = tags + listOf(listOf("a", reportedPost.address().toTag()))
             }
 
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
 
-        fun create(reportedUser: String, type: ReportType, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ReportEvent {
+        fun create(
+            reportedUser: String,
+            type: ReportType,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ReportEvent) -> Unit
+        ) {
             val content = ""
 
             val reportAuthorTag = listOf("p", reportedUser, type.name.lowercase())
 
-            val pubKey = keyPair.pubKey.toHexKey()
             val tags: List<List<String>> = listOf(reportAuthorTag)
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return ReportEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 

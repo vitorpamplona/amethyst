@@ -5,6 +5,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class ChannelHideMessageEvent(
@@ -26,16 +27,19 @@ class ChannelHideMessageEvent(
     companion object {
         const val kind = 43
 
-        fun create(reason: String, messagesToHide: List<String>?, privateKey: ByteArray, createdAt: Long = TimeUtils.now()): ChannelHideMessageEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
+        fun create(
+            reason: String,
+            messagesToHide: List<String>?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelHideMessageEvent) -> Unit
+        ) {
             val tags =
                 messagesToHide?.map {
                     listOf("e", it)
                 } ?: emptyList()
 
-            val id = generateId(pubKey, createdAt, kind, tags, reason)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return ChannelHideMessageEvent(id.toHexKey(), pubKey, createdAt, tags, reason, sig.toHexKey())
+            signer.sign(createdAt, kind, tags, reason, onReady)
         }
     }
 }

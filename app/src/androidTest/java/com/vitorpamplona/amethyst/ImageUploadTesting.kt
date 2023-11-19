@@ -29,11 +29,7 @@ class ImageUploadTesting {
         var url: String? = null
         var error: String? = null
 
-        ImageUploader.account = Account(
-            KeyPair()
-        )
-
-        ImageUploader.uploadImage(
+        ImageUploader(Account(KeyPair())).uploadImage(
             inputStream,
             bytes.size.toLong(),
             "image/gif",

@@ -1439,7 +1439,7 @@ object LocalCache {
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
-        val toBeRemoved = account.hiddenUsers.map { userHex ->
+        val toBeRemoved = account.liveHiddenUsers.value?.hiddenUsers?.map { userHex ->
             (
                 notes.values.filter {
                     it.event?.pubKey() == userHex
@@ -1447,7 +1447,7 @@ object LocalCache {
                     it.event?.pubKey() == userHex
                 }
                 ).toSet()
-        }.flatten()
+        }?.flatten() ?: emptyList()
 
         toBeRemoved.forEach {
             removeFromCache(it)

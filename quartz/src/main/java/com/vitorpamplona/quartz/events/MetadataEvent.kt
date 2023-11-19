@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 import java.io.ByteArrayInputStream
 
 @Stable
@@ -149,20 +150,20 @@ class MetadataEvent(
     companion object {
         const val kind = 0
 
-        fun create(contactMetaData: String, identities: List<IdentityClaim>, pubKey: HexKey, privateKey: ByteArray?, createdAt: Long = TimeUtils.now()): MetadataEvent {
+        fun create(
+            contactMetaData: String,
+            identities: List<IdentityClaim>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (MetadataEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
 
             identities.forEach {
                 tags.add(listOf("i", it.platformIdentity(), it.proof))
             }
 
-            val id = generateId(pubKey, createdAt, kind, tags, contactMetaData)
-            val sig = if (privateKey == null) null else CryptoUtils.sign(id, privateKey)
-            return MetadataEvent(id.toHexKey(), pubKey, createdAt, tags, contactMetaData, sig?.toHexKey() ?: "")
-        }
-
-        fun create(unsignedEvent: MetadataEvent, signature: String): MetadataEvent {
-            return MetadataEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, contactMetaData, onReady)
         }
     }
 }

@@ -19,11 +19,11 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList
+        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList.value
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {
@@ -38,14 +38,14 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     private fun innerApplyFilter(collection: Collection<Note>, ignoreAddressables: Boolean): Set<Note> {
-        val isGlobal = account.defaultHomeFollowList == GLOBAL_FOLLOWS
+        val isGlobal = account.defaultHomeFollowList.value == GLOBAL_FOLLOWS
         val gRelays = account.activeGlobalRelays()
         val isHiddenList = showHiddenKey()
 
-        val followingKeySet = account.selectedUsersFollowList(account.defaultHomeFollowList) ?: emptySet()
-        val followingTagSet = account.selectedTagsFollowList(account.defaultHomeFollowList) ?: emptySet()
-        val followingGeoSet = account.selectedGeohashesFollowList(account.defaultHomeFollowList) ?: emptySet()
-        val followingCommunities = account.selectedCommunitiesFollowList(account.defaultHomeFollowList) ?: emptySet()
+        val followingKeySet = account.liveHomeFollowLists.value?.users ?: emptySet()
+        val followingTagSet = account.liveHomeFollowLists.value?.hashtags ?: emptySet()
+        val followingGeohashSet = account.liveHomeFollowLists.value?.geotags ?: emptySet()
+        val followingCommunities = account.liveHomeFollowLists.value?.communities ?: emptySet()
 
         val oneMinuteInTheFuture = TimeUtils.now() + (1 * 60) // one minute in the future.
         val oneHr = 60 * 60
@@ -57,7 +57,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
                 val isGlobalRelay = it.relays.any { gRelays.contains(it) }
                 (noteEvent is TextNoteEvent || noteEvent is ClassifiedsEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent || noteEvent is LongTextNoteEvent || noteEvent is PollNoteEvent || noteEvent is HighlightEvent || noteEvent is AudioTrackEvent || noteEvent is AudioHeaderEvent) &&
                     (!ignoreAddressables || noteEvent.kind() < 10000) &&
-                    ((isGlobal && isGlobalRelay) || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeoSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
+                    ((isGlobal && isGlobalRelay) || it.author?.pubkeyHex in followingKeySet || noteEvent.isTaggedHashes(followingTagSet) || noteEvent.isTaggedGeoHashes(followingGeohashSet) || noteEvent.isTaggedAddressableNotes(followingCommunities)) &&
                     // && account.isAcceptable(it)  // This filter follows only. No need to check if acceptable
                     (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
                     ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&

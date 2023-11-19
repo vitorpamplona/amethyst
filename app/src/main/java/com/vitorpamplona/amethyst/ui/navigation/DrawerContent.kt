@@ -36,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -62,12 +61,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -564,9 +559,7 @@ fun ListContent(
                 conectOrbotDialogOpen = false
                 disconnectTorDialog = false
                 checked = true
-                coroutineScope.launch(Dispatchers.IO) {
-                    enableTor(accountViewModel.account, true, proxyPort)
-                }
+                accountViewModel.enableTor(true, proxyPort)
             },
             onError = {
                 accountViewModel.toast(
@@ -594,13 +587,7 @@ fun ListContent(
                     onClick = {
                         disconnectTorDialog = false
                         checked = false
-                        coroutineScope.launch(Dispatchers.IO) {
-                            enableTor(
-                                accountViewModel.account,
-                                false,
-                                proxyPort
-                            )
-                        }
+                        accountViewModel.enableTor(false, proxyPort)
                     }
                 ) {
                     Text(text = stringResource(R.string.yes))
@@ -617,17 +604,6 @@ fun ListContent(
             }
         )
     }
-}
-
-private suspend fun enableTor(
-    account: Account,
-    checked: Boolean,
-    portNumber: MutableState<String>
-) {
-    account.proxyPort = portNumber.value.toInt()
-    account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
-    LocalPreferences.saveToEncryptedStorage(account)
-    ServiceManager.forceRestart()
 }
 
 @Composable

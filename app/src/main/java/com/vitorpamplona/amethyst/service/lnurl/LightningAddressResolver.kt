@@ -9,8 +9,6 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Lud06
 import com.vitorpamplona.quartz.encoders.toLnUrl
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -33,12 +31,12 @@ class LightningAddressResolver() {
         return null
     }
 
-    private suspend fun fetchLightningAddressJson(
+    private fun fetchLightningAddressJson(
         lnaddress: String,
-        onSuccess: suspend (String) -> Unit,
+        onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context
-    ) = withContext(Dispatchers.IO) {
+    ) {
         checkNotInMainThread()
 
         val url = assembleUrl(lnaddress)
@@ -51,7 +49,7 @@ class LightningAddressResolver() {
                     lnaddress
                 )
             )
-            return@withContext
+            return
         }
 
         try {
@@ -88,15 +86,17 @@ class LightningAddressResolver() {
         }
     }
 
-    suspend fun fetchLightningInvoice(
+    fun fetchLightningInvoice(
         lnCallback: String,
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
-        onSuccess: suspend (String) -> Unit,
+        onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context
-    ) = withContext(Dispatchers.IO) {
+    ) {
+        checkNotInMainThread()
+
         val encodedMessage = URLEncoder.encode(message, "utf-8")
 
         val urlBinder = if (lnCallback.contains("?")) "&" else "?"
@@ -124,7 +124,7 @@ class LightningAddressResolver() {
         }
     }
 
-    suspend fun lnAddressToLnUrl(lnaddress: String, onSuccess: (String) -> Unit, onError: (String, String) -> Unit, context: Context) {
+    fun lnAddressToLnUrl(lnaddress: String, onSuccess: (String) -> Unit, onError: (String, String) -> Unit, context: Context) {
         fetchLightningAddressJson(
             lnaddress,
             onSuccess = {
@@ -135,12 +135,12 @@ class LightningAddressResolver() {
         )
     }
 
-    suspend fun lnAddressInvoice(
+    fun lnAddressInvoice(
         lnaddress: String,
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
-        onSuccess: suspend (String) -> Unit,
+        onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context

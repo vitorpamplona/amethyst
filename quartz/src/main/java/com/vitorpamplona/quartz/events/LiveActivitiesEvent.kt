@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class LiveActivitiesEvent(
@@ -50,14 +51,12 @@ class LiveActivitiesEvent(
         const val STATUS_ENDED = "ended"
 
         fun create(
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): LiveActivitiesEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (LiveActivitiesEvent) -> Unit
+        ) {
             val tags = mutableListOf<List<String>>()
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, "")
-            val sig = CryptoUtils.sign(id, privateKey)
-            return LiveActivitiesEvent(id.toHexKey(), pubKey, createdAt, tags, "", sig.toHexKey())
+            signer.sign(createdAt, kind, tags, "", onReady)
         }
     }
 }

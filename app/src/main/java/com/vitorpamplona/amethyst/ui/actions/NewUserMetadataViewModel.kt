@@ -184,7 +184,7 @@ class NewUserMetadataViewModel : ViewModel() {
             context.applicationContext,
             onReady = { fileUri, contentType, size ->
                 viewModelScope.launch(Dispatchers.IO) {
-                    ImageUploader.uploadImage(
+                    ImageUploader(account).uploadImage(
                         uri = fileUri,
                         contentType = contentType,
                         size = size,

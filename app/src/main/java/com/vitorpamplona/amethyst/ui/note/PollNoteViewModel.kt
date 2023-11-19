@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.events.CLOSED_AT
 import com.vitorpamplona.quartz.events.CONSENSUS_THRESHOLD
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.VALUE_MAXIMUM
 import com.vitorpamplona.quartz.events.VALUE_MINIMUM
@@ -68,10 +69,13 @@ class PollNoteViewModel : ViewModel() {
     fun refreshTallies() {
         viewModelScope.launch(Dispatchers.Default) {
             totalZapped = totalZapped()
-            wasZappedByLoggedInAccount = pollNote?.let { account?.calculateIfNoteWasZappedByAccount(it) } ?: false
+            wasZappedByLoggedInAccount = false
+            account?.calculateIfNoteWasZappedByAccount(pollNote) {
+                wasZappedByLoggedInAccount = true
+            }
 
-            val newOptions = pollOptions?.keys?.map {
-                val zappedInOption = zappedPollOptionAmount(it)
+            val newOptions = pollOptions?.keys?.map { option ->
+                val zappedInOption = zappedPollOptionAmount(option)
 
                 val myTally = if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
                     zappedInOption.divide(totalZapped, 2, RoundingMode.HALF_UP)
@@ -79,11 +83,11 @@ class PollNoteViewModel : ViewModel() {
                     BigDecimal.ZERO
                 }
 
-                val zappedByLoggedIn = account?.userProfile()?.let { it1 -> isPollOptionZappedBy(it, it1) } ?: false
+                val cachedZappedByLoggedIn = account?.userProfile()?.let { it1 -> cachedIsPollOptionZappedBy(option, it1) } ?: false
 
                 val consensus = consensusThreshold != null && myTally >= consensusThreshold!!
 
-                PollOption(it, pollOptions?.get(it) ?: "", zappedInOption, myTally, consensus, zappedByLoggedIn)
+                PollOption(option, pollOptions?.get(option) ?: "", zappedInOption, myTally, consensus, cachedZappedByLoggedIn)
             }
 
             _tallies.emit(
@@ -166,11 +170,15 @@ class PollNoteViewModel : ViewModel() {
         return false
     }
 
-    fun isPollOptionZappedBy(option: Int, user: User): Boolean {
+    fun isPollOptionZappedBy(option: Int, user: User, onWasZappedByAuthor: () -> Unit) {
+        pollNote?.isZappedBy(option, user, account!!, onWasZappedByAuthor)
+    }
+
+    fun cachedIsPollOptionZappedBy(option: Int, user: User): Boolean {
         return pollNote!!.zaps
             .any {
                 val zapEvent = it.value?.event as? LnZapEvent
-                val privateZapAuthor = account?.decryptZapContentAuthor(it.key)
+                val privateZapAuthor = (it.key.event as? LnZapRequestEvent)?.cachedPrivateZap()
                 zapEvent?.zappedPollOption() == option && (it.key.author?.pubkeyHex == user.pubkeyHex || privateZapAuthor?.pubKey == user.pubkeyHex)
             }
     }

@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -26,9 +27,7 @@ import java.util.Base64
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 fun randomChars() = List(16) { charPool.random() }.joinToString("")
-object ImageUploader {
-    lateinit var account: Account
-
+class ImageUploader(val account: Account?) {
     fun uploadImage(
         uri: Uri,
         contentType: String?,
@@ -109,61 +108,73 @@ object ImageUploader {
             )
             .build()
 
-        server.clientID(requestBody.toString())?.let {
-            requestBuilder.addHeader("Authorization", it)
-        }
+        server.authorizationToken(account, requestBody.toString()) { authorizationToken ->
+            if (authorizationToken != null) {
+                requestBuilder.addHeader("Authorization", authorizationToken)
+            }
 
-        requestBuilder
-            .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-            .url(server.postUrl(contentType))
-            .post(requestBody)
-        val request = requestBuilder.build()
+            requestBuilder
+                .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .url(server.postUrl(contentType))
+                .post(requestBody)
+            val request = requestBuilder.build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                try {
-                    check(response.isSuccessful)
-                    response.body.use { body ->
-                        val url = server.parseUrlFromSuccess(body.string())
-                        checkNotNull(url) {
-                            "There must be an uploaded image URL in the response"
+            client.newCall(request).enqueue(object : Callback {
+                override fun onResponse(call: Call, response: Response) {
+                    try {
+                        check(response.isSuccessful)
+                        response.body.use { body ->
+                            val url = server.parseUrlFromSuccess(body.string(), authorizationToken)
+                            checkNotNull(url) {
+                                "There must be an uploaded image URL in the response"
+                            }
+
+                            onSuccess(url, contentType)
                         }
-
-                        onSuccess(url, contentType)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        onError(e)
                     }
-                } catch (e: Exception) {
+                }
+
+                override fun onFailure(call: Call, e: IOException) {
                     e.printStackTrace()
                     onError(e)
                 }
-            }
-
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-                onError(e)
-            }
-        })
+            })
+        }
     }
 
-    fun NIP98Header(url: String, method: String, body: String): String {
-        val noteJson = account.createHTTPAuthorization(url, method, body)?.toJson() ?: ""
+    fun NIP98Header(url: String, method: String, body: String, onReady: (String?) -> Unit) {
+        val myAccount = account
 
-        val encodedNIP98Event: String = Base64.getEncoder().encodeToString(noteJson.toByteArray())
-        return "Nostr " + encodedNIP98Event
+        if (myAccount == null) {
+            onReady(null)
+            return
+        }
+
+        myAccount.createHTTPAuthorization(url, method, body) {
+            val noteJson = it.toJson()
+            val encodedNIP98Event: String = Base64.getEncoder().encodeToString(noteJson.toByteArray())
+            onReady("Nostr $encodedNIP98Event")
+        }
     }
 }
 
 abstract class FileServer {
     abstract fun postUrl(contentType: String?): String
-    abstract fun parseUrlFromSuccess(body: String): String?
+    abstract fun parseUrlFromSuccess(body: String, authorizationToken: String?): String?
     abstract fun inputParameterName(contentType: String?): String
 
-    open fun clientID(info: String): String? = null
+    open fun authorizationToken(account: Account?, info: String, onReady: (String?) -> Unit) {
+        onReady(null)
+    }
 }
 
 class NostrImgServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostrimg.com/api/upload"
 
-    override fun parseUrlFromSuccess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String, authorizationToken: String?): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("data")?.get("link")?.asText()
         return url
@@ -172,8 +183,6 @@ class NostrImgServer : FileServer() {
     override fun inputParameterName(contentType: String?): String {
         return contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
     }
-
-    override fun clientID(info: String) = null
 }
 
 class ImgurServer : FileServer() {
@@ -182,7 +191,7 @@ class ImgurServer : FileServer() {
         return if (category == "image") "https://api.imgur.com/3/image" else "https://api.imgur.com/3/upload"
     }
 
-    override fun parseUrlFromSuccess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String, authorizationToken: String?): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("data")?.get("link")?.asText()
         return url
@@ -192,12 +201,14 @@ class ImgurServer : FileServer() {
         return contentType?.toMediaType()?.toString()?.split("/")?.get(0) ?: "image"
     }
 
-    override fun clientID(info: String) = "Client-ID e6aea87296f3f96"
+    override fun authorizationToken(account: Account?, info: String, onReady: (String?) -> Unit) {
+        onReady("Client-ID e6aea87296f3f96")
+    }
 }
 
 class NostrBuildServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostr.build/api/v2/upload/files"
-    override fun parseUrlFromSuccess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String, authorizationToken: String?): String? {
         val tree = jacksonObjectMapper().readTree(body)
         val data = tree?.get("data")
         val data0 = data?.get(0)
@@ -209,12 +220,14 @@ class NostrBuildServer : FileServer() {
         return "file"
     }
 
-    override fun clientID(info: String) = ImageUploader.NIP98Header("https://nostr.build/api/v2/upload/files", "POST", info)
+    override fun authorizationToken(account: Account?, info: String, onReady: (String?) -> Unit) {
+        ImageUploader(account).NIP98Header("https://nostr.build/api/v2/upload/files", "POST", info, onReady)
+    }
 }
 
 class NostrFilesDevServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostrfiles.dev/upload_image"
-    override fun parseUrlFromSuccess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String, authorizationToken: String?): String? {
         val tree = jacksonObjectMapper().readTree(body)
         return tree?.get("url")?.asText()
     }
@@ -222,26 +235,29 @@ class NostrFilesDevServer : FileServer() {
     override fun inputParameterName(contentType: String?): String {
         return "file"
     }
-
-    override fun clientID(info: String) = null
 }
 
 class NostrCheckMeServer : FileServer() {
     override fun postUrl(contentType: String?) = "https://nostrcheck.me/api/v1/media"
-    override fun parseUrlFromSuccess(body: String): String? {
+    override fun parseUrlFromSuccess(body: String, authorizationToken: String?): String? {
+        checkNotInMainThread()
+
         val tree = jacksonObjectMapper().readTree(body)
         val url = tree?.get("url")?.asText()
-        var id = tree?.get("id")?.asText()
+        val id = tree?.get("id")?.asText()
         var isCompleted = false
 
         val client = HttpClient.getHttpClient()
-        var requrl = "https://nostrcheck.me/api/v1/media?id=" + id // + "&apikey=26d075787d261660682fb9d20dbffa538c708b1eda921d0efa2be95fbef4910a"
+        val requrl =
+            "https://nostrcheck.me/api/v1/media?id=$id" // + "&apikey=26d075787d261660682fb9d20dbffa538c708b1eda921d0efa2be95fbef4910a"
 
-        val request = Request.Builder()
-            .url(requrl)
-            .addHeader("Authorization", ImageUploader.NIP98Header(requrl, "GET", ""))
-            .get()
-            .build()
+        val requestBuilder = Request.Builder().url(requrl)
+
+        if (authorizationToken != null) {
+            requestBuilder.addHeader("Authorization", authorizationToken)
+        }
+
+        val request = requestBuilder.get().build()
 
         while (!isCompleted) {
             client.newCall(request).execute().use {
@@ -261,5 +277,7 @@ class NostrCheckMeServer : FileServer() {
         return "mediafile"
     }
 
-    override fun clientID(body: String) = ImageUploader.NIP98Header("https://nostrcheck.me/api/v1/media", "POST", body)
+    override fun authorizationToken(account: Account?, body: String, onReady: (String?) -> Unit) {
+        ImageUploader(account).NIP98Header("https://nostrcheck.me/api/v1/media", "POST", body, onReady)
+    }
 }

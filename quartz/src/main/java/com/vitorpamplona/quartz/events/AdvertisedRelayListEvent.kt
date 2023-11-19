@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class AdvertisedRelayListEvent(
@@ -40,9 +41,10 @@ class AdvertisedRelayListEvent(
 
         fun create(
             list: List<AdvertisedRelayInfo>,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): AdvertisedRelayListEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AdvertisedRelayListEvent) -> Unit
+        ) {
             val tags = list.map {
                 if (it.type == AdvertisedRelayType.BOTH) {
                     listOf(it.relayUrl)
@@ -51,10 +53,8 @@ class AdvertisedRelayListEvent(
                 }
             }
             val msg = ""
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, msg)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return AdvertisedRelayListEvent(id.toHexKey(), pubKey, createdAt, tags, msg, sig.toHexKey())
+
+            signer.sign(createdAt, kind, tags, msg, onReady)
         }
     }
 

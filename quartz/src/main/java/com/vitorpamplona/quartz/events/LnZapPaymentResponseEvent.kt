@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class LnZapPaymentResponseEvent(
@@ -19,7 +20,6 @@ class LnZapPaymentResponseEvent(
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-
     // Once one of an app user decrypts the payment, all users else can see it.
     @Transient
     private var response: Response? = null
@@ -27,53 +27,37 @@ class LnZapPaymentResponseEvent(
     fun requestAuthor() = tags.firstOrNull() { it.size > 1 && it[0] == "p" }?.get(1)
     fun requestId() = tags.firstOrNull() { it.size > 1 && it[0] == "e" }?.get(1)
 
-    private fun decrypt(privKey: ByteArray, pubKey: ByteArray): String? {
-        return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey)
+    fun talkingWith(oneSideHex: String): HexKey {
+        return if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
+    }
 
-            val retVal = CryptoUtils.decryptNIP04(content, sharedSecret)
-
-            if (retVal.startsWith(PrivateDmEvent.nip18Advertisement)) {
-                retVal.substring(16)
-            } else {
-                retVal
+    private fun plainContent(signer: NostrSigner, onReady: (String) -> Unit) {
+        try {
+            signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { content ->
+                onReady(content)
             }
         } catch (e: Exception) {
             Log.w("PrivateDM", "Error decrypting the message ${e.message}")
-            null
         }
     }
 
-    fun response(privKey: ByteArray, pubKey: ByteArray): Response? {
-        if (response != null) response
-
-        return try {
-            if (content.isNotEmpty()) {
-                val decrypted = decrypt(privKey, pubKey)
-                response = mapper.readValue(decrypted, Response::class.java)
-                response
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            Log.w("LnZapPaymentResponseEvent", "Can't parse content as a payment response: $content", e)
-            null
+    fun response(signer: NostrSigner, onReady: (Response) -> Unit) {
+        response?.let {
+            onReady(it)
+            return
         }
-    }
 
-    fun response(decryptedContent: String): Response? {
-        if (response != null) response
-
-        return try {
+        try {
             if (content.isNotEmpty()) {
-                response = mapper.readValue(decryptedContent, Response::class.java)
-                response
-            } else {
-                null
+                plainContent(signer) {
+                    mapper.readValue(it, Response::class.java)?.let {
+                        response = it
+                        onReady(it)
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w("LnZapPaymentResponseEvent", "Can't parse content as a payment response: $content", e)
-            null
         }
     }
 

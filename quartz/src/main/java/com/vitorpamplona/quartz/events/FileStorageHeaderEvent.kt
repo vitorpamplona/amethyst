@@ -5,6 +5,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class FileStorageHeaderEvent(
@@ -53,49 +54,10 @@ class FileStorageHeaderEvent(
             torrentInfoHash: String? = null,
             encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
-            pubKey: HexKey,
-            createdAt: Long = TimeUtils.now()
-        ): FileStorageHeaderEvent {
-            val tags = listOfNotNull(
-                listOf("e", storageEvent.id),
-                mimeType?.let { listOf(MIME_TYPE, mimeType) },
-                alt?.ifBlank { null }?.let { listOf(ALT, it) },
-                hash?.let { listOf(HASH, it) },
-                size?.let { listOf(FILE_SIZE, it) },
-                dimensions?.let { listOf(DIMENSION, it) },
-                blurhash?.let { listOf(BLUR_HASH, it) },
-                magnetURI?.let { listOf(MAGNET_URI, it) },
-                torrentInfoHash?.let { listOf(TORRENT_INFOHASH, it) },
-                encryptionKey?.let { listOf(ENCRYPTION_KEY, it.key, it.nonce) },
-                sensitiveContent?.let {
-                    if (it) {
-                        listOf("content-warning", "")
-                    } else {
-                        null
-                    }
-                }
-            )
-
-            val content = alt ?: ""
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            return FileStorageHeaderEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
-        }
-
-        fun create(
-            storageEvent: FileStorageEvent,
-            mimeType: String? = null,
-            alt: String? = null,
-            hash: String? = null,
-            size: String? = null,
-            dimensions: String? = null,
-            blurhash: String? = null,
-            magnetURI: String? = null,
-            torrentInfoHash: String? = null,
-            encryptionKey: AESGCM? = null,
-            sensitiveContent: Boolean? = null,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): FileStorageHeaderEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (FileStorageHeaderEvent) -> Unit
+        ) {
             val tags = listOfNotNull(
                 listOf("e", storageEvent.id),
                 mimeType?.let { listOf(MIME_TYPE, mimeType) },
@@ -117,10 +79,7 @@ class FileStorageHeaderEvent(
             )
 
             val content = alt ?: ""
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return FileStorageHeaderEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

@@ -1,5 +1,9 @@
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.app.Activity
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -19,12 +24,18 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
@@ -44,15 +55,19 @@ fun AccountScreen(
                 LoadingAccounts()
             }
             is AccountState.LoggedOff -> {
-                LaunchedEffect(key1 = accountState) {
-                    serviceManager.pauseForGood()
+                LaunchedEffect(key1 = state) {
+                    launch(Dispatchers.IO) {
+                        serviceManager.pauseForGood()
+                    }
                 }
 
                 LoginPage(accountStateViewModel, isFirstLogin = true)
             }
             is AccountState.LoggedIn -> {
-                LaunchedEffect(key1 = accountState) {
-                    serviceManager.restartIfDifferentAccount(state.account)
+                LaunchedEffect(key1 = state) {
+                    launch(Dispatchers.IO) {
+                        serviceManager.restartIfDifferentAccount(state.account)
+                    }
                 }
 
                 CompositionLocalProvider(
@@ -66,8 +81,10 @@ fun AccountScreen(
                 }
             }
             is AccountState.LoggedInViewOnly -> {
-                LaunchedEffect(key1 = accountState) {
-                    serviceManager.restartIfDifferentAccount(state.account)
+                LaunchedEffect(key1 = state) {
+                    launch(Dispatchers.IO) {
+                        serviceManager.restartIfDifferentAccount(state.account)
+                    }
                 }
 
                 CompositionLocalProvider(
@@ -97,6 +114,51 @@ fun LoggedInPage(
             sharedPreferencesViewModel.sharedPrefs
         )
     )
+
+    val activity = getActivity() as MainActivity
+    // Find a better way to associate these two.
+    accountViewModel.serviceManager = activity.serviceManager
+
+    if (accountViewModel.account.signer is NostrSignerExternal) {
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = { result ->
+                if (result.resultCode != Activity.RESULT_OK) {
+                    accountViewModel.toast(
+                        R.string.sign_request_rejected,
+                        R.string.sign_request_rejected_description
+                    )
+                } else {
+                    result.data?.let {
+                        accountViewModel.runOnIO {
+                            accountViewModel.account.signer.launcher.newResult(it)
+                        }
+                    }
+                }
+            }
+        )
+
+        DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity) {
+            accountViewModel.account.signer.launcher.registerLauncher(
+                launcher = {
+                    try {
+                        activity.prepareToLaunchSigner()
+                        launcher.launch(it)
+                    } catch (e: Exception) {
+                        Log.e("Signer", "Error opening Signer app", e)
+                        accountViewModel.toast(
+                            R.string.error_opening_external_signer,
+                            R.string.error_opening_external_signer_description
+                        )
+                    }
+                },
+                contentResolver = { Amethyst.instance.contentResolver }
+            )
+            onDispose {
+                accountViewModel.account.signer.launcher.clearLauncher()
+            }
+        }
+    }
 
     MainScreen(accountViewModel, accountStateViewModel, sharedPreferencesViewModel)
 }

@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class ChannelMessageEvent(
@@ -34,12 +35,13 @@ class ChannelMessageEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
-            keyPair: KeyPair,
+            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
-            geohash: String? = null
-        ): ChannelMessageEvent {
+            geohash: String? = null,
+            onReady: (ChannelMessageEvent) -> Unit
+        ) {
             val content = message
             val tags = mutableListOf(
                 listOf("e", channel, "", "root")
@@ -63,16 +65,7 @@ class ChannelMessageEvent(
                 tags.add(listOf("g", it))
             }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return ChannelMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: ChannelMessageEvent, signature: String
-        ): ChannelMessageEvent {
-            return ChannelMessageEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

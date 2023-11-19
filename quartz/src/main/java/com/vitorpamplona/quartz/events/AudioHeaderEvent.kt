@@ -3,9 +3,8 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class AudioHeaderEvent(
@@ -30,15 +29,16 @@ class AudioHeaderEvent(
         private const val STREAM_URL = "stream_url"
         private const val WAVEFORM = "waveform"
 
-        fun create(
+        suspend fun create(
             description: String,
             downloadUrl: String,
             streamUrl: String? = null,
             wavefront: String? = null,
             sensitiveContent: Boolean? = null,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): AudioHeaderEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AudioHeaderEvent) -> Unit
+        ) {
             val tags = listOfNotNull(
                 downloadUrl.let { listOf(DOWNLOAD_URL, it) },
                 streamUrl?.let { listOf(STREAM_URL, it) },
@@ -52,11 +52,7 @@ class AudioHeaderEvent(
                 }
             )
 
-            val content = description
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return AudioHeaderEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            signer.sign(createdAt, kind, tags, description, onReady)
         }
     }
 }

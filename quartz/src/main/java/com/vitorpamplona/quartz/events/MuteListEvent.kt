@@ -9,6 +9,8 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
+import java.util.UUID
 
 @Immutable
 class MuteListEvent(
@@ -19,41 +21,51 @@ class MuteListEvent(
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun plainContent(privKey: ByteArray): String? {
-        return try {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privKey, pubKey.hexToByteArray())
-
-            return CryptoUtils.decryptNIP04(content, sharedSecret)
-        } catch (e: Exception) {
-            Log.w("BookmarkList", "Error decrypting the message ${e.message}")
-            null
-        }
-    }
-
     @Transient
     private var privateTagsCache: List<List<String>>? = null
 
-    fun privateTags(privKey: ByteArray): List<List<String>>? {
-        if (privateTagsCache != null) {
-            return privateTagsCache
+    private fun privateTags(signer: NostrSigner, onReady: (List<List<String>>) -> Unit) {
+        if (content.isBlank()) return
+
+        privateTagsCache?.let {
+            onReady(it)
+            return
         }
 
-        privateTagsCache = try {
-            plainContent(privKey)?.let { mapper.readValue<List<List<String>>>(it) }
+        try {
+            signer.nip04Decrypt(content, pubKey) {
+                privateTagsCache = mapper.readValue<List<List<String>>>(it)
+                privateTagsCache?.let {
+                    onReady(it)
+                }
+            }
         } catch (e: Throwable) {
-            Log.w("BookmarkList", "Error parsing the JSON ${e.message}")
-            null
+            Log.w("MuteList", "Error parsing the JSON ${e.message}")
         }
-        return privateTagsCache
     }
 
-    fun privateTaggedUsers(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "p" }?.mapNotNull { it.getOrNull(1) }
-    fun privateTaggedEvents(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "e" }?.mapNotNull { it.getOrNull(1) }
-    fun privateTaggedAddresses(privKey: ByteArray) = privateTags(privKey)?.filter { it.firstOrNull() == "a" }?.mapNotNull {
-        val aTagValue = it.getOrNull(1)
-        val relay = it.getOrNull(2)
+    fun privateTaggedUsers(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(it.filter { it.size > 1 && it[0] == "p" }.map { it[1] } )
+    }
+    fun privateHashtags(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(it.filter { it.size > 1 && it[0] == "t" }.map { it[1] } )
+    }
+    fun privateGeohashes(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(it.filter { it.size > 1 && it[0] == "g" }.map { it[1] } )
+    }
+    fun privateTaggedEvents(signer: NostrSigner, onReady: (List<String>) -> Unit) = privateTags(signer) {
+        onReady(it.filter { it.size > 1 && it[0] == "e" }.map { it[1] } )
+    }
 
-        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+    fun privateTaggedAddresses(signer: NostrSigner, onReady: (List<ATag>) -> Unit) = privateTags(signer) {
+        onReady(
+            it.filter { it.firstOrNull() == "a" }.mapNotNull {
+                val aTagValue = it.getOrNull(1)
+                val relay = it.getOrNull(2)
+
+                if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+            }
+        )
     }
 
     companion object {
@@ -68,11 +80,10 @@ class MuteListEvent(
             privUsers: List<String>? = null,
             privAddresses: List<ATag>? = null,
 
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): MuteListEvent {
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
-
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (MuteListEvent) -> Unit
+        ) {
             val privTags = mutableListOf<List<String>>()
             privEvents?.forEach {
                 privTags.add(listOf("e", it))
@@ -85,12 +96,6 @@ class MuteListEvent(
             }
             val msg = mapper.writeValueAsString(privTags)
 
-            val content = CryptoUtils.encryptNIP04(
-                msg,
-                privateKey,
-                pubKey
-            )
-
             val tags = mutableListOf<List<String>>()
             events?.forEach {
                 tags.add(listOf("e", it))
@@ -102,9 +107,9 @@ class MuteListEvent(
                 tags.add(listOf("a", it.toTag()))
             }
 
-            val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return MuteListEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
+            signer.nip04Encrypt(msg, signer.pubKey) { content ->
+                signer.sign(createdAt, kind, tags, content, onReady)
+            }
         }
     }
 }

@@ -46,13 +46,11 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.ExternalSignerUtils
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -438,7 +436,9 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
             },
             onClick = {
                 scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString(accountViewModel.decrypt(note) ?: ""))
+                    accountViewModel.decrypt(note) {
+                        clipboardManager.setText(AnnotatedString(it))
+                    }
                     onDismiss()
                 }
             }
@@ -501,21 +501,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     Text(stringResource(R.string.remove_from_private_bookmarks))
                 },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithExternalSigner()) {
-                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
-                                bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: ""
-                            )
-                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
-                            accountViewModel.removePrivateBookmark(note, bookmarks?.decryptedContent ?: "")
-                        } else {
-                            accountViewModel.removePrivateBookmark(note)
-                            onDismiss()
-                        }
-                    }
+                    accountViewModel.removePrivateBookmark(note)
+                    onDismiss()
                 }
             )
         } else {
@@ -524,21 +511,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     Text(stringResource(R.string.add_to_private_bookmarks))
                 },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithExternalSigner()) {
-                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
-                                bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: ""
-                            )
-                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
-                            accountViewModel.addPrivateBookmark(note, bookmarks?.decryptedContent ?: "")
-                        } else {
-                            accountViewModel.addPrivateBookmark(note)
-                            onDismiss()
-                        }
-                    }
+                    accountViewModel.addPrivateBookmark(note)
+                    onDismiss()
                 }
             )
         }
@@ -548,24 +522,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     Text(stringResource(R.string.remove_from_public_bookmarks))
                 },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithExternalSigner()) {
-                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
-                                bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: ""
-                            )
-                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
-                            accountViewModel.removePublicBookmark(
-                                note,
-                                bookmarks?.decryptedContent ?: ""
-                            )
-                        } else {
-                            accountViewModel.removePublicBookmark(note)
-                            onDismiss()
-                        }
-                    }
+                    accountViewModel.removePublicBookmark(note)
+                    onDismiss()
                 }
             )
         } else {
@@ -574,24 +532,8 @@ fun NoteDropDownMenu(note: Note, popupExpanded: MutableState<Boolean>, accountVi
                     Text(stringResource(R.string.add_to_public_bookmarks))
                 },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        if (accountViewModel.loggedInWithExternalSigner()) {
-                            val bookmarks = accountViewModel.userProfile().latestBookmarkList
-                            ExternalSignerUtils.decrypt(
-                                bookmarks?.content ?: "",
-                                accountViewModel.account.keyPair.pubKey.toHexKey(),
-                                bookmarks?.id ?: ""
-                            )
-                            bookmarks?.decryptedContent = ExternalSignerUtils.cachedDecryptedContent[bookmarks?.id ?: ""] ?: ""
-                            accountViewModel.addPublicBookmark(
-                                note,
-                                bookmarks?.decryptedContent ?: ""
-                            )
-                        } else {
-                            accountViewModel.addPublicBookmark(note)
-                            onDismiss()
-                        }
-                    }
+                    accountViewModel.addPublicBookmark(note)
+                    onDismiss()
                 }
             )
         }
@@ -654,19 +596,21 @@ fun WatchBookmarksFollowsAndAccount(note: Note, accountViewModel: AccountViewMod
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
         launch(Dispatchers.IO) {
-            val newState = DropDownParams(
-                isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
-                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                isSensitive = note.event?.isSensitive() ?: false,
-                showSensitiveContent = showSensitiveContent
-            )
-
-            launch(Dispatchers.Main) {
-                onNew(
-                    newState
+            accountViewModel.isInPrivateBookmarks(note) {
+                val newState = DropDownParams(
+                    isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                    isPrivateBookmarkNote = it,
+                    isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                    isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                    isSensitive = note.event?.isSensitive() ?: false,
+                    showSensitiveContent = showSensitiveContent
                 )
+
+                launch(Dispatchers.Main) {
+                    onNew(
+                        newState
+                    )
+                }
             }
         }
     }

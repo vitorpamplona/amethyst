@@ -5,6 +5,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class EmojiPackEvent(
@@ -21,18 +22,16 @@ class EmojiPackEvent(
 
         fun create(
             name: String = "",
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): EmojiPackEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (EmojiPackEvent) -> Unit
+        ) {
             val content = ""
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey)
 
             val tags = mutableListOf<List<String>>()
             tags.add(listOf("d", name))
 
-            val id = generateId(pubKey.toHexKey(), createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return EmojiPackEvent(id.toHexKey(), pubKey.toHexKey(), createdAt, tags, content, sig.toHexKey())
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

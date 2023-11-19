@@ -4,6 +4,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 
 class EventFactory {
     companion object {
+
         fun create(
             id: String,
             pubKey: String,
@@ -55,6 +56,7 @@ class EventFactory {
             GenericRepostEvent.kind -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             GiftWrapEvent.kind -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
+            HTTPAuthorizationEvent.kind -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesEvent.kind -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesChatMessageEvent.kind -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -71,6 +73,7 @@ class EventFactory {
             PrivateDmEvent.kind -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.kind -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.kind -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig)
+            RelayAuthEvent.kind -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)
             RelaySetEvent.kind -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.kind -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.kind -> RepostEvent(id, pubKey, createdAt, tags, content, sig)

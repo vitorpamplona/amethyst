@@ -148,6 +148,23 @@ class ZapPaymentHandler(val account: Account) {
         }
     }
 
+    private fun prepareZapRequestIfNeeded(
+        note: Note,
+        pollOption: Int?,
+        message: String,
+        zapType: LnZapEvent.ZapType,
+        overrideUser: User? = null,
+        onReady: (String?) -> Unit
+    ) {
+        if (zapType != LnZapEvent.ZapType.NONZAP) {
+            account.createZapRequestFor(note, pollOption, message, zapType, overrideUser) { zapRequest ->
+                onReady(zapRequest.toJson())
+            }
+        } else {
+            onReady(null)
+        }
+    }
+
     private suspend fun innerZap(
         lud16: String,
         note: Note,
@@ -161,54 +178,49 @@ class ZapPaymentHandler(val account: Account) {
         zapType: LnZapEvent.ZapType,
         overrideUser: User? = null
     ) {
-        var zapRequestJson = ""
+        onProgress(0.05f)
 
-        if (zapType != LnZapEvent.ZapType.NONZAP) {
-            val zapRequest = account.createZapRequestFor(note, pollOption, message, zapType, overrideUser)
-            if (zapRequest != null) {
-                zapRequestJson = zapRequest.toJson()
-            }
-        }
+        prepareZapRequestIfNeeded(note, pollOption, message, zapType, overrideUser) { zapRequestJson ->
+            onProgress(0.10f)
 
-        onProgress(0.10f)
-
-        LightningAddressResolver().lnAddressInvoice(
-            lud16,
-            amount,
-            message,
-            zapRequestJson,
-            onSuccess = {
-                onProgress(0.7f)
-                if (account.hasWalletConnectSetup()) {
-                    account.sendZapPaymentRequestFor(
-                        bolt11 = it,
-                        note,
-                        onResponse = { response ->
-                            if (response is PayInvoiceErrorResponse) {
-                                onProgress(0.0f)
-                                onError(
-                                    context.getString(R.string.error_dialog_pay_invoice_error),
-                                    context.getString(
-                                        R.string.wallet_connect_pay_invoice_error_error,
-                                        response.error?.message
-                                            ?: response.error?.code?.toString()
-                                            ?: "Error parsing error message"
+            LightningAddressResolver().lnAddressInvoice(
+                lud16,
+                amount,
+                message,
+                zapRequestJson,
+                onSuccess = {
+                    onProgress(0.7f)
+                    if (account.hasWalletConnectSetup()) {
+                        account.sendZapPaymentRequestFor(
+                            bolt11 = it,
+                            note,
+                            onResponse = { response ->
+                                if (response is PayInvoiceErrorResponse) {
+                                    onProgress(0.0f)
+                                    onError(
+                                        context.getString(R.string.error_dialog_pay_invoice_error),
+                                        context.getString(
+                                            R.string.wallet_connect_pay_invoice_error_error,
+                                            response.error?.message
+                                                ?: response.error?.code?.toString()
+                                                ?: "Error parsing error message"
+                                        )
                                     )
-                                )
-                            } else {
-                                onProgress(1f)
+                                } else {
+                                    onProgress(1f)
+                                }
                             }
-                        }
-                    )
-                    onProgress(0.8f)
-                } else {
-                    onPayInvoiceThroughIntent(it)
-                    onProgress(0f)
-                }
-            },
-            onError = onError,
-            onProgress = onProgress,
-            context = context
-        )
+                        )
+                        onProgress(0.8f)
+                    } else {
+                        onPayInvoiceThroughIntent(it)
+                        onProgress(0f)
+                    }
+                },
+                onError = onError,
+                onProgress = onProgress,
+                context = context
+            )
+        }
     }
 }

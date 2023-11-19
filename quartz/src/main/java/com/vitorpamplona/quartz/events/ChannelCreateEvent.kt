@@ -9,6 +9,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class ChannelCreateEvent(
@@ -29,7 +30,30 @@ class ChannelCreateEvent(
     companion object {
         const val kind = 40
 
-        fun create(channelInfo: ChannelData?, keyPair: KeyPair, createdAt: Long = TimeUtils.now()): ChannelCreateEvent {
+        fun create(
+            name: String?,
+            about: String?,
+            picture: String?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelCreateEvent) -> Unit
+        ) {
+            return create(
+                ChannelData(
+                    name, about, picture
+                ),
+                signer,
+                createdAt,
+                onReady
+            )
+        }
+
+        fun create(
+            channelInfo: ChannelData?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelCreateEvent) -> Unit
+        ) {
             val content = try {
                 if (channelInfo != null) {
                     mapper.writeValueAsString(channelInfo)
@@ -41,15 +65,7 @@ class ChannelCreateEvent(
                 ""
             }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val tags = emptyList<List<String>>()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.pubKey)
-            return ChannelCreateEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(unsignedEvent: ChannelCreateEvent, signature: String): ChannelCreateEvent {
-            return ChannelCreateEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, emptyList(), content, onReady)
         }
     }
 

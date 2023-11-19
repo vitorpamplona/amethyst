@@ -6,6 +6,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 import java.util.Base64
 
 @Immutable
@@ -43,33 +44,16 @@ class FileStorageEvent(
         fun create(
             mimeType: String,
             data: ByteArray,
-            pubKey: HexKey,
-            createdAt: Long = TimeUtils.now()
-        ): FileStorageEvent {
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (FileStorageEvent) -> Unit
+        ) {
             val tags = listOfNotNull(
                 listOf(TYPE, mimeType)
             )
 
             val content = encode(data)
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            return FileStorageEvent(id.toHexKey(), pubKey, createdAt, tags, content, "")
-        }
-
-        fun create(
-            mimeType: String,
-            data: ByteArray,
-            privateKey: ByteArray,
-            createdAt: Long = TimeUtils.now()
-        ): FileStorageEvent {
-            val tags = listOfNotNull(
-                listOf(TYPE, mimeType)
-            )
-
-            val content = encode(data)
-            val pubKey = CryptoUtils.pubkeyCreate(privateKey).toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = CryptoUtils.sign(id, privateKey)
-            return FileStorageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig.toHexKey())
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

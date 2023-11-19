@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -143,8 +144,21 @@ fun NoteQuickActionMenu(note: Note, popupExpanded: Boolean, onDismiss: () -> Uni
     }
 
     if (showSelectTextDialog.value) {
-        accountViewModel.decrypt(note)?.let {
-            SelectTextDialog(it) { showSelectTextDialog.value = false }
+        val decryptedNote = remember {
+            mutableStateOf<String?>(null)
+        }
+
+        LaunchedEffect(key1 = Unit) {
+            accountViewModel.decrypt(note) {
+                decryptedNote.value = it
+            }
+        }
+
+        decryptedNote.value?.let {
+            SelectTextDialog(it) {
+                showSelectTextDialog.value = false
+                decryptedNote.value = null
+            }
         }
     }
 
@@ -216,15 +230,12 @@ private fun RenderMainPopup(
                         icon = Icons.Default.ContentCopy,
                         label = stringResource(R.string.quick_action_copy_text)
                     ) {
-                        scope.launch(Dispatchers.IO) {
-                            clipboardManager.setText(
-                                AnnotatedString(
-                                    accountViewModel.decrypt(note) ?: ""
-                                )
-                            )
+                        accountViewModel.decrypt(note) {
+                            clipboardManager.setText(AnnotatedString(it))
                             showToast(R.string.copied_note_text_to_clipboard)
-                            onDismiss()
                         }
+
+                        onDismiss()
                     }
                     VerticalDivider(primaryLight)
                     NoteQuickActionItem(
@@ -278,10 +289,8 @@ private fun RenderMainPopup(
                             stringResource(R.string.quick_action_delete)
                         ) {
                             if (accountViewModel.hideDeleteRequestDialog) {
-                                scope.launch(Dispatchers.IO) {
-                                    accountViewModel.delete(note)
-                                    onDismiss()
-                                }
+                                accountViewModel.delete(note)
+                                onDismiss()
                             } else {
                                 showDeleteAlertDialog.value = true
                             }
@@ -380,24 +389,18 @@ fun NoteQuickActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 
 @Composable
 fun DeleteAlertDialog(note: Note, accountViewModel: AccountViewModel, onDismiss: () -> Unit) {
-    val scope = rememberCoroutineScope()
-
     QuickActionAlertDialog(
         title = stringResource(R.string.quick_action_request_deletion_alert_title),
         textContent = stringResource(R.string.quick_action_request_deletion_alert_body),
         buttonIcon = Icons.Default.Delete,
         buttonText = stringResource(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.delete(note)
-            }
+            accountViewModel.delete(note)
             onDismiss()
         },
         onClickDontShowAgain = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.delete(note)
-                accountViewModel.dontShowDeleteRequestDialog()
-            }
+            accountViewModel.delete(note)
+            accountViewModel.dontShowDeleteRequestDialog()
             onDismiss()
         },
         onDismiss = onDismiss

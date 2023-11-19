@@ -7,6 +7,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.signers.NostrSigner
 
 @Immutable
 class LiveActivitiesChatMessageEvent(
@@ -50,12 +51,13 @@ class LiveActivitiesChatMessageEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
-            keyPair: KeyPair,
+            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
-            geohash: String? = null
-        ): LiveActivitiesChatMessageEvent {
+            geohash: String? = null,
+            onReady: (LiveActivitiesChatMessageEvent) -> Unit
+        ) {
             val content = message
             val tags = mutableListOf(
                 listOf("a", activity.toTag(), "", "root")
@@ -79,16 +81,7 @@ class LiveActivitiesChatMessageEvent(
                 tags.add(listOf("g", it))
             }
 
-            val pubKey = keyPair.pubKey.toHexKey()
-            val id = generateId(pubKey, createdAt, kind, tags, content)
-            val sig = if (keyPair.privKey == null) null else CryptoUtils.sign(id, keyPair.privKey)
-            return LiveActivitiesChatMessageEvent(id.toHexKey(), pubKey, createdAt, tags, content, sig?.toHexKey() ?: "")
-        }
-
-        fun create(
-            unsignedEvent: LiveActivitiesChatMessageEvent, signature: String
-        ): LiveActivitiesChatMessageEvent {
-            return LiveActivitiesChatMessageEvent(unsignedEvent.id, unsignedEvent.pubKey, unsignedEvent.createdAt, unsignedEvent.tags, unsignedEvent.content, signature)
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 }

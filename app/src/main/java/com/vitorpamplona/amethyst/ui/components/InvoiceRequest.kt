@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -155,19 +156,33 @@ fun InvoiceRequest(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         onClick = {
             scope.launch(Dispatchers.IO) {
-                val zapRequest = account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType)
-
-                LightningAddressResolver().lnAddressInvoice(
-                    lud16,
-                    amount * 1000,
-                    message,
-                    zapRequest?.toJson(),
-                    onSuccess = onSuccess,
-                    onError = onError,
-                    onProgress = {
-                    },
-                    context = context
-                )
+                if (account.defaultZapType == LnZapEvent.ZapType.NONZAP) {
+                    LightningAddressResolver().lnAddressInvoice(
+                        lud16,
+                        amount * 1000,
+                        message,
+                        null,
+                        onSuccess = onSuccess,
+                        onError = onError,
+                        onProgress = {
+                        },
+                        context = context
+                    )
+                } else {
+                    account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType) { zapRequest ->
+                        LightningAddressResolver().lnAddressInvoice(
+                            lud16,
+                            amount * 1000,
+                            message,
+                            zapRequest.toJson(),
+                            onSuccess = onSuccess,
+                            onError = onError,
+                            onProgress = {
+                            },
+                            context = context
+                        )
+                    }
+                }
             }
         },
         shape = QuoteBorder,

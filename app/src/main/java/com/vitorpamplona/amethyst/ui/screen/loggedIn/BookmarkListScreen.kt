@@ -18,8 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
@@ -29,13 +27,17 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookmarkListScreen(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    BookmarkPublicFeedFilter.account = accountViewModel.account
-    BookmarkPrivateFeedFilter.account = accountViewModel.account
+    val publicFeedViewModel: NostrBookmarkPublicFeedViewModel = viewModel(
+        key = "NotificationViewModel",
+        factory = NostrBookmarkPublicFeedViewModel.Factory(accountViewModel.account)
+    )
 
-    val publicFeedViewModel: NostrBookmarkPublicFeedViewModel = viewModel()
-    val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel = viewModel()
+    val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel = viewModel(
+        key = "NotificationViewModel",
+        factory = NostrBookmarkPrivateFeedViewModel.Factory(accountViewModel.account)
+    )
 
-    val userState by accountViewModel.account.userProfile().live().bookmarks.observeAsState()
+    val userState by accountViewModel.account.decryptBookmarks.observeAsState()
 
     LaunchedEffect(userState) {
         publicFeedViewModel.invalidateData()
