@@ -29,6 +29,8 @@ object OnlineChecker {
             return checkOnlineCache.get(url).online
         }
 
+        Log.d("OnlineChecker", "isOnline $url")
+
         return try {
             val request = Request.Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")

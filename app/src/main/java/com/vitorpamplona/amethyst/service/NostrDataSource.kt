@@ -61,7 +61,7 @@ abstract class NostrDataSource(val debugName: String) {
             if (type == Relay.StateType.EOSE && subscriptionId != null && subscriptionId in subscriptions.keys) {
                 // updates a per subscripton since date
                 subscriptions[subscriptionId]?.updateEOSE(
-                    TimeUtils.fiveMinutesAgo(), // in case people's clock is slighly off.
+                    TimeUtils.oneMinuteAgo(), // in case people's clock is slighly off.
                     relay.url
                 )
             }

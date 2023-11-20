@@ -207,7 +207,7 @@ class Relay(
             "EVENT" -> {
                 val event = Event.fromJson(msgArray.get(2))
 
-                // Log.w("Relay", "Relay onEVENT $url, $channel")
+                Log.w("Relay", "Relay onEVENT $url, $channel ${msgArray.get(2)}")
                 listeners.forEach {
                     it.onEvent(this@Relay, channel, event)
                     if (afterEOSE) {
@@ -276,7 +276,7 @@ class Relay(
                     if (filters.isNotEmpty()) {
                         val request =
                             """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson(url) }}]"""
-                        // println("FILTERSSENT $url $request")
+                        Log.d("Relay", "onFilterSent $url $requestId $request")
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
                         afterEOSE = false

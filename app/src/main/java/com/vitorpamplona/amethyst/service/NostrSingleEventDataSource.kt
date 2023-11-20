@@ -156,6 +156,15 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             }
         }
 
+        addressesToWatch.forEach {
+            val eose = it.lastReactionsDownloadTime[relayUrl]
+            if (eose == null) {
+                it.lastReactionsDownloadTime = it.lastReactionsDownloadTime + Pair(relayUrl, EOSETime(time))
+            } else {
+                eose.time = time
+            }
+        }
+
         // Many relays operate with limits in the amount of filters.
         // As information comes, the filters will be rotated to get more data.
         invalidateFilters()

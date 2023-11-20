@@ -11,6 +11,7 @@ object TimeUtils {
     const val oneWeek = 7 * oneDay
 
     fun now() = System.currentTimeMillis() / 1000
+    fun oneMinuteAgo() = now() - oneMinute
     fun fiveMinutesAgo() = now() - fiveMinutes
     fun oneHourAgo() = now() - oneHour
     fun oneHourAhead() = now() + oneHour
