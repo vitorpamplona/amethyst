@@ -19,9 +19,18 @@ enum class SignerType {
     DECRYPT_ZAP_EVENT
 }
 
+class Permission(
+    val type: String,
+    val kind: Int? = null
+) {
+    fun toJson(): String {
+        return "{\"type\":\"${type}\",\"kind\":${kind}}"
+    }
+}
+
 class ExternalSignerLauncher(
     private val npub: String,
-    private val signerPackageName: String = "com.greenart7c3.nostrsigner"
+    val signerPackageName: String = "com.greenart7c3.nostrsigner"
 ) {
     private val contentCache = LruCache<String, (String) -> Unit>(20)
 
@@ -49,9 +58,11 @@ class ExternalSignerLauncher(
 
     fun newResult(data: Intent) {
         val signature = data.getStringExtra("signature") ?: ""
+        val packageName = data.getStringExtra("package") ?: ""
         val id = data.getStringExtra("id") ?: ""
         if (id.isNotBlank()) {
-            contentCache.get(id)?.invoke(signature)
+            val result = if (packageName.isNotBlank()) "$signature-$packageName" else signature
+            contentCache.get(id)?.invoke(result)
         }
     }
 
@@ -68,6 +79,40 @@ class ExternalSignerLauncher(
                 data, type, it, pubKey, id, onReady
             )
         }
+    }
+
+    private fun defaultPermissions(): String {
+        val permissions = listOf(
+            Permission(
+                "sign_event",
+                22242
+            ),
+            Permission(
+                "nip04_encrypt"
+            ),
+            Permission(
+                "nip04_decrypt"
+            ),
+            Permission(
+                "nip44_encrypt"
+            ),
+            Permission(
+                "nip44_decrypt"
+            ),
+            Permission(
+                "decrypt_zap_event"
+            ),
+        )
+        val jsonArray = StringBuilder("[")
+        permissions.forEachIndexed { index, permission ->
+            jsonArray.append(permission.toJson())
+            if (index < permissions.size - 1) {
+                jsonArray.append(",")
+            }
+        }
+        jsonArray.append("]")
+
+        return jsonArray.toString()
     }
 
     private fun openSignerApp(
@@ -93,8 +138,12 @@ class ExternalSignerLauncher(
         intent.putExtra("id", id)
         if (type !== SignerType.GET_PUBLIC_KEY) {
             intent.putExtra("current_user", npub)
+        } else {
+            intent.putExtra("permissions", defaultPermissions())
         }
-        intent.`package` = signerPackageName
+        if (signerPackageName.isNotBlank()) {
+            intent.`package` = signerPackageName
+        }
 
         contentCache.put(id, onReady)
 

@@ -108,7 +108,7 @@ fun LoginPage(
     var loginWithExternalSigner by remember { mutableStateOf(false) }
 
     if (loginWithExternalSigner) {
-        val externalSignerLauncher = remember { ExternalSignerLauncher("") }
+        val externalSignerLauncher = remember { ExternalSignerLauncher("", signerPackageName = "") }
         val id = remember { UUID.randomUUID().toString() }
 
         val launcher = rememberLauncherForActivityResult(
@@ -162,8 +162,11 @@ fun LoginPage(
                 SignerType.GET_PUBLIC_KEY,
                 "",
                 id
-            ) { pubkey ->
+            ) { result ->
                 println("AAAA- COME BACK")
+                val split = result.split("-")
+                val pubkey = split.first()
+                val packageName = if (split.size > 1) split[1] else ""
                 key.value = TextFieldValue(pubkey)
                 if (!acceptedTerms.value) {
                     termsAcceptanceIsRequired =
@@ -175,7 +178,7 @@ fun LoginPage(
                 }
 
                 if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                    accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt(), true) {
+                    accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt(), true, packageName) {
                         errorMessage = context.getString(R.string.invalid_key)
                     }
                 }
@@ -432,33 +435,8 @@ fun LoginPage(
                                 return@Button
                             }
 
-                            val result = ExternalSignerLauncher("").getDataFromResolver(
-                                SignerType.GET_PUBLIC_KEY,
-                                arrayOf("login"),
-                                contentResolver = Amethyst.instance.contentResolver
-                            )
-
-                            if (result == null) {
-                                loginWithExternalSigner = true
-                                return@Button
-                            } else {
-                                key.value = TextFieldValue(result)
-                                if (key.value.text.isBlank()) {
-                                    errorMessage = context.getString(R.string.key_is_required)
-                                    return@Button
-                                }
-
-                                if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                                    accountViewModel.login(
-                                        key.value.text,
-                                        useProxy.value,
-                                        proxyPort.value.toInt(),
-                                        true
-                                    ) {
-                                        errorMessage = context.getString(R.string.invalid_key)
-                                    }
-                                }
-                            }
+                            loginWithExternalSigner = true
+                            return@Button
                         },
                         shape = RoundedCornerShape(Size35dp),
                         modifier = Modifier
