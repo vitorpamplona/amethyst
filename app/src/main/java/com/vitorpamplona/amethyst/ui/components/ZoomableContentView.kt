@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -294,11 +293,13 @@ private fun LocalImageView(
                 mainImageModifier
                     .widthIn(max = maxWidth)
                     .heightIn(max = maxHeight)
+                    /*
                     .run {
                         aspectRatio(content.dim)?.let { ratio ->
                             this.aspectRatio(ratio, false)
                         } ?: this
                     }
+                    */
             }
 
             val contentScale = remember {
