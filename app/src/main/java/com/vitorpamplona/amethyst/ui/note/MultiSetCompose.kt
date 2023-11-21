@@ -311,7 +311,7 @@ fun MapZaps(
         mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
     }
 
-    LaunchedEffect(key1 = Unit) {
+    LaunchedEffect(key1 = zaps) {
         accountViewModel.decryptAmountMessageInGroup(zaps) {
             zapEvents = it
         }
