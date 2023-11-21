@@ -509,7 +509,9 @@
     <string name="paid">Fizetve</string>
     <string name="wallet_number">Tárca: %1$s</string>
     <string name="error_opening_external_signer">Hiba az aláíró alkalmazás megnyitásakor</string>
+    <string name="error_opening_external_signer_description">Az aláíró alkalmazás nem található. Ellenőrizd, hogy az alkalmazás nincs-e eltávolítva</string>
     <string name="sign_request_rejected">Aláírási kérés elutasítva</string>
+    <string name="sign_request_rejected_description">Győződj meg arról, hogy ezt a tranzakciót az aláíró alkalmazás engedélyezte-e</string>
     <string name="no_wallet_found_with_error">Nem található tárca a Lighning számla kifizetésére (Hiba: %1$s). Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
     <string name="no_wallet_found">Nem található tárca a Lighning számla kifizetésére. Kérjük, a zap-ek használatához telepítsen egy Lightning pénztárcát</string>
     <string name="hidden_words">Elrejtett Szavak</string>
