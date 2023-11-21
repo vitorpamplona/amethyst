@@ -509,7 +509,9 @@
     <string name="paid">Betaald</string>
     <string name="wallet_number">Wallet %1$s</string>
     <string name="error_opening_external_signer">Fout bij openen ondertekenapp</string>
+    <string name="error_opening_external_signer_description">De teken-app kan niet worden gevonden. Controleer of de app niet is verwijderd</string>
     <string name="sign_request_rejected">Ondertekenverzoek afgewezen</string>
+    <string name="sign_request_rejected_description">Zorg ervoor dat de teken-app deze transactie heeft geautoriseerd</string>
     <string name="no_wallet_found_with_error">Geen wallets gevonden om een Lightning Invoice te betalen (Error: %1$s). Installeer een Lightning wallet om zaps te gebruiken</string>
     <string name="no_wallet_found">Geen wallets gevonden om een Lightning Invoice te betalen. Installeer een Lightning wallet om zaps te gebruiken</string>
     <string name="hidden_words">Verborgen woorden</string>
