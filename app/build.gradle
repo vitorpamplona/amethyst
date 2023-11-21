@@ -158,7 +158,7 @@ android {
 dependencies {
     implementation project(path: ':quartz')
     implementation "androidx.core:core-ktx:$core_ktx_version"
-    implementation 'androidx.activity:activity-compose:1.8.0'
+    implementation 'androidx.activity:activity-compose:1.8.1'
     implementation "androidx.compose.ui:ui:$compose_ui_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
 
@@ -202,9 +202,13 @@ dependencies {
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
 
     // view videos
-    implementation "androidx.media3:media3-exoplayer:${exoplayer_version}"
+    implementation "androidx.media3:media3-exoplayer:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
+    implementation "androidx.media3:media3-ui:$media3_version"
+    implementation "androidx.media3:media3-session:$media3_version"
+
     // important for proxy / tor
-    implementation "androidx.media3:media3-datasource-okhttp:${exoplayer_version}"
+    implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
 
     // Load images from the web.
     implementation "io.coil-kt:coil-compose:$coil_version"
@@ -235,9 +239,6 @@ dependencies {
 
     // Language picker and Theme chooser
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
-    implementation "androidx.media3:media3-ui:$media3_version"
-    implementation "androidx.media3:media3-session:$media3_version"
 
     // Local model for language identification
     playImplementation 'com.google.mlkit:language-id:17.0.4'
