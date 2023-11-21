@@ -24,7 +24,9 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
         job?.cancel()
         job = scope.launch(Dispatchers.IO) {
             account.liveStoriesFollowLists.collect {
-                invalidateFilters()
+                if (this@NostrVideoDataSource::account.isInitialized) {
+                    invalidateFilters()
+                }
             }
         }
         super.start()

@@ -29,7 +29,9 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         job?.cancel()
         job = scope.launch(Dispatchers.IO) {
             account.liveDiscoveryFollowLists.collect {
-                invalidateFilters()
+                if (this@NostrDiscoveryDataSource::account.isInitialized) {
+                    invalidateFilters()
+                }
             }
         }
         super.start()

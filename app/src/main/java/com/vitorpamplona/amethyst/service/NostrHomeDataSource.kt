@@ -35,7 +35,9 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         job?.cancel()
         job = account.scope.launch(Dispatchers.IO) {
             account.liveHomeFollowLists.collect {
-                invalidateFilters()
+                if (this@NostrHomeDataSource::account.isInitialized) {
+                    invalidateFilters()
+                }
             }
         }
         super.start()

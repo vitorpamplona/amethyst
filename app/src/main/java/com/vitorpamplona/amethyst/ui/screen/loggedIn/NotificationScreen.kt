@@ -86,6 +86,7 @@ fun NotificationScreen(
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                NostrAccountDataSource.account = accountViewModel.account
                 NostrAccountDataSource.invalidateFilters()
             }
         }
@@ -144,6 +145,7 @@ fun WatchAccountForNotifications(
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
+        NostrAccountDataSource.account = accountViewModel.account
         NostrAccountDataSource.invalidateFilters()
         notifFeedViewModel.checkKeysInvalidateDataAndSendToTop()
     }

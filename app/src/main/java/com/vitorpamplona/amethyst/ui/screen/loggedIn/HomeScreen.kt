@@ -55,7 +55,7 @@ fun HomeScreen(
 
     WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, accountViewModel)
 
-    WatchLifeCycleChanges()
+    WatchLifeCycleChanges(accountViewModel)
 
     AssembleHomeTabs(homeFeedViewModel, repliesFeedViewModel) { pagerState, tabItems ->
         AssembleHomePage(pagerState, tabItems, accountViewModel, nav)
@@ -109,11 +109,12 @@ fun ResolveNIP47(
 }
 
 @Composable
-private fun WatchLifeCycleChanges() {
+private fun WatchLifeCycleChanges(accountViewModel: AccountViewModel) {
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                NostrHomeDataSource.account = accountViewModel.account
                 NostrHomeDataSource.invalidateFilters()
             }
         }
@@ -219,6 +220,7 @@ fun WatchAccountForHomeScreen(
     val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, homeFollowList) {
+        NostrHomeDataSource.account = accountViewModel.account
         NostrHomeDataSource.invalidateFilters()
         homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
