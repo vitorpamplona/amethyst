@@ -163,7 +163,6 @@ fun LoginPage(
                 "",
                 id
             ) { result ->
-                println("AAAA- COME BACK")
                 val split = result.split("-")
                 val pubkey = split.first()
                 val packageName = if (split.size > 1) split[1] else ""
