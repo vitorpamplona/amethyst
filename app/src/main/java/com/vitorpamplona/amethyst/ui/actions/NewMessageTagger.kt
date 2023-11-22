@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Bech32
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.bechToBytes
@@ -69,19 +70,19 @@ class NewMessageTagger(
                 if (results?.key?.type == Nip19.Type.USER) {
                     val user = dao.getOrCreateUser(results.key.hex)
 
-                    "nostr:${user.pubkeyNpub()}${results.restOfWord}"
+                    getNostrAddress(user.pubkeyNpub(), results.restOfWord)
                 } else if (results?.key?.type == Nip19.Type.NOTE) {
                     val note = dao.getOrCreateNote(results.key.hex)
 
-                    "nostr:${note.toNEvent()}${results.restOfWord}"
+                    getNostrAddress(note.toNEvent(), results.restOfWord)
                 } else if (results?.key?.type == Nip19.Type.EVENT) {
                     val note = dao.getOrCreateNote(results.key.hex)
 
-                    "nostr:${note.toNEvent()}${results.restOfWord}"
+                    getNostrAddress(note.toNEvent(), results.restOfWord)
                 } else if (results?.key?.type == Nip19.Type.ADDRESS) {
                     val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
                     if (note != null) {
-                        "nostr:${note.idNote()}${results.restOfWord}"
+                        getNostrAddress(note.idNote(), results.restOfWord)
                     } else {
                         word
                     }
@@ -90,6 +91,18 @@ class NewMessageTagger(
                 }
             }.joinToString(" ")
         }.joinToString("\n")
+    }
+
+    fun getNostrAddress(bechAddress: String, restOfTheWord: String): String {
+        return if (restOfTheWord.isEmpty()) {
+            "nostr:$bechAddress"
+        } else {
+            if (Bech32.alphabet.contains(restOfTheWord.get(0), true)) {
+                "nostr:$bechAddress $restOfTheWord"
+            } else {
+                "nostr:${bechAddress}$restOfTheWord"
+            }
+        }
     }
 
     @Immutable
