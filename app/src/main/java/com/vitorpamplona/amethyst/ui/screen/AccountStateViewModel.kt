@@ -14,6 +14,8 @@ import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -56,7 +58,8 @@ class AccountStateViewModel() : ViewModel() {
         key: String,
         useProxy: Boolean,
         proxyPort: Int,
-        loginWithExternalSigner: Boolean = false
+        loginWithExternalSigner: Boolean = false,
+        packageName: String = ""
     ) = withContext(Dispatchers.IO) {
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
@@ -69,7 +72,8 @@ class AccountStateViewModel() : ViewModel() {
         val account =
             if (loginWithExternalSigner) {
                 val keyPair = KeyPair(pubKey = pubKeyParsed)
-                Account(keyPair, proxy = proxy, proxyPort = proxyPort, signer = NostrSignerExternal(keyPair.pubKey.toHexKey()))
+                val localPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" }
+                Account(keyPair, proxy = proxy, proxyPort = proxyPort, signer = NostrSignerExternal(keyPair.pubKey.toHexKey(), ExternalSignerLauncher(keyPair.pubKey.toNpub(), localPackageName)))
             } else if (key.startsWith("nsec")) {
                 val keyPair = KeyPair(privKey = key.bechToBytes())
                 Account(keyPair, proxy = proxy, proxyPort = proxyPort, signer = NostrSignerInternal(keyPair))
@@ -130,11 +134,12 @@ class AccountStateViewModel() : ViewModel() {
         useProxy: Boolean,
         proxyPort: Int,
         loginWithExternalSigner: Boolean = false,
+        packageName: String = "",
         onError: () -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner)
+                loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
             } catch (e: Exception) {
                 Log.e("Login", "Could not sign in", e)
                 onError()
