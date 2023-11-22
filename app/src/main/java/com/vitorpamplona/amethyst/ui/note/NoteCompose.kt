@@ -2595,21 +2595,27 @@ fun SecondUserInfoRow(
     val noteEvent = remember { note.event } ?: return
     val noteAuthor = remember { note.author } ?: return
 
-    Row(verticalAlignment = CenterVertically, modifier = UserNameMaxRowHeight) {
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier = UserNameMaxRowHeight
+    ) {
         ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) }, accountViewModel, nav)
 
         val geo = remember { noteEvent.getGeoHash() }
         if (geo != null) {
+            Spacer(StdHorzSpacer)
             DisplayLocation(geo, nav)
         }
 
         val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
         if (baseReward != null) {
+            Spacer(StdHorzSpacer)
             DisplayReward(baseReward, note, accountViewModel, nav)
         }
 
         val pow = remember { noteEvent.getPoWRank() }
         if (pow > 20) {
+            Spacer(StdHorzSpacer)
             DisplayPoW(pow)
         }
     }
