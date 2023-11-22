@@ -84,7 +84,7 @@ class ChatMessageEvent(
                 tags.add(listOf("zapraiser", "$it"))
             }
             geohash?.let {
-                tags.add(listOf("g", it))
+                tags.addAll(geohashMipMap(it))
             }
             subject?.let {
                 tags.add(listOf("subject", it))

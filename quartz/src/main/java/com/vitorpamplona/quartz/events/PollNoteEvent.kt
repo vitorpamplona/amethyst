@@ -97,7 +97,7 @@ class PollNoteEvent(
                 tags.add(listOf("zapraiser", "$it"))
             }
             geohash?.let {
-                tags.add(listOf("g", it))
+                tags.addAll(geohashMipMap(it))
             }
 
             signer.sign(createdAt, kind, tags, msg, onReady)

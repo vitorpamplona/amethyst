@@ -62,7 +62,7 @@ class ChannelMessageEvent(
                 tags.add(listOf("zapraiser", "$it"))
             }
             geohash?.let {
-                tags.add(listOf("g", it))
+                tags.addAll(geohashMipMap(it))
             }
 
             signer.sign(createdAt, kind, tags, content, onReady)

@@ -129,7 +129,7 @@ class PrivateDmEvent(
                 tags.add(listOf("zapraiser", "$it"))
             }
             geohash?.let {
-                tags.add(listOf("g", it))
+                tags.addAll(geohashMipMap(it))
             }
 
             signer.nip04Encrypt(message, recipientPubKey) { content ->
@@ -137,4 +137,10 @@ class PrivateDmEvent(
             }
         }
     }
+}
+
+fun geohashMipMap(geohash: String): List<List<String>> {
+    return geohash.indices.asSequence().map {
+        listOf("g", geohash.substring(0, it+1))
+    }.toList().reversed()
 }
