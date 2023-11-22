@@ -1,5 +1,7 @@
 package com.vitorpamplona.amethyst.service.playback
 
+import android.content.Intent
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -58,6 +60,8 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        Log.d("Lifetime Event", "PlaybackService.onCreate")
+
         // Stop all videos and recreates all managers when the proxy changes.
         HttpClient.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
     }
@@ -73,7 +77,15 @@ class PlaybackService : MediaSessionService() {
         toDestroyProgressive?.releaseAppPlayers()
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+
+        Log.d("Lifetime Event", "onTaskRemoved")
+    }
+
     override fun onDestroy() {
+        Log.d("Lifetime Event", "PlaybackService.onDestroy")
+
         HttpClient.proxyChangeListeners.remove(this@PlaybackService::onProxyUpdated)
 
         managerHls?.releaseAppPlayers()

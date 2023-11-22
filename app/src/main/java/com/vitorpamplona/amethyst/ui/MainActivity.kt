@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        Log.d("Lifetime Event", "MainActivity.onCreate")
+
         setContent {
             val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
 
@@ -106,6 +108,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        Log.d("Lifetime Event", "MainActivity.onResume")
+
         // starts muted every time
         DefaultMutedSetting.value = true
 
@@ -130,6 +134,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        Log.d("Lifetime Event", "MainActivity.onPause")
+
         LanguageTranslatorService.clear()
         serviceManager.cleanObservers()
 
@@ -152,11 +158,28 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        Log.d("Lifetime Event", "MainActivity.onStart")
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        Log.d("Lifetime Event", "MainActivity.onStop")
+    }
+
     override fun onDestroy() {
+        Log.d("Lifetime Event", "MainActivity.onDestroy")
+
+        GlobalScope.launch(Dispatchers.IO) {
+            keepPlayingMutex?.stop()
+            keepPlayingMutex?.release()
+            keepPlayingMutex = null
+        }
+
         super.onDestroy()
-        keepPlayingMutex?.stop()
-        keepPlayingMutex?.release()
-        keepPlayingMutex = null
     }
 
     /**

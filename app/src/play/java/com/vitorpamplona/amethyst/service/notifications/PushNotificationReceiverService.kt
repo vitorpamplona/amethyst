@@ -50,7 +50,14 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
         }
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("Lifetime Event", "PushNotificationReceiverService.onCreate")
+    }
+
     override fun onDestroy() {
+        Log.d("Lifetime Event", "PushNotificationReceiverService.onDestroy")
+
         scope.cancel()
         super.onDestroy()
     }
