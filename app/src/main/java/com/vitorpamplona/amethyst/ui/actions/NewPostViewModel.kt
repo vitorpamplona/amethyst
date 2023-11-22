@@ -692,7 +692,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun updateZapPercentage(index: Int, sliderValue: Float) {
-        forwardZapTo?.updatePercentage(index, sliderValue)
+        forwardZapTo.updatePercentage(index, sliderValue)
     }
 }
 
