@@ -167,6 +167,10 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
+        GlobalScope.launch(Dispatchers.Default) {
+            serviceManager.trimMemory()
+        }
+
         Log.d("Lifetime Event", "MainActivity.onStop")
     }
 
