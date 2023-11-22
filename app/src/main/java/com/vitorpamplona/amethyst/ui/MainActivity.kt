@@ -49,6 +49,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.Timer
+import kotlin.concurrent.schedule
 
 class MainActivity : AppCompatActivity() {
     private val isOnMobileDataState = mutableStateOf(false)
@@ -108,6 +110,7 @@ class MainActivity : AppCompatActivity() {
         DefaultMutedSetting.value = true
 
         // Keep connection alive if it's calling the signer app
+        Log.d("shouldPauseService", "shouldPauseService onResume: $shouldPauseService")
         if (shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
                 serviceManager.justStart()
@@ -121,7 +124,9 @@ class MainActivity : AppCompatActivity() {
         (getSystemService(ConnectivityManager::class.java) as ConnectivityManager).registerDefaultNetworkCallback(networkCallback)
 
         // resets state until next External Signer Call
-        shouldPauseService = true
+        Timer().schedule(350) {
+            shouldPauseService = true
+        }
     }
 
     override fun onPause() {
@@ -134,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         }
         // }
 
+        Log.d("shouldPauseService", "shouldPauseService onPause: $shouldPauseService")
         if (shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) {
                 serviceManager.pauseForGood()
@@ -171,8 +177,11 @@ class MainActivity : AppCompatActivity() {
         override fun onAvailable(network: Network) {
             super.onAvailable(network)
 
-            GlobalScope.launch(Dispatchers.IO) {
-                serviceManager.forceRestart()
+            Log.d("shouldPauseService", "shouldPauseService onAvailable: $shouldPauseService")
+            if (shouldPauseService) {
+                GlobalScope.launch(Dispatchers.IO) {
+                    serviceManager.forceRestart()
+                }
             }
         }
 
@@ -202,7 +211,8 @@ class MainActivity : AppCompatActivity() {
                     changedNetwork = true
                 }
 
-                if (changedNetwork) {
+                Log.d("shouldPauseService", "shouldPauseService onCapabilitiesChanged: $shouldPauseService")
+                if (changedNetwork && shouldPauseService) {
                     GlobalScope.launch(Dispatchers.IO) {
                         serviceManager.forceRestart()
                     }

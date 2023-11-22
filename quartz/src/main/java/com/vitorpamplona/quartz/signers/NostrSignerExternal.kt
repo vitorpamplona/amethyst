@@ -34,17 +34,33 @@ class NostrSignerExternal(
         )
 
         launcher.openSigner(event) { signature ->
-            (EventFactory.create(
-                event.id,
-                event.pubKey,
-                event.createdAt,
-                event.kind,
-                event.tags,
-                event.content,
-                signature
-            ) as? T?)?.let {
-                onReady(it)
+            if (signature.startsWith("{")) {
+                val localEvent = Event.fromJson(signature)
+                (EventFactory.create(
+                    localEvent.id,
+                    localEvent.pubKey,
+                    localEvent.createdAt,
+                    localEvent.kind,
+                    localEvent.tags,
+                    localEvent.content,
+                    localEvent.sig
+                ) as? T?)?.let {
+                    onReady(it)
+                }
+            } else {
+                (EventFactory.create(
+                    event.id,
+                    event.pubKey,
+                    event.createdAt,
+                    event.kind,
+                    event.tags,
+                    event.content,
+                    signature
+                ) as? T?)?.let {
+                    onReady(it)
+                }
             }
+
         }
     }
 

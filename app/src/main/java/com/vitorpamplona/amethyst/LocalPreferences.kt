@@ -26,9 +26,11 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.coroutines.Dispatchers
@@ -89,6 +91,7 @@ private object PrefKeys {
     const val AUTOMATICALLY_HIDE_NAV_BARS = "automatically_hide_nav_bars"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
+    const val SIGNER_PACKAGE_NAME = "signer_package_name"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
@@ -249,6 +252,7 @@ object LocalPreferences {
             putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.signer is NostrSignerExternal)
             if (account.signer is NostrSignerExternal) {
                 remove(PrefKeys.NOSTR_PRIVKEY)
+                putString(PrefKeys.SIGNER_PACKAGE_NAME, account.signer.launcher.signerPackageName)
             } else {
                 account.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
             }
@@ -475,7 +479,8 @@ object LocalPreferences {
 
             val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
             val signer = if (loginWithExternalSigner) {
-                NostrSignerExternal(pubKey)
+                val packageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: "com.greenart7c3.nostrsigner"
+                NostrSignerExternal(pubKey, ExternalSignerLauncher(pubKey.hexToByteArray().toNpub(), packageName))
             } else {
                 NostrSignerInternal(keyPair)
             }
