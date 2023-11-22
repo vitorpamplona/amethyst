@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -25,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -261,6 +263,18 @@ fun VideoViewInner(
     }
 }
 
+@Immutable
+sealed class MediaControllerState {
+    @Immutable
+    object NotStarted : MediaControllerState()
+
+    @Immutable
+    object Loading : MediaControllerState()
+
+    @Stable
+    class Loaded(val instance: MediaController) : MediaControllerState()
+}
+
 @Composable
 @OptIn(UnstableApi::class)
 fun GetVideoController(
@@ -273,8 +287,13 @@ fun GetVideoController(
     val context = LocalContext.current
 
     val controller = remember(videoUri) {
-        mutableStateOf<MediaController?>(
-            if (videoUri == keepPlayingMutex?.currentMediaItem?.mediaId) keepPlayingMutex else null
+        val globalMutex = keepPlayingMutex
+        mutableStateOf<MediaControllerState>(
+            if (videoUri == globalMutex?.currentMediaItem?.mediaId) {
+                MediaControllerState.Loaded(globalMutex)
+            } else {
+                MediaControllerState.NotStarted
+            }
         )
     }
 
@@ -294,7 +313,9 @@ fun GetVideoController(
     DisposableEffect(key1 = videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
-        if (controller.value == null) {
+        if (controller.value == MediaControllerState.NotStarted) {
+            controller.value = MediaControllerState.Loading
+
             scope.launch(Dispatchers.IO) {
                 PlaybackClientController.prepareController(
                     uid,
@@ -305,49 +326,28 @@ fun GetVideoController(
                     scope.launch(Dispatchers.Main) {
                         // REQUIRED TO BE RUN IN THE MAIN THREAD
 
-                        // checks again because of race conditions.
-                        if (controller.value == null) { // still prone to race conditions.
-                            controller.value = it
+                        val newState = MediaControllerState.Loaded(it)
 
-                            if (!it.isPlaying) {
-                                if (keepPlayingMutex?.isPlaying == true) {
-                                    // There is a video playing, start this one on mute.
-                                    controller.value?.volume = 0f
-                                } else {
-                                    // There is no other video playing. Use the default mute state to
-                                    // decide if sound is on or not.
-                                    controller.value?.volume = if (defaultToStart) 0f else 1f
-                                }
-                            }
-
-                            controller.value?.setMediaItem(mediaItem.value)
-                            controller.value?.prepare()
-                        } else if (controller.value != it) {
-                            // discards the new controller because there is an existing one
-                            it.stop()
-                            it.release()
-
-                            controller.value?.let {
-                                if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                                    if (it.isPlaying) {
-                                        // There is a video playing, start this one on mute.
-                                        it.volume = 0f
-                                    } else {
-                                        // There is no other video playing. Use the default mute state to
-                                        // decide if sound is on or not.
-                                        it.volume = if (defaultToStart) 0f else 1f
-                                    }
-
-                                    it.setMediaItem(mediaItem.value)
-                                    it.prepare()
-                                }
+                        if (!it.isPlaying) {
+                            if (keepPlayingMutex?.isPlaying == true) {
+                                // There is a video playing, start this one on mute.
+                                newState.instance.volume = 0f
+                            } else {
+                                // There is no other video playing. Use the default mute state to
+                                // decide if sound is on or not.
+                                newState.instance.volume = if (defaultToStart) 0f else 1f
                             }
                         }
+
+                        newState.instance.setMediaItem(mediaItem.value)
+                        newState.instance.prepare()
+
+                        controller.value = newState
                     }
                 }
             }
-        } else {
-            controller.value?.let {
+        } else if (controller.value is MediaControllerState.Loaded) {
+            (controller.value as? MediaControllerState.Loaded)?.instance?.let {
                 scope.launch(Dispatchers.Main) {
                     if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
                         if (it.isPlaying) {
@@ -367,11 +367,15 @@ fun GetVideoController(
         }
 
         onDispose {
-            if (!keepPlaying.value) {
-                // Stops and releases the media.
-                controller.value?.stop()
-                controller.value?.release()
-                controller.value = null
+            scope.launch(Dispatchers.Main) {
+                if (!keepPlaying.value) {
+                    // Stops and releases the media.
+                    (controller.value as? MediaControllerState.Loaded)?.instance?.let {
+                        it.stop()
+                        it.release()
+                        controller.value = MediaControllerState.NotStarted
+                    }
+                }
             }
         }
     }
@@ -384,7 +388,9 @@ fun GetVideoController(
                 // if the controller is null, restarts the controller with a new one
                 // if the controller is not null, just continue playing what the controller was playing
                 scope.launch(Dispatchers.IO) {
-                    if (controller.value == null) {
+                    if (controller.value == MediaControllerState.NotStarted) {
+                        controller.value = MediaControllerState.Loading
+
                         PlaybackClientController.prepareController(
                             uid,
                             videoUri,
@@ -394,40 +400,41 @@ fun GetVideoController(
                             scope.launch(Dispatchers.Main) {
                                 // REQUIRED TO BE RUN IN THE MAIN THREAD
 
+                                val newState = MediaControllerState.Loaded(it)
+
                                 // checks again to make sure no other thread has created a controller.
-                                if (controller.value == null) {
-                                    controller.value = it
-
-                                    if (!it.isPlaying) {
-                                        if (keepPlayingMutex?.isPlaying == true) {
-                                            // There is a video playing, start this one on mute.
-                                            controller.value?.volume = 0f
-                                        } else {
-                                            // There is no other video playing. Use the default mute state to
-                                            // decide if sound is on or not.
-                                            controller.value?.volume =
-                                                if (defaultToStart) 0f else 1f
-                                        }
+                                if (!it.isPlaying) {
+                                    if (keepPlayingMutex?.isPlaying == true) {
+                                        // There is a video playing, start this one on mute.
+                                        newState.instance.volume = 0f
+                                    } else {
+                                        // There is no other video playing. Use the default mute state to
+                                        // decide if sound is on or not.
+                                        newState.instance.volume =
+                                            if (defaultToStart) 0f else 1f
                                     }
-
-                                    controller.value?.setMediaItem(mediaItem.value)
-                                    controller.value?.prepare()
-                                } else if (controller.value != it) {
-                                    // discards the new controller because there is an existing one
-                                    it.stop()
-                                    it.release()
                                 }
+
+                                newState.instance.setMediaItem(mediaItem.value)
+                                newState.instance.prepare()
+
+                                controller.value = newState
                             }
                         }
                     }
                 }
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
-                if (!keepPlaying.value) {
-                    // Stops and releases the media.
-                    controller.value?.stop()
-                    controller.value?.release()
-                    controller.value = null
+                Log.d("PlaybackService", "Opening From Client - onPause ${controller.value} ")
+                scope.launch(Dispatchers.Main) {
+                    if (!keepPlaying.value) {
+                        // Stops and releases the media.
+                        (controller.value as? MediaControllerState.Loaded)?.instance?.let {
+                            it.stop()
+                            it.release()
+                            controller.value = MediaControllerState.NotStarted
+                        }
+                    }
                 }
             }
         }
@@ -438,8 +445,8 @@ fun GetVideoController(
         }
     }
 
-    controller.value?.let {
-        inner(it, keepPlaying)
+    (controller.value as? MediaControllerState.Loaded) ?.let {
+        inner(it.instance, keepPlaying)
     }
 }
 
