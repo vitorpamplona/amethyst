@@ -12,18 +12,9 @@ private const val ATTRIBUTE_VALUE_PROPERTY = "property"
 private const val ATTRIBUTE_VALUE_NAME = "name"
 private const val ATTRIBUTE_VALUE_ITEMPROP = "itemprop"
 
-/* for <meta property="og:" to get title */
-private val META_OG_TITLE = arrayOf("og:title", "\"og:title\"", "'og:title'")
-
-/* for <meta property="og:" to get description */
-private val META_OG_DESCRIPTION =
-    arrayOf("og:description", "\"og:description\"", "'og:description'")
-
-/* for <meta property="og:" to get image */
-private val META_OG_IMAGE = arrayOf("og:image", "\"og:image\"", "'og:image'")
-
-/*for <meta name=... to get title */
-private val META_NAME_TITLE = arrayOf(
+/*for <meta itemprop=... to get title */
+private val META_X_TITLE = arrayOf(
+    "og:title", "\"og:title\"", "'og:title'", "name", "\"name\"", "'name'",
     "twitter:title",
     "\"twitter:title\"",
     "'twitter:title'",
@@ -32,8 +23,10 @@ private val META_NAME_TITLE = arrayOf(
     "'title'"
 )
 
-/*for <meta name=... to get description */
-private val META_NAME_DESCRIPTION = arrayOf(
+/*for <meta itemprop=... to get description */
+private val META_X_DESCRIPTION = arrayOf(
+    "og:description", "\"og:description\"", "'og:description'",
+    "description", "\"description\"", "'description'",
     "twitter:description",
     "\"twitter:description\"",
     "'twitter:description'",
@@ -42,21 +35,14 @@ private val META_NAME_DESCRIPTION = arrayOf(
     "'description'"
 )
 
-/*for <meta name=... to get image */
-private val META_NAME_IMAGE = arrayOf(
+/*for <meta itemprop=... to get image */
+private val META_X_IMAGE = arrayOf(
+    "og:image", "\"og:image\"", "'og:image'",
+    "image", "\"image\"", "'image'",
     "twitter:image",
     "\"twitter:image\"",
     "'twitter:image'"
 )
-
-/*for <meta itemprop=... to get title */
-private val META_ITEMPROP_TITLE = arrayOf("name", "\"name\"", "'name'")
-
-/*for <meta itemprop=... to get description */
-private val META_ITEMPROP_DESCRIPTION = arrayOf("description", "\"description\"", "'description'")
-
-/*for <meta itemprop=... to get image */
-private val META_ITEMPROP_IMAGE = arrayOf("image", "\"image\"", "'image'")
 
 private const val CONTENT = "content"
 
@@ -83,31 +69,38 @@ suspend fun parseHtml(url: String, document: Document): UrlInfoItem =
         var image: String = ""
 
         metaTags.forEach {
-            val propertyTag = it.attr(ATTRIBUTE_VALUE_PROPERTY)
-            when (propertyTag) {
-                in META_OG_TITLE -> if (title.isEmpty()) title = it.attr(CONTENT)
-                in META_OG_DESCRIPTION -> if (description.isEmpty()) {
+            when (it.attr(ATTRIBUTE_VALUE_PROPERTY)) {
+                in META_X_TITLE -> if (title.isEmpty()) {
+                    title = it.attr(CONTENT)
+                }
+                in META_X_DESCRIPTION -> if (description.isEmpty()) {
                     description = it.attr(CONTENT)
                 }
-                in META_OG_IMAGE -> if (image.isEmpty()) image = it.attr(CONTENT)
+                in META_X_IMAGE -> if (image.isEmpty()) {
+                    image = it.attr(CONTENT)
+                }
             }
 
             when (it.attr(ATTRIBUTE_VALUE_NAME)) {
-                in META_NAME_TITLE -> if (title.isEmpty()) title = it.attr(CONTENT)
-                in META_NAME_DESCRIPTION -> if (description.isEmpty()) {
+                in META_X_TITLE -> if (title.isEmpty()) {
+                    title = it.attr(CONTENT)
+                }
+                in META_X_DESCRIPTION -> if (description.isEmpty()) {
                     description = it.attr(CONTENT)
                 }
-                in META_OG_IMAGE -> if (image.isEmpty()) image = it.attr(CONTENT)
+                in META_X_IMAGE -> if (image.isEmpty()) {
+                    image = it.attr(CONTENT)
+                }
             }
 
             when (it.attr(ATTRIBUTE_VALUE_ITEMPROP)) {
-                in META_ITEMPROP_TITLE -> if (title.isEmpty()) {
+                in META_X_TITLE -> if (title.isEmpty()) {
                     title = it.attr(CONTENT)
                 }
-                in META_ITEMPROP_DESCRIPTION -> if (description.isEmpty()) {
+                in META_X_DESCRIPTION -> if (description.isEmpty()) {
                     description = it.attr(CONTENT)
                 }
-                in META_ITEMPROP_IMAGE -> if (image.isEmpty()) {
+                in META_X_IMAGE -> if (image.isEmpty()) {
                     image = it.attr(CONTENT)
                 }
             }
