@@ -193,7 +193,8 @@ open class LatestItem {
     fun updateNewestItem(newNotes: Set<Note>, account: Account, filter: AdditiveFeedFilter<Note>): Note? {
         val newestItem = newestItemPerAccount[account.userProfile().pubkeyHex]
 
-        if (newestItem == null) {
+        // Block list got updated
+        if (newestItem == null || !account.isAcceptable(newestItem)) {
             newestItemPerAccount = newestItemPerAccount + Pair(
                 account.userProfile().pubkeyHex,
                 filterMore(filter.feed(), account).firstOrNull { it.createdAt() != null }
