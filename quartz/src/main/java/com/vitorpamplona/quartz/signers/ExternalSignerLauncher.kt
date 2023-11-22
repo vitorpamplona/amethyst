@@ -166,37 +166,41 @@ class ExternalSignerLauncher(
     }
 
     fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature"): String? {
-        return contentResolver?.let { it() }?.let {
-            getDataFromResolver(signerType, data, columnName, it)
-        }
+        return getDataFromResolver(signerType, data, columnName, contentResolver)
     }
 
-    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature", contentResolver: ContentResolver): String? {
+    fun getDataFromResolver(signerType: SignerType, data: Array<out String>, columnName: String = "signature", contentResolver: (() -> ContentResolver)? = null): String? {
         val localData = if (signerType !== SignerType.GET_PUBLIC_KEY) {
             data.toList().plus(npub).toTypedArray()
         } else {
             data
         }
 
-        contentResolver.query(
-            Uri.parse("content://${signerPackageName}.$signerType"),
-            localData,
-            null,
-            null,
-            null
-        ).use {
-            if (it == null) {
-                return null
-            }
-            if (it.moveToFirst()) {
-                val index = it.getColumnIndex(columnName)
-                if (index < 0) {
-                    Log.d("getDataFromResolver", "column '$columnName' not found")
+        try {
+            contentResolver?.let { it() }?.query(
+                Uri.parse("content://${signerPackageName}.$signerType"),
+                localData,
+                null,
+                null,
+                null
+            ).use {
+                if (it == null) {
                     return null
                 }
-                return it.getString(index)
+                if (it.moveToFirst()) {
+                    val index = it.getColumnIndex(columnName)
+                    if (index < 0) {
+                        Log.d("getDataFromResolver", "column '$columnName' not found")
+                        return null
+                    }
+                    return it.getString(index)
+                }
             }
+        } catch (e: Exception) {
+            Log.e("ExternalSignerLauncher", "Failed to query the Signer app in the background")
+            return null
         }
+
         return null
     }
 
