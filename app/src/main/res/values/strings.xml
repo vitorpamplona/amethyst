@@ -386,6 +386,7 @@
     <string name="follow_list_selection">Follow List</string>
     <string name="follow_list_kind3follows">All Follows</string>
     <string name="follow_list_global">Global</string>
+    <string name="follow_list_mute_list">Mute List</string>
     <string name="connect_through_your_orbot_setup_markdown">
         ## Connect through Tor with Orbot
         \n\n1. Install [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)

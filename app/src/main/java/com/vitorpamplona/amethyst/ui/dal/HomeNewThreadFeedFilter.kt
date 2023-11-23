@@ -10,6 +10,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -23,7 +24,8 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {

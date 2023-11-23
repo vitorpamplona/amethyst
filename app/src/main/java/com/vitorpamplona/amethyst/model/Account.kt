@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.GeneralListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
@@ -51,6 +52,7 @@ import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -71,6 +73,7 @@ import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -299,7 +302,7 @@ class Account(
     }
 
     private fun decryptLiveFollows(peopleListFollows: NoteState?, onReady: (LiveFollowLists) -> Unit) {
-        val listEvent = (peopleListFollows?.note?.event as? PeopleListEvent)
+        val listEvent = (peopleListFollows?.note?.event as? GeneralListEvent)
         listEvent?.privateTags(signer) { privateTagList ->
             onReady(
                 LiveFollowLists(
@@ -321,27 +324,37 @@ class Account(
     )
 
     val flowHiddenUsers: StateFlow<LiveHiddenUsers> by lazy {
-        combineTransform(live.asFlow(), getBlockListNote().flow().metadata.stateFlow) { localLive, blockList ->
+        combineTransform(
+            live.asFlow(),
+            getBlockListNote().flow().metadata.stateFlow,
+            getMuteListNote().flow().metadata.stateFlow
+        ) { localLive, blockList, muteList ->
             checkNotInMainThread()
 
-            val result = withTimeoutOrNull(1000) {
+            val resultBlockList = withTimeoutOrNull(1000) {
                 suspendCancellableCoroutine { continuation ->
                     (blockList.note.event as? PeopleListEvent)?.publicAndPrivateUsersAndWords(signer) {
                         continuation.resume(it)
                     }
                 }
-            }
+            } ?: PeopleListEvent.UsersAndWords()
 
-            result?.let {
-                emit(
-                    LiveHiddenUsers(
-                        hiddenUsers = it.users,
-                        hiddenWords = it.words,
-                        spammers = localLive.account.transientHiddenUsers,
-                        showSensitiveContent = localLive.account.showSensitiveContent
-                    )
+            val resultMuteList = withTimeoutOrNull(1000) {
+                suspendCancellableCoroutine { continuation ->
+                    (muteList.note.event as? MuteListEvent)?.publicAndPrivateUsersAndWords(signer) {
+                        continuation.resume(it)
+                    }
+                }
+            } ?: PeopleListEvent.UsersAndWords()
+
+            emit(
+                LiveHiddenUsers(
+                    hiddenUsers = (resultBlockList.users + resultMuteList.users).toPersistentSet(),
+                    hiddenWords = (resultBlockList.words + resultMuteList.words).toPersistentSet(),
+                    spammers = localLive.account.transientHiddenUsers,
+                    showSensitiveContent = localLive.account.showSensitiveContent
                 )
-            }
+            )
         }.stateIn(
             scope,
             SharingStarted.Eagerly,
@@ -1425,38 +1438,45 @@ class Account(
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
+    fun getMuteListNote(): AddressableNote {
+        val aTag = ATag(
+            MuteListEvent.kind,
+            userProfile().pubkeyHex,
+            "",
+            null
+        )
+        return LocalCache.getOrCreateAddressableNote(aTag)
+    }
+
     fun getBlockList(): PeopleListEvent? {
         return getBlockListNote().event as? PeopleListEvent
     }
 
-    fun hideWord(word: String) {
-        val blockList = getBlockList()
+    fun getMuteList(): MuteListEvent? {
+        return getMuteListNote().event as? MuteListEvent
+    }
 
-        if (blockList != null) {
-            PeopleListEvent.addWord(
-                earlierVersion = blockList,
+    fun hideWord(word: String) {
+        val muteList = getMuteList()
+
+        if (muteList != null) {
+            MuteListEvent.addWord(
+                earlierVersion = muteList,
                 word = word,
                 isPrivate = true,
                 signer = signer
             ) {
                 Client.send(it)
                 LocalCache.consume(it)
-
-                live.invalidateData()
-                saveable.invalidateData()
             }
         } else {
-            PeopleListEvent.createListWithWord(
-                name = PeopleListEvent.blockList,
+            MuteListEvent.createListWithWord(
                 word = word,
                 isPrivate = true,
                 signer = signer
             ) {
                 Client.send(it)
                 LocalCache.consume(it)
-
-                live.invalidateData()
-                saveable.invalidateData()
             }
         }
     }
@@ -1473,46 +1493,50 @@ class Account(
             ) {
                 Client.send(it)
                 LocalCache.consume(it)
+            }
+        }
 
-                live.invalidateData()
-                saveable.invalidateData()
+        val muteList = getMuteList()
+
+        if (muteList != null) {
+            MuteListEvent.removeWord(
+                earlierVersion = muteList,
+                word = word,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
             }
         }
     }
 
-    suspend fun hideUser(pubkeyHex: String) {
-        val blockList = getBlockList()
+    fun hideUser(pubkeyHex: String) {
+        val muteList = getMuteList()
 
-        if (blockList != null) {
-            PeopleListEvent.addUser(
-                earlierVersion = blockList,
+        if (muteList != null) {
+            MuteListEvent.addUser(
+                earlierVersion = muteList,
                 pubKeyHex = pubkeyHex,
                 isPrivate = true,
                 signer = signer
             ) {
                 Client.send(it)
                 LocalCache.consume(it)
-
-                live.invalidateData()
-                saveable.invalidateData()
             }
         } else {
-            PeopleListEvent.createListWithUser(
-                name = PeopleListEvent.blockList,
+            MuteListEvent.createListWithUser(
                 pubKeyHex = pubkeyHex,
                 isPrivate = true,
                 signer = signer
             ) {
                 Client.send(it)
                 LocalCache.consume(it)
-
-                live.invalidateData()
-                saveable.invalidateData()
             }
         }
     }
 
-    suspend fun showUser(pubkeyHex: String) {
+    fun showUser(pubkeyHex: String) {
         val blockList = getBlockList()
 
         if (blockList != null) {
@@ -1524,12 +1548,26 @@ class Account(
             ) {
                 Client.send(it)
                 LocalCache.consume(it)
-
-                transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
-                live.invalidateData()
-                saveable.invalidateData()
             }
         }
+
+        val muteList = getMuteList()
+
+        if (muteList != null) {
+            MuteListEvent.removeUser(
+                earlierVersion = muteList,
+                pubKeyHex = pubkeyHex,
+                isPrivate = true,
+                signer = signer
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+            }
+        }
+
+        transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
+        live.invalidateData()
+        saveable.invalidateData()
     }
 
     fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {

@@ -14,6 +14,7 @@ import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -24,7 +25,8 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultNotificationFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultNotificationFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultNotificationFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {

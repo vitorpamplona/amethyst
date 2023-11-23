@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -589,6 +590,11 @@ data class CodeName(val code: String, val name: Name, val type: CodeNameType)
 class FollowListViewModel(val account: Account) : ViewModel() {
     val kind3Follow = CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows), CodeNameType.HARDCODED)
     val globalFollow = CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global), CodeNameType.HARDCODED)
+    val muteListFollow = CodeName(
+        MuteListEvent.blockListFor(account.userProfile().pubkeyHex),
+        ResourceName(R.string.follow_list_mute_list),
+        CodeNameType.HARDCODED
+    )
 
     private var _kind3GlobalPeopleRoutes = MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
     val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.asStateFlow()
@@ -634,13 +640,13 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
         val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }
 
-        val kind3GlobalPeopleRouteList = listOf(listOf(kind3Follow, globalFollow), newFollowLists, routeList).flatten().toImmutableList()
+        val kind3GlobalPeopleRouteList = listOf(listOf(kind3Follow, globalFollow), newFollowLists, routeList, listOf(muteListFollow)).flatten().toImmutableList()
 
         if (!equalImmutableLists(_kind3GlobalPeopleRoutes.value, kind3GlobalPeopleRouteList)) {
             _kind3GlobalPeopleRoutes.emit(kind3GlobalPeopleRouteList)
         }
 
-        val kind3GlobalPeopleList = listOf(listOf(kind3Follow, globalFollow), newFollowLists).flatten().toImmutableList()
+        val kind3GlobalPeopleList = listOf(listOf(kind3Follow, globalFollow), newFollowLists, listOf(muteListFollow)).flatten().toImmutableList()
 
         if (!equalImmutableLists(_kind3GlobalPeople.value, kind3GlobalPeopleList)) {
             _kind3GlobalPeople.emit(kind3GlobalPeopleList)
@@ -656,7 +662,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 checkNotInMainThread()
                 if (newNotes.any {
-                    it.event?.pubKey() == account.userProfile().pubkeyHex && (it.event is PeopleListEvent || it.event is ContactListEvent)
+                    it.event?.pubKey() == account.userProfile().pubkeyHex && (it.event is PeopleListEvent || it.event is MuteListEvent || it.event is ContactListEvent)
                 }
                 ) {
                     refresh()

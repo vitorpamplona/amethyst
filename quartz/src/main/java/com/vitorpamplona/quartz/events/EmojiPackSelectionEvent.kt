@@ -18,8 +18,11 @@ class EmojiPackSelectionEvent(
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    override fun dTag() = fixedDTag
+
     companion object {
         const val kind = 10030
+        const val fixedDTag = ""
 
         fun create(
             listOfEmojiPacks: List<ATag>?,

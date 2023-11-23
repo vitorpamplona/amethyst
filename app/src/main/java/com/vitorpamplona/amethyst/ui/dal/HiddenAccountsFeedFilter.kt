@@ -14,9 +14,9 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
     }
 
     override fun feed(): List<User> {
-        return account.liveHiddenUsers.value?.hiddenUsers?.map {
+        return account.flowHiddenUsers.value.hiddenUsers.map {
             LocalCache.getOrCreateUser(it)
-        } ?: emptyList()
+        }
     }
 }
 
@@ -30,7 +30,7 @@ class HiddenWordsFeedFilter(val account: Account) : FeedFilter<String>() {
     }
 
     override fun feed(): List<String> {
-        return account.liveHiddenUsers.value?.hiddenWords?.toList() ?: emptyList()
+        return account.flowHiddenUsers.value.hiddenWords.toList()
     }
 }
 

@@ -6,6 +6,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -15,7 +16,8 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {
@@ -31,7 +33,8 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val now = TimeUtils.now()
         val isGlobal = account.defaultStoriesFollowList.value == GLOBAL_FOLLOWS
-        val isHiddenList = account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        val isHiddenList = account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
         val followingKeySet = account.liveStoriesFollowLists.value?.users ?: emptySet()
         val followingTagSet = account.liveStoriesFollowLists.value?.hashtags ?: emptySet()

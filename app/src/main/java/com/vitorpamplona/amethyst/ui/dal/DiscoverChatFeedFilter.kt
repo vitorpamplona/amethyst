@@ -7,6 +7,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.IsInPublicChatChannel
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -16,7 +17,8 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultDiscoveryFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultDiscoveryFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultDiscoveryFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {

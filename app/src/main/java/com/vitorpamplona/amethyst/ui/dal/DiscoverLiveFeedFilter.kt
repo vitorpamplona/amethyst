@@ -9,6 +9,7 @@ import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -24,7 +25,8 @@ open class DiscoverLiveFeedFilter(
     }
 
     override fun showHiddenKey(): Boolean {
-        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
     override fun feed(): List<Note> {

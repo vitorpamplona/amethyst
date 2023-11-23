@@ -23,6 +23,7 @@ import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
@@ -87,7 +88,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind),
+                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind, MuteListEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
                 limit = 100
             )

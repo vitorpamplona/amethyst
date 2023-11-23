@@ -24,15 +24,6 @@ class PeopleListEvent(
     @Transient
     var publicAndPrivateWordCache: ImmutableSet<String>? = null
 
-    fun filterTagList(key: String, privateTags: List<List<String>>?): ImmutableSet<String> {
-        val privateUserList = privateTags?.let {
-            it.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet()
-        } ?: emptySet()
-        val publicUserList = tags.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet()
-
-        return (privateUserList + publicUserList).toImmutableSet()
-    }
-
     fun publicAndPrivateWords(signer: NostrSigner, onReady: (ImmutableSet<String>) -> Unit) {
         publicAndPrivateWordCache?.let {
             onReady(it)
@@ -62,7 +53,10 @@ class PeopleListEvent(
     }
 
     @Immutable
-    data class UsersAndWords(val users: ImmutableSet<String>, val words: ImmutableSet<String>)
+    data class UsersAndWords(
+        val users: ImmutableSet<String> = persistentSetOf(),
+        val words: ImmutableSet<String> = persistentSetOf()
+    )
 
     fun publicAndPrivateUsersAndWords(signer: NostrSigner, onReady: (UsersAndWords) -> Unit) {
         publicAndPrivateUserCache?.let { userList ->
@@ -83,18 +77,6 @@ class PeopleListEvent(
                     )
                 }
             }
-        }
-    }
-
-    fun isTagged(key: String, tag: String, isPrivate: Boolean, signer: NostrSigner, onReady: (Boolean) -> Unit) {
-        return if (isPrivate) {
-            privateTagsOrEmpty(signer = signer) {
-                onReady(
-                    it.any { it.size > 1 && it[0] == key && it[1] == tag }
-                )
-            }
-        } else {
-            onReady(isTagged(key, tag))
         }
     }
 

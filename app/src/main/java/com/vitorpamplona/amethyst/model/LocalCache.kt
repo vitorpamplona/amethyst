@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NNSEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
@@ -425,6 +426,7 @@ object LocalCache {
         }
     }
 
+    fun consume(event: MuteListEvent) { consumeBaseReplaceable(event) }
     fun consume(event: PeopleListEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: AdvertisedRelayListEvent) { consumeBaseReplaceable(event) }
     private fun consume(event: CommunityDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event) }
@@ -696,7 +698,7 @@ object LocalCache {
 
         val author = getOrCreateUser(event.pubKey)
         val repliesTo = event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
-            event.taggedAddresses().mapNotNull { getOrCreateAddressableNote(it) }
+            event.taggedAddresses().map { getOrCreateAddressableNote(it) }
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1561,6 +1563,7 @@ object LocalCache {
                 is LnZapPaymentResponseEvent -> consume(event)
                 is LongTextNoteEvent -> consume(event, relay)
                 is MetadataEvent -> consume(event)
+                is MuteListEvent -> consume(event)
                 is NNSEvent -> comsume(event)
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event)

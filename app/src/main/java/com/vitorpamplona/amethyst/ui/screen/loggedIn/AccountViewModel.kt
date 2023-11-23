@@ -153,8 +153,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     }
 
     fun isNoteHidden(note: Note): Boolean {
-        val isSensitive = note.event?.isSensitive() ?: false
-        return account.isHidden(note.author!!) || (isSensitive && account.showSensitiveContent == false)
+        return note.isHiddenFor(account.flowHiddenUsers.value)
     }
 
     fun hasReactedTo(baseNote: Note, reaction: String): Boolean {

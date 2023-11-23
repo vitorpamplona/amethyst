@@ -142,7 +142,7 @@ fun WatchAccountForNotifications(
     notifFeedViewModel: NotificationViewModel,
     accountViewModel: AccountViewModel
 ) {
-    val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
         NostrAccountDataSource.account = accountViewModel.account

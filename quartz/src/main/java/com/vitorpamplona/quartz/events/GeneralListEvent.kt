@@ -8,6 +8,8 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.toImmutableSet
 
 @Immutable
 abstract class GeneralListEvent(
@@ -32,6 +34,27 @@ abstract class GeneralListEvent(
 
     fun cachedPrivateTags(): List<List<String>>? {
         return privateTagsCache
+    }
+
+    fun filterTagList(key: String, privateTags: List<List<String>>?): ImmutableSet<String> {
+        val privateUserList = privateTags?.let {
+            it.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet()
+        } ?: emptySet()
+        val publicUserList = tags.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet()
+
+        return (privateUserList + publicUserList).toImmutableSet()
+    }
+
+    fun isTagged(key: String, tag: String, isPrivate: Boolean, signer: NostrSigner, onReady: (Boolean) -> Unit) {
+        return if (isPrivate) {
+            privateTagsOrEmpty(signer = signer) {
+                onReady(
+                    it.any { it.size > 1 && it[0] == key && it[1] == tag }
+                )
+            }
+        } else {
+            onReady(isTagged(key, tag))
+        }
     }
 
     fun privateTags(signer: NostrSigner, onReady: (List<List<String>>) -> Unit) {
