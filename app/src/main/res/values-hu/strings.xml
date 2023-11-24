@@ -338,6 +338,7 @@
     <string name="follow_list_selection">Követek Lista</string>
     <string name="follow_list_kind3follows">Mindenki akit követek</string>
     <string name="follow_list_global">Globális</string>
+    <string name="follow_list_mute_list">Némítottak listája</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Kapcsolódj a TOR-on keresztül az Orbot segítségével
         \n\n1. Telepítsd az [Orbot-ot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Indítsd el az Orbot-ot
