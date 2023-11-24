@@ -343,6 +343,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_list_selection">Folgen-Liste</string>
     <string name="follow_list_kind3follows">Alle Folgen</string>
     <string name="follow_list_global">Weltweit</string>
+    <string name="follow_list_mute_list">Stummliste</string>
     <string name="connect_through_your_orbot_setup_markdown">    ## Über Tor mit Orbot verbinden
     \n\n1. Installiere [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
     \n2. Starte Orbot
@@ -513,7 +514,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="paid">Bezahlt</string>
     <string name="wallet_number">Brieftasche %1$s</string>
     <string name="error_opening_external_signer">Fehler beim Öffnen der Signatur-App</string>
+    <string name="error_opening_external_signer_description">Die Unterzeichner-App konnte nicht gefunden werden. Prüfen Sie, ob die App nicht deinstalliert wurde</string>
     <string name="sign_request_rejected">Signaturanfrage abgelehnt</string>
+    <string name="sign_request_rejected_description">Stellen Sie sicher, dass die Unterzeichner-Anwendung diese Transaktion autorisiert hat</string>
     <string name="no_wallet_found_with_error">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen (Fehler: %1$s). Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
     <string name="no_wallet_found">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen. Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
     <string name="hidden_words">Versteckte Wörter</string>
