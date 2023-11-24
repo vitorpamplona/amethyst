@@ -337,6 +337,7 @@
     <string name="follow_list_selection">Följ lista</string>
     <string name="follow_list_kind3follows">Alla följare</string>
     <string name="follow_list_global">Global</string>
+    <string name="follow_list_mute_list">Tyst listan</string>
     <string name="connect_through_your_orbot_setup_markdown">            ## Anslut genom Tor med Orbot
             \n\n1. Installera [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
             \n2. Starta Orbot
@@ -507,7 +508,9 @@
     <string name="paid">Betald</string>
     <string name="wallet_number">Plånbok %1$s</string>
     <string name="error_opening_external_signer">Fel vid öppning av signeringsapp</string>
+    <string name="error_opening_external_signer_description">Signeringsprogrammet kunde inte hittas. Kontrollera att appen inte har avinstallerats</string>
     <string name="sign_request_rejected">Underteckningsbegäran avvisad</string>
+    <string name="sign_request_rejected_description">Kontrollera att signeringsprogrammet har godkänt denna transaktion</string>
     <string name="no_wallet_found_with_error">Inga plånböcker hittades för att betala en blixtfaktura (Fel: %1$s). Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="no_wallet_found">Inga plånböcker hittades för att betala en blixtfaktura. Installera en blixtpengaplånbok för att använda zaps</string>
     <string name="hidden_words">Dolda ord</string>

@@ -338,6 +338,7 @@
     <string name="follow_list_selection">Seznam sledovaných</string>
     <string name="follow_list_kind3follows">Všechna sledování</string>
     <string name="follow_list_global">Globální</string>
+    <string name="follow_list_mute_list">Seznam ztlumení</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Připojte se přes Tor s Orbotem
         \n\n1. Nainstalujte [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Spusťte Orbot
@@ -509,7 +510,9 @@
     <string name="paid">Zaplaceno</string>
     <string name="wallet_number">Peněženka %1$s</string>
     <string name="error_opening_external_signer">Chyba při otevírání aplikace pro podpis</string>
+    <string name="error_opening_external_signer_description">Signner aplikace nebyla nalezena. Zkontrolujte, zda aplikace nebyla odinstalována</string>
     <string name="sign_request_rejected">Žádost o podpis byla zamítnuta</string>
+    <string name="sign_request_rejected_description">Ujistěte se, že podepisující aplikace autorizovala tuto transakci</string>
     <string name="no_wallet_found_with_error">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury (Chyba: %1$s). Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="no_wallet_found">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury. Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
     <string name="hidden_words">Skrytá slova</string>
