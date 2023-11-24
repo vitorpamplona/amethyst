@@ -313,7 +313,7 @@ fun CheckHiddenNoteCompose(
             }.distinctUntilChanged()
         }.observeAsState(accountViewModel.isNoteHidden(note))
 
-        Crossfade(targetState = isHidden) {
+        Crossfade(targetState = isHidden, label = "CheckHiddenNoteCompose") {
             if (!it) {
                 LoadedNoteCompose(
                     note = note,
@@ -353,17 +353,13 @@ fun LoadedNoteCompose(
         )
     }
 
-    val scope = rememberCoroutineScope()
-
     WatchForReports(note, accountViewModel) { newState ->
         if (state != newState) {
-            scope.launch(Dispatchers.Main) {
-                state = newState
-            }
+            state = newState
         }
     }
 
-    Crossfade(targetState = state) {
+    Crossfade(targetState = state, label = "LoadedNoteCompose") {
         RenderReportState(
             it,
             note,
@@ -398,7 +394,7 @@ fun RenderReportState(
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
 
-    Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
+    Crossfade(targetState = !state.isAcceptable && !showReportedNote, label = "RenderReportState") { showHiddenNote ->
         if (showHiddenNote) {
             HiddenNote(
                 state.relevantReports,
