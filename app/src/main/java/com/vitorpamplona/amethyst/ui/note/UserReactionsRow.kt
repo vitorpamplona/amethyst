@@ -336,10 +336,14 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
         val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
 
-        this.shouldShowDecimalsInAxis = shouldShowDecimals(chartEntryModelProducer2.minY, chartEntryModelProducer2.maxY)
+        chartEntryModelProducer1?.let { chart1 ->
+            chartEntryModelProducer2?.let { chart2 ->
+                this.shouldShowDecimalsInAxis = shouldShowDecimals(chart2.minY, chart2.maxY)
 
-        this._axisLabels.emit(listOf(6, 5, 4, 3, 2, 1, 0).map { displayAxisFormatter.format(now.minusSeconds(day * it)) })
-        this._chartModel.emit(chartEntryModelProducer1.plus(chartEntryModelProducer2))
+                this._axisLabels.emit(listOf(6, 5, 4, 3, 2, 1, 0).map { displayAxisFormatter.format(now.minusSeconds(day * it)) })
+                this._chartModel.emit(chart1.plus(chart2))
+            }
+        }
     }
 
     // determine if the min max are so close that they render to the same number.
