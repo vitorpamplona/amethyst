@@ -846,7 +846,7 @@ class NoteLiveSet(u: Note) {
 
     val authorChanges = innerMetadata.map {
         it.note.author
-    }
+    }.distinctUntilChanged()
 
     val hasEvent = innerMetadata.map {
         it.note.event != null

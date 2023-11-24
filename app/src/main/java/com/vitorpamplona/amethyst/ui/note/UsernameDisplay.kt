@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 fun NoteUsernameDisplay(baseNote: Note, weight: Modifier = Modifier, showPlayButton: Boolean = true, textColor: Color = Color.Unspecified) {
     val authorState by baseNote.live().authorChanges.observeAsState(baseNote.author)
 
-    Crossfade(targetState = authorState, modifier = weight) {
+    Crossfade(targetState = authorState, modifier = weight, label = "NoteUsernameDisplay") {
         it?.let {
             UsernameDisplay(it, weight, showPlayButton, textColor = textColor)
         }
@@ -51,7 +51,7 @@ fun UsernameDisplay(baseUser: User, weight: Modifier = Modifier, showPlayButton:
 
     val userMetadata by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
-    Crossfade(targetState = userMetadata, modifier = weight) {
+    Crossfade(targetState = userMetadata, modifier = weight, label = "UsernameDisplay") {
         if (it != null) {
             UserNameDisplay(it.bestUsername(), it.bestDisplayName(), npubDisplay, it.tags, weight, showPlayButton, fontWeight, textColor)
         } else {
