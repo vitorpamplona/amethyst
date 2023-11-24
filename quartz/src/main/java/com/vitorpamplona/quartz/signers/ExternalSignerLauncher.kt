@@ -5,9 +5,12 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.util.LruCache
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
+
 
 enum class SignerType {
     SIGN_EVENT,
@@ -27,6 +30,15 @@ class Permission(
         return "{\"type\":\"${type}\",\"kind\":${kind}}"
     }
 }
+
+class Result(
+    @JsonProperty("package")
+    val `package`: String?,
+    @JsonProperty("signature")
+    val signature: String?,
+    @JsonProperty("id")
+    val id: String?
+)
 
 class ExternalSignerLauncher(
     private val npub: String,
@@ -57,15 +69,35 @@ class ExternalSignerLauncher(
     }
 
     fun newResult(data: Intent) {
-        val signature = data.getStringExtra("signature") ?: ""
-        val packageName = data.getStringExtra("package") ?: ""
-        val id = data.getStringExtra("id") ?: ""
-        if (id.isNotBlank()) {
-            val result = if (packageName.isNotBlank()) "$signature-$packageName" else signature
-            contentCache.get(id)?.invoke(result)
+        val results = data.getStringExtra("results")
+        if (results != null) {
+            val objectMapper = ObjectMapper()
+            val localResults: Array<Result> = objectMapper.readValue(
+                results,
+                Array<Result>::class.java
+            )
+
+            localResults.forEach {
+                val signature = it.signature ?: ""
+                val packageName = it.`package` ?: ""
+                val id = it.id ?: ""
+                if (id.isNotBlank()) {
+                    val result = if (packageName.isNotBlank()) "$signature-$packageName" else signature
+                    val contentCache = contentCache.get(id)
+                    contentCache?.invoke(result)
+                }
+            }
+        } else {
+            val signature = data.getStringExtra("signature") ?: ""
+            val packageName = data.getStringExtra("package") ?: ""
+            val id = data.getStringExtra("id") ?: ""
+            if (id.isNotBlank()) {
+                val result = if (packageName.isNotBlank()) "$signature-$packageName" else signature
+                val contentCache = contentCache.get(id)
+                contentCache?.invoke(result)
+            }
         }
     }
-
 
     fun openSignerApp(
         data: String,
@@ -144,6 +176,8 @@ class ExternalSignerLauncher(
         if (signerPackageName.isNotBlank()) {
             intent.`package` = signerPackageName
         }
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         contentCache.put(id, onReady)
 
