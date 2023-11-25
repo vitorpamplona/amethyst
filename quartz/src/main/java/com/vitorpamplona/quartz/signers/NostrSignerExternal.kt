@@ -91,7 +91,7 @@ class NostrSignerExternal(
 
         return launcher.encrypt(
             decryptedContent,
-            pubKey,
+            toPublicKey,
             SignerType.NIP44_ENCRYPT,
             onReady
         )
@@ -102,7 +102,7 @@ class NostrSignerExternal(
 
         return launcher.decrypt(
             encryptedContent,
-            pubKey,
+            fromPublicKey,
             SignerType.NIP44_DECRYPT,
             onReady
         )
