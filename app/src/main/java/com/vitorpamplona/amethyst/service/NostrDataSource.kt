@@ -76,6 +76,15 @@ abstract class NostrDataSource(val debugName: String) {
         override fun onAuth(relay: Relay, challenge: String) {
             auth(relay, challenge)
         }
+
+        override fun onPaymentRequired(
+            relay: Relay,
+            lnInvoice: String?,
+            description: String?,
+            otherOptionsUrl: String?
+        ) {
+            pay(relay, lnInvoice, description, otherOptionsUrl)
+        }
     }
 
     init {
@@ -190,4 +199,5 @@ abstract class NostrDataSource(val debugName: String) {
 
     abstract fun updateChannelFilters()
     open fun auth(relay: Relay, challenge: String) = Unit
+    open fun pay(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?) = Unit
 }

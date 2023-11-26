@@ -115,14 +115,18 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
     }
 
     fun search(searchString: String) {
-        println("DataSource: ${this.javaClass.simpleName} Search for $searchString")
-        this.searchString = searchString
-        invalidateFilters()
+        if (this.searchString != searchString) {
+            println("DataSource: ${this.javaClass.simpleName} Search for $searchString")
+            this.searchString = searchString
+            invalidateFilters()
+        }
     }
 
     fun clear() {
-        println("DataSource: ${this.javaClass.simpleName} Clear")
-        searchString = null
-        invalidateFilters()
+        if (searchString != null) {
+            println("DataSource: ${this.javaClass.simpleName} Clear")
+            searchString = null
+            invalidateFilters()
+        }
     }
 }

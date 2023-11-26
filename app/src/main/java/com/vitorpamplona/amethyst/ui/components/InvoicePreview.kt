@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,9 +42,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
+@Stable
+data class InvoiceAmount(val invoice: String, val amount: String?)
+
 @Composable
-fun MayBeInvoicePreview(lnbcWord: String) {
-    var lnInvoice by remember { mutableStateOf<Pair<String, String?>?>(null) }
+fun LoadValueFromInvoice(lnbcWord: String, inner: @Composable (invoiceAmount: InvoiceAmount?) -> Unit) {
+    var lnInvoice by remember { mutableStateOf<InvoiceAmount?>(null) }
 
     LaunchedEffect(key1 = lnbcWord) {
         launch(Dispatchers.IO) {
@@ -56,19 +60,26 @@ fun MayBeInvoicePreview(lnbcWord: String) {
                     null
                 }
 
-                lnInvoice = Pair(myInvoice, myInvoiceAmount)
+                lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount)
             }
         }
     }
 
-    Crossfade(targetState = lnInvoice) {
-        if (it != null) {
-            InvoicePreview(it.first, it.second)
-        } else {
-            Text(
-                text = lnbcWord,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
+    inner(lnInvoice)
+}
+
+@Composable
+fun MayBeInvoicePreview(lnbcWord: String) {
+    LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
+        Crossfade(targetState = invoiceAmount, label = "MayBeInvoicePreview") {
+            if (it != null) {
+                InvoicePreview(it.invoice, it.amount)
+            } else {
+                Text(
+                    text = lnbcWord,
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
+                )
+            }
         }
     }
 }

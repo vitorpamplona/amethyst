@@ -952,6 +952,12 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             )
         }
     }
+
+    fun dismissPaymentRequest(request: Account.PaymentRequest) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.dismissPaymentRequest(request)
+        }
+    }
 }
 
 class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {

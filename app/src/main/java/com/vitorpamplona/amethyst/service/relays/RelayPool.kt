@@ -112,6 +112,8 @@ object RelayPool : Relay.Listener {
         fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay)
 
         fun onAuth(relay: Relay, challenge: String)
+
+        fun onPaymentRequired(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?)
     }
 
     override fun onEvent(relay: Relay, subscriptionId: String, event: Event) {
@@ -136,6 +138,10 @@ object RelayPool : Relay.Listener {
 
     override fun onAuth(relay: Relay, challenge: String) {
         listeners.forEach { it.onAuth(relay, challenge) }
+    }
+
+    override fun onPaymentRequired(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?) {
+        listeners.forEach { it.onPaymentRequired(relay, lnInvoice, description, otherOptionsUrl) }
     }
 
     private fun updateStatus() {

@@ -150,6 +150,15 @@ class Account(
 
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 
+    data class PaymentRequest(
+        val relayUrl: String,
+        val lnInvoice: String?,
+        val description: String?,
+        val otherOptionsUrl: String?
+    )
+    var transientPaymentRequestDismissals: Set<PaymentRequest> = emptySet()
+    val transientPaymentRequests: MutableStateFlow<Set<PaymentRequest>> = MutableStateFlow(emptySet())
+
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
     val liveLanguages: AccountLiveData = AccountLiveData(this)
@@ -380,6 +389,21 @@ class Account(
                     }
                 }
             }
+        }
+    }
+
+    fun addPaymentRequestIfNew(paymentRequest: PaymentRequest) {
+        if (!this.transientPaymentRequests.value.contains(paymentRequest) &&
+            !this.transientPaymentRequestDismissals.contains(paymentRequest)
+        ) {
+            this.transientPaymentRequests.value = transientPaymentRequests.value + paymentRequest
+        }
+    }
+
+    fun dismissPaymentRequest(request: PaymentRequest) {
+        if (this.transientPaymentRequests.value.contains(request)) {
+            this.transientPaymentRequests.value = transientPaymentRequests.value - request
+            this.transientPaymentRequestDismissals = transientPaymentRequestDismissals + request
         }
     }
 

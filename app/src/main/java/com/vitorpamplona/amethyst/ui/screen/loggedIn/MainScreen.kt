@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -52,8 +53,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
+import com.vitorpamplona.amethyst.ui.actions.PayRequestDialog
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -133,6 +136,7 @@ fun MainScreen(
     }
 
     DisplayErrorMessages(accountViewModel)
+    DisplayPayMessages(accountViewModel)
 
     val navPopBack = remember(navController) {
         {
@@ -412,6 +416,25 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
             ) {
                 accountViewModel.clearToasts()
             }
+        }
+    }
+}
+
+@Composable
+private fun DisplayPayMessages(accountViewModel: AccountViewModel) {
+    val openDialogMsg = accountViewModel.account.transientPaymentRequests.collectAsStateWithLifecycle(null)
+
+    openDialogMsg.value?.firstOrNull()?.let { request ->
+        PayRequestDialog(
+            stringResource(id = R.string.payment_required_title, request.relayUrl.removePrefix("wss://").removeSuffix("/")),
+            request.description?.let {
+                stringResource(id = R.string.payment_required_explain, it)
+            } ?: stringResource(id = R.string.payment_required_explain_null_description),
+            request.lnInvoice,
+            stringResource(id = R.string.payment_required_explain2),
+            request.otherOptionsUrl
+        ) {
+            accountViewModel.dismissPaymentRequest(request)
         }
     }
 }

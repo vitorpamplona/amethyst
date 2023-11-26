@@ -98,10 +98,6 @@ open class NewPostViewModel() : ViewModel() {
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
-    data class ForwardZapSetup(val user: User) {
-        var percentage by mutableStateOf(100)
-    }
-
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
     var forwardZapTo by mutableStateOf<Split<User>>(Split())

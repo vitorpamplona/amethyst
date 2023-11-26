@@ -244,8 +244,12 @@ class Relay(
                 // Log.w("Relay", "Relay$url, ${msg[1].asString}")
                 it.onAuth(this@Relay, msgArray[1].asText())
             }
+            "PAY" -> listeners.forEach {
+                // Log.w("Relay", "Relay$url, ${msg[1].asString}")
+                it.onPaymentRequired(this@Relay, msgArray[1].asText(), msgArray[2].asText(), msgArray[3].asText())
+            }
             else -> listeners.forEach {
-                // Log.w("Relay", "Relay something else $url, $channel")
+                Log.w("Relay", "Unsupported message: $newMessage")
                 it.onError(
                     this@Relay,
                     channel,
@@ -393,5 +397,10 @@ class Relay(
          * @param type is 0 for disconnect and 1 for connect
          */
         fun onRelayStateChange(relay: Relay, type: StateType, channel: String?)
+
+        /**
+         * Relay sent an invoice
+         */
+        fun onPaymentRequired(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?)
     }
 }
