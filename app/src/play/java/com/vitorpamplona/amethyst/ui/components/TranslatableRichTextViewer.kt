@@ -322,7 +322,8 @@ fun TranslateAndWatchLanguageChanges(content: String, accountViewModel: AccountV
     val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
 
     LaunchedEffect(accountState) {
-        accountViewModel.runOnIO {
+        // This takes some time. Launches as a Composition scope to make sure this gets cancel if this item gets out of view.
+        launch(Dispatchers.IO) {
             LanguageTranslatorService.autoTranslate(
                 content,
                 accountViewModel.account.dontTranslateFrom,
