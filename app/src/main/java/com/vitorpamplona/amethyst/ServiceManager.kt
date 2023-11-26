@@ -7,6 +7,7 @@ import coil.Coil
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.size.Precision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.HttpClient
@@ -65,6 +66,7 @@ class ServiceManager {
                 add(SvgDecoder.Factory())
             } // .logger(DebugLogger())
                 .okHttpClient { HttpClient.getHttpClient() }
+                .precision(Precision.INEXACT)
                 .respectCacheHeaders(false)
                 .build()
         }
