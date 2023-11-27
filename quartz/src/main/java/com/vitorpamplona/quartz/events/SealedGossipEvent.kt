@@ -46,7 +46,11 @@ class SealedGossipEvent(
     private fun unseal(signer: NostrSigner, onReady: (Gossip) -> Unit) {
         try {
             plainContent(signer) {
-                onReady(Gossip.fromJson(it))
+                try {
+                    onReady(Gossip.fromJson(it))
+                } catch (e: Exception) {
+                    Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
+                }
             }
         } catch (e: Exception) {
             Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
