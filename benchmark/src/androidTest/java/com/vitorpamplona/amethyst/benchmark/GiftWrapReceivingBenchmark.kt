@@ -12,12 +12,17 @@ import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.Gossip
+import com.vitorpamplona.quartz.events.NIP24Factory
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -31,12 +36,13 @@ class GiftWrapReceivingBenchmark {
     @get:Rule
     val benchmarkRule = BenchmarkRule()
 
-    fun createMessage(sender: KeyPair, receiver: KeyPair): ChatMessageEvent {
-        val to = listOf(receiver.pubKey.toHexKey())
+    fun createWrap(sender: NostrSigner, receiver: NostrSigner): GiftWrapEvent {
+        val countDownLatch = CountDownLatch(1)
+        var wrap: GiftWrapEvent? = null
 
-        return ChatMessageEvent.create(
+        ChatMessageEvent.create(
             msg = "Hi there! This is a test message",
-            to = to,
+            to = listOf(receiver.pubKey),
             subject = "Party Tonight",
             replyTos = emptyList(),
             mentions = emptyList(),
@@ -44,31 +50,65 @@ class GiftWrapReceivingBenchmark {
             markAsSensitive = true,
             zapRaiserAmount = 10000,
             geohash = null,
-            signer = NostrSignerInternal(keyPair = sender)
-        )
+            signer = sender
+        ) {
+            SealedGossipEvent.create(
+                event = it,
+                encryptTo = receiver.pubKey,
+                signer = sender
+            ) {
+                GiftWrapEvent.create(
+                    event = it,
+                    recipientPubKey = receiver.pubKey
+                ) {
+                    wrap = it
+                    countDownLatch.countDown()
+                }
+            }
+        }
+
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        return wrap!!
+    }
+
+    fun createSeal(sender: NostrSigner, receiver: NostrSigner): SealedGossipEvent {
+        val countDownLatch = CountDownLatch(1)
+        var seal: SealedGossipEvent? = null
+
+        ChatMessageEvent.create(
+            msg = "Hi there! This is a test message",
+            to = listOf(receiver.pubKey),
+            subject = "Party Tonight",
+            replyTos = emptyList(),
+            mentions = emptyList(),
+            zapReceiver = null,
+            markAsSensitive = true,
+            zapRaiserAmount = 10000,
+            geohash = null,
+            signer = sender
+        ) {
+            SealedGossipEvent.create(
+                event = it,
+                encryptTo = receiver.pubKey,
+                signer = sender
+            ) {
+                seal = it
+                countDownLatch.countDown()
+            }
+        }
+
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        return seal!!
     }
 
     @Test
     fun parseWrapFromString() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
-
-        val wrap = GiftWrapEvent.create(
-            event = seal,
-            recipientPubKey = senderPublicKey
-        )
-
-        val str = wrap.toJson()
+        val str = createWrap(sender, receiver).toJson()
 
         benchmarkRule.measureRepeated {
             Event.fromJson(str)
@@ -77,20 +117,10 @@ class GiftWrapReceivingBenchmark {
 
     @Test
     fun checkId() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-        val senderMessage = createMessage(sender, receiver)
-
-        val wrap = GiftWrapEvent.create(
-            event = SealedGossipEvent.create(
-                event = senderMessage,
-                encryptTo = senderPublicKey,
-                privateKey = sender.privKey!!
-            ),
-            recipientPubKey = senderPublicKey
-        )
+        val wrap = createWrap(sender, receiver)
 
         benchmarkRule.measureRepeated {
             wrap.hasCorrectIDHash()
@@ -99,20 +129,10 @@ class GiftWrapReceivingBenchmark {
 
     @Test
     fun checkSignature() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-        val senderMessage = createMessage(sender, receiver)
-
-        val wrap = GiftWrapEvent.create(
-            event = SealedGossipEvent.create(
-                event = senderMessage,
-                encryptTo = senderPublicKey,
-                privateKey = sender.privKey!!
-            ),
-            recipientPubKey = senderPublicKey
-        )
+        val wrap = createWrap(sender, receiver)
 
         benchmarkRule.measureRepeated {
             wrap.hasVerifiedSignature()
@@ -121,78 +141,39 @@ class GiftWrapReceivingBenchmark {
 
     @Test
     fun decodeWrapEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
-
-        val wrappedEvent = GiftWrapEvent.create(
-            event = seal,
-            recipientPubKey = senderPublicKey
-        )
+        val wrap = createWrap(sender, receiver)
 
         benchmarkRule.measureRepeated {
-            assertNotNull(decodeNIP44(wrappedEvent.content))
+            assertNotNull(decodeNIP44(wrap.content))
         }
     }
 
     @Test
     fun decryptWrapEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+        val wrap = createWrap(sender, receiver)
 
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
-
-        val wrappedEvent = GiftWrapEvent.create(
-            event = seal,
-            recipientPubKey = senderPublicKey
-        )
-
-        val toDecrypt = decodeNIP44(wrappedEvent.content) ?: return
+        val toDecrypt = decodeNIP44(wrap.content) ?: return
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, wrappedEvent.pubKey.hexToByteArray()))
+            assertNotNull(CryptoUtils.decryptNIP44(toDecrypt, sender.keyPair.privKey!!, wrap.pubKey.hexToByteArray()))
         }
     }
 
     @Test
     fun parseWrappedEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+        val wrap = createWrap(sender, receiver)
 
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
-
-        val wrappedEvent = GiftWrapEvent.create(
-            event = seal,
-            recipientPubKey = senderPublicKey
-        )
-
-        val toDecrypt = decodeNIP44(wrappedEvent.content) ?: return
-        val innerJson = CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, wrappedEvent.pubKey.hexToByteArray())
+        val toDecrypt = decodeNIP44(wrap.content) ?: return
+        val innerJson = CryptoUtils.decryptNIP44(toDecrypt, receiver.keyPair.privKey!!, wrap.pubKey.hexToByteArray())
 
         benchmarkRule.measureRepeated {
             assertNotNull(innerJson?.let { Event.fromJson(it) })
@@ -201,18 +182,10 @@ class GiftWrapReceivingBenchmark {
 
     @Test
     fun decodeSealEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
+        val seal = createSeal(sender, receiver)
 
         benchmarkRule.measureRepeated {
             assertNotNull(decodeNIP44(seal.content))
@@ -221,43 +194,27 @@ class GiftWrapReceivingBenchmark {
 
     @Test
     fun decryptSealedEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
+        val seal = createSeal(sender, receiver)
 
         val toDecrypt = decodeNIP44(seal.content) ?: return
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, seal.pubKey.hexToByteArray()))
+            assertNotNull(CryptoUtils.decryptNIP44(toDecrypt, sender.keyPair.privKey!!, seal.pubKey.hexToByteArray()))
         }
     }
 
     @Test
     fun parseSealedEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
-
-        val senderMessage = createMessage(sender, receiver)
-
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
+        val seal = createSeal(sender, receiver)
 
         val toDecrypt = decodeNIP44(seal.content) ?: return
-        val innerJson = CryptoUtils.decryptNIP44(toDecrypt, sender.privKey!!, seal.pubKey.hexToByteArray())
+        val innerJson = CryptoUtils.decryptNIP44(toDecrypt, receiver.keyPair.privKey!!, seal.pubKey.hexToByteArray())
 
         benchmarkRule.measureRepeated {
             assertNotNull(innerJson?.let { Gossip.fromJson(it) })

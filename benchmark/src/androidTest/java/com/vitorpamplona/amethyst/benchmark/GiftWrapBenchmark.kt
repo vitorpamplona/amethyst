@@ -10,10 +10,17 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import junit.framework.TestCase
 import org.junit.Assert
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -28,63 +35,93 @@ class GiftWrapBenchmark {
     val benchmarkRule = BenchmarkRule()
 
     fun basePerformanceTest(message: String, expectedLength: Int) {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val events = NIP24Factory().createMsgNIP24(
+        var events: NIP24Factory.Result? = null
+        val countDownLatch = CountDownLatch(1)
+
+        NIP24Factory().createMsgNIP24(
             message,
-            listOf(receiver.pubKey.toHexKey()),
+            listOf(receiver.pubKey),
             sender
-        )
+        ) {
+            events = it
+            countDownLatch.countDown()
+        }
 
-        Assert.assertEquals(expectedLength, events.map { it.toJson() }.joinToString("").length)
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        val countDownLatch2 = CountDownLatch(1)
+
+        Assert.assertEquals(expectedLength, events!!.wraps.map { it.toJson() }.joinToString("").length)
 
         // Simulate Receiver
-        events.forEach {
+        events!!.wraps.forEach {
             it.checkSignature()
 
-            val keyToUse = if (it.recipientPubKey() == sender.pubKey.toHexKey()) sender.privKey!! else receiver.privKey!!
-            val event = it.unwrap(keyToUse)
-            event?.checkSignature()
+            val keyToUse = if (it.recipientPubKey() == sender.pubKey) sender else receiver
 
-            if (event is SealedGossipEvent) {
-                val innerData = event.unseal(keyToUse)
-                Assert.assertEquals(message, innerData?.content)
-            } else {
-                Assert.fail("Wrong Event")
+            it.cachedGift(keyToUse) { event ->
+                event.checkSignature()
+
+                if (event is SealedGossipEvent) {
+                    event.cachedGossip(keyToUse) { innerData ->
+                        Assert.assertEquals(message, innerData.content)
+                        countDownLatch2.countDown()
+                    }
+                } else {
+                    Assert.fail("Wrong Event")
+                }
             }
         }
+
+        assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
     }
 
     fun receivePerformanceTest(message: String) {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val giftWrap = NIP24Factory().createMsgNIP24(
+        var giftWrap: GiftWrapEvent? = null
+        val countDownLatch = CountDownLatch(1)
+
+        NIP24Factory().createMsgNIP24(
             message,
-            listOf(receiver.pubKey.toHexKey()),
+            listOf(receiver.pubKey),
             sender
-        ).first()
+        ) {
+            giftWrap = it.wraps.first()
+            countDownLatch.countDown()
+        }
 
-        val keyToUse = if (giftWrap.recipientPubKey() == sender.pubKey.toHexKey()) sender.privKey!! else receiver.privKey!!
-        val giftWrapJson = giftWrap.toJson()
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        val keyToUse = if (giftWrap!!.recipientPubKey() == sender.pubKey) sender else receiver
+        val giftWrapJson = giftWrap!!.toJson()
 
         // Simulate Receiver
         benchmarkRule.measureRepeated {
             CryptoUtils.clearCache()
+            val counter = CountDownLatch(1)
 
             val wrap = Event.fromJson(giftWrapJson) as GiftWrapEvent
             wrap.checkSignature()
 
-            val seal = wrap.unwrap(keyToUse)
-            seal?.checkSignature()
+            wrap.cachedGift(keyToUse) {seal ->
+                seal.checkSignature()
 
-            if (seal is SealedGossipEvent) {
-                val innerData = seal.unseal(keyToUse)
-                Assert.assertEquals(message, innerData?.content)
-            } else {
-                Assert.fail("Wrong Event")
+                if (seal is SealedGossipEvent) {
+                    seal.cachedGossip(keyToUse) { innerData ->
+                        Assert.assertEquals(message, innerData.content)
+                        counter.countDown()
+                    }
+                } else {
+                    Assert.fail("Wrong Event")
+                }
             }
+
+            TestCase.assertTrue(counter.await(1, TimeUnit.SECONDS))
         }
     }
 

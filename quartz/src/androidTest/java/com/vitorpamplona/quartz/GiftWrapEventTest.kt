@@ -270,7 +270,7 @@ class GiftWrapEventTest {
             }
         }
 
-        countDownDecryptLatch.await(1, TimeUnit.SECONDS)
+        assertTrue(countDownDecryptLatch.await(1, TimeUnit.SECONDS))
     }
 
     @Test()

@@ -11,11 +11,14 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.Gossip
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -29,12 +32,45 @@ class GiftWrapSigningBenchmark {
     @get:Rule
     val benchmarkRule = BenchmarkRule()
 
-    fun createMessage(sender: KeyPair, receiver: KeyPair): ChatMessageEvent {
-        val to = listOf(receiver.pubKey.toHexKey())
+    @Test
+    fun createMessageEvent() {
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        return ChatMessageEvent.create(
+        benchmarkRule.measureRepeated {
+            val countDownLatch = CountDownLatch(1)
+
+            ChatMessageEvent.create(
+                msg = "Hi there! This is a test message",
+                to = listOf(receiver.pubKey),
+                subject = "Party Tonight",
+                replyTos = emptyList(),
+                mentions = emptyList(),
+                zapReceiver = null,
+                markAsSensitive = true,
+                zapRaiserAmount = 10000,
+                geohash = null,
+                signer = sender
+            ) {
+                countDownLatch.countDown()
+            }
+
+            assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun sealMessage() {
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
+
+        val countDownLatch = CountDownLatch(1)
+
+        var msg: ChatMessageEvent? = null
+
+        ChatMessageEvent.create(
             msg = "Hi there! This is a test message",
-            to = to,
+            to = listOf(receiver.pubKey),
             subject = "Party Tonight",
             replyTos = emptyList(),
             mentions = emptyList(),
@@ -42,82 +78,113 @@ class GiftWrapSigningBenchmark {
             markAsSensitive = true,
             zapRaiserAmount = 10000,
             geohash = null,
-            keyPair = sender
-        )
-    }
-
-    @Test
-    fun createMessageEvent() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
-
-        benchmarkRule.measureRepeated {
-            createMessage(sender, receiver)
+            signer = sender
+        ) {
+            msg = it
+            countDownLatch.countDown()
         }
-    }
 
-    @Test
-    fun sealMessage() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
-
-        val senderMessage = createMessage(sender, receiver)
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
         benchmarkRule.measureRepeated {
-            val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+            val countDownLatch2 = CountDownLatch(1)
             SealedGossipEvent.create(
-                event = senderMessage,
-                encryptTo = senderPublicKey,
-                privateKey = sender.privKey!!
-            )
+                event = msg!!,
+                encryptTo = receiver.pubKey,
+                signer = sender
+            ) {
+                countDownLatch2.countDown()
+            }
+
+            assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
         }
     }
 
     @Test
     fun wrapSeal() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+        val countDownLatch = CountDownLatch(1)
 
-        val senderMessage = createMessage(sender, receiver)
+        var seal: SealedGossipEvent? = null
 
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
+        ChatMessageEvent.create(
+            msg = "Hi there! This is a test message",
+            to = listOf(receiver.pubKey),
+            subject = "Party Tonight",
+            replyTos = emptyList(),
+            mentions = emptyList(),
+            zapReceiver = null,
+            markAsSensitive = true,
+            zapRaiserAmount = 10000,
+            geohash = null,
+            signer = sender
+        ) {
+            SealedGossipEvent.create(
+                event = it,
+                encryptTo = receiver.pubKey,
+                signer = sender
+            ) {
+                seal = it
+                countDownLatch.countDown()
+            }
+        }
+
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
         benchmarkRule.measureRepeated {
+            val countDownLatch2 = CountDownLatch(1)
             GiftWrapEvent.create(
-                event = seal,
-                recipientPubKey = senderPublicKey
-            )
+                event = seal!!,
+                recipientPubKey = receiver.pubKey
+            ) {
+                countDownLatch2.countDown()
+            }
+            assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
         }
     }
 
     @Test
     fun wrapToString() {
-        val sender = KeyPair()
-        val receiver = KeyPair()
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-        val senderPublicKey = CryptoUtils.pubkeyCreate(sender.privKey!!).toHexKey()
+        val countDownLatch = CountDownLatch(1)
 
-        val senderMessage = createMessage(sender, receiver)
+        var wrap: GiftWrapEvent? = null
 
-        val seal = SealedGossipEvent.create(
-            event = senderMessage,
-            encryptTo = senderPublicKey,
-            privateKey = sender.privKey!!
-        )
+        ChatMessageEvent.create(
+            msg = "Hi there! This is a test message",
+            to = listOf(receiver.pubKey),
+            subject = "Party Tonight",
+            replyTos = emptyList(),
+            mentions = emptyList(),
+            zapReceiver = null,
+            markAsSensitive = true,
+            zapRaiserAmount = 10000,
+            geohash = null,
+            signer = sender
+        ) {
+            SealedGossipEvent.create(
+                event = it,
+                encryptTo = receiver.pubKey,
+                signer = sender
+            ) {
+                GiftWrapEvent.create(
+                    event = it,
+                    recipientPubKey = receiver.pubKey
+                ) {
+                    wrap = it
+                    countDownLatch.countDown()
+                }
+            }
+        }
 
-        val wrap = GiftWrapEvent.create(
-            event = seal,
-            recipientPubKey = senderPublicKey
-        )
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
         benchmarkRule.measureRepeated {
-            wrap.toJson()
+            wrap!!.toJson()
         }
     }
 }
