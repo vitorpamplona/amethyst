@@ -272,13 +272,14 @@ open class Event(
     private class GossipDeserializer : StdDeserializer<Gossip>(Gossip::class.java) {
         override fun deserialize(jp: JsonParser, ctxt: DeserializationContext): Gossip {
             val jsonObject: JsonNode = jp.codec.readTree(jp)
+            val tagList = jsonObject.get("tags")
             return Gossip(
                 id = jsonObject.get("id")?.asText()?.intern(),
                 pubKey = jsonObject.get("pubkey")?.asText()?.intern(),
                 createdAt = jsonObject.get("created_at")?.asLong(),
                 kind = jsonObject.get("kind")?.asInt(),
-                tags = jsonObject.get("tags")?.map {
-                    it.mapNotNull { s -> if (s?.isNull ?: true) null else s.asText().intern() }
+                tags = tagList.mapTo(ArrayList<List<String>>(tagList.size())) {
+                    it.mapNotNullTo(ArrayList<String>(it.size())) { s -> if (s.isNull) null else s.asText().intern() }
                 },
                 content = jsonObject.get("content")?.asText()
             )
@@ -360,13 +361,14 @@ open class Event(
             )
 
         fun fromJson(jsonObject: JsonNode): Event {
+            val tagList = jsonObject.get("tags")
             return EventFactory.create(
                 id = jsonObject.get("id").asText().intern(),
                 pubKey = jsonObject.get("pubkey").asText().intern(),
                 createdAt = jsonObject.get("created_at").asLong(),
                 kind = jsonObject.get("kind").asInt(),
-                tags = jsonObject.get("tags").map {
-                    it.mapNotNull { s -> if (s.isNull) null else s.asText().intern() }
+                tags = tagList.mapTo(ArrayList<List<String>>(tagList.size())) {
+                    it.mapNotNullTo(ArrayList<String>(it.size())) { s -> if (s.isNull) null else s.asText().intern() }
                 },
                 content = jsonObject.get("content").asText(),
                 sig = jsonObject.get("sig").asText()
