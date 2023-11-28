@@ -177,11 +177,11 @@ object Client : RelayPool.Listener {
         }
     }
 
-    override fun onPaymentRequired(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?) {
+    override fun onNotify(relay: Relay, description: String) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
         GlobalScope.launch(Dispatchers.Default) {
-            listeners.forEach { it.onPaymentRequired(relay, lnInvoice, description, otherOptionsUrl) }
+            listeners.forEach { it.onNotify(relay, description) }
         }
     }
 
@@ -224,6 +224,6 @@ object Client : RelayPool.Listener {
 
         open fun onAuth(relay: Relay, challenge: String) = Unit
 
-        open fun onPaymentRequired(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?) = Unit
+        open fun onNotify(relay: Relay, description: String) = Unit
     }
 }

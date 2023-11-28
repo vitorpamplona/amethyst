@@ -245,11 +245,11 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         }
     }
 
-    override fun pay(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?) {
-        super.pay(relay, lnInvoice, description, otherOptionsUrl)
+    override fun notify(relay: Relay, description: String) {
+        super.notify(relay, description)
 
         if (this::account.isInitialized) {
-            account.addPaymentRequestIfNew(Account.PaymentRequest(relay.url, lnInvoice, description, otherOptionsUrl))
+            account.addPaymentRequestIfNew(Account.PaymentRequest(relay.url, description))
         }
     }
 }

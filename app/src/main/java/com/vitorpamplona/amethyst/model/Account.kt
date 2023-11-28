@@ -152,9 +152,7 @@ class Account(
 
     data class PaymentRequest(
         val relayUrl: String,
-        val lnInvoice: String?,
-        val description: String?,
-        val otherOptionsUrl: String?
+        val description: String
     )
     var transientPaymentRequestDismissals: Set<PaymentRequest> = emptySet()
     val transientPaymentRequests: MutableStateFlow<Set<PaymentRequest>> = MutableStateFlow(emptySet())

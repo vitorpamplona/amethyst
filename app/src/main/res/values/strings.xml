@@ -662,10 +662,5 @@
         After installing, select the app you want to use in the Settings.
     </string>
 
-    <string name="payment_required_title">Payment Required for %1$s</string>
-    <string name="payment_required_explain">Relay has requested a payment of the invoice below for the %1$s.</string>
-    <string name="payment_required_explain_null_description">Relay has requested a payment of the invoice below</string>
-    <string name="payment_required_explain2">If you do not intend to use this relay anymore, please remove it from your relay list</string>
-    <string name="dismiss">Dismiss</string>
-    <string name="other_options">See other options</string>
+    <string name="payment_required_title">Message from %1$s</string>
 </resources>

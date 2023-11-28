@@ -56,7 +56,7 @@ import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.actions.PayRequestDialog
+import com.vitorpamplona.amethyst.ui.actions.NotifyRequestDialog
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.buttons.NewCommunityNoteButton
 import com.vitorpamplona.amethyst.ui.buttons.NewImageButton
@@ -136,7 +136,7 @@ fun MainScreen(
     }
 
     DisplayErrorMessages(accountViewModel)
-    DisplayPayMessages(accountViewModel)
+    DisplayNotifyMessages(accountViewModel, nav)
 
     val navPopBack = remember(navController) {
         {
@@ -421,18 +421,15 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-private fun DisplayPayMessages(accountViewModel: AccountViewModel) {
+private fun DisplayNotifyMessages(accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val openDialogMsg = accountViewModel.account.transientPaymentRequests.collectAsStateWithLifecycle(null)
 
     openDialogMsg.value?.firstOrNull()?.let { request ->
-        PayRequestDialog(
-            stringResource(id = R.string.payment_required_title, request.relayUrl.removePrefix("wss://").removeSuffix("/")),
-            request.description?.let {
-                stringResource(id = R.string.payment_required_explain, it)
-            } ?: stringResource(id = R.string.payment_required_explain_null_description),
-            request.lnInvoice,
-            stringResource(id = R.string.payment_required_explain2),
-            request.otherOptionsUrl
+        NotifyRequestDialog(
+            title = stringResource(id = R.string.payment_required_title, request.relayUrl.removePrefix("wss://").removeSuffix("/")),
+            textContent = request.description,
+            accountViewModel = accountViewModel,
+            nav = nav
         ) {
             accountViewModel.dismissPaymentRequest(request)
         }

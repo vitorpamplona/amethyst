@@ -244,9 +244,9 @@ class Relay(
                 // Log.w("Relay", "Relay$url, ${msg[1].asString}")
                 it.onAuth(this@Relay, msgArray[1].asText())
             }
-            "PAY" -> listeners.forEach {
+            "NOTIFY" -> listeners.forEach {
                 // Log.w("Relay", "Relay$url, ${msg[1].asString}")
-                it.onPaymentRequired(this@Relay, msgArray[1].asText(), msgArray[2].asText(), msgArray[3].asText())
+                it.onNotify(this@Relay, msgArray[1].asText())
             }
             else -> listeners.forEach {
                 Log.w("Relay", "Unsupported message: $newMessage")
@@ -326,27 +326,23 @@ class Relay(
             eventUploadCounterInBytes += event.bytesUsedInMemory()
         } else {
             if (write) {
+                val event = """["EVENT",${signedEvent.toJson()}]"""
                 if (isConnected()) {
                     if (isReady) {
-                        val event = """["EVENT",${signedEvent.toJson()}]"""
                         socket?.send(event)
                         eventUploadCounterInBytes += event.bytesUsedInMemory()
                     }
                 } else {
-                    // waits 60 seconds to reconnect after disconnected.
-                    if (TimeUtils.now() > closingTimeInSeconds + RECONNECTING_IN_SECONDS) {
-                        // sends all filters after connection is successful.
-                        connectAndRun {
-                            checkNotInMainThread()
+                    // sends all filters after connection is successful.
+                    connectAndRun {
+                        checkNotInMainThread()
 
-                            val event = """["EVENT",${signedEvent.toJson()}]"""
-                            socket?.send(event)
-                            eventUploadCounterInBytes += event.bytesUsedInMemory()
+                        socket?.send(event)
+                        eventUploadCounterInBytes += event.bytesUsedInMemory()
 
-                            // Sends everything.
-                            Client.allSubscriptions().forEach {
-                                sendFilter(requestId = it)
-                            }
+                        // Sends everything.
+                        Client.allSubscriptions().forEach {
+                            sendFilter(requestId = it)
                         }
                     }
                 }
@@ -401,6 +397,6 @@ class Relay(
         /**
          * Relay sent an invoice
          */
-        fun onPaymentRequired(relay: Relay, lnInvoice: String?, description: String?, otherOptionsUrl: String?)
+        fun onNotify(relay: Relay, description: String)
     }
 }
