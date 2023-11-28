@@ -227,7 +227,7 @@ class Relay(
             "OK" -> listeners.forEach {
                 val eventId = msgArray[1].asText()
                 val success = msgArray[2].asBoolean()
-                val message = msgArray[3].asText()
+                val message = if (msgArray.size() > 2) msgArray[3].asText() else ""
 
                 if (authResponse.containsKey(eventId)) {
                     val wasAlreadyAuthenticated = authResponse.get(eventId)
