@@ -10,6 +10,7 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -24,6 +25,8 @@ abstract class NostrDataSource(val debugName: String) {
 
     private var eventCounter = mapOf<String, Counter>()
     var changingFilters = AtomicBoolean()
+
+    private var active: Boolean = false
 
     fun printCounter() {
         eventCounter.forEach {
@@ -91,6 +94,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     fun destroy() {
+        // makes sure to run
         stop()
         Client.unsubscribe(clientListener)
         scope.cancel()
@@ -99,14 +103,19 @@ abstract class NostrDataSource(val debugName: String) {
 
     open fun start() {
         println("DataSource: ${this.javaClass.simpleName} Start")
+        active = true
         resetFilters()
     }
 
     open fun stop() {
+        active = false
         println("DataSource: ${this.javaClass.simpleName} Stop")
-        subscriptions.values.forEach { channel ->
-            Client.close(channel.id)
-            channel.typedFilters = null
+
+        GlobalScope.launch(Dispatchers.IO) {
+            subscriptions.values.forEach { subscription ->
+                Client.close(subscription.id)
+                subscription.typedFilters = null
+            }
         }
     }
 
@@ -143,6 +152,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     fun resetFiltersSuspend() {
+        println("DataSource: ${this.javaClass.simpleName} resetFiltersSuspend $active")
         checkNotInMainThread()
 
         // saves the channels that are currently active
@@ -166,10 +176,14 @@ abstract class NostrDataSource(val debugName: String) {
                     // was active and is still active, check if it has changed.
                     if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
                         Client.close(updatedSubscription.id)
-                        Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                        if (active) {
+                            Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                        }
                     } else {
                         // hasn't changed, does nothing.
-                        Client.sendFilterOnlyIfDisconnected(updatedSubscription.id, updatedSubscriptionNewFilters)
+                        if (active) {
+                            Client.sendFilterOnlyIfDisconnected(updatedSubscription.id, updatedSubscriptionNewFilters)
+                        }
                     }
                 }
             } else {
@@ -178,7 +192,9 @@ abstract class NostrDataSource(val debugName: String) {
                 } else {
                     // was not active and becomes active, sends the filter.
                     if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
-                        Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                        if (active) {
+                            Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                        }
                     }
                 }
             }
