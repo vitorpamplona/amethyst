@@ -13,7 +13,7 @@ class PinListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -29,12 +29,12 @@ class PinListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (PinListEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             pins.forEach {
-                tags.add(listOf("pin", it))
+                tags.add(arrayOf("pin", it))
             }
 
-            signer.sign(createdAt, kind, tags, "", onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }
     }
 }

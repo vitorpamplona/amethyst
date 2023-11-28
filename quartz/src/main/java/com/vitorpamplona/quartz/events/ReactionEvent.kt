@@ -13,7 +13,7 @@ class ReactionEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -33,25 +33,25 @@ class ReactionEvent(
         }
 
         fun create(content: String, originalNote: EventInterface, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (ReactionEvent) -> Unit) {
-            var tags = listOf(listOf("e", originalNote.id()), listOf("p", originalNote.pubKey()))
+            var tags = listOf(arrayOf("e", originalNote.id()), arrayOf("p", originalNote.pubKey()))
             if (originalNote is AddressableEvent) {
-                tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+                tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
             }
 
-            return signer.sign(createdAt, kind, tags, content, onReady)
+            return signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
 
         fun create(emojiUrl: EmojiUrl, originalNote: EventInterface, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (ReactionEvent) -> Unit) {
             val content = ":${emojiUrl.code}:"
 
-            var tags = listOf(
-                listOf("e", originalNote.id()),
-                listOf("p", originalNote.pubKey()),
-                listOf("emoji", emojiUrl.code, emojiUrl.url)
+            var tags = arrayOf(
+                arrayOf("e", originalNote.id()),
+                arrayOf("p", originalNote.pubKey()),
+                arrayOf("emoji", emojiUrl.code, emojiUrl.url)
             )
 
             if (originalNote is AddressableEvent) {
-                tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+                tags += arrayOf(arrayOf("a", originalNote.address().toTag()))
             }
 
             signer.sign(createdAt, kind, tags, content, onReady)

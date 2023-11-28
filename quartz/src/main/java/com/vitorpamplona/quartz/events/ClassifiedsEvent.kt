@@ -13,7 +13,7 @@ class ClassifiedsEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -46,26 +46,26 @@ class ClassifiedsEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ClassifiedsEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
 
-            tags.add(listOf("d", dTag))
-            title?.let { tags.add(listOf("title", it)) }
-            image?.let { tags.add(listOf("image", it)) }
-            summary?.let { tags.add(listOf("summary", it)) }
+            tags.add(arrayOf("d", dTag))
+            title?.let { tags.add(arrayOf("title", it)) }
+            image?.let { tags.add(arrayOf("image", it)) }
+            summary?.let { tags.add(arrayOf("summary", it)) }
             price?.let {
                 if (it.frequency != null && it.currency != null) {
-                    tags.add(listOf("price", it.amount, it.currency, it.frequency))
+                    tags.add(arrayOf("price", it.amount, it.currency, it.frequency))
                 } else if (it.currency != null) {
-                    tags.add(listOf("price", it.amount, it.currency))
+                    tags.add(arrayOf("price", it.amount, it.currency))
                 } else {
-                    tags.add(listOf("price", it.amount))
+                    tags.add(arrayOf("price", it.amount))
                 }
             }
-            location?.let { tags.add(listOf("location", it)) }
-            publishedAt?.let { tags.add(listOf("publishedAt", it.toString())) }
-            title?.let { tags.add(listOf("title", it)) }
+            location?.let { tags.add(arrayOf("location", it)) }
+            publishedAt?.let { tags.add(arrayOf("publishedAt", it.toString())) }
+            title?.let { tags.add(arrayOf("title", it)) }
 
-            signer.sign(createdAt, kind, tags, "", onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }
     }
 }

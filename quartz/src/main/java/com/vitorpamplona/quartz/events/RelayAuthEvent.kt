@@ -12,7 +12,7 @@ class RelayAuthEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -30,9 +30,9 @@ class RelayAuthEvent(
             onReady: (RelayAuthEvent) -> Unit
         ) {
             val content = ""
-            val tags = listOf(
-                listOf("relay", relay),
-                listOf("challenge", challenge)
+            val tags = arrayOf(
+                arrayOf("relay", relay),
+                arrayOf("challenge", challenge)
             )
             signer.sign(createdAt, kind, tags, content, onReady)
         }

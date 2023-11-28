@@ -16,7 +16,7 @@ class ChannelCreateEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -65,7 +65,7 @@ class ChannelCreateEvent(
                 ""
             }
 
-            signer.sign(createdAt, kind, emptyList(), content, onReady)
+            signer.sign(createdAt, kind, emptyArray(), content, onReady)
         }
     }
 

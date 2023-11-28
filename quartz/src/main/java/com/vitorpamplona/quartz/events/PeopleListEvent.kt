@@ -15,7 +15,7 @@ class PeopleListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -94,10 +94,10 @@ class PeopleListEvent(
 
         fun createListWithTag(name: String, key: String, tag: String, isPrivate: Boolean, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (PeopleListEvent) -> Unit) {
             if (isPrivate) {
-                encryptTags(listOf(listOf(key, tag)), signer) { encryptedTags ->
+                encryptTags(arrayOf(arrayOf(key, tag)), signer) { encryptedTags ->
                     create(
                         content = encryptedTags,
-                        tags = listOf(listOf("d", name)),
+                        tags = arrayOf(arrayOf("d", name)),
                         signer = signer,
                         createdAt = createdAt,
                         onReady = onReady
@@ -106,7 +106,7 @@ class PeopleListEvent(
             } else {
                 create(
                     content = "",
-                    tags = listOf(listOf("d", name), listOf(key, tag)),
+                    tags = arrayOf(arrayOf("d", name), arrayOf(key, tag)),
                     signer = signer,
                     createdAt = createdAt,
                     onReady = onReady
@@ -128,7 +128,7 @@ class PeopleListEvent(
                     encryptTags(
                         privateTags = privateTags.plus(
                             listPubKeyHex.map {
-                                listOf("p", it)
+                                arrayOf("p", it)
                             }
                         ),
                         signer = signer
@@ -147,7 +147,7 @@ class PeopleListEvent(
                     content = earlierVersion.content,
                     tags = earlierVersion.tags.plus(
                         listPubKeyHex.map {
-                            listOf("p", it)
+                            arrayOf("p", it)
                         }
                     ),
                     signer = signer,
@@ -171,7 +171,7 @@ class PeopleListEvent(
                     if (isPrivate) {
                         earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
                             encryptTags(
-                                privateTags = privateTags.plus(element = listOf(key, tag)),
+                                privateTags = privateTags.plus(element = arrayOf(key, tag)),
                                 signer = signer
                             ) { encryptedTags ->
                                 create(
@@ -186,7 +186,7 @@ class PeopleListEvent(
                     } else {
                         create(
                             content = earlierVersion.content,
-                            tags = earlierVersion.tags.plus(element = listOf(key, tag)),
+                            tags = earlierVersion.tags.plus(element = arrayOf(key, tag)),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady
@@ -210,12 +210,12 @@ class PeopleListEvent(
                     if (isPrivate) {
                         earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
                             encryptTags(
-                                privateTags = privateTags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) },
+                                privateTags = privateTags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) }.toTypedArray(),
                                 signer = signer
                             ) { encryptedTags ->
                                 create(
                                     content = encryptedTags,
-                                    tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) },
+                                    tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) }.toTypedArray(),
                                     signer = signer,
                                     createdAt = createdAt,
                                     onReady = onReady
@@ -225,7 +225,7 @@ class PeopleListEvent(
                     } else {
                         create(
                             content = earlierVersion.content,
-                            tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) },
+                            tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) }.toTypedArray(),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady
@@ -237,7 +237,7 @@ class PeopleListEvent(
 
         fun create(
             content: String,
-            tags: List<List<String>>,
+            tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit

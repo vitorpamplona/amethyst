@@ -12,7 +12,7 @@ class ChannelMuteUserEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig), IsInPublicChatChannel {
@@ -36,8 +36,8 @@ class ChannelMuteUserEvent(
         ) {
             val content = reason
             val tags = usersToMute?.map {
-                listOf("p", it)
-            } ?: emptyList()
+                arrayOf("p", it)
+            }?.toTypedArray() ?: emptyArray()
 
             signer.sign(createdAt, kind, tags, content, onReady)
         }

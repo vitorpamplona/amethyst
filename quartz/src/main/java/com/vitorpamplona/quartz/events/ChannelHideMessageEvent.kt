@@ -12,7 +12,7 @@ class ChannelHideMessageEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig), IsInPublicChatChannel {
@@ -36,8 +36,8 @@ class ChannelHideMessageEvent(
         ) {
             val tags =
                 messagesToHide?.map {
-                    listOf("e", it)
-                } ?: emptyList()
+                    arrayOf("e", it)
+                }?.toTypedArray() ?: emptyArray()
 
             signer.sign(createdAt, kind, tags, reason, onReady)
         }

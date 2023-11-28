@@ -14,7 +14,7 @@ class EmojiPackSelectionEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -31,13 +31,13 @@ class EmojiPackSelectionEvent(
             onReady: (EmojiPackSelectionEvent) -> Unit
         ) {
             val msg = ""
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
 
             listOfEmojiPacks?.forEach {
-                tags.add(listOf("a", it.toTag()))
+                tags.add(arrayOf("a", it.toTag()))
             }
 
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }
 }

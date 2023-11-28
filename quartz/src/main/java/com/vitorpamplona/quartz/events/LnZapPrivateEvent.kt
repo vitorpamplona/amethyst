@@ -21,7 +21,7 @@ class LnZapPrivateEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -31,7 +31,7 @@ class LnZapPrivateEvent(
 
         fun create(
             signer: NostrSigner,
-            tags: List<List<String>> = emptyList(),
+            tags: Array<Array<String>> = emptyArray(),
             content: String = "",
             createdAt: Long = TimeUtils.now(),
             onReady: (LnZapPrivateEvent) -> Unit

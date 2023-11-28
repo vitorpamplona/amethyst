@@ -284,7 +284,7 @@ open class Note(val idHex: String) {
     }
 
     fun removeReaction(note: Note) {
-        val tags = note.event?.tags() ?: emptyList()
+        val tags = note.event?.tags() ?: emptyArray()
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
@@ -403,7 +403,7 @@ open class Note(val idHex: String) {
     }
 
     fun addReaction(note: Note) {
-        val tags = note.event?.tags() ?: emptyList()
+        val tags = note.event?.tags() ?: emptyArray()
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reaction !in reactions.keys) {

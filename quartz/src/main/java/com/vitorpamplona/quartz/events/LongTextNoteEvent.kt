@@ -13,7 +13,7 @@ class LongTextNoteEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
@@ -42,14 +42,14 @@ class LongTextNoteEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (LongTextNoteEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             mentions?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }
 }

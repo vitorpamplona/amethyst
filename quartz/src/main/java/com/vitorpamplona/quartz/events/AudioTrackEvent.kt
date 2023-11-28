@@ -13,7 +13,7 @@ class AudioTrackEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -46,12 +46,12 @@ class AudioTrackEvent(
             onReady: (AudioTrackEvent) -> Unit
         ) {
             val tags = listOfNotNull(
-                listOf(MEDIA, media),
-                listOf(TYPE, type),
-                price?.let { listOf(PRICE, it) },
-                cover?.let { listOf(COVER, it) },
-                subject?.let { listOf(SUBJECT, it) }
-            )
+                arrayOf(MEDIA, media),
+                arrayOf(TYPE, type),
+                price?.let { arrayOf(PRICE, it) },
+                cover?.let { arrayOf(COVER, it) },
+                subject?.let { arrayOf(SUBJECT, it) }
+            ).toTypedArray()
 
             signer.sign(createdAt, kind, tags, "", onReady)
         }

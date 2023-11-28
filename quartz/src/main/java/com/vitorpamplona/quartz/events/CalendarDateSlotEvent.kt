@@ -13,7 +13,7 @@ class CalendarDateSlotEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -33,7 +33,7 @@ class CalendarDateSlotEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (CalendarDateSlotEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = emptyArray<Array<String>>()
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

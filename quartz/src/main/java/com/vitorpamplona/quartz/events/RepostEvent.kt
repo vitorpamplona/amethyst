@@ -13,7 +13,7 @@ class RepostEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -38,13 +38,13 @@ class RepostEvent(
         ) {
             val content = boostedPost.toJson()
 
-            val replyToPost = listOf("e", boostedPost.id())
-            val replyToAuthor = listOf("p", boostedPost.pubKey())
+            val replyToPost = arrayOf("e", boostedPost.id())
+            val replyToAuthor = arrayOf("p", boostedPost.pubKey())
 
-            var tags: List<List<String>> = listOf(replyToPost, replyToAuthor)
+            var tags: Array<Array<String>> = arrayOf(replyToPost, replyToAuthor)
 
             if (boostedPost is AddressableEvent) {
-                tags = tags + listOf(listOf("a", boostedPost.address().toTag()))
+                tags = tags + listOf(arrayOf("a", boostedPost.address().toTag()))
             }
 
             signer.sign(createdAt, kind, tags, content, onReady)

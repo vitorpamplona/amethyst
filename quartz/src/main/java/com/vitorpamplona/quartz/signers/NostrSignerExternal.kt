@@ -17,7 +17,7 @@ class NostrSignerExternal(
     override fun <T: Event> sign(
         createdAt: Long,
         kind: Int,
-        tags: List<List<String>>,
+        tags: Array<Array<String>>,
         content: String,
         onReady: (T) -> Unit
     ) {

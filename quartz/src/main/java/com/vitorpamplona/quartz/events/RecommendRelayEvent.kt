@@ -13,7 +13,7 @@ class RecommendRelayEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -30,8 +30,7 @@ class RecommendRelayEvent(
             onReady: (RecommendRelayEvent) -> Unit
         ) {
             val content = relay.toString()
-            val tags = listOf<List<String>>()
-            signer.sign(createdAt, kind, tags, content, onReady)
+            signer.sign(createdAt, kind, emptyArray(), content, onReady)
         }
     }
 }

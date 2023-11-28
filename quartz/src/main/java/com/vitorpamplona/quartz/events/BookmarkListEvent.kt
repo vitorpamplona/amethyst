@@ -13,7 +13,7 @@ class BookmarkListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -49,7 +49,7 @@ class BookmarkListEvent(
         ) {
             add(
                 earlierVersion,
-                listOf(listOf(tagName, tagValue)),
+                arrayOf(arrayOf(tagName, tagValue)),
                 isPrivate,
                 signer,
                 createdAt,
@@ -59,7 +59,7 @@ class BookmarkListEvent(
 
         fun add(
             earlierVersion: BookmarkListEvent?,
-            listNewTags: List<List<String>>,
+            listNewTags: Array<Array<String>>,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -88,7 +88,7 @@ class BookmarkListEvent(
                     ) { encryptedTags ->
                         create(
                             content = encryptedTags,
-                            tags = emptyList(),
+                            tags = emptyArray(),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady
@@ -98,7 +98,7 @@ class BookmarkListEvent(
             } else {
                 create(
                     content = earlierVersion?.content ?: "",
-                    tags = (earlierVersion?.tags ?: emptyList()).plus(listNewTags),
+                    tags = (earlierVersion?.tags ?: emptyArray()).plus(listNewTags),
                     signer = signer,
                     createdAt = createdAt,
                     onReady = onReady
@@ -136,12 +136,12 @@ class BookmarkListEvent(
             if (isPrivate) {
                 earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
                     encryptTags(
-                        privateTags = privateTags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) },
+                        privateTags = privateTags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }.toTypedArray(),
                         signer = signer
                     ) { encryptedTags ->
                         create(
                             content = encryptedTags,
-                            tags = earlierVersion.tags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) },
+                            tags = earlierVersion.tags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }.toTypedArray(),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady
@@ -151,7 +151,7 @@ class BookmarkListEvent(
             } else {
                 create(
                     content = earlierVersion.content,
-                    tags = earlierVersion.tags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) },
+                    tags = earlierVersion.tags.filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }.toTypedArray(),
                     signer = signer,
                     createdAt = createdAt,
                     onReady = onReady
@@ -161,7 +161,7 @@ class BookmarkListEvent(
 
         fun create(
             content: String,
-            tags: List<List<String>>,
+            tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (BookmarkListEvent) -> Unit
@@ -184,21 +184,21 @@ class BookmarkListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (BookmarkListEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
-            tags.add(listOf("d", name))
+            val tags = mutableListOf<Array<String>>()
+            tags.add(arrayOf("d", name))
 
             events?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             users?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
             addresses?.forEach {
-                tags.add(listOf("a", it.toTag()))
+                tags.add(arrayOf("a", it.toTag()))
             }
 
             createPrivateTags(privEvents, privUsers, privAddresses, signer) { content ->
-                signer.sign(createdAt, kind, tags, content, onReady)
+                signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
             }
         }
     }

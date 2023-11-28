@@ -13,7 +13,7 @@ class RelaySetEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -29,12 +29,12 @@ class RelaySetEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (RelaySetEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             relays.forEach {
-                tags.add(listOf("r", it))
+                tags.add(arrayOf("r", it))
             }
 
-            signer.sign(createdAt, kind, tags, "", onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }
     }
 }

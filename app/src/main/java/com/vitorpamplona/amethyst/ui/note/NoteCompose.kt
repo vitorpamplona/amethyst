@@ -1586,7 +1586,7 @@ fun RenderAppDefinition(
                     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
                         CreateTextWithEmoji(
                             text = it,
-                            tags = remember { (note.event?.tags() ?: emptyList()).toImmutableListOfLists() },
+                            tags = remember { (note.event?.tags() ?: emptyArray()).toImmutableListOfLists() },
                             fontWeight = FontWeight.Bold,
                             fontSize = 25.sp
                         )

@@ -10,7 +10,7 @@ class EventFactory {
             pubKey: String,
             createdAt: Long,
             kind: Int,
-            tags: List<List<String>>,
+            tags: Array<Array<String>>,
             content: String,
             sig: String
         ) = when (kind) {

@@ -12,7 +12,7 @@ class HighlightEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -32,7 +32,7 @@ class HighlightEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (HighlightEvent) -> Unit
         ) {
-            signer.sign(createdAt, kind, emptyList(), msg, onReady)
+            signer.sign(createdAt, kind, emptyArray(), msg, onReady)
         }
     }
 }

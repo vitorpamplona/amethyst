@@ -14,7 +14,7 @@ class FileStorageEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -49,11 +49,11 @@ class FileStorageEvent(
             onReady: (FileStorageEvent) -> Unit
         ) {
             val tags = listOfNotNull(
-                listOf(TYPE, mimeType)
+                arrayOf(TYPE, mimeType)
             )
 
             val content = encode(data)
-            signer.sign(createdAt, kind, tags, content, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }
 }

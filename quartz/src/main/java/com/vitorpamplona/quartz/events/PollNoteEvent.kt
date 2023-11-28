@@ -19,7 +19,7 @@ class PollNoteEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     // ots: String?, TODO implement OTS: https://github.com/opentimestamps/java-opentimestamps
     content: String,
     sig: HexKey
@@ -62,45 +62,45 @@ class PollNoteEvent(
             geohash: String? = null,
             onReady: (PollNoteEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             mentions?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
             addresses?.forEach {
-                tags.add(listOf("a", it.toTag()))
+                tags.add(arrayOf("a", it.toTag()))
             }
             pollOptions.forEach { poll_op ->
-                tags.add(listOf(POLL_OPTION, poll_op.key.toString(), poll_op.value))
+                tags.add(arrayOf(POLL_OPTION, poll_op.key.toString(), poll_op.value))
             }
             valueMaximum?.let {
-                tags.add(listOf(VALUE_MAXIMUM, valueMaximum.toString()))
+                tags.add(arrayOf(VALUE_MAXIMUM, valueMaximum.toString()))
             }
             valueMinimum?.let {
-                tags.add(listOf(VALUE_MINIMUM, valueMinimum.toString()))
+                tags.add(arrayOf(VALUE_MINIMUM, valueMinimum.toString()))
             }
             consensusThreshold?.let {
-                tags.add(listOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
+                tags.add(arrayOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
             }
             closedAt?.let {
-                tags.add(listOf(CLOSED_AT, closedAt.toString()))
+                tags.add(arrayOf(CLOSED_AT, closedAt.toString()))
             }
             zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
+                tags.add(arrayOf("content-warning", ""))
             }
             zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
+                tags.add(arrayOf("zapraiser", "$it"))
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
 
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }
 }

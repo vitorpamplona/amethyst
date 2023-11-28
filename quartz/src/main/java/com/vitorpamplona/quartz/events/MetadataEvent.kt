@@ -123,7 +123,7 @@ class MetadataEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -157,13 +157,13 @@ class MetadataEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (MetadataEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
 
             identities.forEach {
-                tags.add(listOf("i", it.platformIdentity(), it.proof))
+                tags.add(arrayOf("i", it.platformIdentity(), it.proof))
             }
 
-            signer.sign(createdAt, kind, tags, contactMetaData, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), contactMetaData, onReady)
         }
     }
 }

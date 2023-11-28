@@ -13,7 +13,7 @@ class HTTPAuthorizationEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -35,12 +35,12 @@ class HTTPAuthorizationEvent(
             }
 
             val tags = listOfNotNull(
-                listOf("u", url),
-                listOf("method", method),
-                listOf("payload", hash)
+                arrayOf("u", url),
+                arrayOf("method", method),
+                arrayOf("payload", hash)
             )
 
-            signer.sign(createdAt, kind, tags, "", onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }
     }
 }

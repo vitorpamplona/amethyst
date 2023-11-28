@@ -14,7 +14,7 @@ class CommunityPostApprovalEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -55,12 +55,12 @@ class CommunityPostApprovalEvent(
         ) {
             val content = approvedPost.toJson()
 
-            val communities = listOf("a", community.address().toTag())
-            val replyToPost = listOf("e", approvedPost.id())
-            val replyToAuthor = listOf("p", approvedPost.pubKey())
-            val innerKind = listOf("k", "${approvedPost.kind()}")
+            val communities = arrayOf("a", community.address().toTag())
+            val replyToPost = arrayOf("e", approvedPost.id())
+            val replyToAuthor = arrayOf("p", approvedPost.pubKey())
+            val innerKind = arrayOf("k", "${approvedPost.kind()}")
 
-            val tags: List<List<String>> = listOf(communities, replyToPost, replyToAuthor, innerKind)
+            val tags: Array<Array<String>> = arrayOf(communities, replyToPost, replyToAuthor, innerKind)
 
             signer.sign(createdAt, kind, tags, content, onReady)
         }

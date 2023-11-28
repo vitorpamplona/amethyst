@@ -21,7 +21,7 @@ class ContactListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -112,27 +112,27 @@ class ContactListEvent(
 
             val tags = followUsers.map {
                 if (it.relayUri != null) {
-                    listOf("p", it.pubKeyHex, it.relayUri)
+                    arrayOf("p", it.pubKeyHex, it.relayUri)
                 } else {
-                    listOf("p", it.pubKeyHex)
+                    arrayOf("p", it.pubKeyHex)
                 }
             } + followTags.map {
-                listOf("t", it)
+                arrayOf("t", it)
             } + followEvents.map {
-                listOf("e", it)
+                arrayOf("e", it)
             } + followCommunities.map {
                 if (it.relay != null) {
-                    listOf("a", it.toTag(), it.relay)
+                    arrayOf("a", it.toTag(), it.relay)
                 } else {
-                    listOf("a", it.toTag())
+                    arrayOf("a", it.toTag())
                 }
             } + followGeohashes.map {
-                listOf("g", it)
+                arrayOf("g", it)
             }
 
             return create(
                 content = content,
-                tags = tags,
+                tags = tags.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -144,7 +144,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.plus(element = listOf("p", pubKeyHex)),
+                tags = earlierVersion.tags.plus(element = arrayOf("p", pubKeyHex)),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -156,7 +156,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex },
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -168,7 +168,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.plus(element = listOf("t", hashtag)),
+                tags = earlierVersion.tags.plus(element = arrayOf("t", hashtag)),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -180,7 +180,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && !it[1].equals(hashtag, true) },
+                tags = earlierVersion.tags.filter { it.size > 1 && !it[1].equals(hashtag, true) }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -192,7 +192,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.plus(element = listOf("g", hashtag)),
+                tags = earlierVersion.tags.plus(element = arrayOf("g", hashtag)),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -204,7 +204,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag },
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -216,7 +216,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.plus(element = listOf("e", idHex)),
+                tags = earlierVersion.tags.plus(element = arrayOf("e", idHex)),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -228,7 +228,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != idHex },
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != idHex }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -240,7 +240,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.plus(element = listOfNotNull("a", aTag.toTag(), aTag.relay)),
+                tags = earlierVersion.tags.plus(element = listOfNotNull("a", aTag.toTag(), aTag.relay).toTypedArray()),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -252,7 +252,7 @@ class ContactListEvent(
 
             return create(
                 content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != aTag.toTag() },
+                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != aTag.toTag() }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady
@@ -277,7 +277,7 @@ class ContactListEvent(
 
         fun create(
             content: String,
-            tags: List<List<String>>,
+            tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ContactListEvent) -> Unit
@@ -346,10 +346,10 @@ class UserMetadata {
 }
 
 @Stable
-data class ImmutableListOfLists<T>(val lists: List<List<T>> = emptyList())
+data class ImmutableListOfLists<T>(val lists: Array<Array<T>>)
 
-val EmptyTagList = ImmutableListOfLists<String>(emptyList())
+val EmptyTagList = ImmutableListOfLists<String>(emptyArray())
 
-fun List<List<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
+fun Array<Array<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
     return ImmutableListOfLists(this)
 }

@@ -18,7 +18,7 @@ class LnZapPaymentRequestEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -66,8 +66,7 @@ class LnZapPaymentRequestEvent(
         ) {
             val serializedRequest = mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
 
-            val tags = mutableListOf<List<String>>()
-            tags.add(listOf("p", walletServicePubkey))
+            val tags = arrayOf(arrayOf("p", walletServicePubkey))
 
             signer.nip04Encrypt(
                 serializedRequest,

@@ -14,7 +14,7 @@ class StatusEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -30,12 +30,12 @@ class StatusEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (StatusEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
 
-            tags.add(listOf("d", type))
-            expiration?.let { tags.add(listOf("expiration", it.toString())) }
+            tags.add(arrayOf("d", type))
+            expiration?.let { tags.add(arrayOf("expiration", it.toString())) }
 
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
 
         fun update(
@@ -57,7 +57,7 @@ class StatusEvent(
         ) {
             val msg = ""
             val tags = event.tags.filter { it.size > 1 && it[0] == "d" }
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }
 }

@@ -14,7 +14,7 @@ class LiveActivitiesChatMessageEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -60,28 +60,28 @@ class LiveActivitiesChatMessageEvent(
         ) {
             val content = message
             val tags = mutableListOf(
-                listOf("a", activity.toTag(), "", "root")
+                arrayOf("a", activity.toTag(), "", "root")
             )
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             mentions?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
             zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
+                tags.add(arrayOf("content-warning", ""))
             }
             zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
+                tags.add(arrayOf("zapraiser", "$it"))
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
 
-            signer.sign(createdAt, kind, tags, content, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }
 }

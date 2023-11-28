@@ -12,7 +12,7 @@ class EmojiPackEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -28,10 +28,10 @@ class EmojiPackEvent(
         ) {
             val content = ""
 
-            val tags = mutableListOf<List<String>>()
-            tags.add(listOf("d", name))
+            val tags = mutableListOf<Array<String>>()
+            tags.add(arrayOf("d", name))
 
-            signer.sign(createdAt, kind, tags, content, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }
 }

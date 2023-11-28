@@ -17,7 +17,7 @@ class ReportEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -63,13 +63,13 @@ class ReportEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ReportEvent) -> Unit
         ) {
-            val reportPostTag = listOf("e", reportedPost.id(), type.name.lowercase())
-            val reportAuthorTag = listOf("p", reportedPost.pubKey(), type.name.lowercase())
+            val reportPostTag = arrayOf("e", reportedPost.id(), type.name.lowercase())
+            val reportAuthorTag = arrayOf("p", reportedPost.pubKey(), type.name.lowercase())
 
-            var tags: List<List<String>> = listOf(reportPostTag, reportAuthorTag)
+            var tags: Array<Array<String>> = arrayOf(reportPostTag, reportAuthorTag)
 
             if (reportedPost is AddressableEvent) {
-                tags = tags + listOf(listOf("a", reportedPost.address().toTag()))
+                tags = tags + listOf(arrayOf("a", reportedPost.address().toTag()))
             }
 
             signer.sign(createdAt, kind, tags, content, onReady)
@@ -84,9 +84,9 @@ class ReportEvent(
         ) {
             val content = ""
 
-            val reportAuthorTag = listOf("p", reportedUser, type.name.lowercase())
+            val reportAuthorTag = arrayOf("p", reportedUser, type.name.lowercase())
 
-            val tags: List<List<String>> = listOf(reportAuthorTag)
+            val tags: Array<Array<String>> = arrayOf(reportAuthorTag)
             signer.sign(createdAt, kind, tags, content, onReady)
         }
     }

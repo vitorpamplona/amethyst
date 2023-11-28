@@ -22,7 +22,7 @@ class LnZapRequestEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -89,25 +89,25 @@ class LnZapRequestEvent(
             if (zapType == LnZapEvent.ZapType.NONZAP) return
 
             var tags = listOf(
-                listOf("e", originalNote.id()),
-                listOf("p", toUserPubHex ?: originalNote.pubKey()),
-                listOf("relays") + relays
+                arrayOf("e", originalNote.id()),
+                arrayOf("p", toUserPubHex ?: originalNote.pubKey()),
+                arrayOf("relays") + relays
             )
             if (originalNote is AddressableEvent) {
-                tags = tags + listOf(listOf("a", originalNote.address().toTag()))
+                tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
             }
             if (pollOption != null && pollOption >= 0) {
-                tags = tags + listOf(listOf(POLL_OPTION, pollOption.toString()))
+                tags = tags + listOf(arrayOf(POLL_OPTION, pollOption.toString()))
             }
 
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                tags = tags + listOf(listOf("anon"))
-                NostrSignerInternal(KeyPair()).sign(createdAt, kind, tags, message, onReady)
+                tags = tags + listOf(arrayOf("anon"))
+                NostrSignerInternal(KeyPair()).sign(createdAt, kind, tags.toTypedArray(), message, onReady)
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                tags = tags + listOf(listOf("anon", ""))
-                signer.sign(createdAt, kind, tags, message, onReady)
+                tags = tags + listOf(arrayOf("anon", ""))
+                signer.sign(createdAt, kind, tags.toTypedArray(), message, onReady)
             } else {
-                signer.sign(createdAt, kind, tags, message, onReady)
+                signer.sign(createdAt, kind, tags.toTypedArray(), message, onReady)
             }
         }
 
@@ -122,16 +122,16 @@ class LnZapRequestEvent(
         ) {
             if (zapType == LnZapEvent.ZapType.NONZAP) return
 
-            var tags = listOf(
-                listOf("p", userHex),
-                listOf("relays") + relays
+            var tags = arrayOf(
+                arrayOf("p", userHex),
+                arrayOf("relays") + relays
             )
 
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                tags = tags + listOf(listOf("anon", ""))
+                tags += arrayOf(arrayOf("anon", ""))
                 NostrSignerInternal(KeyPair()).sign(createdAt, kind, tags, message, onReady)
             } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                tags = tags + listOf(listOf("anon", ""))
+                tags += arrayOf(arrayOf("anon", ""))
                 signer.sign(createdAt, kind, tags, message, onReady)
             } else {
                 signer.sign(createdAt, kind, tags, message, onReady)

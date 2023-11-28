@@ -13,7 +13,7 @@ class AdvertisedRelayListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -47,11 +47,11 @@ class AdvertisedRelayListEvent(
         ) {
             val tags = list.map {
                 if (it.type == AdvertisedRelayType.BOTH) {
-                    listOf(it.relayUrl)
+                    arrayOf(it.relayUrl)
                 } else {
-                    listOf(it.relayUrl, it.type.code)
+                    arrayOf(it.relayUrl, it.type.code)
                 }
-            }
+            }.toTypedArray()
             val msg = ""
 
             signer.sign(createdAt, kind, tags, msg, onReady)

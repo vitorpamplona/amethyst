@@ -16,7 +16,7 @@ open class BaseTextNoteEvent(
     pubKey: HexKey,
     createdAt: Long,
     kind: Int,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {

@@ -21,7 +21,7 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
     override fun <T: Event> sign(
         createdAt: Long,
         kind: Int,
-        tags: List<List<String>>,
+        tags: Array<Array<String>>,
         content: String,
         onReady: (T)-> Unit
     ) {
@@ -37,7 +37,7 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
 
     fun isUnsignedPrivateEvent(
         kind: Int,
-        tags: List<List<String>>,
+        tags: Array<Array<String>>,
     ): Boolean {
         return kind == LnZapRequestEvent.kind && tags.any { t -> t.size > 1 && t[0] == "anon" && t[1].isBlank() }
     }
@@ -45,7 +45,7 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
     fun <T: Event> signNormal(
         createdAt: Long,
         kind: Int,
-        tags: List<List<String>>,
+        tags: Array<Array<String>>,
         content: String,
         onReady: (T)-> Unit
     ) {
@@ -123,7 +123,7 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
     private fun <T> signPrivateZap(
         createdAt: Long,
         kind: Int,
-        tags: List<List<String>>,
+        tags: Array<Array<String>>,
         content: String,
         onReady: (T)-> Unit
     ) {
@@ -138,7 +138,7 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
         val encryptionPrivateKey =
             LnZapRequestEvent.createEncryptionPrivateKey(keyPair.privKey.toHexKey(), idToGeneratePrivateKey, createdAt)
 
-        val fullTagsNoAnon = tags.filter { t -> t.getOrNull(0) != "anon" }
+        val fullTagsNoAnon = tags.filter { t -> t.getOrNull(0) != "anon" }.toTypedArray()
 
         LnZapPrivateEvent.create(this, fullTagsNoAnon, content) {
             val noteJson = it.toJson()
@@ -148,10 +148,10 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
                 userHex.hexToByteArray()
             )
 
-            val newTags = tags.filter { t -> t.getOrNull(0) != "anon" } + listOf(listOf("anon", encryptedContent))
+            val newTags = tags.filter { t -> t.getOrNull(0) != "anon" } + listOf(arrayOf("anon", encryptedContent))
             val newContent = ""
 
-            NostrSignerInternal(KeyPair(encryptionPrivateKey)).signNormal(createdAt, kind, newTags, newContent, onReady)
+            NostrSignerInternal(KeyPair(encryptionPrivateKey)).signNormal(createdAt, kind, newTags.toTypedArray(), newContent, onReady)
         }
     }
 

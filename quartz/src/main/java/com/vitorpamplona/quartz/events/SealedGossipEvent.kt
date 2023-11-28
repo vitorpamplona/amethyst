@@ -19,7 +19,7 @@ class SealedGossipEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ): WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -85,10 +85,9 @@ class SealedGossipEvent(
             onReady: (SealedGossipEvent) -> Unit
         ) {
             val msg = Gossip.toJson(gossip)
-            val tags = listOf<List<String>>()
 
             signer.nip44Encrypt(msg, encryptTo) { content ->
-                signer.sign(createdAt, kind, tags, content, onReady)
+                signer.sign(createdAt, kind, emptyArray(), content, onReady)
             }
         }
     }
@@ -101,14 +100,14 @@ class Gossip(
     @JsonProperty("created_at")
     val createdAt: Long?,
     val kind: Int?,
-    val tags: List<List<String>>?,
+    val tags: Array<Array<String>>?,
     val content: String?
 ) {
     fun mergeWith(event: SealedGossipEvent): Event {
         val newPubKey = pubKey?.ifBlank { null } ?: event.pubKey
         val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
         val newKind = kind ?: -1
-        val newTags = (tags ?: emptyList()).plus(event.tags)
+        val newTags = (tags ?: emptyArray()).plus(event.tags)
         val newContent = content ?: ""
         val newID = id?.ifBlank { null } ?: Event.generateId(newPubKey, newCreatedAt, newKind, newTags, newContent).toHexKey()
         val sig = ""

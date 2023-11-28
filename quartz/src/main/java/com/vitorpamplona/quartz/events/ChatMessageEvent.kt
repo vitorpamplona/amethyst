@@ -13,7 +13,7 @@ class ChatMessageEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
@@ -64,33 +64,33 @@ class ChatMessageEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ChatMessageEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             to?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             mentions?.forEach {
-                tags.add(listOf("p", it, "", "mention"))
+                tags.add(arrayOf("p", it, "", "mention"))
             }
             zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
+                tags.add(arrayOf("content-warning", ""))
             }
             zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
+                tags.add(arrayOf("zapraiser", "$it"))
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
             subject?.let {
-                tags.add(listOf("subject", it))
+                tags.add(arrayOf("subject", it))
             }
 
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }
 }

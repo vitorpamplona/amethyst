@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -33,7 +34,7 @@ open class Event(
     @JsonProperty("created_at")
     val createdAt: Long,
     val kind: Int,
-    val tags: List<List<String>>,
+    val tags: Array<Array<String>>,
     val content: String,
     val sig: HexKey
 ) : EventInterface {
@@ -55,7 +56,7 @@ open class Event(
 
     override fun kind(): Int = kind
 
-    override fun tags(): List<List<String>> = tags
+    override fun tags(): Array<Array<String>> = tags
 
     override fun content(): String = content
 
@@ -272,14 +273,13 @@ open class Event(
     private class GossipDeserializer : StdDeserializer<Gossip>(Gossip::class.java) {
         override fun deserialize(jp: JsonParser, ctxt: DeserializationContext): Gossip {
             val jsonObject: JsonNode = jp.codec.readTree(jp)
-            val tagList = jsonObject.get("tags")
             return Gossip(
                 id = jsonObject.get("id")?.asText()?.intern(),
                 pubKey = jsonObject.get("pubkey")?.asText()?.intern(),
                 createdAt = jsonObject.get("created_at")?.asLong(),
                 kind = jsonObject.get("kind")?.asInt(),
-                tags = tagList.mapTo(ArrayList<List<String>>(tagList.size())) {
-                    it.mapNotNullTo(ArrayList<String>(it.size())) { s -> if (s.isNull) null else s.asText().intern() }
+                tags = jsonObject.get("tags").toTypedArray {
+                    it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
                 },
                 content = jsonObject.get("content")?.asText()
             )
@@ -295,7 +295,7 @@ open class Event(
             gen.writeNumberField("kind", event.kind)
             gen.writeArrayFieldStart("tags")
             event.tags.forEach { tag ->
-                gen.writeArray(tag.toTypedArray(), 0, tag.size)
+                gen.writeArray(tag, 0, tag.size)
             }
             gen.writeEndArray()
             gen.writeStringField("content", event.content)
@@ -314,7 +314,7 @@ open class Event(
             event.tags?.let {
                 gen.writeArrayFieldStart("tags")
                 event.tags.forEach { tag ->
-                    gen.writeArray(tag.toTypedArray(), 0, tag.size)
+                    gen.writeArray(tag, 0, tag.size)
                 }
                 gen.writeEndArray()
             }
@@ -361,24 +361,29 @@ open class Event(
             )
 
         fun fromJson(jsonObject: JsonNode): Event {
-            val tagList = jsonObject.get("tags")
             return EventFactory.create(
                 id = jsonObject.get("id").asText().intern(),
                 pubKey = jsonObject.get("pubkey").asText().intern(),
                 createdAt = jsonObject.get("created_at").asLong(),
                 kind = jsonObject.get("kind").asInt(),
-                tags = tagList.mapTo(ArrayList<List<String>>(tagList.size())) {
-                    it.mapNotNullTo(ArrayList<String>(it.size())) { s -> if (s.isNull) null else s.asText().intern() }
+                tags = jsonObject.get("tags").toTypedArray {
+                    it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
                 },
                 content = jsonObject.get("content").asText(),
                 sig = jsonObject.get("sig").asText()
             )
         }
 
+        private inline fun <reified R> JsonNode.toTypedArray(transform: (JsonNode) -> R): Array<R> {
+            return Array(size()) {
+                transform(get(it))
+            }
+        }
+
         fun fromJson(json: String): Event = mapper.readValue(json, Event::class.java)
         fun toJson(event: Event): String = mapper.writeValueAsString(event)
 
-        fun makeJsonForId(pubKey: HexKey, createdAt: Long, kind: Int, tags: List<List<String>>, content: String): String {
+        fun makeJsonForId(pubKey: HexKey, createdAt: Long, kind: Int, tags: Array<Array<String>>, content: String): String {
             val factory = mapper.nodeFactory
             val rawEvent = factory.arrayNode(6).apply {
                 add(0)
@@ -402,11 +407,11 @@ open class Event(
             return mapper.writeValueAsString(rawEvent)
         }
 
-        fun generateId(pubKey: HexKey, createdAt: Long, kind: Int, tags: List<List<String>>, content: String): ByteArray {
+        fun generateId(pubKey: HexKey, createdAt: Long, kind: Int, tags: Array<Array<String>>, content: String): ByteArray {
             return CryptoUtils.sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
         }
 
-        fun create(signer: NostrSigner, kind: Int, tags: List<List<String>> = emptyList(), content: String = "", createdAt: Long = TimeUtils.now(), onReady: (Event) -> Unit) {
+        fun create(signer: NostrSigner, kind: Int, tags: Array<Array<String>> = emptyArray(), content: String = "", createdAt: Long = TimeUtils.now(), onReady: (Event) -> Unit) {
             return signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
@@ -420,7 +425,7 @@ open class WrappedEvent(
     @JsonProperty("created_at")
     createdAt: Long,
     kind: Int,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -440,7 +445,7 @@ open class BaseAddressableEvent(
     pubKey: HexKey,
     createdAt: Long,
     kind: Int,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ): Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {

@@ -11,7 +11,7 @@ class AudioHeaderEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -29,7 +29,7 @@ class AudioHeaderEvent(
         private const val STREAM_URL = "stream_url"
         private const val WAVEFORM = "waveform"
 
-        suspend fun create(
+        fun create(
             description: String,
             downloadUrl: String,
             streamUrl: String? = null,
@@ -40,17 +40,17 @@ class AudioHeaderEvent(
             onReady: (AudioHeaderEvent) -> Unit
         ) {
             val tags = listOfNotNull(
-                downloadUrl.let { listOf(DOWNLOAD_URL, it) },
-                streamUrl?.let { listOf(STREAM_URL, it) },
-                wavefront?.let { listOf(WAVEFORM, it) },
+                downloadUrl.let { arrayOf(DOWNLOAD_URL, it) },
+                streamUrl?.let { arrayOf(STREAM_URL, it) },
+                wavefront?.let { arrayOf(WAVEFORM, it) },
                 sensitiveContent?.let {
                     if (it) {
-                        listOf("content-warning", "")
+                        arrayOf("content-warning", "")
                     } else {
                         null
                     }
                 }
-            )
+            ).toTypedArray()
 
             signer.sign(createdAt, kind, tags, description, onReady)
         }

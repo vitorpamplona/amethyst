@@ -17,12 +17,12 @@ abstract class GeneralListEvent(
     pubKey: HexKey,
     createdAt: Long,
     kind: Int,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     @Transient
-    private var privateTagsCache: List<List<String>>? = null
+    private var privateTagsCache: Array<Array<String>>? = null
 
     fun category() = dTag()
     fun bookmarkedPosts() = taggedEvents()
@@ -32,11 +32,11 @@ abstract class GeneralListEvent(
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
     fun nameOrTitle() = name() ?: title()
 
-    fun cachedPrivateTags(): List<List<String>>? {
+    fun cachedPrivateTags(): Array<Array<String>>? {
         return privateTagsCache
     }
 
-    fun filterTagList(key: String, privateTags: List<List<String>>?): ImmutableSet<String> {
+    fun filterTagList(key: String, privateTags: Array<Array<String>>?): ImmutableSet<String> {
         val privateUserList = privateTags?.let {
             it.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet()
         } ?: emptySet()
@@ -57,7 +57,7 @@ abstract class GeneralListEvent(
         }
     }
 
-    fun privateTags(signer: NostrSigner, onReady: (List<List<String>>) -> Unit) {
+    fun privateTags(signer: NostrSigner, onReady: (Array<Array<String>>) -> Unit) {
         if (content.isBlank()) return
 
         privateTagsCache?.let {
@@ -67,7 +67,7 @@ abstract class GeneralListEvent(
 
         try {
             signer.nip04Decrypt(content, pubKey) {
-                privateTagsCache = mapper.readValue<List<List<String>>>(it)
+                privateTagsCache = mapper.readValue<Array<Array<String>>>(it)
                 privateTagsCache?.let {
                     onReady(it)
                 }
@@ -77,7 +77,7 @@ abstract class GeneralListEvent(
         }
     }
 
-    fun privateTagsOrEmpty(signer: NostrSigner, onReady: (List<List<String>>) -> Unit) {
+    fun privateTagsOrEmpty(signer: NostrSigner, onReady: (Array<Array<String>>) -> Unit) {
         privateTags(signer, onReady)
     }
 
@@ -97,23 +97,23 @@ abstract class GeneralListEvent(
         onReady(filterAddresses(it))
     }
 
-    fun filterUsers(tags: List<List<String>>): List<String> {
+    fun filterUsers(tags: Array<Array<String>>): List<String> {
         return tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
     }
 
-    fun filterHashtags(tags: List<List<String>>): List<String> {
+    fun filterHashtags(tags: Array<Array<String>>): List<String> {
         return tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
     }
 
-    fun filterGeohashes(tags: List<List<String>>): List<String> {
+    fun filterGeohashes(tags: Array<Array<String>>): List<String> {
         return tags.filter { it.size > 1 && it[0] == "g" }.map { it[1] }
     }
 
-    fun filterEvents(tags: List<List<String>>): List<String> {
+    fun filterEvents(tags: Array<Array<String>>): List<String> {
         return tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
     }
 
-    fun filterAddresses(tags: List<List<String>>): List<ATag> {
+    fun filterAddresses(tags: Array<Array<String>>): List<ATag> {
         return tags.filter { it.firstOrNull() == "a" }.mapNotNull {
             val aTagValue = it.getOrNull(1)
             val relay = it.getOrNull(2)
@@ -131,22 +131,22 @@ abstract class GeneralListEvent(
             signer: NostrSigner,
             onReady: (String) -> Unit
         ) {
-            val privTags = mutableListOf<List<String>>()
+            val privTags = mutableListOf<Array<String>>()
             privEvents?.forEach {
-                privTags.add(listOf("e", it))
+                privTags.add(arrayOf("e", it))
             }
             privUsers?.forEach {
-                privTags.add(listOf("p", it))
+                privTags.add(arrayOf("p", it))
             }
             privAddresses?.forEach {
-                privTags.add(listOf("a", it.toTag()))
+                privTags.add(arrayOf("a", it.toTag()))
             }
 
-            return encryptTags(privTags, signer, onReady)
+            return encryptTags(privTags.toTypedArray(), signer, onReady)
         }
 
         fun encryptTags(
-            privateTags: List<List<String>>? = null,
+            privateTags: Array<Array<String>>? = null,
             signer: NostrSigner,
             onReady: (String) -> Unit
         ) {

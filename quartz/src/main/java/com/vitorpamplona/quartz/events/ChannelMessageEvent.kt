@@ -2,9 +2,6 @@ package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 
@@ -13,7 +10,7 @@ class ChannelMessageEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig), IsInPublicChatChannel {
@@ -42,30 +39,29 @@ class ChannelMessageEvent(
             geohash: String? = null,
             onReady: (ChannelMessageEvent) -> Unit
         ) {
-            val content = message
             val tags = mutableListOf(
-                listOf("e", channel, "", "root")
+                arrayOf("e", channel, "", "root")
             )
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             mentions?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
             zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
+                tags.add(arrayOf("content-warning", ""))
             }
             zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
+                tags.add(arrayOf("zapraiser", "$it"))
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
 
-            signer.sign(createdAt, kind, tags, content, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), message, onReady)
         }
     }
 }

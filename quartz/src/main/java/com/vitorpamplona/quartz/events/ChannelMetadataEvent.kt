@@ -14,7 +14,7 @@ class ChannelMetadataEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig), IsInPublicChatChannel {
@@ -65,8 +65,8 @@ class ChannelMetadataEvent(
                     ""
                 }
 
-            val tags = listOf(listOf("e", originalChannelIdHex, "", "root"))
-            signer.sign(createdAt, kind, tags, content, onReady)
+            val tags = listOf(arrayOf("e", originalChannelIdHex, "", "root"))
+            signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }
 }

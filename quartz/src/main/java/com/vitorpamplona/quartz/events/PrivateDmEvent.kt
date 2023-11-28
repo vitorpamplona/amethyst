@@ -19,7 +19,7 @@ class PrivateDmEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
@@ -109,38 +109,38 @@ class PrivateDmEvent(
             onReady: (PrivateDmEvent) -> Unit
         ) {
             val message = if (advertiseNip18) { nip18Advertisement } else { "" } + msg
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             publishedRecipientPubKey?.let {
-                tags.add(listOf("p", publishedRecipientPubKey))
+                tags.add(arrayOf("p", publishedRecipientPubKey))
             }
             replyTos?.forEach {
-                tags.add(listOf("e", it))
+                tags.add(arrayOf("e", it))
             }
             mentions?.forEach {
-                tags.add(listOf("p", it))
+                tags.add(arrayOf("p", it))
             }
             zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
+                tags.add(arrayOf("content-warning", ""))
             }
             zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
+                tags.add(arrayOf("zapraiser", "$it"))
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
 
             signer.nip04Encrypt(message, recipientPubKey) { content ->
-                signer.sign(createdAt, kind, tags, content, onReady)
+                signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
             }
         }
     }
 }
 
-fun geohashMipMap(geohash: String): List<List<String>> {
+fun geohashMipMap(geohash: String): Array<Array<String>> {
     return geohash.indices.asSequence().map {
-        listOf("g", geohash.substring(0, it+1))
-    }.toList().reversed()
+        arrayOf("g", geohash.substring(0, it+1))
+    }.toList().reversed().toTypedArray()
 }

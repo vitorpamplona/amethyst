@@ -16,7 +16,7 @@ class TextNoteEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : BaseTextNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -43,61 +43,61 @@ class TextNoteEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteEvent) -> Unit
         ) {
-            val tags = mutableListOf<List<String>>()
+            val tags = mutableListOf<Array<String>>()
             replyTos?.forEach {
                 if (it == root) {
-                    tags.add(listOf("e", it, "", "root"))
+                    tags.add(arrayOf("e", it, "", "root"))
                 } else if (it == replyingTo) {
-                    tags.add(listOf("e", it, "", "reply"))
+                    tags.add(arrayOf("e", it, "", "reply"))
                 } else if (it in directMentions) {
-                    tags.add(listOf("e", it, "", "mention"))
+                    tags.add(arrayOf("e", it, "", "mention"))
                 } else {
-                    tags.add(listOf("e", it))
+                    tags.add(arrayOf("e", it))
                 }
             }
             mentions?.forEach {
                 if (it in directMentions) {
-                    tags.add(listOf("p", it, "", "mention"))
+                    tags.add(arrayOf("p", it, "", "mention"))
                 } else {
-                    tags.add(listOf("p", it))
+                    tags.add(arrayOf("p", it))
                 }
             }
             addresses?.forEach {
                 val aTag = it.toTag()
                 if (aTag == root) {
-                    tags.add(listOf("a", aTag, "", "root"))
+                    tags.add(arrayOf("a", aTag, "", "root"))
                 } else if (aTag == replyingTo) {
-                    tags.add(listOf("a", aTag, "", "reply"))
+                    tags.add(arrayOf("a", aTag, "", "reply"))
                 } else if (aTag in directMentions) {
-                    tags.add(listOf("a", aTag, "", "mention"))
+                    tags.add(arrayOf("a", aTag, "", "mention"))
                 } else {
-                    tags.add(listOf("a", aTag))
+                    tags.add(arrayOf("a", aTag))
                 }
             }
             findHashtags(msg).forEach {
-                tags.add(listOf("t", it))
-                tags.add(listOf("t", it.lowercase()))
+                tags.add(arrayOf("t", it))
+                tags.add(arrayOf("t", it.lowercase()))
             }
             extraTags?.forEach {
-                tags.add(listOf("t", it))
+                tags.add(arrayOf("t", it))
             }
             zapReceiver?.forEach {
-                tags.add(listOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             findURLs(msg).forEach {
-                tags.add(listOf("r", it))
+                tags.add(arrayOf("r", it))
             }
             if (markAsSensitive) {
-                tags.add(listOf("content-warning", ""))
+                tags.add(arrayOf("content-warning", ""))
             }
             zapRaiserAmount?.let {
-                tags.add(listOf("zapraiser", "$it"))
+                tags.add(arrayOf("zapraiser", "$it"))
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
 
-            signer.sign(createdAt, kind, tags, msg, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }
 }

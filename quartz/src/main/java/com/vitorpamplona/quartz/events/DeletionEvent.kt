@@ -13,7 +13,7 @@ class DeletionEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -24,7 +24,7 @@ class DeletionEvent(
 
         fun create(deleteEvents: List<String>, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (DeletionEvent) -> Unit) {
             val content = ""
-            val tags = deleteEvents.map { listOf("e", it) }
+            val tags = deleteEvents.map { arrayOf("e", it) }.toTypedArray()
             signer.sign(createdAt, kind, tags, content, onReady)
         }
     }

@@ -12,7 +12,7 @@ class FileStorageHeaderEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -59,19 +59,19 @@ class FileStorageHeaderEvent(
             onReady: (FileStorageHeaderEvent) -> Unit
         ) {
             val tags = listOfNotNull(
-                listOf("e", storageEvent.id),
-                mimeType?.let { listOf(MIME_TYPE, mimeType) },
-                hash?.let { listOf(HASH, it) },
-                alt?.let { listOf(ALT, it) },
-                size?.let { listOf(FILE_SIZE, it) },
-                dimensions?.let { listOf(DIMENSION, it) },
-                blurhash?.let { listOf(BLUR_HASH, it) },
-                magnetURI?.let { listOf(MAGNET_URI, it) },
-                torrentInfoHash?.let { listOf(TORRENT_INFOHASH, it) },
-                encryptionKey?.let { listOf(ENCRYPTION_KEY, it.key, it.nonce) },
+                arrayOf("e", storageEvent.id),
+                mimeType?.let { arrayOf(MIME_TYPE, mimeType) },
+                hash?.let { arrayOf(HASH, it) },
+                alt?.let { arrayOf(ALT, it) },
+                size?.let { arrayOf(FILE_SIZE, it) },
+                dimensions?.let { arrayOf(DIMENSION, it) },
+                blurhash?.let { arrayOf(BLUR_HASH, it) },
+                magnetURI?.let { arrayOf(MAGNET_URI, it) },
+                torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
+                encryptionKey?.let { arrayOf(ENCRYPTION_KEY, it.key, it.nonce) },
                 sensitiveContent?.let {
                     if (it) {
-                        listOf("content-warning", "")
+                        arrayOf("content-warning", "")
                     } else {
                         null
                     }
@@ -79,7 +79,7 @@ class FileStorageHeaderEvent(
             )
 
             val content = alt ?: ""
-            signer.sign(createdAt, kind, tags, content, onReady)
+            signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }
 }

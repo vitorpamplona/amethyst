@@ -18,7 +18,7 @@ class MuteListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -61,10 +61,10 @@ class MuteListEvent(
 
         fun createListWithTag(key: String, tag: String, isPrivate: Boolean, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (MuteListEvent) -> Unit) {
             if (isPrivate) {
-                encryptTags(listOf(listOf(key, tag)), signer) { encryptedTags ->
+                encryptTags(arrayOf(arrayOf(key, tag)), signer) { encryptedTags ->
                     create(
                         content = encryptedTags,
-                        tags = emptyList(),
+                        tags = emptyArray(),
                         signer = signer,
                         createdAt = createdAt,
                         onReady = onReady
@@ -73,7 +73,7 @@ class MuteListEvent(
             } else {
                 create(
                     content = "",
-                    tags = listOf(listOf(key, tag)),
+                    tags = arrayOf(arrayOf(key, tag)),
                     signer = signer,
                     createdAt = createdAt,
                     onReady = onReady
@@ -95,7 +95,7 @@ class MuteListEvent(
                     encryptTags(
                         privateTags = privateTags.plus(
                             listPubKeyHex.map {
-                                listOf("p", it)
+                                arrayOf("p", it)
                             }
                         ),
                         signer = signer
@@ -114,7 +114,7 @@ class MuteListEvent(
                     content = earlierVersion.content,
                     tags = earlierVersion.tags.plus(
                         listPubKeyHex.map {
-                            listOf("p", it)
+                            arrayOf("p", it)
                         }
                     ),
                     signer = signer,
@@ -138,7 +138,7 @@ class MuteListEvent(
                     if (isPrivate) {
                         earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
                             encryptTags(
-                                privateTags = privateTags.plus(element = listOf(key, tag)),
+                                privateTags = privateTags.plus(element = arrayOf(key, tag)),
                                 signer = signer
                             ) { encryptedTags ->
                                 create(
@@ -153,7 +153,7 @@ class MuteListEvent(
                     } else {
                         create(
                             content = earlierVersion.content,
-                            tags = earlierVersion.tags.plus(element = listOf(key, tag)),
+                            tags = earlierVersion.tags.plus(element = arrayOf(key, tag)),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady
@@ -177,12 +177,12 @@ class MuteListEvent(
                     if (isPrivate) {
                         earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
                             encryptTags(
-                                privateTags = privateTags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) },
+                                privateTags = privateTags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) }.toTypedArray(),
                                 signer = signer
                             ) { encryptedTags ->
                                 create(
                                     content = encryptedTags,
-                                    tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) },
+                                    tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) }.toTypedArray(),
                                     signer = signer,
                                     createdAt = createdAt,
                                     onReady = onReady
@@ -192,7 +192,7 @@ class MuteListEvent(
                     } else {
                         create(
                             content = earlierVersion.content,
-                            tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) },
+                            tags = earlierVersion.tags.filter { it.size > 1 && !(it[0] == key && it[1] == tag) }.toTypedArray(),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady
@@ -204,7 +204,7 @@ class MuteListEvent(
 
         fun create(
             content: String,
-            tags: List<List<String>>,
+            tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit

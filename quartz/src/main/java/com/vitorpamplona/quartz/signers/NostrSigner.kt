@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 
 abstract class NostrSigner(val pubKey: HexKey) {
 
-    abstract fun <T: Event> sign(createdAt: Long, kind: Int, tags: List<List<String>>, content: String, onReady: (T) -> Unit)
+    abstract fun <T: Event> sign(createdAt: Long, kind: Int, tags: Array<Array<String>>, content: String, onReady: (T) -> Unit)
 
     abstract fun nip04Encrypt(decryptedContent: String, toPublicKey: HexKey, onReady: (String)-> Unit)
     abstract fun nip04Decrypt(encryptedContent: String, fromPublicKey: HexKey, onReady: (String)-> Unit)

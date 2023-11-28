@@ -19,7 +19,7 @@ class GiftWrapEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
-    tags: List<List<String>>,
+    tags: Array<Array<String>>,
     content: String,
     sig: HexKey
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
@@ -71,7 +71,7 @@ class GiftWrapEvent(
         ) {
             val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
             val serializedContent = toJson(event)
-            val tags = listOf(listOf("p", recipientPubKey))
+            val tags = arrayOf(arrayOf("p", recipientPubKey))
 
             signer.nip44Encrypt(serializedContent, recipientPubKey) {
                 signer.sign(createdAt, kind, tags, it, onReady)

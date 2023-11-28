@@ -64,7 +64,7 @@ class MultiSetCard(
     )
 
     val likeEventsByType = likeEvents.groupBy {
-        it.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(it.event?.tags() ?: emptyList())) ?: "+"
+        it.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(it.event?.tags() ?: emptyArray())) ?: "+"
     }.mapValues {
         it.value.toImmutableList()
     }.toImmutableMap()
