@@ -263,7 +263,7 @@ class Relay(
         checkNotInMainThread()
 
         closingTimeInSeconds = TimeUtils.now()
-        socket?.close(1000, "Normal close")
+        socket?.cancel()
         socket = null
         isReady = false
         usingCompression = false
