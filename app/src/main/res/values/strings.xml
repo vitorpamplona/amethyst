@@ -664,4 +664,7 @@
 
     <string name="payment_required_title">Message from %1$s</string>
     <string name="thread_title">Thread</string>
+    <string name="send_the_seller_a_message">Send the seller a message</string>
+    <string name="hi_seller_is_this_still_available">Hi %1$s, is this still available?</string>
+    <string name="hi_there_is_this_still_available">Hi there, is this still available?</string>
 </resources>

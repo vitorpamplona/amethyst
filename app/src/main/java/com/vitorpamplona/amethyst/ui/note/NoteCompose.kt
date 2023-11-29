@@ -1206,7 +1206,8 @@ private fun RenderNoteRow(
             RenderClassifieds(
                 noteEvent,
                 baseNote,
-                accountViewModel
+                accountViewModel,
+                nav
             )
         }
 
@@ -3896,7 +3897,7 @@ private fun LongFormHeader(noteEvent: LongTextNoteEvent, note: Note, accountView
 }
 
 @Composable
-private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountViewModel: AccountViewModel) {
+private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val image = remember(noteEvent) { noteEvent.image() }
     val title = remember(noteEvent) { noteEvent.title() }
     val summary = remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
@@ -3933,18 +3934,23 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                         text = it,
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 price?.let {
                     val priceTag = remember(noteEvent) {
+                        val newAmount = price.amount.toBigDecimalOrNull()?.let {
+                            showAmount(it)
+                        } ?: price.amount
+
                         if (price.frequency != null && price.currency != null) {
-                            "${price.amount} ${price.currency}/${price.frequency}"
+                            "$newAmount ${price.currency}/${price.frequency}"
                         } else if (price.currency != null) {
-                            "${price.amount} ${price.currency}"
+                            "$newAmount ${price.currency}"
                         } else {
-                            price.amount
+                            newAmount
                         }
                     }
 
@@ -3956,7 +3962,6 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                         modifier = remember {
                             Modifier
                                 .clip(SmallBorder)
-                                .background(Color.Black)
                                 .padding(start = 5.dp)
                         }
                     )
@@ -3977,16 +3982,46 @@ private fun RenderClassifieds(noteEvent: ClassifiedsEvent, note: Note, accountVi
                         )
                     }
 
-                    location?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(start = 5.dp)
-                        )
+                    /*
+                    Column {
+                        location?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 5.dp)
+                            )
+                        }
+
+                        Button(
+                            modifier = Modifier
+                                .padding(horizontal = 3.dp)
+                                .width(50.dp),
+                            onClick = {
+                                note.author?.let {
+                                    accountViewModel.createChatRoomFor(it) {
+                                        nav("Room/$it")
+                                    }
+                                }
+                            },
+                            contentPadding = ZeroPadding,
+                            colors = ButtonDefaults
+                                .buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                )
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_dm),
+                                stringResource(R.string.send_a_direct_message),
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                        }
                     }
+
+                     */
                 }
             }
 

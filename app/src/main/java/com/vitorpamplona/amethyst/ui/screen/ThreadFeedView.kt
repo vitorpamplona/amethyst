@@ -6,6 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,14 +18,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pullrefresh.PullRefreshIndicator
 import androidx.compose.material3.pullrefresh.pullRefresh
 import androidx.compose.material3.pullrefresh.rememberPullRefreshState
@@ -38,15 +43,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -55,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.AudioTrackHeader
@@ -87,13 +96,18 @@ import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.Reward
+import com.vitorpamplona.amethyst.ui.note.routeToMessage
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThinSendButton
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
@@ -117,6 +131,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.RepostEvent
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -388,7 +403,7 @@ fun NoteMaster(
             } else if (noteEvent is LongTextNoteEvent) {
                 RenderLongFormHeaderForThread(noteEvent)
             } else if (noteEvent is ClassifiedsEvent) {
-                RenderClassifiedsReaderForThread(noteEvent, note, accountViewModel)
+                RenderClassifiedsReaderForThread(noteEvent, note, accountViewModel, nav)
             }
 
             Row(
@@ -517,52 +532,64 @@ fun NoteMaster(
 private fun RenderClassifiedsReaderForThread(
     noteEvent: ClassifiedsEvent,
     note: Note,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
-    val image = remember(noteEvent) { noteEvent.image() }
+    val images = remember(noteEvent) { noteEvent.images().toImmutableList() }
     val title = remember(noteEvent) { noteEvent.title() }
-    val summary =
-        remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+    val summary = remember(noteEvent) {
+        val sum = noteEvent.summary()
+        if (sum != noteEvent.content) {
+            sum
+        } else {
+            null
+        }
+    }
     val price = remember(noteEvent) { noteEvent.price() }
     val location = remember(noteEvent) { noteEvent.location() }
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
-            Row() {
-                image?.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = stringResource(
-                            R.string.preview_card_image_for,
-                            it
-                        ),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth()
+            if (images.isNotEmpty()) {
+                Row() {
+                    InlineCarrousel(
+                        images,
+                        images.first()
                     )
-                } ?: CreateImageHeader(note, accountViewModel)
+                }
+            } else {
+                CreateImageHeader(note, accountViewModel)
             }
 
             Row(
-                Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                Modifier.padding(top = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 title?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1,
+                        style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.weight(1f)
                     )
                 }
+            }
 
-                price?.let {
+            price?.let {
+                Row(
+                    Modifier.padding(top = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val newAmount = price.amount.toBigDecimalOrNull()?.let {
+                        showAmount(it)
+                    } ?: price.amount
+
                     val priceTag = remember(noteEvent) {
                         if (price.frequency != null && price.currency != null) {
-                            "${price.amount} ${price.currency}/${price.frequency}"
+                            "$newAmount ${price.currency}/${price.frequency}"
                         } else if (price.currency != null) {
-                            "${price.amount} ${price.currency}"
+                            "$newAmount ${price.currency}"
                         } else {
-                            price.amount
+                            newAmount
                         }
                     }
 
@@ -571,19 +598,22 @@ private fun RenderClassifiedsReaderForThread(
                         maxLines = 1,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
-                        modifier = remember {
-                            Modifier
-                                .clip(SmallBorder)
-                                .background(Color.Black)
-                                .padding(start = 5.dp)
-                        }
+                        modifier = Modifier.weight(1f)
                     )
+
+                    location?.let {
+                        Text(
+                            text = it,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
             summary?.let {
                 Row(
-                    Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp),
+                    Modifier.padding(top = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -596,19 +626,78 @@ private fun RenderClassifiedsReaderForThread(
                 }
             }
 
-            location?.let {
-                Row(
-                    Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+            Row(
+                Modifier
+                    .padding(start = 20.dp, end = 20.dp, bottom = 5.dp, top = 15.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_dm),
+                    stringResource(R.string.send_a_direct_message),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = StdHorzSpacer)
+
+                Text(stringResource(id = R.string.send_the_seller_a_message))
+            }
+
+            Row(
+                modifier = Modifier
+                    .padding(start = 10.dp, end = 10.dp, bottom = 5.dp, top = 5.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val sellerName = note.author?.bestDisplayName() ?: note.author?.bestUsername()
+
+                val msg = if (sellerName != null) {
+                    stringResource(
+                        id = R.string.hi_seller_is_this_still_available,
+                        sellerName
                     )
+                } else {
+                    stringResource(id = R.string.hi_there_is_this_still_available)
                 }
+
+                var message by remember {
+                    mutableStateOf(TextFieldValue(msg))
+                }
+
+                TextField(
+                    value = message,
+                    onValueChange = {
+                        message = it
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    shape = EditFieldBorder,
+                    modifier = Modifier.weight(1f, true),
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.reply_here),
+                            color = MaterialTheme.colorScheme.placeholderText
+                        )
+                    },
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    trailingIcon = {
+                        ThinSendButton(
+                            isActive = message.text.isNotBlank(),
+                            modifier = EditFieldTrailingIconModifier
+                        ) {
+                            note.author?.let {
+                                nav(routeToMessage(it, msg, accountViewModel))
+                            }
+                        }
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
             }
         }
     }

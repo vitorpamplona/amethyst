@@ -19,6 +19,7 @@ class ClassifiedsEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
     fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
+    fun images() = tags.filter { it.size > 1 && it[0] == "image" }.map { it[1] }
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
     fun price() = tags.firstOrNull { it.size > 1 && it[0] == "price" }?.let {
         Price(it[1], it.getOrNull(2), it.getOrNull(3))

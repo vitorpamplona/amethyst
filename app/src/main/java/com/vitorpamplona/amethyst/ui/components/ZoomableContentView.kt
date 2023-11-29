@@ -834,6 +834,44 @@ private fun DialogContent(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
+fun InlineCarrousel(
+    allImages: ImmutableList<String>,
+    imageUrl: String
+) {
+    val pagerState: PagerState = rememberPagerState() { allImages.size }
+
+    LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
+        launch {
+            val page = allImages.indexOf(imageUrl)
+            if (page > -1) {
+                pagerState.scrollToPage(page)
+            }
+        }
+    }
+
+    if (allImages.size > 1) {
+        SlidingCarousel(
+            pagerState = pagerState
+        ) { index ->
+            AsyncImage(
+                model = allImages[index],
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    } else {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
 private fun CopyToClipboard(
     content: ZoomableContent
 ) {
