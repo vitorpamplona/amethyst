@@ -22,8 +22,8 @@ object HttpClient {
         this.internalProxy = proxy
     }
 
-    fun getHttpClient(): OkHttpClient {
-        val seconds = if (internalProxy != null) 20L else 10L
+    fun getHttpClient(timeout: Duration): OkHttpClient {
+        val seconds = if (internalProxy != null) timeout.seconds * 2 else timeout.seconds
         val duration = Duration.ofSeconds(seconds)
         return OkHttpClient.Builder()
             .proxy(internalProxy)
@@ -31,6 +31,10 @@ object HttpClient {
             .connectTimeout(duration)
             .writeTimeout(duration)
             .build()
+    }
+
+    fun getHttpClient(): OkHttpClient {
+        return getHttpClient(Duration.ofSeconds(10L))
     }
 
     fun getProxy(): Proxy? {

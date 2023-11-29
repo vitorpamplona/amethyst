@@ -22,6 +22,7 @@ import okio.BufferedSink
 import okio.IOException
 import okio.source
 import java.io.InputStream
+import java.time.Duration
 import java.util.Base64
 
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
@@ -86,7 +87,7 @@ class ImageUploader(val account: Account?) {
         val fileName = randomChars()
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClient.getHttpClient()
+        val client = HttpClient.getHttpClient(Duration.ofSeconds(30L))
         val requestBody: RequestBody
         val requestBuilder = Request.Builder()
 
