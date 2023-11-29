@@ -556,4 +556,5 @@
     <string name="push_server_install_app_description">        Pro příjem Push-oznámení nainstalujte libovolnou aplikaci, která podporuje [Unified Push](https://unifiedpush.org/), jako je [Nfty](https://ntfy.sh/).
         Po instalaci vyberte aplikaci kterou chcete používat v Nastavení.
     </string>
+    <string name="payment_required_title">Zpráva od %1$s</string>
 </resources>
