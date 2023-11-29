@@ -4127,6 +4127,31 @@ https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db
         }
     }
 
+    @Test
+    fun testUrlsEndingInPeriod() {
+        val text = "That’s it! http://vitorpamplona.com/. That’s the note"
+
+        val state = RichTextParser().parseText(text, EmptyTagList)
+
+        printStateForDebug(state)
+
+        val expectedResult = listOf<String>(
+            "RegularText(That’s)",
+            "RegularText(it!)",
+            "Link(http://vitorpamplona.com/.)",
+            "RegularText(That’s)",
+            "RegularText(the)",
+            "RegularText(note)"
+        )
+
+        state.paragraphs.map { it.words }.flatten().forEachIndexed { index, seg ->
+            Assert.assertEquals(
+                expectedResult[index],
+                "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})"
+            )
+        }
+    }
+
     private fun printStateForDebug(state: RichTextViewerState) {
         state.paragraphs.forEach { paragraph ->
             paragraph.words.forEach { seg ->
