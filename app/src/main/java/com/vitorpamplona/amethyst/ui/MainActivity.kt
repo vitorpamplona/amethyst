@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
@@ -220,6 +221,14 @@ class MainActivity : AppCompatActivity() {
             isOnWifiDataState.value = isOnWifi
 
             changedNetwork = true
+        }
+
+        if (changedNetwork) {
+            if (isOnMobileData) {
+                HttpClient.changeTimeouts(HttpClient.DEFAULT_TIMEOUT_ON_MOBILE)
+            } else {
+                HttpClient.changeTimeouts(HttpClient.DEFAULT_TIMEOUT_ON_WIFI)
+            }
         }
 
         return changedNetwork
