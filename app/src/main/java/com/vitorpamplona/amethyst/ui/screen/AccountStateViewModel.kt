@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -32,6 +33,8 @@ val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
 
 @Stable
 class AccountStateViewModel() : ViewModel() {
+    var serviceManager: ServiceManager? = null
+
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
 
@@ -52,6 +55,10 @@ class AccountStateViewModel() : ViewModel() {
 
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            serviceManager?.pauseForGood()
+        }
     }
 
     suspend fun loginAndStartUI(
@@ -99,6 +106,10 @@ class AccountStateViewModel() : ViewModel() {
             _accountContent.update { AccountState.LoggedIn(account) }
         } else {
             _accountContent.update { AccountState.LoggedInViewOnly(account) }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            serviceManager?.restartIfDifferentAccount(account)
         }
 
         account.saveable.observeForever(saveListener)

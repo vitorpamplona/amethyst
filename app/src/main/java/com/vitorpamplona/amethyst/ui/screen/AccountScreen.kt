@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -34,14 +32,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
     accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-    serviceManager: ServiceManager
+    sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
@@ -55,21 +51,9 @@ fun AccountScreen(
                 LoadingAccounts()
             }
             is AccountState.LoggedOff -> {
-                LaunchedEffect(key1 = state) {
-                    launch(Dispatchers.IO) {
-                        serviceManager.pauseForGood()
-                    }
-                }
-
                 LoginPage(accountStateViewModel, isFirstLogin = true)
             }
             is AccountState.LoggedIn -> {
-                LaunchedEffect(key1 = state) {
-                    launch(Dispatchers.IO) {
-                        serviceManager.restartIfDifferentAccount(state.account)
-                    }
-                }
-
                 CompositionLocalProvider(
                     LocalViewModelStoreOwner provides state.currentViewModelStore
                 ) {
@@ -81,12 +65,6 @@ fun AccountScreen(
                 }
             }
             is AccountState.LoggedInViewOnly -> {
-                LaunchedEffect(key1 = state) {
-                    launch(Dispatchers.IO) {
-                        serviceManager.restartIfDifferentAccount(state.account)
-                    }
-                }
-
                 CompositionLocalProvider(
                     LocalViewModelStoreOwner provides state.currentViewModelStore
                 ) {

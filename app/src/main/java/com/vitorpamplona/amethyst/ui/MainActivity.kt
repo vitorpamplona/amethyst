@@ -75,11 +75,11 @@ class MainActivity : AppCompatActivity() {
 
             LaunchedEffect(key1 = sharedPreferencesViewModel) {
                 sharedPreferencesViewModel.init()
+                sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
             }
 
             LaunchedEffect(isOnMobileDataState) {
                 sharedPreferencesViewModel.updateConnectivityStatusState(isOnMobileDataState)
-                sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
             }
 
             AmethystTheme(sharedPreferencesViewModel) {
@@ -89,12 +89,13 @@ class MainActivity : AppCompatActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val accountStateViewModel: AccountStateViewModel = viewModel()
+                    accountStateViewModel.serviceManager = serviceManager
 
                     LaunchedEffect(key1 = Unit) {
                         accountStateViewModel.tryLoginExistingAccountAsync()
                     }
 
-                    AccountScreen(accountStateViewModel, sharedPreferencesViewModel, serviceManager)
+                    AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
                 }
             }
         }
@@ -125,7 +126,10 @@ class MainActivity : AppCompatActivity() {
             PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
         }
 
-        (getSystemService(ConnectivityManager::class.java) as ConnectivityManager).registerDefaultNetworkCallback(networkCallback)
+        val connectivityManager = (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
+        connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            ?.let { updateNetworkCapabilities(it) }
 
         // resets state until next External Signer Call
         Timer().schedule(350) {
@@ -200,17 +204,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun updateNetworkCapabilities(networkCapabilities: NetworkCapabilities): Boolean {
+        val isOnMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        val isOnWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+
+        var changedNetwork = false
+
+        if (isOnMobileDataState.value != isOnMobileData) {
+            isOnMobileDataState.value = isOnMobileData
+
+            changedNetwork = true
+        }
+
+        if (isOnWifiDataState.value != isOnWifi) {
+            isOnWifiDataState.value = isOnWifi
+
+            changedNetwork = true
+        }
+
+        return changedNetwork
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        var lastNetwork: Network? = null
+
         override fun onAvailable(network: Network) {
             super.onAvailable(network)
 
-            Log.d("shouldPauseService", "shouldPauseService onAvailable: $shouldPauseService")
-            if (shouldPauseService) {
+            Log.d("ServiceManager NetworkCallback", "onAvailable: $shouldPauseService")
+            if (shouldPauseService && lastNetwork != null && lastNetwork != network) {
                 GlobalScope.launch(Dispatchers.IO) {
                     serviceManager.forceRestart()
                 }
             }
+
+            lastNetwork = network
         }
 
         // Network capabilities have changed for the network
@@ -221,26 +250,8 @@ class MainActivity : AppCompatActivity() {
             super.onCapabilitiesChanged(network, networkCapabilities)
 
             GlobalScope.launch(Dispatchers.IO) {
-                val isOnMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                val isOnWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                Log.d("ServiceManager NetworkCallback", "onCapabilitiesChanged: ${network.networkHandle} hasMobileData $isOnMobileData hasWifi $isOnWifi")
-
-                var changedNetwork = false
-
-                if (isOnMobileDataState.value != isOnMobileData) {
-                    isOnMobileDataState.value = isOnMobileData
-
-                    changedNetwork = true
-                }
-
-                if (isOnWifiDataState.value != isOnWifi) {
-                    isOnWifiDataState.value = isOnWifi
-
-                    changedNetwork = true
-                }
-
-                Log.d("shouldPauseService", "shouldPauseService onCapabilitiesChanged: $shouldPauseService")
-                if (changedNetwork && shouldPauseService) {
+                Log.d("ServiceManager NetworkCallback", "onCapabilitiesChanged: ${network.networkHandle} hasMobileData ${isOnMobileDataState.value} hasWifi ${isOnWifiDataState.value}")
+                if (updateNetworkCapabilities(networkCapabilities) && shouldPauseService) {
                     GlobalScope.launch(Dispatchers.IO) {
                         serviceManager.forceRestart()
                     }
