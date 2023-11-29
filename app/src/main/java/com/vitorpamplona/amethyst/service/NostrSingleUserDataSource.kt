@@ -17,99 +17,71 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
 
         val firstTimers = usersToWatch.filter { it.info?.latestMetadata == null }.map { it.pubkeyHex }
 
+        if (firstTimers.isEmpty()) return null
+
         return listOf(
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
-                    kinds = listOf(MetadataEvent.kind, StatusEvent.kind),
-                    authors = firstTimers,
-                    limit = 10 * firstTimers.size
+                    kinds = listOf(MetadataEvent.kind),
+                    authors = firstTimers
                 )
             )
         )
     }
 
-    fun createUserMetadataFilter(minLatestEOSEs: Map<String, EOSETime>): TypedFilter? {
+    fun createUserMetadataStatusReportFilter(): List<TypedFilter>? {
         if (usersToWatch.isEmpty()) return null
 
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(StatusEvent.kind),
-                authors = usersToWatch.map { it.pubkeyHex },
-                since = minLatestEOSEs
+        val secondTimers = usersToWatch.filter { it.info?.latestMetadata != null }
+
+        if (secondTimers.isEmpty()) return null
+
+        return groupByEOSEPresence(secondTimers).map { group ->
+            val groupIds = group.map { it.pubkeyHex }
+            val minEOSEs = findMinimumEOSEsForUsers(group)
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter = JsonFilter(
+                        kinds = listOf(MetadataEvent.kind, StatusEvent.kind),
+                        authors = groupIds,
+                        since = minEOSEs
+                    )
+                ),
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter = JsonFilter(
+                        kinds = listOf(ReportEvent.kind),
+                        tags = mapOf("p" to groupIds),
+                        since = minEOSEs
+                    )
+                )
             )
-        )
-    }
-
-    fun createUserStatusFilter(minLatestEOSEs: Map<String, EOSETime>): TypedFilter? {
-        if (usersToWatch.isEmpty()) return null
-
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(StatusEvent.kind),
-                authors = usersToWatch.map { it.pubkeyHex },
-                since = minLatestEOSEs
-            )
-        )
-    }
-
-    fun createUserReportFilter(minLatestEOSEs: Map<String, EOSETime>): TypedFilter? {
-        if (usersToWatch.isEmpty()) return null
-
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(ReportEvent.kind),
-                tags = mapOf("p" to usersToWatch.map { it.pubkeyHex }),
-                since = minLatestEOSEs
-            )
-        )
+        }.flatten()
     }
 
     val userChannel = requestNewChannel() { time, relayUrl ->
-        usersToWatch.forEach {
-            val eose = it.latestEOSEs[relayUrl]
-            if (eose == null) {
-                it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, EOSETime(time))
-            } else {
-                eose.time = time
-            }
-        }
-    }
+        checkNotInMainThread()
 
-    val userChannelFirstTimers = requestNewChannel() { time, relayUrl ->
-        // Many relays operate with limits in the amount of filters.
-        // As information comes, the filters will be rotated to get more data.
-        invalidateFilters()
-    }
-
-    override fun updateChannelFilters() {
-        val minLatestEOSEs = mutableMapOf<String, EOSETime>()
-        val neverGottenAnEOSE = mutableSetOf<String>()
         usersToWatch.forEach {
-            if (it.latestEOSEs.isEmpty()) { // first time
-                neverGottenAnEOSE.add(it.pubkeyHex)
-            } else {
-                it.latestEOSEs.forEach {
-                    val minEose = minLatestEOSEs[it.key]
-                    if (minEose == null) {
-                        minLatestEOSEs.put(it.key, EOSETime(it.value.time))
-                    } else if (it.value.time < minEose.time) {
-                        minEose.time = it.value.time
-                    }
+            if (it.info?.latestMetadata != null) {
+                val eose = it.latestEOSEs[relayUrl]
+                if (eose == null) {
+                    it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, EOSETime(time))
+                } else {
+                    eose.time = time
                 }
             }
         }
+    }
+
+    override fun updateChannelFilters() {
+        checkNotInMainThread()
 
         userChannel.typedFilters = listOfNotNull(
-            createUserMetadataFilter(minLatestEOSEs),
-            createUserStatusFilter(minLatestEOSEs),
-            createUserReportFilter(minLatestEOSEs)
-        ).ifEmpty { null }
-        userChannelFirstTimers.typedFilters = listOfNotNull(
-            createUserMetadataFilter()
+            createUserMetadataFilter(),
+            createUserMetadataStatusReportFilter()
         ).flatten().ifEmpty { null }
     }
 

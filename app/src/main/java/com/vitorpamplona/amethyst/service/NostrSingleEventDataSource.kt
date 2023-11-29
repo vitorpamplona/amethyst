@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
@@ -21,34 +22,32 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var addressesToWatch = setOf<Note>()
 
     private fun createReactionsToWatchInAddressFilter(): List<TypedFilter>? {
-        val addressesToWatch = eventsToWatch.filter { it.address() != null } + addressesToWatch
+        val addressesToWatch = eventsToWatch.filter { it.address() != null } + addressesToWatch.filter { it.address() != null }
 
         if (addressesToWatch.isEmpty()) {
             return null
         }
 
-        return addressesToWatch.mapNotNull {
-            it.address()?.let { aTag ->
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter = JsonFilter(
-                        kinds = listOf(
-                            TextNoteEvent.kind,
-                            ReactionEvent.kind,
-                            RepostEvent.kind,
-                            GenericRepostEvent.kind,
-                            ReportEvent.kind,
-                            LnZapEvent.kind,
-                            PollNoteEvent.kind,
-                            CommunityPostApprovalEvent.kind,
-                            LiveActivitiesChatMessageEvent.kind
-                        ),
-                        tags = mapOf("a" to listOf(aTag.toTag())),
-                        since = it.lastReactionsDownloadTime,
-                        limit = 1000 // Max amount of "replies" to download on a specific event.
-                    )
+        return groupByEOSEPresence(eventsToWatch).mapNotNull {
+            TypedFilter(
+                types = COMMON_FEED_TYPES,
+                filter = JsonFilter(
+                    kinds = listOf(
+                        TextNoteEvent.kind,
+                        ReactionEvent.kind,
+                        RepostEvent.kind,
+                        GenericRepostEvent.kind,
+                        ReportEvent.kind,
+                        LnZapEvent.kind,
+                        PollNoteEvent.kind,
+                        CommunityPostApprovalEvent.kind,
+                        LiveActivitiesChatMessageEvent.kind
+                    ),
+                    tags = mapOf("a" to it.mapNotNull { it.address()?.toTag() }),
+                    since = findMinimumEOSEs(it),
+                    limit = 1000 // Max amount of "replies" to download on a specific event.
                 )
-            }
+            )
         }
     }
 
@@ -67,7 +66,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         filter = JsonFilter(
                             kinds = listOf(aTag.kind),
                             authors = listOf(aTag.pubKeyHex),
-                            limit = 1000 // Max amount of "replies" to download on a specific event.
+                            limit = 5
                         )
                     )
                 } else {
@@ -77,7 +76,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             kinds = listOf(aTag.kind),
                             tags = mapOf("d" to listOf(aTag.dTag)),
                             authors = listOf(aTag.pubKeyHex),
-                            limit = 1000 // Max amount of "replies" to download on a specific event.
+                            limit = 5
                         )
                     )
                 }
@@ -86,13 +85,11 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     }
 
     private fun createRepliesAndReactionsFilter(): List<TypedFilter>? {
-        val reactionsToWatch = eventsToWatch
-
-        if (reactionsToWatch.isEmpty()) {
+        if (eventsToWatch.isEmpty()) {
             return null
         }
 
-        return reactionsToWatch.map {
+        return groupByEOSEPresence(eventsToWatch).map {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
@@ -105,8 +102,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                         LnZapEvent.kind,
                         PollNoteEvent.kind
                     ),
-                    tags = mapOf("e" to listOf(it.idHex)),
-                    since = it.lastReactionsDownloadTime,
+                    tags = mapOf("e" to it.map { it.idHex }),
+                    since = findMinimumEOSEs(it),
                     limit = 1000 // Max amount of "replies" to download on a specific event.
                 )
             )
@@ -206,4 +203,46 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             invalidateFilters()
         }
     }
+}
+
+fun groupByEOSEPresence(notes: Set<Note>): Collection<List<Note>> {
+    return notes.groupBy { it.lastReactionsDownloadTime.keys.sorted().joinToString(",") }.values
+}
+
+fun groupByEOSEPresence(users: Iterable<User>): Collection<List<User>> {
+    return users.groupBy { it.latestEOSEs.keys.sorted().joinToString(",") }.values
+}
+
+fun findMinimumEOSEs(notes: List<Note>): Map<String, EOSETime> {
+    val minLatestEOSEs = mutableMapOf<String, EOSETime>()
+
+    notes.forEach {
+        it.lastReactionsDownloadTime.forEach {
+            val minEose = minLatestEOSEs[it.key]
+            if (minEose == null) {
+                minLatestEOSEs.put(it.key, EOSETime(it.value.time))
+            } else if (it.value.time < minEose.time) {
+                minEose.time = it.value.time
+            }
+        }
+    }
+
+    return minLatestEOSEs
+}
+
+fun findMinimumEOSEsForUsers(users: List<User>): Map<String, EOSETime> {
+    val minLatestEOSEs = mutableMapOf<String, EOSETime>()
+
+    users.forEach {
+        it.latestEOSEs.forEach {
+            val minEose = minLatestEOSEs[it.key]
+            if (minEose == null) {
+                minLatestEOSEs.put(it.key, EOSETime(it.value.time))
+            } else if (it.value.time < minEose.time) {
+                minEose.time = it.value.time
+            }
+        }
+    }
+
+    return minLatestEOSEs
 }
