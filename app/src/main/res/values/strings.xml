@@ -663,4 +663,5 @@
     </string>
 
     <string name="payment_required_title">Message from %1$s</string>
+    <string name="thread_title">Thread</string>
 </resources>

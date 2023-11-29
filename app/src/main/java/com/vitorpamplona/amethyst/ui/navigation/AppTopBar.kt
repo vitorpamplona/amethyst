@@ -178,6 +178,7 @@ private fun RenderTopRouteBar(
                     Route.Community.base -> CommunityTopBar(id, accountViewModel, nav, navPopBack)
                     Route.Hashtag.base -> HashTagTopBar(id, accountViewModel, navPopBack)
                     Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
+                    Route.Note.base -> ThreadTopBar(id, accountViewModel, navPopBack)
                     else -> MainTopBar(drawerState, accountViewModel, nav)
                 }
             } else {
@@ -185,6 +186,20 @@ private fun RenderTopRouteBar(
             }
         }
     }
+}
+
+@Composable
+private fun ThreadTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    navPopBack: () -> Unit
+) {
+    FlexibleTopBarWithBackButton(
+        title = {
+            Text(stringResource(id = R.string.thread_title))
+        },
+        popBack = navPopBack
+    )
 }
 
 @Composable
