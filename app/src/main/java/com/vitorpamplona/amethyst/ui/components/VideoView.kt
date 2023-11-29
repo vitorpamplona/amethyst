@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
@@ -317,6 +318,7 @@ fun GetVideoController(
             controller.value = MediaControllerState.Loading
 
             scope.launch(Dispatchers.IO) {
+                Log.d("PlaybackService", "Preparing Video $videoUri ")
                 PlaybackClientController.prepareController(
                     uid,
                     videoUri,
@@ -367,12 +369,13 @@ fun GetVideoController(
         }
 
         onDispose {
-            scope.launch(Dispatchers.Main) {
+            GlobalScope.launch(Dispatchers.Main) {
                 if (!keepPlaying.value) {
                     // Stops and releases the media.
                     (controller.value as? MediaControllerState.Loaded)?.instance?.let {
                         it.stop()
                         it.release()
+                        Log.d("PlaybackService", "Releasing Video $videoUri ")
                         controller.value = MediaControllerState.NotStarted
                     }
                 }
@@ -390,6 +393,8 @@ fun GetVideoController(
                 scope.launch(Dispatchers.IO) {
                     if (controller.value == MediaControllerState.NotStarted) {
                         controller.value = MediaControllerState.Loading
+
+                        Log.d("PlaybackService", "Preparing Video from Resume $videoUri ")
 
                         PlaybackClientController.prepareController(
                             uid,
@@ -425,11 +430,11 @@ fun GetVideoController(
                 }
             }
             if (event == Lifecycle.Event.ON_PAUSE) {
-                Log.d("PlaybackService", "Opening From Client - onPause ${controller.value} ")
-                scope.launch(Dispatchers.Main) {
+                GlobalScope.launch(Dispatchers.Main) {
                     if (!keepPlaying.value) {
                         // Stops and releases the media.
                         (controller.value as? MediaControllerState.Loaded)?.instance?.let {
+                            Log.d("PlaybackService", "Releasing Video from Pause $videoUri ")
                             it.stop()
                             it.release()
                             controller.value = MediaControllerState.NotStarted

@@ -201,9 +201,8 @@ class Relay(
 
     fun processNewRelayMessage(newMessage: String) {
         val msgArray = Event.mapper.readTree(newMessage)
-        val type = msgArray.get(0).asText()
 
-        when (type) {
+        when (val type = msgArray.get(0).asText()) {
             "EVENT" -> {
                 val subscriptionId = msgArray.get(1).asText()
                 val event = Event.fromJson(msgArray.get(2))
