@@ -362,7 +362,11 @@ class Relay(
     }
 
     fun close(subscriptionId: String) {
-        socket?.send("""["CLOSE","$subscriptionId"]""")
+        checkNotInMainThread()
+
+        val msg = """["CLOSE","$subscriptionId"]"""
+        Log.d("Relay", "Close Subscription $url $msg")
+        socket?.send(msg)
     }
 
     fun isSameRelayConfig(other: Relay): Boolean {
