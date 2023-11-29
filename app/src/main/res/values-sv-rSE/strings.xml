@@ -554,4 +554,5 @@
     <string name="push_server_install_app_description">        För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Nfty](https://ntfy.sh/).
         Efter installationen väljer du den app du vill använda i inställningarna.
     </string>
+    <string name="payment_required_title">Meddelande från %1$s</string>
 </resources>

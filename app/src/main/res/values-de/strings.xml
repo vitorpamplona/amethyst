@@ -560,4 +560,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="push_server_install_app_description">        Um Push-Benachrichtigungen zu erhalten, installieren Sie eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Nfty](https://ntfy.sh/).
         Nach der Installation wählen Sie die App aus, die Sie in den Einstellungen verwenden möchten.
     </string>
+    <string name="payment_required_title">Nachricht von %1$s</string>
 </resources>
