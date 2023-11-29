@@ -101,14 +101,14 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 30.dp, end = 30.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
             .clip(shape = QuoteBorder)
             .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(30.dp)
+                .padding(20.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
