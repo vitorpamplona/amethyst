@@ -119,6 +119,16 @@ abstract class NostrDataSource(val debugName: String) {
         }
     }
 
+    open fun stopSync() {
+        active = false
+        println("DataSource: ${this.javaClass.simpleName} Stop")
+
+        subscriptions.values.forEach { subscription ->
+            Client.close(subscription.id)
+            subscription.typedFilters = null
+        }
+    }
+
     fun requestNewChannel(onEOSE: ((Long, String) -> Unit)? = null): Subscription {
         val newSubscription = Subscription(UUID.randomUUID().toString().substring(0, 4), onEOSE)
         subscriptions = subscriptions + Pair(newSubscription.id, newSubscription)
