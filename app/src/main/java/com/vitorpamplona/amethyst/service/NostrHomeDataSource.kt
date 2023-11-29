@@ -22,6 +22,7 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     lateinit var account: Account
@@ -34,6 +35,10 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
     override fun start() {
         job?.cancel()
         job = account.scope.launch(Dispatchers.IO) {
+            // creates cache on main
+            withContext(Dispatchers.Main) {
+                account.userProfile().live()
+            }
             account.liveHomeFollowLists.collect {
                 if (this@NostrHomeDataSource::account.isInitialized) {
                     invalidateFilters()
