@@ -338,6 +338,7 @@
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
     <string name="follow_list_global">Global</string>
+    <string name="follow_list_mute_list">Lista Silenciada</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conecte-se através do Tor com o Orbot
         \n\n1. Instale o [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Iniciar Orbot
@@ -509,7 +510,9 @@
     <string name="paid">Pago</string>
     <string name="wallet_number">Carteira %1$s</string>
     <string name="error_opening_external_signer">Erro ao abrir o aplicativo para assinar evento</string>
+    <string name="error_opening_external_signer_description">O aplicativo de assinatura não pôde ser encontrado. Verifique se o aplicativo não foi desinstalado</string>
     <string name="sign_request_rejected">Solicitação de assinatura rejeitada</string>
+    <string name="sign_request_rejected_description">Certifique-se de que a aplicação assinante autorizou esta transação</string>
     <string name="no_wallet_found_with_error">Nenhuma carteira encontrada para pagar uma fatura Lightning (Erro: %1$s). Instale uma carteira Lightning para usar zaps</string>
     <string name="no_wallet_found">Nenhuma carteira encontrada para pagar uma fatura Lightning. Instale uma carteira Lightning para usar zaps</string>
     <string name="hidden_words">Palavras Ocultas</string>
@@ -553,4 +556,5 @@
     <string name="push_server_install_app_description">        Para receber notificações push, instale qualquer aplicativo que suporte [Unified Push](https://unifiedpush.org/), como [Nfty](https://ntfy.sh/).
         Após a instalação, selecione o aplicativo que deseja usar nas configurações.
     </string>
+    <string name="payment_required_title">Mensagem de %1$s</string>
 </resources>
