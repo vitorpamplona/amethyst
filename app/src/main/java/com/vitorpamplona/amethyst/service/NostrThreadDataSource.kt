@@ -17,10 +17,12 @@ object NostrThreadDataSource : NostrDataSource("SingleThreadFeed") {
             .toSet()
             .ifEmpty { null } ?: return null
 
+        if (eventsToLoad.isEmpty()) return null
+
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter = JsonFilter(
-                ids = eventsToLoad.map { it.substring(0, 8) }
+                ids = eventsToLoad.toList()
             )
         )
     }
