@@ -73,7 +73,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
         val follows = account.liveDiscoveryFollowLists.value?.users?.toList()
         val followChats = account.selectedChatsFollowList().toList()
 
-        return listOf(
+        return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter = JsonFilter(
@@ -83,15 +83,19 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                     since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList.value)?.relayList
                 )
             ),
-            TypedFilter(
-                types = setOf(FeedType.PUBLIC_CHATS),
-                filter = JsonFilter(
-                    ids = followChats,
-                    kinds = listOf(ChannelCreateEvent.kind),
-                    limit = 300,
-                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList.value)?.relayList
+            if (followChats.isNotEmpty()) {
+                TypedFilter(
+                    types = setOf(FeedType.PUBLIC_CHATS),
+                    filter = JsonFilter(
+                        ids = followChats,
+                        kinds = listOf(ChannelCreateEvent.kind),
+                        limit = 300,
+                        since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList.value)?.relayList
+                    )
                 )
-            )
+            } else {
+                null
+            }
         )
     }
 
