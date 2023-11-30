@@ -261,9 +261,7 @@ class MainActivity : AppCompatActivity() {
             GlobalScope.launch(Dispatchers.IO) {
                 Log.d("ServiceManager NetworkCallback", "onCapabilitiesChanged: ${network.networkHandle} hasMobileData ${isOnMobileDataState.value} hasWifi ${isOnWifiDataState.value}")
                 if (updateNetworkCapabilities(networkCapabilities) && shouldPauseService) {
-                    GlobalScope.launch(Dispatchers.IO) {
-                        serviceManager.forceRestart()
-                    }
+                    serviceManager.forceRestart()
                 }
             }
         }
