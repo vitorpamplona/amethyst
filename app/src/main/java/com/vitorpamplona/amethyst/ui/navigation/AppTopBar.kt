@@ -809,7 +809,7 @@ fun RenderOption(option: Name) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val name by option.note.live().metadata.map {
-                    "/n/" + (it.note as? AddressableNote)?.dTag()
+                    "/n/" + ((it.note as? AddressableNote)?.dTag() ?: "")
                 }.observeAsState()
 
                 Text(text = name ?: "", color = MaterialTheme.colorScheme.onSurface)
