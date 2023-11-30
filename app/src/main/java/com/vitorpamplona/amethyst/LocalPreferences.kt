@@ -387,9 +387,6 @@ object LocalPreferences {
             val loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
             val privKey = if (loginWithExternalSigner) null else getString(PrefKeys.NOSTR_PRIVKEY, null)
 
-            val followingChannels = getStringSet(PrefKeys.FOLLOWING_CHANNELS, null) ?: setOf()
-            val followingCommunities = getStringSet(PrefKeys.FOLLOWING_COMMUNITIES, null) ?: setOf()
-            val hiddenUsers = getStringSet(PrefKeys.HIDDEN_USERS, emptySet()) ?: setOf()
             val localRelays = getString(PrefKeys.RELAYS, "[]")?.let {
                 println("LocalRelays: $it")
                 Event.mapper.readValue<Set<RelaySetupInfo>?>(it)
@@ -485,7 +482,7 @@ object LocalPreferences {
                 NostrSignerInternal(keyPair)
             }
 
-            return@with Account(
+            val account = Account(
                 keyPair = keyPair,
                 signer = signer,
                 localRelays = localRelays,
@@ -512,6 +509,16 @@ object LocalPreferences {
                 filterSpamFromStrangers = filterSpam,
                 lastReadPerRoute = lastReadPerRoute
             )
+
+            // Loads from DB
+            account.userProfile()
+
+            withContext(Dispatchers.Main) {
+                // Loads Live Objects
+                account.userProfile().live()
+            }
+
+            return@with account
         }
     }
 }
