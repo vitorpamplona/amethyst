@@ -34,7 +34,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
 
     override fun start() {
         job?.cancel()
-        job = account.scope.launch(Dispatchers.IO) {
+        job = scope.launch(Dispatchers.IO) {
             // creates cache on main
             withContext(Dispatchers.Main) {
                 account.userProfile().live()
