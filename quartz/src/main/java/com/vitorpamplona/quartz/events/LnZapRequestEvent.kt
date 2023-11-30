@@ -28,7 +28,7 @@ class LnZapRequestEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
     @Transient
-    private var privateZapEvent: Event? = null
+    private var privateZapEvent: LnZapPrivateEvent? = null
 
     fun zappedPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
@@ -36,7 +36,7 @@ class LnZapRequestEvent(
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 
-    fun getPrivateZapEvent(loggedInUserPrivKey: ByteArray, pubKey: HexKey): Event? {
+    fun getPrivateZapEvent(loggedInUserPrivKey: ByteArray, pubKey: HexKey): LnZapPrivateEvent? {
         val anonTag = tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
         if (anonTag != null) {
             val encnote = anonTag[1]
@@ -45,7 +45,7 @@ class LnZapRequestEvent(
                     val note = decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.hexToByteArray())
                     val decryptedEvent = fromJson(note)
                     if (decryptedEvent.kind == 9733) {
-                        return decryptedEvent
+                        return decryptedEvent as LnZapPrivateEvent
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -55,7 +55,7 @@ class LnZapRequestEvent(
         return null
     }
 
-    fun cachedPrivateZap(): Event? {
+    fun cachedPrivateZap(): LnZapPrivateEvent? {
         return privateZapEvent
     }
 

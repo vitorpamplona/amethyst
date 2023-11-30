@@ -71,7 +71,10 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
+import kotlin.coroutines.resume
 import kotlin.time.measureTimedValue
 
 @Immutable
@@ -220,15 +223,59 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            allOrNothingSigningOperations<CombinedZap, ZapAmountCommentNotification>(
-                remainingTos = zaps,
+            val myList = zaps.toList()
+
+            val initialResults = myList.associate {
+                it.request to ZapAmountCommentNotification(
+                    it.request.author,
+                    it.request.event?.content()?.ifBlank { null },
+                    showAmountAxis((it.response?.event as? LnZapEvent)?.amount)
+                )
+            }.toMutableMap()
+
+            collectSuccessfulSigningOperations<CombinedZap, ZapAmountCommentNotification>(
+                operationsInput = myList,
                 runRequestFor = { next, onReady ->
                     innerDecryptAmountMessage(next.request, next.response, onReady)
                 }
             ) {
-                onNewState(it.toImmutableList())
+                it.forEach { decrypted ->
+                    initialResults[decrypted.key.request] = decrypted.value
+                }
+
+                onNewState(initialResults.values.toImmutableList())
             }
         }
+    }
+
+    fun cachedDecryptAmountMessageInGroup(baseNote: Note): ImmutableList<ZapAmountCommentNotification> {
+        val myList = baseNote.zaps.toList()
+
+        return myList.map {
+            val request = it.first.event as? LnZapRequestEvent
+            if (request?.isPrivateZap() == true) {
+                val cachedPrivateRequest = request.cachedPrivateZap()
+                if (cachedPrivateRequest != null) {
+                    ZapAmountCommentNotification(
+                        LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
+                        cachedPrivateRequest.content.ifBlank { null },
+                        showAmountAxis((it.second?.event as? LnZapEvent)?.amount)
+                    )
+                } else {
+                    ZapAmountCommentNotification(
+                        it.first.author,
+                        it.first.event?.content()?.ifBlank { null },
+                        showAmountAxis((it.second?.event as? LnZapEvent)?.amount)
+                    )
+                }
+            } else {
+                ZapAmountCommentNotification(
+                    it.first.author,
+                    it.first.event?.content()?.ifBlank { null },
+                    showAmountAxis((it.second?.event as? LnZapEvent)?.amount)
+                )
+            }
+        }.toImmutableList()
     }
 
     fun decryptAmountMessageInGroup(
@@ -236,13 +283,27 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            allOrNothingSigningOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
-                remainingTos = baseNote.zaps.toList(),
+            val myList = baseNote.zaps.toList()
+
+            val initialResults = myList.associate {
+                it.first to ZapAmountCommentNotification(
+                    it.first.author,
+                    it.first.event?.content()?.ifBlank { null },
+                    showAmountAxis((it.second?.event as? LnZapEvent)?.amount)
+                )
+            }.toMutableMap()
+
+            collectSuccessfulSigningOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
+                operationsInput = myList,
                 runRequestFor = { next, onReady ->
                     innerDecryptAmountMessage(next.first, next.second, onReady)
                 }
             ) {
-                onNewState(it.toImmutableList())
+                it.forEach { decrypted ->
+                    initialResults[decrypted.key.first] = decrypted.value
+                }
+
+                onNewState(initialResults.values.toImmutableList())
             }
         }
     }
@@ -998,4 +1059,32 @@ public fun <T, K> allOrNothingSigningOperations(
         output.add(result)
         allOrNothingSigningOperations(remainingTos.minus(next), runRequestFor, output, onReady)
     }
+}
+
+public suspend fun <T, K> collectSuccessfulSigningOperations(
+    operationsInput: List<T>,
+    runRequestFor: (T, (K) -> Unit) -> Unit,
+    output: MutableMap<T, K> = mutableMapOf(),
+    onReady: (MutableMap<T, K>) -> Unit
+) {
+    if (operationsInput.isEmpty()) {
+        onReady(output)
+        return
+    }
+
+    for (input in operationsInput) {
+        // runs in sequence to avoid overcrowding Amber.
+        val result = withTimeoutOrNull(100) {
+            suspendCancellableCoroutine { continuation ->
+                runRequestFor(input) { result: K ->
+                    continuation.resume(result)
+                }
+            }
+        }
+        if (result != null) {
+            output[input] = result
+        }
+    }
+
+    onReady(output)
 }

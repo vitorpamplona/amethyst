@@ -3,6 +3,7 @@ package com.vitorpamplona.quartz.signers
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
+import com.vitorpamplona.quartz.events.LnZapPrivateEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableSet
@@ -19,5 +20,5 @@ abstract class NostrSigner(val pubKey: HexKey) {
     abstract fun nip44Encrypt(decryptedContent: String, toPublicKey: HexKey, onReady: (String)-> Unit)
     abstract fun nip44Decrypt(encryptedContent: String, fromPublicKey: HexKey, onReady: (String)-> Unit)
 
-    abstract fun decryptZapEvent(event: LnZapRequestEvent, onReady: (Event)-> Unit)
+    abstract fun decryptZapEvent(event: LnZapRequestEvent, onReady: (LnZapPrivateEvent)-> Unit)
 }

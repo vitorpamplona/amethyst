@@ -155,7 +155,7 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
         }
     }
 
-    override fun decryptZapEvent(event: LnZapRequestEvent, onReady: (Event)-> Unit) {
+    override fun decryptZapEvent(event: LnZapRequestEvent, onReady: (LnZapPrivateEvent)-> Unit) {
         if (keyPair.privKey == null) return
 
         val recipientPK = event.zappedAuthor().firstOrNull()

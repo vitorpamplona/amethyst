@@ -7,6 +7,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
+import com.vitorpamplona.quartz.events.LnZapPrivateEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
 class NostrSignerExternal(
@@ -108,7 +109,7 @@ class NostrSignerExternal(
         )
     }
 
-    override fun decryptZapEvent(event: LnZapRequestEvent, onReady: (Event)-> Unit) {
+    override fun decryptZapEvent(event: LnZapRequestEvent, onReady: (LnZapPrivateEvent)-> Unit) {
         return launcher.decryptZapEvent(event) {
             val event = try {
                 Event.fromJson(it)
@@ -116,7 +117,7 @@ class NostrSignerExternal(
                 Log.e("NostrExternalSigner", "Unable to parse returned decrypted Zap: ${it}")
                 null
             }
-            event?.let {
+            (event as? LnZapPrivateEvent)?.let {
                 onReady(event)
             }
         }
