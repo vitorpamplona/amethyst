@@ -109,6 +109,10 @@ class AccountStateViewModel() : ViewModel() {
         }
 
         viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                // Prepares livedata objects on the main user.
+                account.userProfile().live()
+            }
             serviceManager?.restartIfDifferentAccount(account)
         }
 
