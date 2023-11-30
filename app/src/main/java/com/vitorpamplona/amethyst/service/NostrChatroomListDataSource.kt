@@ -44,8 +44,10 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         )
     )
 
-    fun createMyChannelsFilter(): TypedFilter {
+    fun createMyChannelsFilter(): TypedFilter? {
         val followingEvents = account.selectedChatsFollowList()
+
+        if (followingEvents.isEmpty()) return null
 
         return TypedFilter(
             types = COMMON_FEED_TYPES, // Metadata comes from any relay
@@ -59,6 +61,8 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
 
     fun createLastChannelInfoFilter(): List<TypedFilter>? {
         val followingEvents = account.selectedChatsFollowList()
+
+        if (followingEvents.isEmpty()) return null
 
         return followingEvents.map {
             TypedFilter(
@@ -74,6 +78,8 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
 
     fun createLastMessageOfEachChannelFilter(): List<TypedFilter>? {
         val followingEvents = account.selectedChatsFollowList()
+
+        if (followingEvents.isEmpty()) return null
 
         return followingEvents.map {
             TypedFilter(
@@ -93,7 +99,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
     }
 
     override fun updateChannelFilters() {
-        val list = listOf(
+        val list = listOfNotNull(
             createMessagesToMeFilter(),
             createMessagesFromMeFilter(),
             createMyChannelsFilter()
