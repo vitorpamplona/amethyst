@@ -210,6 +210,8 @@ class Account(
                 }
                 result?.let {
                     emit(it)
+                } ?: run {
+                    emit(LiveFollowLists())
                 }
             }
         }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
@@ -241,6 +243,8 @@ class Account(
                 }
                 result?.let {
                     emit(it)
+                } ?: run {
+                    emit(LiveFollowLists())
                 }
             }
         }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
@@ -272,6 +276,8 @@ class Account(
                 }
                 result?.let {
                     emit(it)
+                } ?: run {
+                    emit(LiveFollowLists())
                 }
             }
         }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
@@ -303,6 +309,8 @@ class Account(
                 }
                 result?.let {
                     emit(it)
+                } ?: run {
+                    emit(LiveFollowLists())
                 }
             }
         }.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
