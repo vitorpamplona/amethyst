@@ -87,7 +87,7 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Client", "Relay.connect $url")
+        Log.d("Relay", "Relay.connect $url")
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
@@ -120,6 +120,7 @@ class Relay(
     inner class RelayListener(val onConnected: (Relay) -> Unit) : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             checkNotInMainThread()
+            Log.d("Relay", "Connect onOpen $url $socket")
 
             markConnectionAsReady(
                 pingInMs = response.receivedResponseAtMillis - response.sentRequestAtMillis,
@@ -150,6 +151,8 @@ class Relay(
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
             checkNotInMainThread()
 
+            Log.w("Relay", "Relay onClosing $url: $reason")
+
             listeners.forEach {
                 it.onRelayStateChange(
                     this@Relay,
@@ -163,6 +166,8 @@ class Relay(
             checkNotInMainThread()
 
             markConnectionAsClosed()
+
+            Log.w("Relay", "Relay onClosed $url: $reason")
 
             listeners.forEach { it.onRelayStateChange(this@Relay, StateType.DISCONNECT, null) }
         }
@@ -211,6 +216,7 @@ class Relay(
                 listeners.forEach {
                     it.onEvent(this@Relay, subscriptionId, event)
                     if (afterEOSEPerSubscription[subscriptionId] == true) {
+                        Log.w("Relay", "Relay onEOSE $url $subscriptionId")
                         it.onRelayStateChange(this@Relay, StateType.EOSE, subscriptionId)
                     }
                 }
@@ -267,7 +273,7 @@ class Relay(
     }
 
     fun disconnect() {
-        Log.d("Client", "Relay.disconnect $url")
+        Log.d("Relay", "Relay.disconnect $url")
         checkNotInMainThread()
 
         closingTimeInSeconds = TimeUtils.now()

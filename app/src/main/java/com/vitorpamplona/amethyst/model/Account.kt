@@ -19,7 +19,6 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
@@ -1809,11 +1808,7 @@ class Account(
 
     fun reconnectIfRelaysHaveChanged() {
         val newRelaySet = activeRelays() ?: convertLocalRelays()
-        if (!Client.isSameRelaySetConfig(newRelaySet)) {
-            Client.disconnect()
-            Client.connect(newRelaySet)
-            RelayPool.requestAndWatch()
-        }
+        Client.reconnect(newRelaySet, true)
     }
 
     fun isAllHidden(users: Set<HexKey>): Boolean {

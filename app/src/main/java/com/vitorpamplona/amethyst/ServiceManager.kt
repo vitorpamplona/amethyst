@@ -72,7 +72,9 @@ class ServiceManager {
         }
 
         if (myAccount != null) {
-            Client.connect(myAccount.activeRelays() ?: myAccount.convertLocalRelays())
+            val relaySet = myAccount.activeRelays() ?: myAccount.convertLocalRelays()
+            Log.d("Relay", "Service Manager Connect Connecting ${relaySet.size}")
+            Client.reconnect(relaySet)
 
             // start services
             NostrAccountDataSource.account = myAccount
@@ -120,7 +122,7 @@ class ServiceManager {
         NostrUserProfileDataSource.stopSync()
         NostrVideoDataSource.stopSync()
 
-        Client.disconnect()
+        Client.reconnect(null)
         isStarted = false
     }
 

@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
+import android.util.Log
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
@@ -18,21 +19,47 @@ import java.util.UUID
  */
 object Client : RelayPool.Listener {
     private var listeners = setOf<Listener>()
-    private var relays = Constants.convertDefaultRelays()
+    private var relays = emptyArray<Relay>()
     private var subscriptions = mapOf<String, List<TypedFilter>>()
 
     @Synchronized
-    fun connect(relays: Array<Relay>) {
+    fun reconnect(relays: Array<Relay>?, onlyIfChanged: Boolean = false) {
+        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays")
         checkNotInMainThread()
 
-        RelayPool.register(this)
-        RelayPool.unloadRelays()
-        RelayPool.loadRelays(relays.toList())
-        this.relays = relays
+        if (onlyIfChanged) {
+            if (!isSameRelaySetConfig(relays)) {
+                if (this.relays.isNotEmpty()) {
+                    RelayPool.disconnect()
+                    RelayPool.unregister(this)
+                    RelayPool.unloadRelays()
+                }
+
+                if (relays != null) {
+                    RelayPool.register(this)
+                    RelayPool.loadRelays(relays.toList())
+                    RelayPool.requestAndWatch()
+                    this.relays = relays
+                }
+            }
+        } else {
+            if (this.relays.isNotEmpty()) {
+                RelayPool.disconnect()
+                RelayPool.unregister(this)
+                RelayPool.unloadRelays()
+            }
+
+            if (relays != null) {
+                RelayPool.register(this)
+                RelayPool.loadRelays(relays.toList())
+                RelayPool.requestAndWatch()
+                this.relays = relays
+            }
+        }
     }
 
-    fun isSameRelaySetConfig(newRelayConfig: Array<Relay>): Boolean {
-        if (relays.size != newRelayConfig.size) return false
+    fun isSameRelaySetConfig(newRelayConfig: Array<Relay>?): Boolean {
+        if (relays.size != newRelayConfig?.size) return false
 
         relays.forEach { oldRelayInfo ->
             val newRelayInfo = newRelayConfig.find { it.url == oldRelayInfo.url } ?: return false
@@ -124,12 +151,6 @@ object Client : RelayPool.Listener {
     fun close(subscriptionId: String) {
         RelayPool.close(subscriptionId)
         subscriptions = subscriptions.minus(subscriptionId)
-    }
-
-    fun disconnect() {
-        RelayPool.unregister(this)
-        RelayPool.disconnect()
-        RelayPool.unloadRelays()
     }
 
     @OptIn(DelicateCoroutinesApi::class)
