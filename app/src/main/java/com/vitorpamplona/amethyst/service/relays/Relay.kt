@@ -172,7 +172,7 @@ class Relay(
 
             errorCounter++
 
-            socket?.close(1000, "Normal close")
+            socket?.cancel() // 1000, "Normal close"
             // Failures disconnect the relay.
             markConnectionAsClosed()
 
