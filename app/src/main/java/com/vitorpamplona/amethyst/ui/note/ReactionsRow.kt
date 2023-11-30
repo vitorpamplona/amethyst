@@ -453,7 +453,7 @@ private fun WatchZapAndRenderGallery(
     val zapsState by baseNote.live().zaps.observeAsState()
 
     var zapEvents by remember(zapsState) {
-        mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(
+        mutableStateOf(
             accountViewModel.cachedDecryptAmountMessageInGroup(baseNote)
         )
     }

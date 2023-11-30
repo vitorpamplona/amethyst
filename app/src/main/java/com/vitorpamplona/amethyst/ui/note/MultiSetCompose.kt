@@ -176,7 +176,9 @@ private fun Galeries(
 
     if (hasZapEvents) {
         var zapEvents by remember(multiSetCard.zapEvents) {
-            mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+            mutableStateOf(
+                accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)
+            )
         }
 
         LaunchedEffect(key1 = Unit) {

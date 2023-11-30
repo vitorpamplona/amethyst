@@ -248,6 +248,34 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
+    fun cachedDecryptAmountMessageInGroup(zapNotes: List<CombinedZap>): ImmutableList<ZapAmountCommentNotification> {
+        return zapNotes.map {
+            val request = it.request.event as? LnZapRequestEvent
+            if (request?.isPrivateZap() == true) {
+                val cachedPrivateRequest = request.cachedPrivateZap()
+                if (cachedPrivateRequest != null) {
+                    ZapAmountCommentNotification(
+                        LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
+                        cachedPrivateRequest.content.ifBlank { null },
+                        showAmountAxis((it.response.event as? LnZapEvent)?.amount)
+                    )
+                } else {
+                    ZapAmountCommentNotification(
+                        it.request.author,
+                        it.request.event?.content()?.ifBlank { null },
+                        showAmountAxis((it.response.event as? LnZapEvent)?.amount)
+                    )
+                }
+            } else {
+                ZapAmountCommentNotification(
+                    it.request.author,
+                    it.request.event?.content()?.ifBlank { null },
+                    showAmountAxis((it.response.event as? LnZapEvent)?.amount)
+                )
+            }
+        }.toImmutableList()
+    }
+
     fun cachedDecryptAmountMessageInGroup(baseNote: Note): ImmutableList<ZapAmountCommentNotification> {
         val myList = baseNote.zaps.toList()
 
