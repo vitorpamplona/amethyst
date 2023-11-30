@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
@@ -99,6 +101,7 @@ object LocalPreferences {
 
     private var _currentAccount: String? = null
     private var _savedAccounts: List<AccountInfo>? = null
+    private var _cachedAccounts: MutableMap<String, Account?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
         if (_currentAccount == null) {
@@ -286,9 +289,9 @@ object LocalPreferences {
     }
 
     suspend fun loadCurrentAccountFromEncryptedStorage(): Account? {
-        val acc = loadCurrentAccountFromEncryptedStorage(currentAccount())
-        acc?.registerObservers()
-        return acc
+        return currentAccount()?.let {
+            loadCurrentAccountFromEncryptedStorage(it)
+        }
     }
 
     suspend fun migrateOldSharedSettings(): Settings? {
@@ -376,7 +379,23 @@ object LocalPreferences {
         }
     }
 
-    suspend fun loadCurrentAccountFromEncryptedStorage(npub: String?): Account? = withContext(Dispatchers.IO) {
+    val mutex = Mutex()
+    suspend fun loadCurrentAccountFromEncryptedStorage(npub: String): Account? = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (_cachedAccounts.containsKey(npub)) {
+                return@withContext _cachedAccounts.get(npub)
+            }
+
+            val account = innerLoadCurrentAccountFromEncryptedStorage(npub)
+            account?.registerObservers()
+
+            _cachedAccounts.put(npub, account)
+
+            return@withContext account
+        }
+    }
+
+    suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): Account? = withContext(Dispatchers.IO) {
         checkNotInMainThread()
 
         return@withContext with(encryptedPreferences(npub)) {

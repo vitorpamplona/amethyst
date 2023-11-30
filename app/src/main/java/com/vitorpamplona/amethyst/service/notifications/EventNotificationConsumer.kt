@@ -116,7 +116,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         // old event being re-broadcast
         if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
 
-        if (acc != null && acc.userProfile().pubkeyHex == event.verifiedRecipientPubKey()) {
+        if (acc.userProfile().pubkeyHex == event.verifiedRecipientPubKey()) {
             val followingKeySet = acc.followingKeySet()
 
             val knownChatrooms = acc.userProfile().privateChatrooms.keys.filter {

@@ -10,6 +10,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 // TODO: Migrate this to a property of AccountVi
 object NostrAccountDataSource : NostrDataSource("AccountData") {
     lateinit var account: Account
+    var otherAccounts = listOf<HexKey>()
 
     val latestEOSEs = EOSEAccount()
     val hasLoadedTheBasics = mutableMapOf<User, Boolean>()
@@ -71,6 +73,18 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 kinds = listOf(AdvertisedRelayListEvent.kind, StatusEvent.kind),
                 authors = listOf(account.userProfile().pubkeyHex),
                 limit = 5
+            )
+        )
+    }
+
+    fun createOtherAccountsBaseFilter(): TypedFilter? {
+        if (otherAccounts.isEmpty()) return null
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter = JsonFilter(
+                kinds = listOf(MetadataEvent.kind, ContactListEvent.kind, AdvertisedRelayListEvent.kind, MuteListEvent.kind, PeopleListEvent.kind),
+                authors = otherAccounts.filter { it != account.userProfile().pubkeyHex },
+                limit = 100
             )
         )
     }
@@ -218,7 +232,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     override fun updateChannelFilters() {
         return if (hasLoadedTheBasics[account.userProfile()] != null) {
             // gets everthing about the user logged in
-            accountChannel.typedFilters = listOf(
+            accountChannel.typedFilters = listOfNotNull(
                 createAccountMetadataFilter(),
                 createAccountContactListFilter(),
                 createAccountRelayListFilter(),
@@ -227,7 +241,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 createAccountReportsFilter(),
                 createAccountAcceptedAwardsFilter(),
                 createAccountBookmarkListFilter(),
-                createAccountLastPostsListFilter()
+                createAccountLastPostsListFilter(),
+                createOtherAccountsBaseFilter()
             ).ifEmpty { null }
         } else {
             // just the basics.

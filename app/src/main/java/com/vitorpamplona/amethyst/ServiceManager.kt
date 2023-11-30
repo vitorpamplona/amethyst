@@ -28,7 +28,9 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -78,6 +80,13 @@ class ServiceManager {
 
             // start services
             NostrAccountDataSource.account = myAccount
+            NostrAccountDataSource.otherAccounts = LocalPreferences.allSavedAccounts().mapNotNull {
+                try {
+                    it.npub.bechToBytes().toHexKey()
+                } catch (e: Exception) {
+                    null
+                }
+            }
             NostrHomeDataSource.account = myAccount
             NostrChatroomListDataSource.account = myAccount
             NostrVideoDataSource.account = myAccount
