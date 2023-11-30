@@ -115,8 +115,9 @@ fun VideoScreen(
 @Composable
 fun WatchAccountForVideoScreen(videoFeedView: NostrVideoFeedViewModel, accountViewModel: AccountViewModel) {
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
+    val hiddenUsers = accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, listState) {
+    LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         NostrVideoDataSource.resetFilters()
         videoFeedView.checkKeysInvalidateDataAndSendToTop()
     }
@@ -193,6 +194,7 @@ private fun LoadedState(
         SlidingCarousel(
             state.feed,
             pagerState,
+            state.showHidden.value,
             accountViewModel,
             nav
         )
@@ -204,6 +206,7 @@ private fun LoadedState(
 fun SlidingCarousel(
     feed: MutableState<ImmutableList<Note>>,
     pagerState: PagerState,
+    showHidden: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -216,7 +219,7 @@ fun SlidingCarousel(
         }
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            LoadedVideoCompose(note, accountViewModel, nav)
+            LoadedVideoCompose(note, showHidden, accountViewModel, nav)
         }
     }
 }
@@ -224,6 +227,7 @@ fun SlidingCarousel(
 @Composable
 fun LoadedVideoCompose(
     note: Note,
+    showHidden: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -233,17 +237,19 @@ fun LoadedVideoCompose(
         )
     }
 
-    val scope = rememberCoroutineScope()
+    if (!showHidden) {
+        val scope = rememberCoroutineScope()
 
-    WatchForReports(note, accountViewModel) { newState ->
-        if (state != newState) {
-            scope.launch(Dispatchers.Main) {
-                state = newState
+        WatchForReports(note, accountViewModel) { newState ->
+            if (state != newState) {
+                scope.launch(Dispatchers.Main) {
+                    state = newState
+                }
             }
         }
     }
 
-    Crossfade(targetState = state) {
+    Crossfade(targetState = state, label = "LoadedVideoCompose") {
         RenderReportState(
             it,
             note,
@@ -262,7 +268,7 @@ fun RenderReportState(
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
 
-    Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
+    Crossfade(targetState = (!state.isAcceptable || state.isHiddenAuthor) && !showReportedNote) { showHiddenNote ->
         if (showHiddenNote) {
             Column(remember { Modifier.fillMaxSize() }, verticalArrangement = Arrangement.Center) {
                 HiddenNote(

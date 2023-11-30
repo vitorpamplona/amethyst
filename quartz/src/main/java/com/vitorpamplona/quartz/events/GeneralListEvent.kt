@@ -58,7 +58,10 @@ abstract class GeneralListEvent(
     }
 
     fun privateTags(signer: NostrSigner, onReady: (Array<Array<String>>) -> Unit) {
-        if (content.isBlank()) return
+        if (content.isEmpty()) {
+            onReady(emptyArray())
+            return
+        }
 
         privateTagsCache?.let {
             onReady(it)

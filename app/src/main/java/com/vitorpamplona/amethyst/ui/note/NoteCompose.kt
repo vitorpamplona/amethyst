@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
@@ -434,8 +435,9 @@ fun WatchForReports(
 ) {
     val userFollowsState by accountViewModel.userFollows.observeAsState()
     val noteReportsState by note.live().reports.observeAsState()
+    val userBlocks by accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
 
-    LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState) {
+    LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState, userBlocks) {
         accountViewModel.isNoteAcceptable(note, onChange)
     }
 }

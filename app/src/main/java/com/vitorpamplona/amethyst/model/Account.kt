@@ -345,18 +345,22 @@ class Account(
         ) { localLive, blockList, muteList ->
             checkNotInMainThread()
 
-            val resultBlockList = withTimeoutOrNull(1000) {
-                suspendCancellableCoroutine { continuation ->
-                    (blockList.note.event as? PeopleListEvent)?.publicAndPrivateUsersAndWords(signer) {
-                        continuation.resume(it)
+            val resultBlockList = (blockList.note.event as? PeopleListEvent)?.let {
+                withTimeoutOrNull(1000) {
+                    suspendCancellableCoroutine { continuation ->
+                        it.publicAndPrivateUsersAndWords(signer) {
+                            continuation.resume(it)
+                        }
                     }
                 }
             } ?: PeopleListEvent.UsersAndWords()
 
-            val resultMuteList = withTimeoutOrNull(1000) {
-                suspendCancellableCoroutine { continuation ->
-                    (muteList.note.event as? MuteListEvent)?.publicAndPrivateUsersAndWords(signer) {
-                        continuation.resume(it)
+            val resultMuteList = (muteList.note.event as? MuteListEvent)?.let {
+                withTimeoutOrNull(1000) {
+                    suspendCancellableCoroutine { continuation ->
+                        it.publicAndPrivateUsersAndWords(signer) {
+                            continuation.resume(it)
+                        }
                     }
                 }
             } ?: PeopleListEvent.UsersAndWords()
