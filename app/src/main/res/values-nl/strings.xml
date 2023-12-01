@@ -111,7 +111,7 @@
     <string name="known">Bekend</string>
     <string name="new_requests">Nieuw verzoek</string>
     <string name="blocked_users">Geblokkeerde gebruikers</string>
-    <string name="new_threads">Nieuwe notes</string>
+    <string name="new_threads">Nieuwe thread</string>
     <string name="conversations">Gesprekken</string>
     <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
@@ -338,6 +338,7 @@
     <string name="follow_list_selection">Volgerslijst</string>
     <string name="follow_list_kind3follows">Iedereen</string>
     <string name="follow_list_global">Globaal</string>
+    <string name="follow_list_mute_list">Mute-lijst</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Verbind via Tor met Orbot
         \n\n1. Installeer [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Start Orbot
@@ -555,4 +556,9 @@
     <string name="push_server_install_app_description">        Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Nfty](https://ntfy.sh/).
         Na installatie selecteer de app die je wilt gebruiken in de instellingen.
     </string>
+    <string name="payment_required_title">Bericht van %1$s</string>
+    <string name="thread_title">Thread</string>
+    <string name="send_the_seller_a_message">Stuur de verkoper een bericht</string>
+    <string name="hi_seller_is_this_still_available">Hallo %1$s, is dit nog steeds beschikbaar?</string>
+    <string name="hi_there_is_this_still_available">Hallo daar, is dit nog steeds beschikbaar?</string>
 </resources>

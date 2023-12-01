@@ -5,7 +5,7 @@
     <string name="profile_image">Profiilikuva</string>
     <string name="scan_qr">Skannaa QR</string>
     <string name="show_anyway">Näytä silti</string>
-    <string name="post_was_flagged_as_inappropriate_by">Viesti raportoitiin käyttäjän toimesta</string>
+    <string name="post_was_flagged_as_inappropriate_by">Viesti mykistettiin tai raportoitiin käyttäjän toimesta</string>
     <string name="post_not_found">Tapahtumaa ladataan tai sitä ei löydy relelistalta</string>
     <string name="channel_image">Kanavan kuva</string>
     <string name="referenced_event_not_found">Viitattua tapahtumaa ei löytynyt</string>
@@ -36,6 +36,8 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Kirjaudu sisään yksityisellä avaimella Zapien lähettämiseksi</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Kirjaudu sisään yksityisellä avaimella voidaksesi seurata</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Kirjaudu sisään yksityisellä avaimella seuraamisen lopettamiseksi</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Käytät julkista avainta ja julkiset avaimet ovat vain luku -tilassa. Kirjaudu yksityisellä avaimella, jotta voit piilottaa sanan tai lauseen</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Käytät julkista avainta ja julkiset avaimet ovat vain luettavissa. Kirjaudu yksityisellä avaimella, jotta voit näyttää sanan tai lauseen</string>
     <string name="zaps">Zapit</string>
     <string name="view_count">Katselukerrat</string>
     <string name="boost">Tehosta</string>
@@ -144,6 +146,7 @@
     <string name="login">Kirjaudu sisään</string>
     <string name="generate_a_new_key">Luo uusi avain</string>
     <string name="loading_feed">Ladataan syöte</string>
+    <string name="loading_account">Ladataan tiliä</string>
     <string name="error_loading_replies">"Virhe ladattaessa vastauksia: "</string>
     <string name="try_again">Yritä uudelleen</string>
     <string name="feed_is_empty">Syöte on tyhjä.</string>
@@ -191,6 +194,8 @@
     <string name="secret_key_copied_to_clipboard">Salainen avain (nsec) kopioitu leikepöydälle</string>
     <string name="copy_my_secret_key">Kopioi salainen avain</string>
     <string name="biometric_authentication_failed">Tunnistautuminen epäonnistui</string>
+    <string name="biometric_authentication_failed_explainer">Biometriikka ei pystynyt tunnistamaan tämän puhelimen omistajaa</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometriikka ei pystynyt tunnistamaan tämän puhelimen omistajaa. Virhe: %1$s</string>
     <string name="biometric_error">Virhe</string>
     <string name="badge_created_by">"Luonut %1$s"</string>
     <string name="badge_award_image_for">"Merkki kohteelle %1$s"</string>
@@ -270,6 +275,8 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Sulje äänestys</string>
     <string name="poll_closing_time_days">päivän kuluttua</string>
+    <string name="poll_unable_to_vote">Ei voi äänestää</string>
+    <string name="poll_is_closed_explainer">Äänestys on suljettu uusilta ääniltä</string>
     <string name="poll_zap_amount">Zap-määrä</string>
     <string name="one_vote_per_user_on_atomic_votes">Vain yksi ääni käyttäjää kohti tällä äänestystyypillä</string>
     <string name="looking_for_event">"Etsitään tapahtumaa %1$s"</string>
@@ -279,6 +286,7 @@
     <string name="custom_zaps_add_a_message_example">Kiitos tehdystä työstä!</string>
     <string name="lightning_create_and_add_invoice">Luo ja lisää</string>
     <string name="poll_author_no_vote">Äänestyksen luojat eivät voi äänestää omissa äänestyksissään.</string>
+    <string name="hash_verification_info_title">Mitä tämä tarkoittaa?</string>
     <string name="hash_verification_passed">Tämä sisältö on sama kuin viestin julkaisuhetkellä</string>
     <string name="hash_verification_failed">Tämä sisältö on muuttunut. Kirjoittaja ei ehkä ole nähnyt tai hyväksynyt muutosta</string>
     <string name="content_description_add_image">Lisää kuva</string>
