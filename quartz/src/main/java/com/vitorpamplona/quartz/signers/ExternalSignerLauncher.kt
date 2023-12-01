@@ -6,10 +6,17 @@ import android.net.Uri
 import android.util.Log
 import android.util.LruCache
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
+import org.json.JSONArray
 
 
 enum class SignerType {
@@ -38,7 +45,40 @@ class Result(
     val signature: String?,
     @JsonProperty("id")
     val id: String?
-)
+) {
+    companion object {
+        val mapper = jacksonObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .registerModule(
+                SimpleModule()
+                    .addDeserializer(Result::class.java, ResultDeserializer())
+            )
+
+        private class ResultDeserializer : StdDeserializer<Result>(Result::class.java) {
+            override fun deserialize(jp: JsonParser, ctxt: DeserializationContext): Result {
+                val jsonObject: JsonNode = jp.codec.readTree(jp)
+                return Result(
+                    jsonObject.get("package").asText().intern(),
+                    jsonObject.get("signature").asText().intern(),
+                    jsonObject.get("id").asText().intern()
+                )
+            }
+        }
+
+        fun fromJson(json: String): Result = mapper.readValue(json, Result::class.java)
+
+        fun fromJsonArray(json: String): Array<Result> {
+            val result: MutableList<Result> = mutableListOf()
+            val array = JSONArray(json)
+            (0 until array.length()).forEach {
+                val resultJson = array.getJSONObject(it)
+                val localResult = fromJson(resultJson.toString())
+                result.add(localResult)
+            }
+            return result.toTypedArray()
+        }
+    }
+}
 
 class ExternalSignerLauncher(
     private val npub: String,
@@ -71,12 +111,7 @@ class ExternalSignerLauncher(
     fun newResult(data: Intent) {
         val results = data.getStringExtra("results")
         if (results != null) {
-            val objectMapper = ObjectMapper()
-            val localResults: Array<Result> = objectMapper.readValue(
-                results,
-                Array<Result>::class.java
-            )
-
+            val localResults: Array<Result> = Result.fromJsonArray(results)
             localResults.forEach {
                 val signature = it.signature ?: ""
                 val packageName = it.`package` ?: ""
