@@ -14,7 +14,6 @@ import com.vitorpamplona.quartz.events.ZapSplitSetup
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.round
@@ -142,8 +141,17 @@ class ZapPaymentHandler(val account: Account) {
         } else {
             launch(Dispatchers.IO) {
                 // Awaits for the event to come back to LocalCache.
-                delay(5000)
-                onProgress(1f)
+                var count = 0
+                while (invoicesToPayOnIntent.size < zapsToSend.size || count < 4) {
+                    count++
+                    Thread.sleep(5000)
+                }
+                if (invoicesToPayOnIntent.isNotEmpty()) {
+                    onPayViaIntent(invoicesToPayOnIntent.toImmutableList())
+                    onProgress(1f)
+                } else {
+                    onProgress(1f)
+                }
             }
         }
     }
