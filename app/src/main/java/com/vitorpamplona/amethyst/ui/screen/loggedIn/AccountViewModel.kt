@@ -675,15 +675,15 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun updateStatus(it: AddressableNote, newStatus: String) {
+    fun updateStatus(it: ATag, newStatus: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.updateStatus(it, newStatus)
+            account.updateStatus(LocalCache.getOrCreateAddressableNote(it), newStatus)
         }
     }
 
-    fun deleteStatus(it: AddressableNote) {
+    fun deleteStatus(it: ATag) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.deleteStatus(it)
+            account.deleteStatus(LocalCache.getOrCreateAddressableNote(it))
         }
     }
 

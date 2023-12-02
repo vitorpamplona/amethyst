@@ -33,6 +33,7 @@ val Typography = Typography(
 val Font12SP = 12.sp
 val Font14SP = 14.sp
 val Font17SP = 17.sp
+val Font18SP = 18.sp
 
 val MarkdownTextStyle = TextStyle(lineHeight = 1.30.em)
 

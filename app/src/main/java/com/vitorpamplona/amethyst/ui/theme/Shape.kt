@@ -148,3 +148,12 @@ val EditFieldLeadingIconModifier = Modifier
 val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
+
+val profileContentHeaderModifier = Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
+val bannerModifier = Modifier.fillMaxWidth().height(120.dp)
+val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Size25dp)
+
+val IconRowTextModifier = Modifier.padding(start = 16.dp)
+val IconRowModifier = Modifier
+    .fillMaxWidth()
+    .padding(vertical = 15.dp, horizontal = 25.dp)

@@ -74,12 +74,20 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Font18SP
+import com.vitorpamplona.amethyst.ui.theme.IconRowModifier
+import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.ui.theme.bannerModifier
+import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -90,6 +98,15 @@ fun DrawerContent(
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val onClickUser = {
+        nav("User/${accountViewModel.userProfile().pubkeyHex}")
+        coroutineScope.launch {
+            drawerState.close()
+        }
+        Unit
+    }
+
     val automaticallyShowProfilePicture = remember {
         accountViewModel.settings.showProfilePictures.value
     }
@@ -100,27 +117,31 @@ fun DrawerContent(
     ) {
         Column() {
             ProfileContent(
-                accountViewModel.account.userProfile(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 25.dp)
-                    .padding(top = 70.dp),
-                drawerState,
+                baseAccountUser = accountViewModel.account.userProfile(),
+                modifier = profileContentHeaderModifier,
                 accountViewModel,
-                nav
+                onClickUser
             )
+
+            Column(drawerSpacing) {
+                EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel)
+            }
+
+            FollowingAndFollowerCounts(accountViewModel.account.userProfile(), onClickUser)
+
             Divider(
                 thickness = DividerThickness,
                 modifier = Modifier.padding(top = 20.dp)
             )
+
             ListContent(
-                nav,
-                drawerState,
-                openSheet,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                accountViewModel
+                drawerState,
+                openSheet,
+                accountViewModel,
+                nav
             )
 
             BottomContent(
@@ -137,45 +158,48 @@ fun DrawerContent(
 fun ProfileContent(
     baseAccountUser: User,
     modifier: Modifier = Modifier,
-    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+    onClickUser: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val userInfo by baseAccountUser.live().userMetadataInfo.observeAsState()
 
-    val accountUserState by baseAccountUser.live().metadata.observeAsState()
+    ProfileContentTemplate(
+        profilePubHex = baseAccountUser.pubkeyHex,
+        profileBanner = userInfo?.banner,
+        profilePicture = userInfo?.profilePicture(),
+        bestDisplayName = userInfo?.bestDisplayName(),
+        tags = userInfo?.tags,
+        modifier = modifier,
+        accountViewModel = accountViewModel,
+        onClick = onClickUser
+    )
+}
 
-    val profilePubHex = remember(accountUserState) { accountUserState?.user?.pubkeyHex } ?: return
-
-    val profileBanner = remember(accountUserState) { accountUserState?.user?.info?.banner?.ifBlank { null } }
-    val profilePicture = remember(accountUserState) { accountUserState?.user?.profilePicture() }
-    // val bestUserName = remember(accountUserState) { accountUserState?.user?.bestUsername() }
-    val bestDisplayName = remember(accountUserState) { accountUserState?.user?.toBestDisplayName() }
-    val tags = remember(accountUserState) { accountUserState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-    val route = remember(accountUserState) { "User/${accountUserState?.user?.pubkeyHex}" }
-
-    val automaticallyShowProfilePicture = remember {
-        accountViewModel.settings.showProfilePictures.value
-    }
-
+@Composable
+fun ProfileContentTemplate(
+    profilePubHex: HexKey,
+    profileBanner: String?,
+    profilePicture: String?,
+    bestDisplayName: String?,
+    tags: ImmutableListOfLists<String>?,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit
+) {
     Box {
         if (profileBanner != null) {
             AsyncImage(
                 model = profileBanner,
                 contentDescription = stringResource(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
+                modifier = bannerModifier
             )
         } else {
             Image(
                 painter = painterResource(R.drawable.profile_banner),
                 contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
+                modifier = bannerModifier
             )
         }
 
@@ -190,13 +214,8 @@ fun ProfileContent(
                     .clip(shape = CircleShape)
                     .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
                     .background(MaterialTheme.colorScheme.background)
-                    .clickable(onClick = {
-                        nav(route)
-                        coroutineScope.launch {
-                            drawerState.close()
-                        }
-                    }),
-                loadProfilePicture = automaticallyShowProfilePicture
+                    .clickable(onClick = onClick),
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value
             )
 
             if (bestDisplayName != null) {
@@ -205,34 +224,12 @@ fun ProfileContent(
                     tags = tags,
                     modifier = Modifier
                         .padding(top = 7.dp)
-                        .clickable(onClick = {
-                            nav(route)
-                            coroutineScope.launch {
-                                drawerState.close()
-                            }
-                        }),
+                        .clickable(onClick = onClick),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            Column(Modifier.padding(top = Size10dp)) {
-                EditStatusBoxes(baseAccountUser, accountViewModel)
-            }
-
-            Row(
-                modifier = Modifier
-                    .padding(top = Size10dp)
-                    .clickable(onClick = {
-                        nav(route)
-                        coroutineScope.launch {
-                            drawerState.close()
-                        }
-                    })
-            ) {
-                FollowingAndFollowerCounts(baseAccountUser)
             }
         }
     }
@@ -240,102 +237,83 @@ fun ProfileContent(
 
 @Composable
 private fun EditStatusBoxes(baseAccountUser: User, accountViewModel: AccountViewModel) {
-    val focusManager = LocalFocusManager.current
-
     LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
         if (statuses.isEmpty()) {
-            val currentStatus = remember {
-                mutableStateOf("")
-            }
-            val hasChanged by remember {
-                derivedStateOf {
-                    currentStatus.value != ""
-                }
-            }
-
-            OutlinedTextField(
-                value = currentStatus.value,
-                onValueChange = { currentStatus.value = it },
-                label = { Text(text = stringResource(R.string.status_update)) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.status_update),
-                        color = MaterialTheme.colorScheme.placeholderText
-                    )
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Send,
-                    capitalization = KeyboardCapitalization.Sentences
-                ),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        accountViewModel.createStatus(currentStatus.value)
-                        focusManager.clearFocus(true)
-                    }
-                ),
-                singleLine = true,
-                trailingIcon = {
-                    if (hasChanged) {
-                        SendButton() {
-                            accountViewModel.createStatus(currentStatus.value)
-                            focusManager.clearFocus(true)
-                        }
-                    }
-                }
-            )
+            StatusEditBar(accountViewModel = accountViewModel)
         } else {
             statuses.forEach {
-                val originalStatus by it.live().content.observeAsState("")
+                val originalStatus by it.live().content.observeAsState()
 
-                val thisStatus = remember {
-                    mutableStateOf(originalStatus)
-                }
-                val hasChanged by remember {
-                    derivedStateOf {
-                        thisStatus.value != originalStatus
-                    }
-                }
-
-                OutlinedTextField(
-                    value = thisStatus.value,
-                    onValueChange = { thisStatus.value = it },
-                    label = { Text(text = stringResource(R.string.status_update)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.status_update),
-                            color = MaterialTheme.colorScheme.placeholderText
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Send,
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            accountViewModel.updateStatus(it, thisStatus.value)
-                            focusManager.clearFocus(true)
-                        }
-                    ),
-                    singleLine = true,
-                    trailingIcon = {
-                        if (hasChanged) {
-                            SendButton() {
-                                accountViewModel.updateStatus(it, thisStatus.value)
-                                focusManager.clearFocus(true)
-                            }
-                        } else {
-                            UserStatusDeleteButton() {
-                                accountViewModel.deleteStatus(it)
-                                focusManager.clearFocus(true)
-                            }
-                        }
-                    }
-                )
+                StatusEditBar(originalStatus, it.address, accountViewModel)
             }
         }
     }
+}
+
+@Composable
+fun StatusEditBar(
+    savedStatus: String? = null,
+    tag: ATag? = null,
+    accountViewModel: AccountViewModel
+) {
+    val focusManager = LocalFocusManager.current
+
+    val currentStatus = remember {
+        mutableStateOf(savedStatus ?: "")
+    }
+    val hasChanged = remember {
+        derivedStateOf {
+            currentStatus.value != (savedStatus ?: "")
+        }
+    }
+
+    OutlinedTextField(
+        value = currentStatus.value,
+        onValueChange = { currentStatus.value = it },
+        label = { Text(text = stringResource(R.string.status_update)) },
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = {
+            Text(
+                text = stringResource(R.string.status_update),
+                color = MaterialTheme.colorScheme.placeholderText
+            )
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = ImeAction.Send,
+            capitalization = KeyboardCapitalization.Sentences
+        ),
+        keyboardActions = KeyboardActions(
+            onSend = {
+                if (tag == null) {
+                    accountViewModel.createStatus(currentStatus.value)
+                } else {
+                    accountViewModel.updateStatus(tag, currentStatus.value)
+                }
+
+                focusManager.clearFocus(true)
+            }
+        ),
+        singleLine = true,
+        trailingIcon = {
+            if (hasChanged.value) {
+                SendButton {
+                    if (tag == null) {
+                        accountViewModel.createStatus(currentStatus.value)
+                    } else {
+                        accountViewModel.updateStatus(tag, currentStatus.value)
+                    }
+                    focusManager.clearFocus(true)
+                }
+            } else {
+                if (tag != null) {
+                    UserStatusDeleteButton {
+                        accountViewModel.deleteStatus(tag)
+                        focusManager.clearFocus(true)
+                    }
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -369,7 +347,7 @@ fun UserStatusDeleteButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun FollowingAndFollowerCounts(baseAccountUser: User) {
+private fun FollowingAndFollowerCounts(baseAccountUser: User, onClick: () -> Unit) {
     var followingCount by remember { mutableStateOf("--") }
     var followerCount by remember { mutableStateOf("--") }
 
@@ -385,21 +363,25 @@ private fun FollowingAndFollowerCounts(baseAccountUser: User) {
         }
     }
 
-    Text(
-        text = followingCount,
-        fontWeight = FontWeight.Bold
-    )
+    Row(
+        modifier = drawerSpacing.clickable(onClick = onClick)
+    ) {
+        Text(
+            text = followingCount,
+            fontWeight = FontWeight.Bold
+        )
 
-    Text(stringResource(R.string.following))
+        Text(stringResource(R.string.following))
 
-    Spacer(modifier = DoubleHorzSpacer)
+        Spacer(modifier = DoubleHorzSpacer)
 
-    Text(
-        text = followerCount,
-        fontWeight = FontWeight.Bold
-    )
+        Text(
+            text = followerCount,
+            fontWeight = FontWeight.Bold
+        )
 
-    Text(stringResource(R.string.followers))
+        Text(stringResource(R.string.followers))
+    }
 }
 
 @Composable
@@ -426,20 +408,18 @@ fun WatchFollower(baseAccountUser: User, onReady: (String) -> Unit) {
 
 @Composable
 fun ListContent(
-    nav: (String) -> Unit,
+    modifier: Modifier,
     drawerState: DrawerState,
     openSheet: () -> Unit,
-    modifier: Modifier,
-    accountViewModel: AccountViewModel
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
 ) {
     val route = remember(accountViewModel) {
         "User/${accountViewModel.userProfile().pubkeyHex}"
     }
 
     val coroutineScope = rememberCoroutineScope()
-    var wantsToEditRelays by remember {
-        mutableStateOf(false)
-    }
+    var wantsToEditRelays by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(accountViewModel.account.proxy != null) }
@@ -504,9 +484,8 @@ fun ListContent(
             )
         }
 
-        val textTorProxy = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short)
         IconRow(
-            title = textTorProxy,
+            title = if (checked) stringResource(R.string.disconnect_from_your_orbot_setup) else stringResource(R.string.connect_via_tor_short),
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
             onLongClick = {
@@ -672,21 +651,19 @@ fun IconRow(title: String, icon: Int, tint: Color, onClick: () -> Unit, onLongCl
             )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 15.dp, horizontal = 25.dp),
+            modifier = IconRowModifier,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(icon),
                 null,
-                modifier = Modifier.size(22.dp),
+                modifier = Size22Modifier,
                 tint = tint
             )
             Text(
-                modifier = Modifier.padding(start = 16.dp),
+                modifier = IconRowTextModifier,
                 text = title,
-                fontSize = 18.sp
+                fontSize = Font18SP
             )
         }
     }

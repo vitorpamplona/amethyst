@@ -3,7 +3,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
@@ -302,10 +305,8 @@ fun MainScreen(
                 bottomBar = {
                     AnimatedContent(
                         targetState = shouldShow.value,
-                        transitionSpec = {
-                            slideInVertically { height -> height } togetherWith
-                                slideOutVertically { height -> height }
-                        }
+                        transitionSpec = AnimatedContentTransitionScope<Boolean>::bottomBarTransitionSpec,
+                        label = "BottomBarAnimatedContent"
                     ) { isVisible ->
                         if (isVisible) {
                             AppBottomBar(accountViewModel, navState, navBottomRow)
@@ -315,10 +316,8 @@ fun MainScreen(
                 topBar = {
                     AnimatedContent(
                         targetState = shouldShow.value,
-                        transitionSpec = {
-                            slideInVertically { height -> 0 } togetherWith
-                                slideOutVertically { height -> 0 }
-                        }
+                        transitionSpec = AnimatedContentTransitionScope<Boolean>::topBarTransitionSpec,
+                        label = "TopBarAnimatedContent"
                     ) { isVisible ->
                         if (isVisible) {
                             AppTopBar(
@@ -395,6 +394,23 @@ fun MainScreen(
         }
     }
 }
+
+@OptIn(ExperimentalAnimationApi::class)
+private fun <S> AnimatedContentTransitionScope<S>.topBarTransitionSpec(): ContentTransform {
+    return topBarAnimation
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+private fun <S> AnimatedContentTransitionScope<S>.bottomBarTransitionSpec(): ContentTransform {
+    return bottomBarAnimation
+}
+
+@ExperimentalAnimationApi
+val topBarAnimation: ContentTransform =
+    slideInVertically { height -> 0 } togetherWith slideOutVertically { height -> 0 }
+
+val bottomBarAnimation: ContentTransform =
+    slideInVertically { height -> height } togetherWith slideOutVertically { height -> height }
 
 @Composable
 private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
