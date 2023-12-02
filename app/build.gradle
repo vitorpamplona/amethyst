@@ -187,7 +187,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
     // Zoomable images
-    implementation 'net.engawapg.lib:zoomable:1.5.1'
+    implementation 'net.engawapg.lib:zoomable:1.5.2'
 
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
@@ -196,7 +196,7 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
     // HTML Parsing for Link Preview
-    implementation 'org.jsoup:jsoup:1.16.2'
+    implementation 'org.jsoup:jsoup:1.17.1'
 
     // Encrypted Key Storage
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
@@ -272,8 +272,8 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.mockk:mockk:1.13.8'
-    androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
-    androidTestImplementation "androidx.test.ext:junit-ktx:1.2.0-alpha01"
+    androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha02'
+    androidTestImplementation 'androidx.test.ext:junit-ktx:1.2.0-alpha02'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"
