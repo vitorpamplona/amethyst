@@ -557,4 +557,8 @@
         Após a instalação, selecione o aplicativo que deseja usar nas configurações.
     </string>
     <string name="payment_required_title">Mensagem de %1$s</string>
+    <string name="thread_title">Linha</string>
+    <string name="send_the_seller_a_message">Envie uma mensagem para o vendedor</string>
+    <string name="hi_seller_is_this_still_available">Oi %1$s, ainda está disponível?</string>
+    <string name="hi_there_is_this_still_available">Olá, ainda está disponível?</string>
 </resources>
