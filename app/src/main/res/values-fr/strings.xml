@@ -338,6 +338,7 @@
     <string name="follow_list_selection">Liste des Abonnés</string>
     <string name="follow_list_kind3follows">Tous les abonnements</string>
     <string name="follow_list_global">Général</string>
+    <string name="follow_list_mute_list">Liste en Sourdine</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Se connecter à travers Tor avec Orbot
         \n\n1. Installe [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Démarre Orbot
@@ -509,7 +510,9 @@
     <string name="paid">Payé</string>
     <string name="wallet_number">Portefeuille %1$s</string>
     <string name="error_opening_external_signer">Erreur lors de l\'ouverture de l\'application de signature</string>
+    <string name="error_opening_external_signer_description">L\'application signataire est introuvable. Vérifiez que l\'application n\'a pas été désinstallée</string>
     <string name="sign_request_rejected">Demande de signature rejetée</string>
+    <string name="sign_request_rejected_description">Assurez-vous que l\'application signataire a autorisé cette transaction</string>
     <string name="no_wallet_found_with_error">Aucun portefeuille trouvé pour payer une facture lightning (Erreur : %1$s). Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
     <string name="no_wallet_found">Aucun portefeuille trouvé pour payer une facture lightning. Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
     <string name="hidden_words">Mots Masqués</string>
@@ -547,4 +550,9 @@
     <string name="push_server_install_app_description">        Pour recevoir des notifications push, installez n\'importe quelle application qui supporte les [Unified Push](https://unifiedpush.org/), tel que [Nfty](https://ntfy.sh/).
         Après installation, sélectionnez l\'application que vous voulez utiliser dans les Paramètres.
     </string>
+    <string name="payment_required_title">Message de %1$s</string>
+    <string name="thread_title">Fil de discussion</string>
+    <string name="send_the_seller_a_message">Envoyer un message au vendeur</string>
+    <string name="hi_seller_is_this_still_available">Bonjour %1$s, est-ce toujours disponible ?</string>
+    <string name="hi_there_is_this_still_available">Bonjour, est-ce toujours disponible ?</string>
 </resources>
