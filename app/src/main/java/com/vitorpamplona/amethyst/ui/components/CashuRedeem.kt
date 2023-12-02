@@ -6,6 +6,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,15 +41,19 @@ import androidx.core.content.ContextCompat.startActivity
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
+import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
-    var cachuData by remember { mutableStateOf<GenericLoadable<CashuToken>>(GenericLoadable.Loading<CashuToken>()) }
+    var cachuData by remember {
+        mutableStateOf<GenericLoadable<CashuToken>>(GenericLoadable.Loading())
+    }
 
     LaunchedEffect(key1 = cashutoken) {
         launch(Dispatchers.IO) {
@@ -59,7 +64,7 @@ fun CashuPreview(cashutoken: String, accountViewModel: AccountViewModel) {
         }
     }
 
-    Crossfade(targetState = cachuData) {
+    Crossfade(targetState = cachuData, label = "CashuPreview(") {
         when (it) {
             is GenericLoadable.Loaded<CashuToken> -> CashuPreview(it.loaded, accountViewModel)
             is GenericLoadable.Error<CashuToken> -> Text(
@@ -85,14 +90,14 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 30.dp, end = 30.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
             .clip(shape = QuoteBorder)
             .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(30.dp)
+                .padding(20.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -117,37 +122,38 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
 
             Divider()
 
-            token.totalAmount.let {
-                Text(
-                    text = "$it ${stringResource(id = R.string.sats)}",
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp)
-                )
-            }
-
-            Row(
-
+            Text(
+                text = "${token.totalAmount} ${stringResource(id = R.string.sats)}",
+                fontSize = 25.sp,
+                fontWeight = FontWeight.W500,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-            ) {
-                Button(
+                    .padding(vertical = 10.dp)
+            )
 
-                    modifier = Modifier
-                        .padding(vertical = 10.dp).padding(horizontal = 2.dp),
+            Row(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .fillMaxWidth()
+            ) {
+                var isRedeeming by remember {
+                    mutableStateOf(false)
+                }
+
+                Button(
                     onClick = {
                         if (lud16 != null) {
                             scope.launch(Dispatchers.IO) {
+                                isRedeeming = true
                                 CashuProcessor().melt(
                                     token,
                                     lud16,
                                     onSuccess = { title, message ->
+                                        isRedeeming = false
                                         accountViewModel.toast(title, message)
                                     },
                                     onError = { title, message ->
+                                        isRedeeming = false
                                         accountViewModel.toast(title, message)
                                     },
                                     context
@@ -165,15 +171,22 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                         containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
+                    if (isRedeeming) {
+                        LoadingAnimation()
+                    }
+
+                    Spacer(modifier = StdHorzSpacer)
+
                     Text(
                         stringResource(R.string.cashu_redeem),
                         color = Color.White,
                         fontSize = 18.sp
                     )
                 }
+
+                Spacer(modifier = StdHorzSpacer)
+
                 Button(
-                    modifier = Modifier
-                        .padding(vertical = 10.dp).padding(horizontal = 1.dp),
                     onClick = {
                         if (useWebService) {
                             // In case we want to use the cashu.me webservice
