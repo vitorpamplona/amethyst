@@ -555,4 +555,8 @@
         Efter installationen väljer du den app du vill använda i inställningarna.
     </string>
     <string name="payment_required_title">Meddelande från %1$s</string>
+    <string name="thread_title">Tråd</string>
+    <string name="send_the_seller_a_message">Skicka ett meddelande till säljaren</string>
+    <string name="hi_seller_is_this_still_available">Hej %1$s, är detta fortfarande tillgängligt?</string>
+    <string name="hi_there_is_this_still_available">Hallå där, är detta fortfarande tillgängligt?</string>
 </resources>
