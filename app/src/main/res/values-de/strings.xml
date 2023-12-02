@@ -561,4 +561,8 @@ anz der Bedingungen ist erforderlich</string>
         Nach der Installation wählen Sie die App aus, die Sie in den Einstellungen verwenden möchten.
     </string>
     <string name="payment_required_title">Nachricht von %1$s</string>
+    <string name="thread_title">Faden</string>
+    <string name="send_the_seller_a_message">Dem Verkäufer eine Nachricht senden</string>
+    <string name="hi_seller_is_this_still_available">Hallo %1$s, ist das noch verfügbar?</string>
+    <string name="hi_there_is_this_still_available">Hallo, ist das noch verfügbar?</string>
 </resources>
