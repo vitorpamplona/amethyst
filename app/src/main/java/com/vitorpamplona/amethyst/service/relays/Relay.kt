@@ -204,11 +204,7 @@ class Relay(
 
                 // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
                 listeners.forEach {
-                    it.onEvent(this@Relay, subscriptionId, event)
-                    if (afterEOSEPerSubscription[subscriptionId] == true) {
-                        Log.w("Relay", "Relay onEOSE $url $subscriptionId")
-                        it.onRelayStateChange(this@Relay, StateType.EOSE, subscriptionId)
-                    }
+                    it.onEvent(this@Relay, subscriptionId, event, afterEOSEPerSubscription[subscriptionId] == true)
                 }
             }
             "EOSE" -> listeners.forEach {
@@ -389,7 +385,7 @@ class Relay(
         /**
          * A new message was received
          */
-        fun onEvent(relay: Relay, subscriptionId: String, event: Event)
+        fun onEvent(relay: Relay, subscriptionId: String, event: Event, afterEOSE: Boolean)
 
         fun onError(relay: Relay, subscriptionId: String, error: Error)
 

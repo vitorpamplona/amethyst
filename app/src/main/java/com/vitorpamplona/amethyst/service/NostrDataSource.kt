@@ -35,7 +35,7 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     private val clientListener = object : Client.Listener() {
-        override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
+        override fun onEvent(event: Event, subscriptionId: String, relay: Relay, afterEOSE: Boolean) {
             if (subscriptionId in subscriptions.keys) {
                 val key = "$debugName $subscriptionId ${event.kind}"
                 val keyValue = eventCounter.get(key)
@@ -46,6 +46,9 @@ abstract class NostrDataSource(val debugName: String) {
                 }
 
                 consume(event, relay)
+                if (afterEOSE) {
+                    markAsEOSE(subscriptionId, relay)
+                }
             }
         }
 
@@ -62,11 +65,7 @@ abstract class NostrDataSource(val debugName: String) {
             // }}")
 
             if (type == Relay.StateType.EOSE && subscriptionId != null && subscriptionId in subscriptions.keys) {
-                // updates a per subscripton since date
-                subscriptions[subscriptionId]?.updateEOSE(
-                    TimeUtils.oneMinuteAgo(), // in case people's clock is slighly off.
-                    relay.url
-                )
+                markAsEOSE(subscriptionId, relay)
             }
         }
 
@@ -219,6 +218,13 @@ abstract class NostrDataSource(val debugName: String) {
 
     open fun markAsSeenOnRelay(eventId: String, relay: Relay) {
         LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
+    }
+
+    open fun markAsEOSE(subscriptionId: String, relay: Relay) {
+        subscriptions[subscriptionId]?.updateEOSE(
+            TimeUtils.oneMinuteAgo(), // in case people's clock is slighly off.
+            relay.url
+        )
     }
 
     abstract fun updateChannelFilters()

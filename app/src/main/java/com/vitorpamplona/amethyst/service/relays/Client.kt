@@ -153,11 +153,11 @@ object Client : RelayPool.Listener {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun onEvent(event: Event, subscriptionId: String, relay: Relay) {
+    override fun onEvent(event: Event, subscriptionId: String, relay: Relay, afterEOSE: Boolean) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
         GlobalScope.launch(Dispatchers.Default) {
-            listeners.forEach { it.onEvent(event, subscriptionId, relay) }
+            listeners.forEach { it.onEvent(event, subscriptionId, relay, afterEOSE) }
         }
     }
 
@@ -225,7 +225,7 @@ object Client : RelayPool.Listener {
         /**
          * A new message was received
          */
-        open fun onEvent(event: Event, subscriptionId: String, relay: Relay) = Unit
+        open fun onEvent(event: Event, subscriptionId: String, relay: Relay, afterEOSE: Boolean) = Unit
 
         /**
          * A new or repeat message was received

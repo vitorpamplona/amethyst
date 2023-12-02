@@ -103,7 +103,7 @@ object RelayPool : Relay.Listener {
     }
 
     interface Listener {
-        fun onEvent(event: Event, subscriptionId: String, relay: Relay)
+        fun onEvent(event: Event, subscriptionId: String, relay: Relay, afterEOSE: Boolean)
 
         fun onError(error: Error, subscriptionId: String, relay: Relay)
 
@@ -116,8 +116,8 @@ object RelayPool : Relay.Listener {
         fun onNotify(relay: Relay, description: String)
     }
 
-    override fun onEvent(relay: Relay, subscriptionId: String, event: Event) {
-        listeners.forEach { it.onEvent(event, subscriptionId, relay) }
+    override fun onEvent(relay: Relay, subscriptionId: String, event: Event, afterEOSE: Boolean) {
+        listeners.forEach { it.onEvent(event, subscriptionId, relay, afterEOSE) }
     }
 
     override fun onError(relay: Relay, subscriptionId: String, error: Error) {
