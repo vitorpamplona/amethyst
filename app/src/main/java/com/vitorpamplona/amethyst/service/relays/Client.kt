@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
-import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -126,7 +125,7 @@ object Client : RelayPool.Listener {
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun newSporadicRelay(url: String, feedTypes: Set<FeedType>?, onConnected: (Relay) -> Unit, onDone: (() -> Unit)?) {
-        val relay = Relay(url, true, true, feedTypes ?: emptySet(), HttpClient.getProxy())
+        val relay = Relay(url, true, true, feedTypes ?: emptySet())
         RelayPool.addRelay(relay)
 
         relay.connectAndRun {

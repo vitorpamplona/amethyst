@@ -14,6 +14,8 @@ object HttpClient {
     var proxyChangeListeners = ArrayList<() -> Unit>()
     var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
 
+    var defaultHttpClient: OkHttpClient? = null
+
     // fires off every time value of the property changes
     private var internalProxy: Proxy? by Delegates.observable(null) { _, oldValue, newValue ->
         if (oldValue != newValue) {
@@ -24,13 +26,17 @@ object HttpClient {
     }
 
     fun start(proxy: Proxy?) {
-        this.internalProxy = proxy
+        if (internalProxy != proxy) {
+            this.internalProxy = proxy
+            this.defaultHttpClient = getHttpClient()
+        }
     }
 
     fun changeTimeouts(timeout: Duration) {
         Log.d("HttpClient", "Changing timeout to: $timeout")
         if (this.defaultTimeout.seconds != timeout.seconds) {
             this.defaultTimeout = timeout
+            this.defaultHttpClient = getHttpClient()
         }
     }
 
@@ -42,11 +48,23 @@ object HttpClient {
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
+            .followRedirects(true)
+            .followSslRedirects(true)
             .build()
     }
 
+    fun getHttpClientForRelays(): OkHttpClient {
+        if (this.defaultHttpClient == null) {
+            this.defaultHttpClient = getHttpClient(defaultTimeout)
+        }
+        return defaultHttpClient!!
+    }
+
     fun getHttpClient(): OkHttpClient {
-        return getHttpClient(defaultTimeout)
+        if (this.defaultHttpClient == null) {
+            this.defaultHttpClient = getHttpClient(defaultTimeout)
+        }
+        return defaultHttpClient!!
     }
 
     fun getProxy(): Proxy? {

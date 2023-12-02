@@ -1,7 +1,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.HttpClient
 
 object Constants {
     val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
@@ -11,7 +10,7 @@ object Constants {
 
     fun convertDefaultRelays(): Array<Relay> {
         return defaultRelays.map {
-            Relay(it.url, it.read, it.write, it.feedTypes, HttpClient.getProxy())
+            Relay(it.url, it.read, it.write, it.feedTypes)
         }.toTypedArray()
     }
 

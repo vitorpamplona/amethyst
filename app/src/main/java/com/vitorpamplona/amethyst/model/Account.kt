@@ -1772,7 +1772,7 @@ class Account(
                 ?: Constants.defaultRelays.filter { defaultRelay -> defaultRelay.url == it.key }.firstOrNull()?.feedTypes
                 ?: FeedType.values().toSet()
 
-            Relay(it.key, it.value.read, it.value.write, localFeedTypes, proxy)
+            Relay(it.key, it.value.read, it.value.write, localFeedTypes)
         } ?: return null
 
         // Ugly, but forces nostr.band as the only search-supporting relay today.
@@ -1785,8 +1785,7 @@ class Account(
                     it.url,
                     it.read,
                     it.write,
-                    it.feedTypes,
-                    proxy
+                    it.feedTypes
                 )
             }
         }
@@ -1796,7 +1795,7 @@ class Account(
 
     fun convertLocalRelays(): Array<Relay> {
         return localRelays.map {
-            Relay(it.url, it.read, it.write, it.feedTypes, proxy)
+            Relay(it.url, it.read, it.write, it.feedTypes)
         }.toTypedArray()
     }
 

@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
@@ -9,13 +10,10 @@ import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.TimeUtils
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import java.net.Proxy
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 
 enum class FeedType {
@@ -28,22 +26,14 @@ class Relay(
     var url: String,
     var read: Boolean = true,
     var write: Boolean = true,
-    var activeTypes: Set<FeedType> = FeedType.values().toSet(),
-    proxy: Proxy?
+    var activeTypes: Set<FeedType> = FeedType.values().toSet()
 ) {
     companion object {
         // waits 3 minutes to reconnect once things fail
         const val RECONNECTING_IN_SECONDS = 60 * 3
     }
 
-    private val httpClient = OkHttpClient.Builder()
-        .proxy(proxy)
-        .readTimeout(Duration.ofSeconds(if (proxy != null) 20L else 10L))
-        .connectTimeout(Duration.ofSeconds(if (proxy != null) 20L else 10L))
-        .writeTimeout(Duration.ofSeconds(if (proxy != null) 20L else 10L))
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .build()
+    private val httpClient = HttpClient.getHttpClientForRelays()
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
