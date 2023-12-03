@@ -178,12 +178,32 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                     Spacer(modifier = StdHorzSpacer)
 
                     Text(
-                        stringResource(R.string.cashu_redeem),
+                        "⚡",
                         color = Color.White,
-                        fontSize = 18.sp
+                        fontSize = 16.sp
                     )
                 }
 
+                Spacer(modifier = StdHorzSpacer)
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("cashu://$token"))
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                            startActivity(context, intent, null)
+                        } catch (e: Exception) {
+                            accountViewModel.toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
+                        }
+                    },
+                    shape = QuoteBorder,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Spacer(modifier = StdHorzSpacer)
+                    Text("\uD83E\uDD5C", color = Color.White, fontSize = 16.sp)
+                }
                 Spacer(modifier = StdHorzSpacer)
 
                 Button(
@@ -205,6 +225,7 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                 ) {
                     Text("⎘", color = Color.White, fontSize = 18.sp)
                 }
+                Spacer(modifier = StdHorzSpacer)
             }
         }
     }

@@ -629,6 +629,7 @@
 
     <string name="cashu_sucessful_redemption">Cashu Received</string>
     <string name="cashu_sucessful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>
+    <string name="cashu_no_wallet_found">No compatible Cashu wallet found on system</string>
 
     <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
 
