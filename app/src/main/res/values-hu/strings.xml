@@ -556,4 +556,9 @@
     <string name="push_server_install_app_description">        A push értesítések fogadásához olyan alkalmazást telepíts, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Nfty](https://ntfy.sh/) alkalmazást.
         A telepítés után a Beállításokban válaszd ki a használni kívánt alkalmazást.
     </string>
+    <string name="payment_required_title">Üzenet %1$s-tól</string>
+    <string name="thread_title">Gondolatmenet</string>
+    <string name="send_the_seller_a_message">Küldj az eladónak üzenetet</string>
+    <string name="hi_seller_is_this_still_available">Szia %1$s, ez még aktuális?</string>
+    <string name="hi_there_is_this_still_available">Szia, ez még aktuális?</string>
 </resources>
