@@ -50,13 +50,13 @@ object Constants {
 
         // Supporting NIP-50
         RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
-        RelaySetupInfo("wss://filter.nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
+        RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
         RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch)
     )
 
     val forcedRelayForSearch = arrayOf(
         RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
-        RelaySetupInfo("wss://filter.nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
+        RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
         RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch)
     )
     val forcedRelaysForSearchSet = forcedRelayForSearch.map { it.url }
