@@ -1,6 +1,7 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.graphics.Rect
+import android.view.View
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -53,23 +54,30 @@ enum class Keyboard {
     Opened, Closed
 }
 
+fun isKeyboardOpen(view: View): Keyboard {
+    val rect = Rect()
+    view.getWindowVisibleDisplayFrame(rect)
+    val screenHeight = view.rootView.height
+    val keypadHeight = screenHeight - rect.bottom
+
+    return if (keypadHeight > screenHeight * 0.15) {
+        Keyboard.Opened
+    } else {
+        Keyboard.Closed
+    }
+}
+
 @Composable
 fun keyboardAsState(): State<Keyboard> {
-    val keyboardState = remember { mutableStateOf(Keyboard.Closed) }
     val view = LocalView.current
+
+    val keyboardState = remember(view) {
+        mutableStateOf(isKeyboardOpen(view))
+    }
 
     DisposableEffect(view) {
         val onGlobalListener = ViewTreeObserver.OnGlobalLayoutListener {
-            val rect = Rect()
-            view.getWindowVisibleDisplayFrame(rect)
-            val screenHeight = view.rootView.height
-            val keypadHeight = screenHeight - rect.bottom
-
-            val newKeyboardValue = if (keypadHeight > screenHeight * 0.15) {
-                Keyboard.Opened
-            } else {
-                Keyboard.Closed
-            }
+            val newKeyboardValue = isKeyboardOpen(view)
 
             if (newKeyboardValue != keyboardState.value) {
                 keyboardState.value = newKeyboardValue
@@ -89,8 +97,8 @@ fun keyboardAsState(): State<Keyboard> {
 fun IfKeyboardClosed(
     inner: @Composable () -> Unit
 ) {
-    val isKeyboardOpen by keyboardAsState()
-    if (isKeyboardOpen == Keyboard.Closed) {
+    val isKeyboardState by keyboardAsState()
+    if (isKeyboardState == Keyboard.Closed) {
         inner()
     }
 }
