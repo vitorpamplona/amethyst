@@ -470,6 +470,10 @@
     <string name="payment">Payment</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Redeem</string>
+    <string name="cashu_redeem_to_zap">Send to Zap Wallet</string>
+    <string name="cashu_redeem_to_cachu">Open in Cashu Wallet</string>
+    <string name="cashu_copy_token">Copy Token</string>
+
     <string name="no_lightning_address_set">No Lightning Address set</string>
     <string name="copied_token_to_clipboard">Copied token to clipboard</string>
 
@@ -558,6 +562,7 @@
     <string name="automatically_show_url_preview_description">Show URL previews</string>
     <string name="load_image_description">When to load images</string>
 
+    <string name="copy_to_clipboard">Copy to clipboard</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
 

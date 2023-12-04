@@ -42,8 +42,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.note.CashuIcon
+import com.vitorpamplona.amethyst.ui.note.CopyIcon
+import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.Dispatchers
@@ -173,10 +179,13 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                 ) {
                     if (isRedeeming) {
                         LoadingAnimation()
+                    } else {
+                        ZapIcon(Size20dp, tint = Color.White)
                     }
+                    Spacer(DoubleHorzSpacer)
 
                     Text(
-                        "⚡ Send to Zap Wallet",
+                        stringResource(id = R.string.cashu_redeem_to_zap),
                         color = Color.White,
                         fontSize = 16.sp
                     )
@@ -200,7 +209,9 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("\uD83E\uDD5C Open in Cashu Wallet", color = Color.White, fontSize = 16.sp)
+                CashuIcon(Size20Modifier)
+                Spacer(DoubleHorzSpacer)
+                Text(stringResource(id = R.string.cashu_redeem_to_cachu), color = Color.White, fontSize = 16.sp)
             }
             Spacer(modifier = StdHorzSpacer)
             Button(
@@ -213,7 +224,9 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("⎘ Copy ", color = Color.White, fontSize = 16.sp)
+                CopyIcon(Size20Modifier, Color.White)
+                Spacer(DoubleHorzSpacer)
+                Text(stringResource(id = R.string.cashu_copy_token), color = Color.White, fontSize = 16.sp)
             }
             Spacer(modifier = StdHorzSpacer)
         }

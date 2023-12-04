@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.ExpandLess
@@ -170,6 +171,26 @@ fun ZapIcon(modifier: Modifier, tint: Color = Color.Unspecified) {
     Icon(
         imageVector = Icons.Default.Bolt,
         contentDescription = stringResource(R.string.zaps),
+        tint = tint,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun CashuIcon(modifier: Modifier) {
+    Icon(
+        painter = painterResource(R.drawable.cashu),
+        "Cashu",
+        tint = Color.Unspecified,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun CopyIcon(modifier: Modifier, tint: Color = Color.Unspecified) {
+    Icon(
+        imageVector = Icons.Default.ContentCopy,
+        stringResource(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier
     )
