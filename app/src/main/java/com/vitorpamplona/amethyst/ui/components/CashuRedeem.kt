@@ -175,58 +175,47 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
                         LoadingAnimation()
                     }
 
-                    Spacer(modifier = StdHorzSpacer)
-
                     Text(
-                        "⚡",
+                        "⚡ Send to Zap Wallet",
                         color = Color.White,
                         fontSize = 16.sp
                     )
                 }
-
-                Spacer(modifier = StdHorzSpacer)
-                Button(
-                    onClick = {
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("cashu://$token"))
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                            startActivity(context, intent, null)
-                        } catch (e: Exception) {
-                            accountViewModel.toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
-                        }
-                    },
-                    shape = QuoteBorder,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Spacer(modifier = StdHorzSpacer)
-                    Text("\uD83E\uDD5C", color = Color.White, fontSize = 16.sp)
-                }
-                Spacer(modifier = StdHorzSpacer)
-
-                Button(
-                    onClick = {
-                        if (useWebService) {
-                            // In case we want to use the cashu.me webservice
-                            val url = "https://redeem.cashu.me?token=$token&lightning=$lud16&autopay=false"
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            startActivity(context, intent, null)
-                        } else {
-                            // Copying the token to clipboard for now
-                            clipboardManager.setText(AnnotatedString(token.token))
-                        }
-                    },
-                    shape = QuoteBorder,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("⎘", color = Color.White, fontSize = 18.sp)
-                }
-                Spacer(modifier = StdHorzSpacer)
             }
+
+            Spacer(modifier = StdHorzSpacer)
+            Button(
+                onClick = {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("cashu://$token"))
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                        startActivity(context, intent, null)
+                    } catch (e: Exception) {
+                        accountViewModel.toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
+                    }
+                },
+                shape = QuoteBorder,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("\uD83E\uDD5C Open in Cashu Wallet", color = Color.White, fontSize = 16.sp)
+            }
+            Spacer(modifier = StdHorzSpacer)
+            Button(
+                onClick = {
+                    // Copying the token to clipboard
+                    clipboardManager.setText(AnnotatedString(token.token))
+                },
+                shape = QuoteBorder,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("⎘ Copy ", color = Color.White, fontSize = 16.sp)
+            }
+            Spacer(modifier = StdHorzSpacer)
         }
     }
 }
