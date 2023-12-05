@@ -406,6 +406,9 @@
     <string name="payment">Fizetés</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Beváltás</string>
+    <string name="cashu_redeem_to_zap">Küldje a Zap tárcába</string>
+    <string name="cashu_redeem_to_cachu">Nyissa meg a Cashu tárcában</string>
+    <string name="cashu_copy_token">Token másolása</string>
     <string name="no_lightning_address_set">Nincs Lightning Cím beállítva</string>
     <string name="copied_token_to_clipboard">Token a vágólapra másolva</string>
     <string name="live_stream_live_tag">ÉLŐ</string>
@@ -475,6 +478,7 @@
     <string name="automatically_play_videos_description">A videók és a GIF-ek automatikus lejátszása</string>
     <string name="automatically_show_url_preview_description">URL előnézetek megjelenítése</string>
     <string name="load_image_description">Mikor kell a képeket betölteni</string>
+    <string name="copy_to_clipboard">Másolás a vágólapra</string>
     <string name="copy_url_to_clipboard">Az URL vágólapra másolása</string>
     <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
     <string name="created_at">Létrehozva</string>
@@ -530,6 +534,7 @@
     <string name="cashu_failed_redemption_explainer_already_spent">A Cashu tokeneket már elköltötték.</string>
     <string name="cashu_sucessful_redemption">Cashu Megkapva</string>
     <string name="cashu_sucessful_redemption_explainer">%1$s sats érkezett a tárcádba. (Díjak: %2$s sats)</string>
+    <string name="cashu_no_wallet_found">A rendszeren nem található kompatibilis Cashu pénztárca</string>
     <string name="error_unable_to_fetch_invoice">Nem sikerült a számlát a címzett szervereiről lekérni</string>
     <string name="wallet_connect_pay_invoice_error_error">A Wallet Connect szolgáltatója a következő hibát jelezte: %1$s</string>
     <string name="could_not_connect_to_tor">Nem sikerült a Tor hálózathoz csatlakozni</string>
