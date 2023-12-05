@@ -338,6 +338,7 @@
     <string name="follow_list_selection">Seuraa-lista</string>
     <string name="follow_list_kind3follows">Kaikki seuraajat</string>
     <string name="follow_list_global">Maailmanlaajuinen</string>
+    <string name="follow_list_mute_list">Mykistä lista</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Yhdistä Torin kautta Orbotin avulla
         \n\n1. Asenna [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Käynnistä Orbot
@@ -437,6 +438,8 @@
     <string name="automatically_load_images_gifs">Kuvan esikatselu</string>
     <string name="automatically_play_videos">Videon toisto</string>
     <string name="automatically_show_url_preview">URL-esikatselu</string>
+    <string name="automatically_hide_nav_bars">Immersiivinen vieritys</string>
+    <string name="automatically_hide_nav_bars_description">Piilota navigointipalkit vieritettäessä</string>
     <string name="load_image">Lataa kuva</string>
     <string name="spamming_users">Roskapostittajat</string>
     <string name="muted_button">Ääni pois päältä. Napsauta palauttaaksesi äänet</string>
@@ -465,6 +468,7 @@
     <string name="messages_group_descriptor">Tämän ryhmän jäsenet</string>
     <string name="messages_new_subject_message">Selitys jäsenille</string>
     <string name="messages_new_subject_message_placeholder">Muuta nimi uusille tavoitteille.</string>
+    <string name="paste_from_clipboard">Liitä leikepöydältä</string>
     <string name="language_description">Sovelluksen käyttöliittymälle</string>
     <string name="theme_description">Tumma, vaalea tai järjestelmäteema</string>
     <string name="automatically_load_images_gifs_description">Lataa kuvat ja GIF-animaatiot automaattisesti</string>
@@ -475,6 +479,7 @@
     <string name="copy_the_note_id_to_the_clipboard">Kopioi viestin tunniste leikepöydälle</string>
     <string name="created_at">Luotu</string>
     <string name="rules">Säännöt</string>
+    <string name="login_with_external_signer">Kirjaudu sisään Amberilla</string>
     <string name="status_update">Päivitä tilaasi</string>
     <string name="lightning_wallets_not_found">Virhe tulkittaessa virhesanomaa</string>
     <string name="poll_zap_value_min_max_explainer">Äänet painotetaan zappin määrän perusteella. Voit asettaa minimimäärän roskapostin välttämiseksi ja maksimimäärän suurten zappereiden estämiseksi. Käytä samaa määrää molemmissa kentissä, jotta jokainen ääni arvostetaan samalla määrällä. Jätä se tyhjäksi hyväksyäksesi minkä tahansa määrän.</string>
@@ -491,4 +496,20 @@
     <string name="active_for_chats">Keskustelut</string>
     <string name="active_for_global">Yleinen</string>
     <string name="active_for_search">Haku</string>
+    <string name="zap_split_title">Jaa ja ohjaa zapit</string>
+    <string name="zap_split_explainer">Asiakkaiden tukeminen jakaa ja välittää zapit käyttäjille, jotka on lisätty tähän sinun sijasta</string>
+    <string name="zap_split_serarch_and_add_user">Etsi ja lisää käyttäjä</string>
+    <string name="zap_split_serarch_and_add_user_placeholder">Käyttäjänimi tai näyttönimi</string>
+    <string name="missing_lud16">Lightning asetukset puuttuvat</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Käyttäjällä %1$s ei ole Lightning-osoitetta määritettynä vastaanottamaan satseja</string>
+    <string name="zap_split_weight">Prosenttiosuus</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Zapien jakaminen</string>
+    <string name="forwarding_zaps_to">Ohjaa zappit kohteeseen</string>
+    <string name="lightning_wallets_not_found2">Lightning lompakkoja ei löytynyt</string>
+    <string name="paid">Maksettu</string>
+    <string name="wallet_number">Lompakko %1$s</string>
+    <string name="error_opening_external_signer">Virhe avattaessa allekirjoitussovellusta</string>
+    <string name="error_opening_external_signer_description">Allekirjoittajasovellusta ei löytynyt. Tarkista, että sovellusta ei ole poistettu</string>
+    <string name="sign_request_rejected">Allekirjoittajasovellus hylätty</string>
 </resources>
