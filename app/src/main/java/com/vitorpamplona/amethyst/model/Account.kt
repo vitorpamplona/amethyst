@@ -699,7 +699,9 @@ class Account(
     suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        val myNotes = notes.filter { it.author == userProfile() }.map { it.idHex }
+        val myNotes = notes.filter { it.author == userProfile() }.mapNotNull {
+            it.event?.id()
+        }
 
         if (myNotes.isNotEmpty()) {
             DeletionEvent.create(myNotes, signer) {
