@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -39,6 +42,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.distinctUntilChanged
@@ -58,23 +62,28 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.events.Price
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -95,7 +104,7 @@ fun ChannelCardCompose(
 ) {
     val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
 
-    Crossfade(targetState = hasEvent) {
+    Crossfade(targetState = hasEvent, label = "ChannelCardCompose") {
         if (it) {
             if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
                 CheckHiddenChannelCardCompose(
@@ -155,7 +164,7 @@ fun CheckHiddenChannelCardCompose(
             note.isHiddenFor(it)
         }.distinctUntilChanged().observeAsState(accountViewModel.isNoteHidden(note))
 
-        Crossfade(targetState = isHidden) {
+        Crossfade(targetState = isHidden, label = "CheckHiddenChannelCardCompose") {
             if (!it) {
                 LoadedChannelCardCompose(
                     note,
@@ -195,7 +204,7 @@ fun LoadedChannelCardCompose(
         }
     }
 
-    Crossfade(targetState = state) {
+    Crossfade(targetState = state, label = "CheckHiddenChannelCardCompose") {
         RenderChannelCardReportState(
             it,
             note,
@@ -220,7 +229,7 @@ fun RenderChannelCardReportState(
 ) {
     var showReportedNote by remember { mutableStateOf(false) }
 
-    Crossfade(targetState = !state.isAcceptable && !showReportedNote) { showHiddenNote ->
+    Crossfade(targetState = !state.isAcceptable && !showReportedNote, label = "CheckHiddenChannelCardCompose") { showHiddenNote ->
         if (showHiddenNote) {
             HiddenNote(
                 state.relevantReports,
@@ -335,6 +344,28 @@ fun InnerChannelCardWithReactions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
+    when (remember { baseNote.event }) {
+        is LiveActivitiesEvent -> {
+            InnerCardRow(baseNote, accountViewModel, nav)
+        }
+        is CommunityDefinitionEvent -> {
+            InnerCardRow(baseNote, accountViewModel, nav)
+        }
+        is ChannelCreateEvent -> {
+            InnerCardRow(baseNote, accountViewModel, nav)
+        }
+        is ClassifiedsEvent -> {
+            InnerCardBox(baseNote, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun InnerCardRow(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
     Column(StdPadding) {
         SensitivityWarning(
             note = baseNote,
@@ -354,6 +385,22 @@ fun InnerChannelCardWithReactions(
 }
 
 @Composable
+fun InnerCardBox(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    Column(HalfPadding) {
+        SensitivityWarning(
+            note = baseNote,
+            accountViewModel = accountViewModel
+        ) {
+            RenderClassifiedsThumb(baseNote, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
 private fun RenderNoteRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -368,6 +415,116 @@ private fun RenderNoteRow(
         }
         is ChannelCreateEvent -> {
             RenderChannelThumb(baseNote, accountViewModel, nav)
+        }
+    }
+}
+
+@Immutable
+data class ClassifiedsThumb(
+    val image: String?,
+    val title: String?,
+    val price: Price?
+)
+
+@Composable
+fun RenderClassifiedsThumb(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+    val noteEvent = baseNote.event as? ClassifiedsEvent ?: return
+
+    val card by baseNote.live().metadata.map {
+        val noteEvent = it.note.event as? ClassifiedsEvent
+
+        ClassifiedsThumb(
+            image = noteEvent?.image(),
+            title = noteEvent?.title(),
+            price = noteEvent?.price()
+        )
+    }.distinctUntilChanged().observeAsState(
+        ClassifiedsThumb(
+            image = noteEvent.image(),
+            title = noteEvent.title(),
+            price = noteEvent.price()
+        )
+    )
+
+    RenderClassifiedsThumb(card, baseNote.author)
+}
+
+@Preview
+@Composable
+fun RenderClassifiedsThumbPreview() {
+    Surface(Modifier.size(200.dp)) {
+        RenderClassifiedsThumb(
+            card = ClassifiedsThumb(
+                image = null,
+                title = "Like New",
+                price = Price("800000", "SATS", null)
+            ),
+            author = null
+        )
+    }
+}
+
+@Composable
+fun RenderClassifiedsThumb(card: ClassifiedsThumb, author: User?) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+        contentAlignment = BottomStart
+    ) {
+        card.image?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } ?: run {
+            author?.let {
+                DisplayAuthorBanner(it)
+            }
+        }
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(Color.Black.copy(0.6f))
+                .padding(Size5dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            card.title?.let {
+                Text(
+                    text = it,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            card.price?.let {
+                val priceTag = remember(card) {
+                    val newAmount = it.amount.toBigDecimalOrNull()?.let {
+                        showAmountAxis(it)
+                    } ?: it.amount
+
+                    if (it.frequency != null && it.currency != null) {
+                        "$newAmount ${it.currency}/${it.frequency}"
+                    } else if (it.currency != null) {
+                        "$newAmount ${it.currency}"
+                    } else {
+                        newAmount
+                    }
+                }
+
+                Text(
+                    text = priceTag,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White
+                )
+            }
         }
     }
 }

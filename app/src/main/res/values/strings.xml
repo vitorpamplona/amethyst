@@ -489,6 +489,7 @@
 
     <string name="relay_setup">Relays</string>
 
+    <string name="discover_marketplace">Marketplace</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Community</string>
     <string name="discover_chat">Chats</string>

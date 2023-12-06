@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -22,6 +23,7 @@ object ScrollStateKeys {
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
 
+    val DISCOVER_MARKETPLACE = Route.Home.base + "Marketplace"
     val DISCOVER_LIVE = Route.Home.base + "Live"
     val DISCOVER_COMMUNITY = Route.Home.base + "Communities"
     val DISCOVER_CHATS = Route.Home.base + "Chats"
@@ -30,6 +32,31 @@ object ScrollStateKeys {
 object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
+}
+
+@Composable
+fun rememberForeverLazyGridState(
+    key: String,
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Int = 0
+): LazyGridState {
+    val scrollState = rememberSaveable(saver = LazyGridState.Saver) {
+        val savedValue = savedScrollStates[key]
+        val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+        val savedOffset = savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
+        LazyGridState(
+            savedIndex,
+            savedOffset.roundToInt()
+        )
+    }
+    DisposableEffect(scrollState) {
+        onDispose {
+            val lastIndex = scrollState.firstVisibleItemIndex
+            val lastOffset = scrollState.firstVisibleItemScrollOffset
+            savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
+        }
+    }
+    return scrollState
 }
 
 @Composable

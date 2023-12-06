@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.ui.dal.CommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
@@ -68,6 +69,16 @@ class NostrVideoFeedViewModel(val account: Account) : FeedViewModel(VideoFeedFil
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrVideoFeedViewModel : ViewModel> create(modelClass: Class<NostrVideoFeedViewModel>): NostrVideoFeedViewModel {
             return NostrVideoFeedViewModel(account) as NostrVideoFeedViewModel
+        }
+    }
+}
+
+class NostrDiscoverMarketplaceFeedViewModel(val account: Account) : FeedViewModel(
+    DiscoverMarketplaceFeedFilter(account)
+) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrDiscoverMarketplaceFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverMarketplaceFeedViewModel>): NostrDiscoverMarketplaceFeedViewModel {
+            return NostrDiscoverMarketplaceFeedViewModel(account) as NostrDiscoverMarketplaceFeedViewModel
         }
     }
 }
