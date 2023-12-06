@@ -129,7 +129,7 @@ class CashuProcessor {
                 }
             }
         } catch (e: Exception) {
-            onError(context.getString(R.string.cashu_sucessful_redemption), context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message))
+            onError(context.getString(R.string.cashu_successful_redemption), context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message))
         }
     }
 
@@ -159,8 +159,8 @@ class CashuProcessor {
 
                 if (successful) {
                     onSuccess(
-                        context.getString(R.string.cashu_sucessful_redemption),
-                        context.getString(R.string.cashu_sucessful_redemption_explainer, token.totalAmount.toString(), fees.toString())
+                        context.getString(R.string.cashu_successful_redemption),
+                        context.getString(R.string.cashu_successful_redemption_explainer, token.totalAmount.toString(), fees.toString())
                     )
                 } else {
                     val msg = tree?.get("detail")?.asText()?.split('.')?.getOrNull(0)?.ifBlank { null }
@@ -175,7 +175,7 @@ class CashuProcessor {
                 }
             }
         } catch (e: Exception) {
-            onError(context.getString(R.string.cashu_sucessful_redemption), context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message))
+            onError(context.getString(R.string.cashu_successful_redemption), context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message))
         }
     }
 }

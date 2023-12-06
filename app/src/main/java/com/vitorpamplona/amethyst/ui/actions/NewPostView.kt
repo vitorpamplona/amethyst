@@ -1109,11 +1109,11 @@ fun FowardZapTo(postViewModel: NewPostViewModel, accountViewModel: AccountViewMo
             onValueChange = {
                 postViewModel.updateZapForwardTo(it)
             },
-            label = { Text(text = stringResource(R.string.zap_split_serarch_and_add_user)) },
+            label = { Text(text = stringResource(R.string.zap_split_search_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.zap_split_serarch_and_add_user_placeholder),
+                    text = stringResource(R.string.zap_split_search_and_add_user_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText
                 )
             },

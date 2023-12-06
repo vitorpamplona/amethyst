@@ -498,8 +498,8 @@
     <string name="active_for_search">Αναζήτηση</string>
     <string name="zap_split_title">Διαχωρισμός και προώθηση Zaps</string>
     <string name="zap_split_explainer">Οι cients θα διαχωρίσουν και θα προωθήσουν τα zaps στους χρήστες που προστέθηκαν εδώ αντί για εσάς</string>
-    <string name="zap_split_serarch_and_add_user">Αναζήτηση και Προσθήκη Χρήστη</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Όνομα Χρήστη ή εμφανιζόμενο όνομα</string>
+    <string name="zap_split_search_and_add_user">Αναζήτηση και Προσθήκη Χρήστη</string>
+    <string name="zap_split_search_and_add_user_placeholder">Όνομα Χρήστη ή εμφανιζόμενο όνομα</string>
     <string name="missing_lud16">Λείπει η ρύθμιση lightning (LN)</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Ο Χρήστης %1$s δεν έχει ορίσει διεύθυνση LN (lightning) για να λαμβάνει sats</string>
     <string name="zap_split_weight">Ποσοστό</string>
@@ -526,8 +526,8 @@
     <string name="cashu_failed_redemption">Αδυναμία εξαργύρωσης Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Το Mint έδωσε το ακόλουθο μήνυμα σφάλματος: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Τα Cashu tokens έχουν ήδη δαπανηθεί.</string>
-    <string name="cashu_sucessful_redemption">Ληφθέντα Cashu</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats στάλθηκαν στο πορτοφόλι σας. (Κρατήσεις: %2$s sats)</string>
+    <string name="cashu_successful_redemption">Ληφθέντα Cashu</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats στάλθηκαν στο πορτοφόλι σας. (Κρατήσεις: %2$s sats)</string>
     <string name="error_unable_to_fetch_invoice">Αδυναμία ανάκτησης τιμολογίου από τους διακομιστές του παραλήπτη</string>
     <string name="wallet_connect_pay_invoice_error_error">Ο πάροχος σύνδεσης του πορτοφολιού σας επέστρεψε το ακόλουθο σφάλμα: %1$s</string>
     <string name="could_not_connect_to_tor">Αδυναμία σύνδεσης στο Tor</string>

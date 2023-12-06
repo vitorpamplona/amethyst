@@ -501,8 +501,8 @@
     <string name="active_for_search">Hledání</string>
     <string name="zap_split_title">Rozdělit a přeposlat Zaps</string>
     <string name="zap_split_explainer">Podporované klienty budou Zapy rozdělovat a přeposílat uživatelům přidaným zde místo vám</string>
-    <string name="zap_split_serarch_and_add_user">Hledat a přidat uživatele</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Uživatelské jméno nebo zobrazované jméno</string>
+    <string name="zap_split_search_and_add_user">Hledat a přidat uživatele</string>
+    <string name="zap_split_search_and_add_user_placeholder">Uživatelské jméno nebo zobrazované jméno</string>
     <string name="missing_lud16">Chybí nastavení blesku</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel %1$s nemá nastavenou bleskovou adresu pro přijímání satoshi</string>
     <string name="zap_split_weight">Procenta</string>
@@ -531,8 +531,8 @@
     <string name="cashu_failed_redemption">Nepodařilo se použít Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint poskytl následující chybovou zprávu: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Tokeny Cashu již byly utraceny.</string>
-    <string name="cashu_sucessful_redemption">Obdrženo Cashu</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats bylo odesláno do vaší peněženky. (Poplatek: %2$s sats)</string>
+    <string name="cashu_successful_redemption">Obdrženo Cashu</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats bylo odesláno do vaší peněženky. (Poplatek: %2$s sats)</string>
     <string name="cashu_no_wallet_found">V systému nebyla nalezena žádná kompatibilní peněženka Cashu</string>
     <string name="error_unable_to_fetch_invoice">Nebylo možné načíst fakturu ze serverů příjemce</string>
     <string name="wallet_connect_pay_invoice_error_error">Poskytovatel připojení vaší peněženky vrátil následující chybu: %1$s</string>

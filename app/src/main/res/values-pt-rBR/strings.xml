@@ -502,8 +502,8 @@
     <string name="active_for_search">Pesquisa</string>
     <string name="zap_split_title">Dividir e encaminhar Zaps</string>
     <string name="zap_split_explainer">Os clientes que suportam dividirão e encaminharão zaps para os usuários adicionados aqui em vez dos seus</string>
-    <string name="zap_split_serarch_and_add_user">Pesquisar e adicionar usuário</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Nome de usuário ou nome de exibição</string>
+    <string name="zap_split_search_and_add_user">Pesquisar e adicionar usuário</string>
+    <string name="zap_split_search_and_add_user_placeholder">Nome de usuário ou nome de exibição</string>
     <string name="missing_lud16">Configuração Lightning ausente</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">O usuário %1$s não possui um endereço lightning configurado para receber sats</string>
     <string name="zap_split_weight">Percentual</string>
@@ -532,8 +532,8 @@
     <string name="cashu_failed_redemption">Não foi possível resgatar o Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">O Mint forneceu a seguinte mensagem de erro: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Tokens Cashu já foram gastos.</string>
-    <string name="cashu_sucessful_redemption">Cashu Recebido</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats foram enviados para a sua carteira. (Taxas: %2$s sats)</string>
+    <string name="cashu_successful_redemption">Cashu Recebido</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats foram enviados para a sua carteira. (Taxas: %2$s sats)</string>
     <string name="cashu_no_wallet_found">Nenhuma carteira Cashu compatível encontrada no sistema</string>
     <string name="error_unable_to_fetch_invoice">Não foi possível obter a fatura dos servidores do destinatário</string>
     <string name="wallet_connect_pay_invoice_error_error">Seu provedor de Wallet Connect retornou o seguinte erro: %1$s</string>

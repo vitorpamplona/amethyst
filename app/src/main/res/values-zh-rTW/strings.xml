@@ -487,8 +487,8 @@
     <string name="active_for_search">搜索</string>
     <string name="zap_split_title">拆分及轉發打閃</string>
     <string name="zap_split_explainer">支持的客戶端將會把打閃拆分及轉發到在這裡添加的用戶，而不是你的</string>
-    <string name="zap_split_serarch_and_add_user">搜索並添加用戶</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">用戶名或顯示名</string>
+    <string name="zap_split_search_and_add_user">搜索並添加用戶</string>
+    <string name="zap_split_search_and_add_user_placeholder">用戶名或顯示名</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未設置接收聰的閃電地址</string>
     <string name="zap_split_weight">百分比</string>
     <string name="zap_split_weight_placeholder">25</string>

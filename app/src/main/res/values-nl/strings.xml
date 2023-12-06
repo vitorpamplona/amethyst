@@ -498,8 +498,8 @@
     <string name="active_for_search">Zoeken</string>
     <string name="zap_split_title">Deel en stuur Zaps door</string>
     <string name="zap_split_explainer">Ondersteunende clients delen en sturen door naar de gebruikers toegevoegd hier in plaats van de jouwe</string>
-    <string name="zap_split_serarch_and_add_user">Zoek en voeg gebruiker toe</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Gebruikersnaam of weergavenaam</string>
+    <string name="zap_split_search_and_add_user">Zoek en voeg gebruiker toe</string>
+    <string name="zap_split_search_and_add_user_placeholder">Gebruikersnaam of weergavenaam</string>
     <string name="missing_lud16">Ontbrekende Lightning configuratie</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker %1$s heeft geen Lightning Adress ingesteld om sats te ontvangen</string>
     <string name="zap_split_weight">Percentage</string>
@@ -528,8 +528,8 @@
     <string name="cashu_failed_redemption">Kan Cashu niet verzilveren</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint geeft de volgende foutmelding: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Cashu tokens zijn al uitgegeven.</string>
-    <string name="cashu_sucessful_redemption">Cashu ontvangen</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats zijn naar uw wallet gestuurd. (Fees: %2$s sats)</string>
+    <string name="cashu_successful_redemption">Cashu ontvangen</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats zijn naar uw wallet gestuurd. (Fees: %2$s sats)</string>
     <string name="error_unable_to_fetch_invoice">Kan invoice niet ophalen van de servers van de ontvanger</string>
     <string name="wallet_connect_pay_invoice_error_error">De volgende fout is geretourneerd door uw wallet connect provider: %1$s</string>
     <string name="could_not_connect_to_tor">Kan geen verbinding maken met Tor</string>

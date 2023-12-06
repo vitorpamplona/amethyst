@@ -502,8 +502,8 @@
     <string name="active_for_search">Keresés</string>
     <string name="zap_split_title">Zap-ek megosztása és továbbítása</string>
     <string name="zap_split_explainer">A támogató kliensek a zapokat, az itt hozzáadott felhasználóknak helyetted felosztják és továbbítják</string>
-    <string name="zap_split_serarch_and_add_user">Felhasználó keresése és hozzáadása</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Felhasználónév vagy megjelenítendő név</string>
+    <string name="zap_split_search_and_add_user">Felhasználó keresése és hozzáadása</string>
+    <string name="zap_split_search_and_add_user_placeholder">Felhasználónév vagy megjelenítendő név</string>
     <string name="missing_lud16">Hiányzó lightning beállítás</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A %1$s felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
     <string name="zap_split_weight">Százalék</string>
@@ -532,8 +532,8 @@
     <string name="cashu_failed_redemption">Nem sikerült a Cashu-t beváltani</string>
     <string name="cashu_failed_redemption_explainer_error_msg">A verde a következő hibaüzenetet küldte:%1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">A Cashu tokeneket már elköltötték.</string>
-    <string name="cashu_sucessful_redemption">Cashu Megkapva</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats érkezett a tárcádba. (Díjak: %2$s sats)</string>
+    <string name="cashu_successful_redemption">Cashu Megkapva</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats érkezett a tárcádba. (Díjak: %2$s sats)</string>
     <string name="cashu_no_wallet_found">A rendszeren nem található kompatibilis Cashu pénztárca</string>
     <string name="error_unable_to_fetch_invoice">Nem sikerült a számlát a címzett szervereiről lekérni</string>
     <string name="wallet_connect_pay_invoice_error_error">A Wallet Connect szolgáltatója a következő hibát jelezte: %1$s</string>

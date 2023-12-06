@@ -498,8 +498,8 @@
     <string name="active_for_search">Rechercher</string>
     <string name="zap_split_title">Diviser et Transférer des Zaps</string>
     <string name="zap_split_explainer">Les clients supportés vont diviser et transférer les zaps aux utilisateurs ajoutés ici au lieu du vôtre</string>
-    <string name="zap_split_serarch_and_add_user">Rechercher et Ajouter un Utilisateur</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Nom d\'utilisateur ou nom affiché</string>
+    <string name="zap_split_search_and_add_user">Rechercher et Ajouter un Utilisateur</string>
+    <string name="zap_split_search_and_add_user_placeholder">Nom d\'utilisateur ou nom affiché</string>
     <string name="missing_lud16">Configuration lightning manquante</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">L\'utilisateur %1$s n\'a pas configuré d\'adresse Lightning pour recevoir des sats</string>
     <string name="zap_split_weight">Pourcentage</string>
@@ -523,8 +523,8 @@
     <string name="error_dialog_pay_invoice_error">Impossible de payer la facture</string>
     <string name="error_dialog_pay_withdraw_error">Impossible de retirer</string>
     <string name="error_parsing_nip47_title">Impossible de configurer Wallet Connect</string>
-    <string name="cashu_sucessful_redemption">Cashu reçu</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats ont été envoyés à votre portefeuille. (Frais : %2$s sats)</string>
+    <string name="cashu_successful_redemption">Cashu reçu</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats ont été envoyés à votre portefeuille. (Frais : %2$s sats)</string>
     <string name="error_unable_to_fetch_invoice">Impossible de récupérer la facture depuis les serveurs du destinataire</string>
     <string name="could_not_connect_to_tor">Impossible de se connecter à Tor</string>
     <string name="unable_to_download_relay_document">Téléchargement du document relais indisponible</string>

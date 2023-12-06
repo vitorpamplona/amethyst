@@ -506,8 +506,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="active_for_search">Suche</string>
     <string name="zap_split_title">Zaps aufteilen und weiterleiten</string>
     <string name="zap_split_explainer">Unterstützende Clients werden Zaps an die hier hinzugefügten Benutzer aufteilen und weiterleiten, anstatt an Sie</string>
-    <string name="zap_split_serarch_and_add_user">Benutzer suchen und hinzufügen</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Benutzername oder Anzeigename</string>
+    <string name="zap_split_search_and_add_user">Benutzer suchen und hinzufügen</string>
+    <string name="zap_split_search_and_add_user_placeholder">Benutzername oder Anzeigename</string>
     <string name="missing_lud16">Fehlende Lightning-Konfiguration</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Benutzer %1$s hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
     <string name="zap_split_weight">Prozent</string>
@@ -536,8 +536,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_failed_redemption">Cashu konnte nicht eingelöst werden</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint hat folgende Fehlermeldung geliefert: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Cashu-Token bereits ausgegeben.</string>
-    <string name="cashu_sucessful_redemption">Cashu erhalten</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s Sats wurden an Ihre Wallet gesendet. (Gebühren: %2$s Sats)</string>
+    <string name="cashu_successful_redemption">Cashu erhalten</string>
+    <string name="cashu_successful_redemption_explainer">%1$s Sats wurden an Ihre Wallet gesendet. (Gebühren: %2$s Sats)</string>
     <string name="cashu_no_wallet_found">Keine kompatible Cashu-Brieftasche im System gefunden</string>
     <string name="error_unable_to_fetch_invoice">Konnte Rechnung nicht vom Server des Empfängers abrufen</string>
     <string name="wallet_connect_pay_invoice_error_error">Ihr Wallet-Connect-Anbieter hat folgenden Fehler zurückgegeben: %1$s</string>

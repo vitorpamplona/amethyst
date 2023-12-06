@@ -497,8 +497,8 @@
     <string name="active_for_search">جستجو</string>
     <string name="zap_split_title">تقسیم و فرستادن زپ ها</string>
     <string name="zap_split_explainer">کلاینت هایی که این ویژگی را دارند زپ ها را تقسیم کرده و به جای شما کاربرانی که اینجا افزوده اید می فرستند</string>
-    <string name="zap_split_serarch_and_add_user">جستجو و افزودن کاربر</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">نام کاربری یا نام نمایشی</string>
+    <string name="zap_split_search_and_add_user">جستجو و افزودن کاربر</string>
+    <string name="zap_split_search_and_add_user_placeholder">نام کاربری یا نام نمایشی</string>
     <string name="missing_lud16">تنظیمات لایتنینگ موجود نیست</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">کاربر %1$s آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
     <string name="zap_split_weight">درصد</string>
@@ -524,8 +524,8 @@
     <string name="cashu_failed_redemption">Cashu بازپرداخت نشد</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint پیام خطای روبرو را داد: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">توکن Cashu خرج شده است.</string>
-    <string name="cashu_sucessful_redemption">Cashu دریافت شد</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s ساتوشی به کیف پول شما ارسال شد. (کارمزد: %2$s ساتوشی)</string>
+    <string name="cashu_successful_redemption">Cashu دریافت شد</string>
+    <string name="cashu_successful_redemption_explainer">%1$s ساتوشی به کیف پول شما ارسال شد. (کارمزد: %2$s ساتوشی)</string>
     <string name="error_unable_to_fetch_invoice">صورتحساب از سرور گیرنده دریافت نشد</string>
     <string name="wallet_connect_pay_invoice_error_error">ارائه دهنده اتصال کیف پول شما خطای روبرو را داد: %1$s</string>
     <string name="could_not_connect_to_tor">نمی توان به Tor وصل شد</string>

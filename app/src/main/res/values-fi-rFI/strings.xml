@@ -498,8 +498,8 @@
     <string name="active_for_search">Haku</string>
     <string name="zap_split_title">Jaa ja ohjaa zapit</string>
     <string name="zap_split_explainer">Asiakkaiden tukeminen jakaa ja välittää zapit käyttäjille, jotka on lisätty tähän sinun sijasta</string>
-    <string name="zap_split_serarch_and_add_user">Etsi ja lisää käyttäjä</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Käyttäjänimi tai näyttönimi</string>
+    <string name="zap_split_search_and_add_user">Etsi ja lisää käyttäjä</string>
+    <string name="zap_split_search_and_add_user_placeholder">Käyttäjänimi tai näyttönimi</string>
     <string name="missing_lud16">Lightning asetukset puuttuvat</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Käyttäjällä %1$s ei ole Lightning-osoitetta määritettynä vastaanottamaan satseja</string>
     <string name="zap_split_weight">Prosenttiosuus</string>

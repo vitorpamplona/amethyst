@@ -428,7 +428,7 @@ NIP جديد: قد لا يراه العملاء الآخرون</string>
     <string name="error_dialog_button_ok">موافق</string>
     <string name="relay_information_document_error_assemble_url">فشل الوصول إلى  
 %1$s: %2$s</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats أرسلت الى محفظتك
+    <string name="cashu_successful_redemption_explainer">%1$s sats أرسلت الى محفظتك
 (الرسوم: sats %2$s ) </string>
     <string name="error_unable_to_fetch_invoice">تعذر جلب الinvoice من خوادم المستلم</string>
     <string name="wallet_connect_pay_invoice_error_error">موفر wallet connect الخاص بك أعاد الخطأ التالي: %1$s</string>
