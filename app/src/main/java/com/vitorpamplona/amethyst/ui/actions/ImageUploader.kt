@@ -123,14 +123,17 @@ class ImageUploader(val account: Account?) {
             client.newCall(request).enqueue(object : Callback {
                 override fun onResponse(call: Call, response: Response) {
                     try {
-                        check(response.isSuccessful)
-                        response.body.use { body ->
-                            val url = server.parseUrlFromSuccess(body.string(), authorizationToken)
-                            checkNotNull(url) {
-                                "There must be an uploaded image URL in the response"
-                            }
+                        if (response.isSuccessful) {
+                            response.body.use { body ->
+                                val url = server.parseUrlFromSuccess(body.string(), authorizationToken)
+                                checkNotNull(url) {
+                                    "There must be an uploaded image URL in the response"
+                                }
 
-                            onSuccess(url, contentType)
+                                onSuccess(url, contentType)
+                            }
+                        } else {
+                            onError(RuntimeException("Error Uploading image: ${response.code}"))
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
