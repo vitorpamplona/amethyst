@@ -594,4 +594,8 @@ anz der Bedingungen ist erforderlich</string>
     <!-- Add other category translations as needed -->
     <string name="classifieds_category_other">Sonstiges</string>
 
+    <string name="cashu_redeem_to_zap">An Zap Wallet senden</string>
+    <string name="cashu_redeem_to_cashu">In Cashu Wallet öffnen</string>
+    <string name="cashu_copy_token">Token kopieren</string>
+    <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
 </resources>

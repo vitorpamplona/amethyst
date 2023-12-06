@@ -599,4 +599,9 @@
     <string name="classifieds_category_food">Mat</string>
     <string name="classifieds_category_misc">Diverse</string>
     <string name="classifieds_category_other">Annat</string>
+
+    <string name="cashu_redeem_to_zap">Skicka till Zap Plånbok</string>
+    <string name="cashu_redeem_to_cashu">Öppna i Cashu Plånbok</string>
+    <string name="cashu_copy_token">Kopiera Token</string>
+    <string name="copy_to_clipboard">Kopiera till Urklipp</string>
 </resources>
