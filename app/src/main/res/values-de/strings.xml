@@ -591,6 +591,19 @@ anz der Bedingungen ist erforderlich</string>
 
     <string name="classifieds_category_clothing">Kleidung</string>
     <string name="classifieds_category_accessories">Accessoires</string>
+    <string name="classifieds_category_electronics">Elektronik</string>
+    <string name="classifieds_category_furniture">Möbel</string>
+    <string name="classifieds_category_collectibles">Sammlerstücke</string>
+    <string name="classifieds_category_books">Bücher</string>
+    <string name="classifieds_category_pets">Haustiere</string>
+    <string name="classifieds_category_sports">Sport</string>
+    <string name="classifieds_category_fitness">Fitness</string>
+    <string name="classifieds_category_art">Kunst</string>
+    <string name="classifieds_category_crafts">Handwerk</string>
+    <string name="classifieds_category_home">Zuhause</string>
+    <string name="classifieds_category_office">Büro</string>
+    <string name="classifieds_category_food">Lebensmittel</string>
+    <string name="classifieds_category_misc">Verschiedenes</string>
     <!-- Add other category translations as needed -->
     <string name="classifieds_category_other">Sonstiges</string>
 
@@ -598,4 +611,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_redeem_to_cashu">In Cashu Wallet öffnen</string>
     <string name="cashu_copy_token">Token kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
+    <string name="cashu_no_wallet_found">Keine kompatible Cashu-Brieftasche im System gefunden</string>
+
 </resources>

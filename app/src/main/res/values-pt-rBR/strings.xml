@@ -606,4 +606,5 @@
     <string name="cashu_redeem_to_cashu">Abrir na Carteira Cashu</string>
     <string name="cashu_copy_token">Copiar Token</string>
     <string name="copy_to_clipboard">Copiar para a Área de Transferência</string>
+    <string name="cashu_no_wallet_found">Nenhuma carteira Cashu compatível encontrada no sistema</string>
 </resources>

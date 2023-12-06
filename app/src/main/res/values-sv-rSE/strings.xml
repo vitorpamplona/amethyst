@@ -604,4 +604,6 @@
     <string name="cashu_redeem_to_cashu">Öppna i Cashu Plånbok</string>
     <string name="cashu_copy_token">Kopiera Token</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
+    <string name="cashu_no_wallet_found">Ingen kompatibel Cashu-plånbok hittades på systemet</string>
+
 </resources>
