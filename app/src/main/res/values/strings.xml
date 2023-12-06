@@ -471,7 +471,7 @@
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Redeem</string>
     <string name="cashu_redeem_to_zap">Send to Zap Wallet</string>
-    <string name="cashu_redeem_to_cachu">Open in Cashu Wallet</string>
+    <string name="cashu_redeem_to_cashu">Open in Cashu Wallet</string>
     <string name="cashu_copy_token">Copy Token</string>
 
     <string name="no_lightning_address_set">No Lightning Address set</string>

@@ -211,7 +211,7 @@ fun CashuPreview(token: CashuToken, accountViewModel: AccountViewModel) {
             ) {
                 CashuIcon(Size20Modifier)
                 Spacer(DoubleHorzSpacer)
-                Text(stringResource(id = R.string.cashu_redeem_to_cachu), color = Color.White, fontSize = 16.sp)
+                Text(stringResource(id = R.string.cashu_redeem_to_cashu), color = Color.White, fontSize = 16.sp)
             }
             Spacer(modifier = StdHorzSpacer)
             Button(
