@@ -561,4 +561,50 @@
     <string name="send_the_seller_a_message">Envie uma mensagem para o vendedor</string>
     <string name="hi_seller_is_this_still_available">Oi %1$s, ainda está disponível?</string>
     <string name="hi_there_is_this_still_available">Olá, ainda está disponível?</string>
+
+    <string name="classifieds">Vender um Item</string>
+
+    <string name="classifieds_title">Título</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">Condição</string>
+    <string name="classifieds_category">Categoria</string>
+    <string name="classifieds_price">Preço (em Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">Localização</string>
+    <string name="classifieds_location_placeholder">Cidade, Estado, País</string>
+
+    <string name="classifieds_condition_new">Novo</string>
+    <string name="classifieds_condition_new_explainer">É uma unidade totalmente nova, na caixa original</string>
+
+    <string name="classifieds_condition_like_new">Como Novo</string>
+    <string name="classifieds_condition_like_new_explainer">Foi usado, mas não há sinais de uso</string>
+
+    <string name="classifieds_condition_good">Bom</string>
+    <string name="classifieds_condition_good_explainer">Possui algumas marcas superficiais de uso</string>
+
+    <string name="classifieds_condition_fair">Regular</string>
+    <string name="classifieds_condition_fair_explainer">Ainda está em estado aceitável e funcional</string>
+
+    <string name="classifieds_category_clothing">Roupas</string>
+    <string name="classifieds_category_accessories">Acessórios</string>
+    <string name="classifieds_category_electronics">Eletrônicos</string>
+    <string name="classifieds_category_furniture">Móveis</string>
+    <string name="classifieds_category_collectibles">Colecionáveis</string>
+    <string name="classifieds_category_books">Livros</string>
+    <string name="classifieds_category_pets">Animais de Estimação</string>
+    <string name="classifieds_category_sports">Esportes</string>
+    <string name="classifieds_category_fitness">Fitness</string>
+    <string name="classifieds_category_art">Arte</string>
+    <string name="classifieds_category_crafts">Artesanato</string>
+    <string name="classifieds_category_home">Casa</string>
+    <string name="classifieds_category_office">Escritório</string>
+    <string name="classifieds_category_food">Alimentos</string>
+    <string name="classifieds_category_misc">Diversos</string>
+    <string name="classifieds_category_other">Outros</string>
+
+    <string name="cashu_redeem_to_zap">Enviar para Zap Wallet</string>
+    <string name="cashu_redeem_to_cashu">Abrir na Carteira Cashu</string>
+    <string name="cashu_copy_token">Copiar Token</string>
+    <string name="copy_to_clipboard">Copiar para a Área de Transferência</string>
+    <string name="cashu_no_wallet_found">Nenhuma carteira Cashu compatível encontrada no sistema</string>
 </resources>
