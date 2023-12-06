@@ -32,10 +32,9 @@ class NewRelayListViewModel : ViewModel() {
         relays.let {
             viewModelScope.launch(Dispatchers.IO) {
                 account.saveRelayList(it.value)
+                clear()
             }
         }
-
-        clear()
     }
 
     fun loadRelayDocuments() {
@@ -120,7 +119,7 @@ class NewRelayListViewModel : ViewModel() {
 
     fun deleteAll() {
         _relays.update { relays ->
-            relays.dropWhile { relays.isNotEmpty() }
+            emptyList()
         }
     }
 
