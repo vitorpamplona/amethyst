@@ -407,7 +407,7 @@
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Beváltás</string>
     <string name="cashu_redeem_to_zap">Küldje a Zap tárcába</string>
-    <string name="cashu_redeem_to_cachu">Nyissa meg a Cashu tárcában</string>
+    <string name="cashu_redeem_to_cashu">Nyissa meg a Cashu tárcában</string>
     <string name="cashu_copy_token">Token másolása</string>
     <string name="no_lightning_address_set">Nincs Lightning Cím beállítva</string>
     <string name="copied_token_to_clipboard">Token a vágólapra másolva</string>
