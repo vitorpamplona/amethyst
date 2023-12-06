@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -93,6 +94,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -152,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -345,6 +348,15 @@ fun NewPostView(
                                     }
                                 }
 
+                                if (postViewModel.wantsProduct) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)
+                                    ) {
+                                        SellProduct(postViewModel = postViewModel)
+                                    }
+                                }
+
                                 MessageField(postViewModel)
 
                                 if (postViewModel.wantsPoll) {
@@ -530,6 +542,16 @@ fun NewPostView(
                                 // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
                                 AddPollButton(postViewModel.wantsPoll) {
                                     postViewModel.wantsPoll = !postViewModel.wantsPoll
+                                    if (postViewModel.wantsPoll) {
+                                        postViewModel.wantsProduct = false
+                                    }
+                                }
+                            }
+
+                            AddClassifiedsButton(postViewModel) {
+                                postViewModel.wantsProduct = !postViewModel.wantsProduct
+                                if (postViewModel.wantsProduct) {
+                                    postViewModel.wantsPoll = false
                                 }
                             }
 
@@ -635,7 +657,11 @@ private fun MessageField(
             },
         placeholder = {
             Text(
-                text = stringResource(R.string.what_s_on_your_mind),
+                text = if (postViewModel.wantsProduct) {
+                    stringResource(R.string.description)
+                } else {
+                    stringResource(R.string.what_s_on_your_mind)
+                },
                 color = MaterialTheme.colorScheme.placeholderText
             )
         },
@@ -759,6 +785,227 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 placeholder = {
                     Text(
                         text = stringResource(R.string.messages_new_message_subject_caption),
+                        color = MaterialTheme.colorScheme.placeholderText
+                    )
+                },
+                visualTransformation = UrlUserTagTransformation(
+                    MaterialTheme.colorScheme.primary
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                )
+            )
+        }
+
+        Divider()
+    }
+}
+
+@Composable
+fun SellProduct(postViewModel: NewPostViewModel) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.classifieds_title),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            MyTextField(
+                value = postViewModel.title,
+                onValueChange = {
+                    postViewModel.title = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.classifieds_title_placeholder),
+                        color = MaterialTheme.colorScheme.placeholderText
+                    )
+                },
+                visualTransformation = UrlUserTagTransformation(
+                    MaterialTheme.colorScheme.primary
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                )
+            )
+        }
+
+        Divider()
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.classifieds_price),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            MyTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = postViewModel.price,
+                onValueChange = {
+                    runCatching {
+                        if (it.text.isEmpty()) {
+                            postViewModel.price = TextFieldValue("")
+                        } else if (it.text.toLongOrNull() != null) {
+                            postViewModel.price = it
+                        }
+                    }
+                },
+                placeholder = {
+                    Text(
+                        text = "1000",
+                        color = MaterialTheme.colorScheme.placeholderText
+                    )
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number
+                ),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent
+                )
+            )
+        }
+
+        Divider()
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.classifieds_condition),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            val conditionTypes = listOf(
+                Triple(ClassifiedsEvent.CONDITION.NEW, stringResource(id = R.string.classifieds_condition_new), stringResource(id = R.string.classifieds_condition_new_explainer)),
+                Triple(ClassifiedsEvent.CONDITION.USED_LIKE_NEW, stringResource(id = R.string.classifieds_condition_like_new), stringResource(id = R.string.classifieds_condition_like_new_explainer)),
+                Triple(ClassifiedsEvent.CONDITION.USED_GOOD, stringResource(id = R.string.classifieds_condition_good), stringResource(id = R.string.classifieds_condition_good_explainer)),
+                Triple(ClassifiedsEvent.CONDITION.USED_FAIR, stringResource(id = R.string.classifieds_condition_fair), stringResource(id = R.string.classifieds_condition_fair_explainer))
+            )
+
+            val conditionOptions = remember { conditionTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
+
+            TextSpinner(
+                placeholder = conditionTypes.filter { it.first == postViewModel.condition }.first().second,
+                options = conditionOptions,
+                onSelect = {
+                    postViewModel.condition = conditionTypes[it].first
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 5.dp, bottom = 1.dp)
+            ) { currentOption, modifier ->
+                MyTextField(
+                    value = TextFieldValue(currentOption),
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = modifier,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = Color.Transparent
+                    )
+                )
+            }
+        }
+
+        Divider()
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.classifieds_category),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            val categoryList = listOf(
+                R.string.classifieds_category_clothing,
+                R.string.classifieds_category_accessories,
+                R.string.classifieds_category_electronics,
+                R.string.classifieds_category_furniture,
+                R.string.classifieds_category_collectibles,
+                R.string.classifieds_category_books,
+                R.string.classifieds_category_pets,
+                R.string.classifieds_category_sports,
+                R.string.classifieds_category_fitness,
+                R.string.classifieds_category_art,
+                R.string.classifieds_category_crafts,
+                R.string.classifieds_category_home,
+                R.string.classifieds_category_office,
+                R.string.classifieds_category_food,
+                R.string.classifieds_category_misc,
+                R.string.classifieds_category_other
+            )
+
+            val categoryTypes = categoryList.map {
+                Triple(it, stringResource(id = it), null)
+            }
+
+            val categoryOptions = remember { categoryTypes.map { TitleExplainer(it.second, null) }.toImmutableList() }
+            TextSpinner(
+                placeholder = categoryTypes.filter { it.second == postViewModel.category.text }.firstOrNull()?.second ?: "",
+                options = categoryOptions,
+                onSelect = {
+                    postViewModel.category = TextFieldValue(categoryTypes[it].second)
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 5.dp, bottom = 1.dp)
+            ) { currentOption, modifier ->
+                MyTextField(
+                    value = TextFieldValue(currentOption),
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = modifier,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = Color.Transparent
+                    )
+                )
+            }
+        }
+
+        Divider()
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.classifieds_location),
+                fontSize = Font14SP,
+                fontWeight = FontWeight.W500
+            )
+
+            MyTextField(
+                value = postViewModel.locationText,
+                onValueChange = {
+                    postViewModel.locationText = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.classifieds_location_placeholder),
                         color = MaterialTheme.colorScheme.placeholderText
                     )
                 },
@@ -1209,6 +1456,36 @@ private fun ForwardZapTo(
                     tint = BitcoinOrange
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun AddClassifiedsButton(
+    postViewModel: NewPostViewModel,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            onClick()
+        }
+    ) {
+        if (!postViewModel.wantsProduct) {
+            Icon(
+                imageVector = Icons.Default.Sell,
+                contentDescription = stringResource(R.string.classifieds),
+                modifier = Modifier
+                    .size(20.dp),
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Sell,
+                contentDescription = stringResource(id = R.string.classifieds),
+                modifier = Modifier
+                    .size(20.dp),
+                tint = BitcoinOrange
+            )
         }
     }
 }

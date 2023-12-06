@@ -276,7 +276,7 @@ object LocalCache {
         // avoids processing empty contact lists.
         if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
             user.updateContactList(event)
-            // Log.d("CL", "AAA ${user.toBestDisplayName()} ${follows.size}")
+            // Log.d("CL", "Consumed contact list ${user.toNostrUri()} ${event.relays()?.size}")
         }
     }
 
@@ -426,16 +426,16 @@ object LocalCache {
         }
     }
 
-    fun consume(event: MuteListEvent) { consumeBaseReplaceable(event) }
-    fun consume(event: PeopleListEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: AdvertisedRelayListEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: CommunityDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event) }
-    fun consume(event: EmojiPackSelectionEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: EmojiPackEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: ClassifiedsEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: PinListEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: RelaySetEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: AudioTrackEvent) { consumeBaseReplaceable(event) }
+    fun consume(event: MuteListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    fun consume(event: PeopleListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: AdvertisedRelayListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: CommunityDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    fun consume(event: EmojiPackSelectionEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: EmojiPackEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: ClassifiedsEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: PinListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: RelaySetEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: AudioTrackEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
     fun consume(event: StatusEvent, relay: Relay?) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -458,7 +458,7 @@ object LocalCache {
         }
     }
 
-    fun consume(event: BadgeDefinitionEvent) { consumeBaseReplaceable(event) }
+    fun consume(event: BadgeDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
 
     fun consume(event: BadgeProfilesEvent) {
         val version = getOrCreateNote(event.id)
@@ -504,14 +504,14 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    private fun comsume(event: NNSEvent) { consumeBaseReplaceable(event) }
-    fun consume(event: AppDefinitionEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: CalendarEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: CalendarDateSlotEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: CalendarTimeSlotEvent) { consumeBaseReplaceable(event) }
-    private fun consume(event: CalendarRSVPEvent) { consumeBaseReplaceable(event) }
+    private fun comsume(event: NNSEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    fun consume(event: AppDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: CalendarEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: CalendarDateSlotEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: CalendarTimeSlotEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: CalendarRSVPEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
 
-    private fun consumeBaseReplaceable(event: BaseAddressableEvent) {
+    private fun consumeBaseReplaceable(event: BaseAddressableEvent, relay: Relay?) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -519,6 +519,11 @@ object LocalCache {
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
             version.moveAllReferencesTo(note)
+        }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
         }
 
         // Already processed this event.
@@ -531,7 +536,7 @@ object LocalCache {
         }
     }
 
-    fun consume(event: AppRecommendationEvent) { consumeBaseReplaceable(event) }
+    fun consume(event: AppRecommendationEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
 
     @Suppress("UNUSED_PARAMETER")
     fun consume(event: RecommendRelayEvent) {
@@ -1511,26 +1516,26 @@ object LocalCache {
 
         try {
             when (event) {
-                is AdvertisedRelayListEvent -> consume(event)
-                is AppDefinitionEvent -> consume(event)
-                is AppRecommendationEvent -> consume(event)
+                is AdvertisedRelayListEvent -> consume(event, relay)
+                is AppDefinitionEvent -> consume(event, relay)
+                is AppRecommendationEvent -> consume(event, relay)
                 is AudioHeaderEvent -> consume(event, relay)
-                is AudioTrackEvent -> consume(event)
+                is AudioTrackEvent -> consume(event, relay)
                 is BadgeAwardEvent -> consume(event)
-                is BadgeDefinitionEvent -> consume(event)
+                is BadgeDefinitionEvent -> consume(event, relay)
                 is BadgeProfilesEvent -> consume(event)
                 is BookmarkListEvent -> consume(event)
-                is CalendarEvent -> consume(event)
-                is CalendarDateSlotEvent -> consume(event)
-                is CalendarTimeSlotEvent -> consume(event)
-                is CalendarRSVPEvent -> consume(event)
+                is CalendarEvent -> consume(event, relay)
+                is CalendarDateSlotEvent -> consume(event, relay)
+                is CalendarTimeSlotEvent -> consume(event, relay)
+                is CalendarRSVPEvent -> consume(event, relay)
                 is ChannelCreateEvent -> consume(event)
                 is ChannelHideMessageEvent -> consume(event)
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
                 is ChatMessageEvent -> consume(event, relay)
-                is ClassifiedsEvent -> consume(event)
+                is ClassifiedsEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
                     event.containedPost()?.let {
@@ -1540,8 +1545,8 @@ object LocalCache {
                 }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
-                is EmojiPackEvent -> consume(event)
-                is EmojiPackSelectionEvent -> consume(event)
+                is EmojiPackEvent -> consume(event, relay)
+                is EmojiPackSelectionEvent -> consume(event, relay)
                 is SealedGossipEvent -> consume(event, relay)
 
                 is FileHeaderEvent -> consume(event, relay)
@@ -1563,15 +1568,15 @@ object LocalCache {
                 is LnZapPaymentResponseEvent -> consume(event)
                 is LongTextNoteEvent -> consume(event, relay)
                 is MetadataEvent -> consume(event)
-                is MuteListEvent -> consume(event)
-                is NNSEvent -> comsume(event)
+                is MuteListEvent -> consume(event, relay)
+                is NNSEvent -> comsume(event, relay)
                 is PrivateDmEvent -> consume(event, relay)
-                is PinListEvent -> consume(event)
-                is PeopleListEvent -> consume(event)
+                is PinListEvent -> consume(event, relay)
+                is PeopleListEvent -> consume(event, relay)
                 is PollNoteEvent -> consume(event, relay)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
-                is RelaySetEvent -> consume(event)
+                is RelaySetEvent -> consume(event, relay)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {
                     event.containedPost()?.let {

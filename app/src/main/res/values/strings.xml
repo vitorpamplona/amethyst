@@ -673,4 +673,44 @@
     <string name="send_the_seller_a_message">Send the seller a message</string>
     <string name="hi_seller_is_this_still_available">Hi %1$s, is this still available?</string>
     <string name="hi_there_is_this_still_available">Hi there, is this still available?</string>
+
+    <string name="classifieds">Sell an Item</string>
+
+    <string name="classifieds_title">Title</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">Condition</string>
+    <string name="classifieds_category">Category</string>
+    <string name="classifieds_price">Price (in Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">Location</string>
+    <string name="classifieds_location_placeholder">City, State, Country</string>
+
+    <string name="classifieds_condition_new">New</string>
+    <string name="classifieds_condition_new_explainer">It\'s a brand new unit, in the original box</string>
+
+    <string name="classifieds_condition_like_new">Like New</string>
+    <string name="classifieds_condition_like_new_explainer">It\'s used, but there are no signs of usage</string>
+
+    <string name="classifieds_condition_good">Good</string>
+    <string name="classifieds_condition_good_explainer">It has some superficial usage marks</string>
+
+    <string name="classifieds_condition_fair">Fair</string>
+    <string name="classifieds_condition_fair_explainer">It is still in acceptable and functional shape</string>
+
+    <string name="classifieds_category_clothing">Clothing</string>
+    <string name="classifieds_category_accessories">Accessories</string>
+    <string name="classifieds_category_electronics">Electronics</string>
+    <string name="classifieds_category_furniture">Furniture</string>
+    <string name="classifieds_category_collectibles">Collectibles</string>
+    <string name="classifieds_category_books">Books</string>
+    <string name="classifieds_category_pets">Pets</string>
+    <string name="classifieds_category_sports">Sports</string>
+    <string name="classifieds_category_fitness">Fitness</string>
+    <string name="classifieds_category_art">Art</string>
+    <string name="classifieds_category_crafts">Crafts</string>
+    <string name="classifieds_category_home">Home</string>
+    <string name="classifieds_category_office">Office</string>
+    <string name="classifieds_category_food">Food</string>
+    <string name="classifieds_category_misc">Miscellaneous</string>
+    <string name="classifieds_category_other">Other</string>
 </resources>

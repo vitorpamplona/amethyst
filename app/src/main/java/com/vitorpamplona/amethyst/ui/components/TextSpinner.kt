@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -44,22 +45,46 @@ fun TextSpinner(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    TextSpinner(
+        placeholder,
+        options,
+        onSelect,
+        modifier
+    ) { currentOption, modifier ->
+        OutlinedTextField(
+            value = currentOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { label?.let { Text(it) } },
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+fun TextSpinner(
+    placeholder: String,
+    options: ImmutableList<TitleExplainer>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit
+) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
     var currentText by remember { mutableStateOf(placeholder) }
 
     Box(
-        modifier = modifier
+        modifier = modifier,
+        contentAlignment = Alignment.Center
     ) {
-        OutlinedTextField(
-            value = currentText,
-            onValueChange = {},
-            readOnly = true,
-            label = { label?.let { Text(it) } },
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
+        mainElement(
+            currentText,
+            remember {
+                Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+            }
         )
         Box(
             modifier = Modifier

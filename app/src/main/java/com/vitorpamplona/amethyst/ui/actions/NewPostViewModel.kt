@@ -33,7 +33,9 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
@@ -93,6 +95,14 @@ open class NewPostViewModel() : ViewModel() {
     var isValidvalueMinimum = mutableStateOf(true)
     var isValidConsensusThreshold = mutableStateOf(true)
     var isValidClosedAt = mutableStateOf(true)
+
+    // Classifieds
+    var wantsProduct by mutableStateOf(false)
+    var title by mutableStateOf(TextFieldValue(""))
+    var price by mutableStateOf(TextFieldValue(""))
+    var locationText by mutableStateOf(TextFieldValue(""))
+    var category by mutableStateOf(TextFieldValue(""))
+    var condition by mutableStateOf<ClassifiedsEvent.CONDITION>(ClassifiedsEvent.CONDITION.USED_LIKE_NEW)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -273,6 +283,23 @@ open class NewPostViewModel() : ViewModel() {
                     relayList,
                     geoHash
                 )
+            } else if (wantsProduct) {
+                account?.sendClassifieds(
+                    title = title.text,
+                    price = Price(price.text, "SATS", null),
+                    condition = condition,
+                    message = tagger.message,
+                    replyTo = tagger.replyTos,
+                    mentions = tagger.mentions,
+                    location = locationText.text,
+                    category = category.text,
+                    directMentions = tagger.directMentions,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    relayList = relayList,
+                    geohash = geoHash
+                )
             } else {
                 // adds markers
                 val rootId =
@@ -338,6 +365,7 @@ open class NewPostViewModel() : ViewModel() {
                                     }
                                 },
                                 onError = {
+                                    Log.e("ImageUploader", "Failed to upload the image / video", it)
                                     isUploadingImage = false
                                     viewModelScope.launch {
                                         imageUploadingError.emit("Failed to upload the image / video")
@@ -380,6 +408,10 @@ open class NewPostViewModel() : ViewModel() {
         wantsInvoice = false
         wantsZapraiser = false
         zapRaiserAmount = null
+
+        wantsProduct = false
+        condition = ClassifiedsEvent.CONDITION.USED_LIKE_NEW
+        price = TextFieldValue("")
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
@@ -527,6 +559,7 @@ open class NewPostViewModel() : ViewModel() {
             (!wantsZapraiser || zapRaiserAmount != null) &&
             (!wantsDirectMessage || !toUsers.text.isNullOrBlank()) &&
             (!wantsPoll || (pollOptions.values.all { it.isNotEmpty() } && isValidvalueMinimum.value && isValidvalueMaximum.value)) &&
+            (!wantsProduct || (!title.text.isNullOrBlank() && !price.text.isNullOrBlank() && !category.text.isNullOrBlank())) &&
             contentToAddUrl == null
     }
 

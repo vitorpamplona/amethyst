@@ -4,6 +4,8 @@ import android.content.res.Resources
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
@@ -55,6 +58,7 @@ import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
@@ -91,6 +95,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.net.Proxy
 import java.util.Locale
+import java.util.UUID
 import kotlin.coroutines.resume
 
 val DefaultChannels = setOf(
@@ -447,7 +452,7 @@ class Account(
         val contactList = userProfile().latestContactList
 
         if (contactList != null && contactList.tags.isNotEmpty()) {
-            val event = ContactListEvent.updateRelayList(
+            ContactListEvent.updateRelayList(
                 earlierVersion = contactList,
                 relayUse = relays,
                 signer = signer
@@ -456,7 +461,7 @@ class Account(
                 LocalCache.justConsume(it, null)
             }
         } else {
-            val event = ContactListEvent.createFromScratch(
+            ContactListEvent.createFromScratch(
                 followUsers = listOf(),
                 followTags = listOf(),
                 followGeohashes = listOf(),
@@ -1025,6 +1030,64 @@ class Account(
         }
     }
 
+    fun sendClassifieds(
+        title: String,
+        price: Price,
+        condition: ClassifiedsEvent.CONDITION,
+        location: String,
+        category: String,
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        directMentions: Set<HexKey>,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        relayList: List<Relay>? = null,
+        geohash: String? = null
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = replyTo?.mapNotNull { it.address() }
+
+        ClassifiedsEvent.create(
+            dTag = UUID.randomUUID().toString(),
+            title = title,
+            price = price,
+            condition = condition,
+            summary = message,
+            image = null,
+            location = location,
+            category = category,
+            message = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            addresses = addresses,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            directMentions = directMentions,
+            geohash = geohash,
+            signer = signer
+        ) {
+            Client.send(it, relayList = relayList)
+            LocalCache.justConsume(it, null)
+
+            replyTo?.forEach {
+                it.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
+            }
+            addresses?.forEach {
+                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
+            }
+        }
+    }
+
     fun sendPost(
         message: String,
         replyTo: List<Note>?,
@@ -1500,7 +1563,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         } else {
             MuteListEvent.createListWithWord(
@@ -1509,7 +1572,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         }
     }
@@ -1525,7 +1588,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         }
 
@@ -1539,7 +1602,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         }
     }
@@ -1555,7 +1618,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         } else {
             MuteListEvent.createListWithUser(
@@ -1564,7 +1627,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         }
     }
@@ -1580,7 +1643,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         }
 
@@ -1594,7 +1657,7 @@ class Account(
                 signer = signer
             ) {
                 Client.send(it)
-                LocalCache.consume(it)
+                LocalCache.consume(it, null)
             }
         }
 
