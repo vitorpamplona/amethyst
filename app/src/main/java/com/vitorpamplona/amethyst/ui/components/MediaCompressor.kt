@@ -69,11 +69,16 @@ class MediaCompressor {
                     }
                 }
             )
-        } else if (contentType?.startsWith("image", true) == true && !contentType.contains("gif")) {
-            val compressedImageFile = Compressor.compress(applicationContext, from(uri, contentType, applicationContext)) {
-                default(width = 640, format = Bitmap.CompressFormat.JPEG)
+        } else if (contentType?.startsWith("image", true) == true && !contentType.contains("gif") && !contentType.contains("svg")) {
+            try {
+                val compressedImageFile = Compressor.compress(applicationContext, from(uri, contentType, applicationContext)) {
+                    default(width = 640, format = Bitmap.CompressFormat.JPEG)
+                }
+                onReady(compressedImageFile.toUri(), contentType, compressedImageFile.length())
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onReady(uri, contentType, null)
             }
-            onReady(compressedImageFile.toUri(), contentType, compressedImageFile.length())
         } else {
             onReady(uri, contentType, null)
         }
