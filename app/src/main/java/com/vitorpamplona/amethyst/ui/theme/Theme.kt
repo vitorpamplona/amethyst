@@ -37,17 +37,17 @@ import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 private val DarkColorPalette = darkColorScheme(
     primary = Purple200,
     secondary = Teal200,
-    // secondary = Purple700,
     tertiary = Teal200,
     background = Color(0xFF000000),
-    surface = Color(0xFF000000)
+    surface = Color(0xFF000000),
+    surfaceVariant = Color(red = 29, green = 26, blue = 34)
 )
 
 private val LightColorPalette = lightColorScheme(
     primary = Purple500,
     secondary = Teal200,
-    // secondary = Purple700,
-    tertiary = Teal200
+    tertiary = Teal200,
+    surfaceVariant = Color(red = 250, green = 245, blue = 252)
 )
 
 private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
