@@ -781,7 +781,7 @@ object LocalCache {
 
     fun consume(event: ChannelMetadataEvent) {
         val channelId = event.channel()
-        // Log.d("MT", "New User ${users.size} ${event.contactMetaData.name}")
+        // Log.d("MT", "New PublicChatMetadata ${event.channelInfo()}")
         if (channelId.isNullOrBlank()) return
 
         // new event
@@ -789,10 +789,8 @@ object LocalCache {
 
         val author = getOrCreateUser(event.pubKey)
         if (event.createdAt > oldChannel.updatedMetadataAt) {
-            if (oldChannel.creator == null || oldChannel.creator == author) {
-                if (oldChannel is PublicChatChannel) {
-                    oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
-                }
+            if (oldChannel is PublicChatChannel) {
+                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()} ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
