@@ -565,4 +565,33 @@ anz der Bedingungen ist erforderlich</string>
     <string name="send_the_seller_a_message">Dem Verkäufer eine Nachricht senden</string>
     <string name="hi_seller_is_this_still_available">Hallo %1$s, ist das noch verfügbar?</string>
     <string name="hi_there_is_this_still_available">Hallo, ist das noch verfügbar?</string>
+
+    <string name="classifieds">Artikel verkaufen</string>
+
+    <string name="classifieds_title">Titel</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">Zustand</string>
+    <string name="classifieds_category">Kategorie</string>
+    <string name="classifieds_price">Preis (in Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">Ort</string>
+    <string name="classifieds_location_placeholder">Stadt, Staat, Land</string>
+
+    <string name="classifieds_condition_new">Neu</string>
+    <string name="classifieds_condition_new_explainer">Es handelt sich um eine brandneue Einheit, in der Originalverpackung</string>
+
+    <string name="classifieds_condition_like_new">Wie neu</string>
+    <string name="classifieds_condition_like_new_explainer">Es wurde benutzt, aber es gibt keine Anzeichen von Nutzung</string>
+
+    <string name="classifieds_condition_good">Gut</string>
+    <string name="classifieds_condition_good_explainer">Es hat einige oberflächliche Gebrauchsspuren</string>
+
+    <string name="classifieds_condition_fair">Fair</string>
+    <string name="classifieds_condition_fair_explainer">Es ist immer noch in akzeptablem und funktionalem Zustand</string>
+
+    <string name="classifieds_category_clothing">Kleidung</string>
+    <string name="classifieds_category_accessories">Accessoires</string>
+    <!-- Add other category translations as needed -->
+    <string name="classifieds_category_other">Sonstiges</string>
+
 </resources>
