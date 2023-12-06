@@ -57,7 +57,7 @@ class AccountStateViewModel() : ViewModel() {
         _accountContent.update { AccountState.LoggedOff }
 
         viewModelScope.launch(Dispatchers.IO) {
-            serviceManager?.pauseForGood()
+            serviceManager?.pauseForGoodAndClearAccount()
         }
     }
 

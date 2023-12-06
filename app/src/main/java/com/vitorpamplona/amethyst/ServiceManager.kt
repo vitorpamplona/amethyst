@@ -31,8 +31,12 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -40,6 +44,9 @@ import kotlinx.coroutines.launch
 class ServiceManager {
     private var isStarted: Boolean = false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var collectorJob: Job? = null
 
     private fun start(account: Account) {
         this.account = account
@@ -78,6 +85,17 @@ class ServiceManager {
             Log.d("Relay", "Service Manager Connect Connecting ${relaySet.size}")
             Client.reconnect(relaySet)
 
+            collectorJob?.cancel()
+            collectorJob = null
+            collectorJob = scope.launch {
+                myAccount.userProfile().flow().relays.stateFlow.collect {
+                    if (isStarted) {
+                        val newRelaySet = myAccount.activeRelays() ?: myAccount.convertLocalRelays()
+                        Client.reconnect(newRelaySet, onlyIfChanged = true)
+                    }
+                }
+            }
+
             // start services
             NostrAccountDataSource.account = myAccount
             NostrAccountDataSource.otherAccounts = LocalPreferences.allSavedAccounts().mapNotNull {
@@ -112,6 +130,9 @@ class ServiceManager {
 
     private fun pause() {
         Log.d("ServiceManager", "Pausing Relay Services")
+
+        collectorJob?.cancel()
+        collectorJob = null
 
         NostrAccountDataSource.stopSync()
         NostrHomeDataSource.stopSync()
@@ -190,6 +211,11 @@ class ServiceManager {
     }
 
     fun pauseForGood() {
+        forceRestart(null, false, true)
+    }
+
+    fun pauseForGoodAndClearAccount() {
+        account = null
         forceRestart(null, false, true)
     }
 }

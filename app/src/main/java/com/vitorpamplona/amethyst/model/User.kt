@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 
 @Stable
@@ -123,6 +124,7 @@ class User(val pubkeyHex: String) {
         }
 
         liveSet?.innerRelays?.invalidateData()
+        flowSet?.relays?.invalidateData()
     }
 
     fun addReport(note: Note) {
@@ -356,6 +358,7 @@ class User(val pubkeyHex: String) {
     }
 
     var liveSet: UserLiveSet? = null
+    var flowSet: UserFlowSet? = null
 
     fun live(): UserLiveSet {
         if (liveSet == null) {
@@ -382,6 +385,47 @@ class User(val pubkeyHex: String) {
                 liveSet = null
             }
         }
+    }
+
+    @Synchronized
+    fun createOrDestroyFlowSync(create: Boolean) {
+        if (create) {
+            if (flowSet == null) {
+                flowSet = UserFlowSet(this)
+            }
+        } else {
+            if (flowSet != null && flowSet?.isInUse() == false) {
+                flowSet?.destroy()
+                flowSet = null
+            }
+        }
+    }
+
+    fun flow(): UserFlowSet {
+        if (flowSet == null) {
+            createOrDestroyFlowSync(true)
+        }
+        return flowSet!!
+    }
+
+    fun clearFlow() {
+        if (flowSet != null && flowSet?.isInUse() == false) {
+            createOrDestroyFlowSync(false)
+        }
+    }
+}
+
+@Stable
+class UserFlowSet(u: User) {
+    // Observers line up here.
+    val relays = UserBundledRefresherFlow(u)
+
+    fun isInUse(): Boolean {
+        return relays.stateFlow.subscriptionCount.value > 0
+    }
+
+    fun destroy() {
+        relays.destroy()
     }
 }
 
@@ -488,6 +532,27 @@ class UserBundledRefresherLiveData(val user: User) : LiveData<UserState>(UserSta
         val result = UserLoadingLiveData(user, initialValue)
         result.addSource(this) { x -> result.value = transform(x) }
         return result
+    }
+}
+
+@Stable
+class UserBundledRefresherFlow(val user: User) {
+    // Refreshes observers in batches.
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
+    val stateFlow = MutableStateFlow(UserState(user))
+
+    fun destroy() {
+        bundler.cancel()
+    }
+
+    fun invalidateData() {
+        checkNotInMainThread()
+
+        bundler.invalidate() {
+            checkNotInMainThread()
+
+            stateFlow.emit(UserState(user))
+        }
     }
 }
 

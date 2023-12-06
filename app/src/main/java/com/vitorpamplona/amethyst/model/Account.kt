@@ -1874,11 +1874,6 @@ class Account(
         return (activeRelays() ?: convertLocalRelays()).filter { it.write }
     }
 
-    fun reconnectIfRelaysHaveChanged() {
-        val newRelaySet = activeRelays() ?: convertLocalRelays()
-        Client.reconnect(newRelaySet, true)
-    }
-
     fun isAllHidden(users: Set<HexKey>): Boolean {
         return users.all { isHidden(it) }
     }
@@ -1957,7 +1952,7 @@ class Account(
             ).toSet()
     }
 
-    suspend fun saveRelayList(value: List<RelaySetupInfo>) {
+    fun saveRelayList(value: List<RelaySetupInfo>) {
         try {
             localRelays = value.toSet()
             return sendNewRelayList(value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) })
@@ -2003,13 +1998,6 @@ class Account(
     }
 
     suspend fun registerObservers() = withContext(Dispatchers.Main) {
-        // Observes relays to restart connections
-        userProfile().live().relays.observeForever {
-            GlobalScope.launch(Dispatchers.IO) {
-                reconnectIfRelaysHaveChanged()
-            }
-        }
-
         // saves contact list for the next time.
         userProfile().live().follows.observeForever {
             GlobalScope.launch(Dispatchers.IO) {
