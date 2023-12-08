@@ -20,11 +20,8 @@ class PublicChatChannel(idHex: String) : Channel(idHex) {
     var info = ChannelCreateEvent.ChannelData(null, null, null)
 
     fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
-        this.creator = creator
         this.info = channelInfo
-        this.updatedMetadataAt = updatedAt
-
-        live.invalidateData()
+        super.updateChannelInfo(creator, updatedAt)
     }
 
     override fun toBestDisplayName(): String {

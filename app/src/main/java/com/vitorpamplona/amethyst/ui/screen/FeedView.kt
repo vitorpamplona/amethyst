@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
@@ -64,7 +66,9 @@ fun RefresheableView(
 
     val modifier = remember {
         if (enablePullRefresh) {
-            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
+            Modifier
+                .fillMaxSize()
+                .pullRefresh(pullRefreshState)
         } else {
             Modifier.fillMaxSize()
         }
@@ -113,6 +117,23 @@ fun SaveableFeedState(
     WatchScrollToTop(viewModel, listState)
 
     content(listState)
+}
+
+@Composable
+fun SaveableGridFeedState(
+    viewModel: FeedViewModel,
+    scrollStateKey: String? = null,
+    content: @Composable (LazyGridState) -> Unit
+) {
+    val gridState = if (scrollStateKey != null) {
+        rememberForeverLazyGridState(scrollStateKey)
+    } else {
+        rememberLazyGridState()
+    }
+
+    WatchScrollToTop(viewModel, gridState)
+
+    content(gridState)
 }
 
 @Composable
@@ -174,6 +195,21 @@ private fun WatchScrollToTop(
     }
 }
 
+@Composable
+private fun WatchScrollToTop(
+    viewModel: FeedViewModel,
+    listState: LazyGridState
+) {
+    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+            listState.scrollToItem(index = 0)
+            viewModel.sentToTop()
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
@@ -190,7 +226,9 @@ private fun FeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val (value, elapsed) = measureTimedValue {
                 val defaultModifier = remember {
-                    Modifier.fillMaxWidth().animateItemPlacement()
+                    Modifier
+                        .fillMaxWidth()
+                        .animateItemPlacement()
                 }
 
                 Row(defaultModifier) {

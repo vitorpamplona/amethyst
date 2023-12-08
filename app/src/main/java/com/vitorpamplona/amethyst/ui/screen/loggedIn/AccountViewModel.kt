@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.service.CashuProcessor
+import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.Nip05Verifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
@@ -1045,6 +1047,34 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun dismissPaymentRequest(request: Account.PaymentRequest) {
         viewModelScope.launch(Dispatchers.IO) {
             account.dismissPaymentRequest(request)
+        }
+    }
+
+    fun meltCashu(
+        token: CashuToken,
+        context: Context,
+        onDone: (String, String) -> Unit
+    ) {
+        val lud16 = account.userProfile().info?.lud16
+        if (lud16 != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                CashuProcessor().melt(
+                    token,
+                    lud16,
+                    onSuccess = { title, message ->
+                        onDone(title, message)
+                    },
+                    onError = { title, message ->
+                        onDone(title, message)
+                    },
+                    context
+                )
+            }
+        } else {
+            onDone(
+                context.getString(R.string.no_lightning_address_set),
+                context.getString(R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats, account.userProfile().toBestDisplayName())
+            )
         }
     }
 }

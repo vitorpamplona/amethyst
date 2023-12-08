@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
@@ -40,6 +41,54 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     override fun stop() {
         super.stop()
         job?.cancel()
+    }
+
+    fun createMarketplaceFilter(): List<TypedFilter> {
+        val follows = account.liveDiscoveryFollowLists.value?.users?.toList()
+        val hashToLoad = account.liveDiscoveryFollowLists.value?.hashtags?.toList()
+        val geohashToLoad = account.liveDiscoveryFollowLists.value?.geotags?.toList()
+
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter = JsonFilter(
+                    authors = follows,
+                    kinds = listOf(ClassifiedsEvent.kind),
+                    limit = 300,
+                    since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList.value)?.relayList
+                )
+            ),
+            hashToLoad?.let {
+                TypedFilter(
+                    types = setOf(FeedType.GLOBAL),
+                    filter = JsonFilter(
+                        kinds = listOf(ClassifiedsEvent.kind),
+                        tags = mapOf(
+                            "t" to it.map {
+                                listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                            }.flatten()
+                        ),
+                        limit = 300,
+                        since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList.value)?.relayList
+                    )
+                )
+            },
+            geohashToLoad?.let {
+                TypedFilter(
+                    types = setOf(FeedType.GLOBAL),
+                    filter = JsonFilter(
+                        kinds = listOf(ClassifiedsEvent.kind),
+                        tags = mapOf(
+                            "g" to it.map {
+                                listOf(it, it.lowercase(), it.uppercase(), it.capitalize())
+                            }.flatten()
+                        ),
+                        limit = 300,
+                        since = latestEOSEs.users[account.userProfile()]?.followList?.get(account.defaultDiscoveryFollowList.value)?.relayList
+                    )
+                )
+            }
+        )
     }
 
     fun createLiveStreamFilter(): List<TypedFilter> {
@@ -238,16 +287,19 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     }
 
     override fun updateChannelFilters() {
-        discoveryFeedChannel.typedFilters = createLiveStreamFilter().plus(createPublicChatFilter()).plus(
-            listOfNotNull(
-                createLiveStreamTagsFilter(),
-                createLiveStreamGeohashesFilter(),
-                createCommunitiesFilter(),
-                createPublicChatsTagsFilter(),
-                createCommunitiesTagsFilter(),
-                createCommunitiesGeohashesFilter(),
-                createPublicChatsGeohashesFilter()
-            )
-        ).ifEmpty { null }
+        discoveryFeedChannel.typedFilters = createLiveStreamFilter()
+            .plus(createPublicChatFilter())
+            .plus(createMarketplaceFilter())
+            .plus(
+                listOfNotNull(
+                    createLiveStreamTagsFilter(),
+                    createLiveStreamGeohashesFilter(),
+                    createCommunitiesFilter(),
+                    createCommunitiesTagsFilter(),
+                    createCommunitiesGeohashesFilter(),
+                    createPublicChatsTagsFilter(),
+                    createPublicChatsGeohashesFilter()
+                )
+            ).ifEmpty { null }
     }
 }

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -61,6 +62,7 @@ fun AppNavigation(
     knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
+    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
@@ -137,6 +139,7 @@ fun AppNavigation(
         Route.Discover.let { route ->
             composable(route.route, route.arguments, content = {
                 DiscoverScreen(
+                    discoveryMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
                     discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
                     discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
                     discoveryChatFeedViewModel = discoveryChatFeedViewModel,

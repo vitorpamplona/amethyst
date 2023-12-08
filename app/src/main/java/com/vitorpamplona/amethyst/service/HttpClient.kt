@@ -1,7 +1,12 @@
 package com.vitorpamplona.amethyst.service
 
 import android.util.Log
+import com.vitorpamplona.amethyst.BuildConfig
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
@@ -48,9 +53,22 @@ object HttpClient {
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
+            .addInterceptor(DefaultContentTypeInterceptor())
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
+    }
+
+    class DefaultContentTypeInterceptor : Interceptor {
+        @Throws(IOException::class)
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val originalRequest: Request = chain.request()
+            val requestWithUserAgent: Request = originalRequest
+                .newBuilder()
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .build()
+            return chain.proceed(requestWithUserAgent)
+        }
     }
 
     fun getHttpClientForRelays(): OkHttpClient {

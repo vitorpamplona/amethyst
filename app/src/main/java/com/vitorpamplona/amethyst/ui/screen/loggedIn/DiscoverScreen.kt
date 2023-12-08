@@ -3,6 +3,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,8 +19,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,14 +48,17 @@ import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
+import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -64,6 +68,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
+    discoveryMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
@@ -75,6 +80,7 @@ fun DiscoverScreen(
     val tabs by remember(discoveryLiveFeedViewModel, discoveryCommunityFeedViewModel, discoveryChatFeedViewModel) {
         mutableStateOf(
             listOf(
+                TabItem(R.string.discover_marketplace, discoveryMarketplaceFeedViewModel, Route.Discover.base + "Marketplace", ScrollStateKeys.DISCOVER_MARKETPLACE, ClassifiedsEvent.kind),
                 TabItem(R.string.discover_live, discoveryLiveFeedViewModel, Route.Discover.base + "Live", ScrollStateKeys.DISCOVER_LIVE, LiveActivitiesEvent.kind),
                 TabItem(R.string.discover_community, discoveryCommunityFeedViewModel, Route.Discover.base + "Community", ScrollStateKeys.DISCOVER_COMMUNITY, CommunityDefinitionEvent.kind),
                 TabItem(R.string.discover_chat, discoveryChatFeedViewModel, Route.Discover.base + "Chats", ScrollStateKeys.DISCOVER_CHATS, ChannelCreateEvent.kind)
@@ -85,6 +91,7 @@ fun DiscoverScreen(
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
 
     WatchAccountForDiscoveryScreen(
+        discoverMarketplaceFeedViewModel = discoveryMarketplaceFeedViewModel,
         discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
         discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
         discoveryChatFeedViewModel = discoveryChatFeedViewModel,
@@ -122,11 +129,12 @@ private fun DiscoverPages(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    TabRow(
+    ScrollableTabRow(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
         selectedTabIndex = pagerState.currentPage,
-        modifier = TabRowHeight
+        modifier = TabRowHeight,
+        edgePadding = 8.dp
     ) {
         val coroutineScope = rememberCoroutineScope()
 
@@ -145,15 +153,28 @@ private fun DiscoverPages(
 
     HorizontalPager(state = pagerState) { page ->
         RefresheableView(tabs[page].viewModel, true) {
-            SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
-                RenderDiscoverFeed(
-                    viewModel = tabs[page].viewModel,
-                    routeForLastRead = tabs[page].routeForLastRead,
-                    forceEventKind = tabs[page].forceEventKind,
-                    listState = listState,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
+            if (tabs[page].viewModel is NostrDiscoverMarketplaceFeedViewModel) {
+                SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+                    RenderDiscoverFeed(
+                        viewModel = tabs[page].viewModel,
+                        routeForLastRead = tabs[page].routeForLastRead,
+                        forceEventKind = tabs[page].forceEventKind,
+                        listState = listState,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
+            } else {
+                SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+                    RenderDiscoverFeed(
+                        viewModel = tabs[page].viewModel,
+                        routeForLastRead = tabs[page].routeForLastRead,
+                        forceEventKind = tabs[page].forceEventKind,
+                        listState = listState,
+                        accountViewModel = accountViewModel,
+                        nav = nav
+                    )
+                }
             }
         }
     }
@@ -164,7 +185,7 @@ private fun RenderDiscoverFeed(
     viewModel: FeedViewModel,
     routeForLastRead: String?,
     forceEventKind: Int?,
-    listState: LazyListState,
+    listState: ScrollableState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
@@ -189,14 +210,25 @@ private fun RenderDiscoverFeed(
             }
 
             is FeedState.Loaded -> {
-                DiscoverFeedLoaded(
-                    state,
-                    routeForLastRead,
-                    listState,
-                    forceEventKind,
-                    accountViewModel,
-                    nav
-                )
+                if (listState is LazyGridState) {
+                    DiscoverFeedColumnsLoaded(
+                        state,
+                        routeForLastRead,
+                        listState,
+                        forceEventKind,
+                        accountViewModel,
+                        nav
+                    )
+                } else if (listState is LazyListState) {
+                    DiscoverFeedLoaded(
+                        state,
+                        routeForLastRead,
+                        listState,
+                        forceEventKind,
+                        accountViewModel,
+                        nav
+                    )
+                }
             }
 
             is FeedState.Loading -> {
@@ -208,6 +240,7 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun WatchAccountForDiscoveryScreen(
+    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
@@ -217,6 +250,7 @@ fun WatchAccountForDiscoveryScreen(
 
     LaunchedEffect(accountViewModel, listState) {
         NostrDiscoveryDataSource.resetFilters()
+        discoverMarketplaceFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoveryLiveFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoveryCommunityFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoveryChatFeedViewModel.checkKeysInvalidateDataAndSendToTop()
@@ -260,7 +294,7 @@ private fun DiscoverFeedLoaded(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DiscoverFeedTwoColumnsLoaded(
+private fun DiscoverFeedColumnsLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     listState: LazyGridState,

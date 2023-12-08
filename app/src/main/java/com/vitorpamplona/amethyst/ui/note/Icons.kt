@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.VolumeOff
@@ -190,6 +191,16 @@ fun CashuIcon(modifier: Modifier) {
 fun CopyIcon(modifier: Modifier, tint: Color = Color.Unspecified) {
     Icon(
         imageVector = Icons.Default.ContentCopy,
+        stringResource(id = R.string.copy_to_clipboard),
+        tint = tint,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun OpenInNewIcon(modifier: Modifier, tint: Color = Color.Unspecified) {
+    Icon(
+        imageVector = Icons.Default.OpenInNew,
         stringResource(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier
