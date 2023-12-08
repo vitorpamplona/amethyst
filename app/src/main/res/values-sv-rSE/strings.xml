@@ -500,8 +500,8 @@
     <string name="active_for_search">Sök</string>
     <string name="zap_split_title">Dela och vidarebefordra Zaps</string>
     <string name="zap_split_explainer">Stödjande klienter kommer att dela och vidarebefordra zaps till användarna som har lagts till här istället för dig</string>
-    <string name="zap_split_serarch_and_add_user">Sök och lägg till användare</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Användarnamn eller visningsnamn</string>
+    <string name="zap_split_search_and_add_user">Sök och lägg till användare</string>
+    <string name="zap_split_search_and_add_user_placeholder">Användarnamn eller visningsnamn</string>
     <string name="missing_lud16">Saknad lightning-konfiguration</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren %1$s har inte ställt in en blixtfakturaadress för att ta emot satoshis</string>
     <string name="zap_split_weight">Procent</string>
@@ -530,8 +530,8 @@
     <string name="cashu_failed_redemption">Kunde inte lösa in Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint gav följande felmeddelande: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Cashu-token har redan spenderats.</string>
-    <string name="cashu_sucessful_redemption">Cashu mottagen</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sats skickades till din plånbok. (Avgifter: %2$s sats)</string>
+    <string name="cashu_successful_redemption">Cashu mottagen</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats skickades till din plånbok. (Avgifter: %2$s sats)</string>
     <string name="cashu_no_wallet_found">Ingen kompatibel Cashu-plånbok hittades på systemet</string>
     <string name="error_unable_to_fetch_invoice">Kunde inte hämta fakturan från mottagarens servrar</string>
     <string name="wallet_connect_pay_invoice_error_error">Din Wallet Connect-leverantör returnerade följande fel: %1$s</string>

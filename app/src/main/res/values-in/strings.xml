@@ -474,8 +474,8 @@
     <string name="login_with_external_signer">Masuk dengan Amber</string>
     <string name="zap_split_title">Bagi dan Teruskan Zaps</string>
     <string name="zap_split_explainer">Klien pendukung akan membagi dan meneruskan zaps ke pengguna yang ditambahkan di sini, bukan kepada Anda</string>
-    <string name="zap_split_serarch_and_add_user">Cari dan Tambah Pengguna</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Nama pengguna atau nama ditampilkan</string>
+    <string name="zap_split_search_and_add_user">Cari dan Tambah Pengguna</string>
+    <string name="zap_split_search_and_add_user_placeholder">Nama pengguna atau nama ditampilkan</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna %1$s tidak memiliki alamat lightning yang diatur untuk menerima sats</string>
     <string name="zap_split_weight">Persentase</string>
     <string name="splitting_zaps_with">Bagikan zaps dengan</string>
@@ -511,8 +511,8 @@
     <string name="cashu_failed_redemption">Tidak dapat menukarkan Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint memberikan pesan kesalahan berikut: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Token Cashu sudah habis.</string>
-    <string name="cashu_sucessful_redemption">Cashu diterima</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sat telah dikirim ke dompet Anda. (Biaya: %2$s sat)</string>
+    <string name="cashu_successful_redemption">Cashu diterima</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sat telah dikirim ke dompet Anda. (Biaya: %2$s sat)</string>
     <string name="error_unable_to_fetch_invoice">Tidak dapat mengambil faktur dari server penerima</string>
     <string name="wallet_connect_pay_invoice_error_error">Penyedia koneksi dompet Anda menampilkan kesalahan berikut: %1$s</string>
     <string name="could_not_connect_to_tor">Tidak dapat terhubung ke Tor</string>

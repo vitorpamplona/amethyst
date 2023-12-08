@@ -487,8 +487,8 @@
     <string name="active_for_search">অনুসন্ধান করুন</string>
     <string name="zap_split_title">জ্যাপগুলি ভাগ করুন এবং পাঠান</string>
     <string name="zap_split_explainer">সমর্থিত ক্লায়েন্টরা জ্যাপ ভাগ করবে এবং আপনার পরিবর্তে এখানে সংযুক্ত ব্যবহারকারীদেরকে পাঠাবে</string>
-    <string name="zap_split_serarch_and_add_user">ব্যবহারকারীদের অনুসন্ধান করুন এবং যুক্ত করুন</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">ইউজারনেম কিংবা প্রদর্শিত নাম দিন</string>
+    <string name="zap_split_search_and_add_user">ব্যবহারকারীদের অনুসন্ধান করুন এবং যুক্ত করুন</string>
+    <string name="zap_split_search_and_add_user_placeholder">ইউজারনেম কিংবা প্রদর্শিত নাম দিন</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s ব্যবহারকারীর স্যাট গ্রহণের উপযোগী কোনো বিজলি ঠিকানা সেট করা নেই</string>
     <string name="zap_split_weight">শতাংশ</string>
     <string name="zap_split_weight_placeholder">২৫</string>

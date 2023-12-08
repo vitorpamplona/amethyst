@@ -498,8 +498,8 @@
     <string name="active_for_search">Búsqueda</string>
     <string name="zap_split_title">Dividir y reenviar zaps</string>
     <string name="zap_split_explainer">Los clientes compatibles dividirán y reenviarán los zaps a los usuarios que se agreguen aquí en lugar de a ti.</string>
-    <string name="zap_split_serarch_and_add_user">Buscar y agregar usuario</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Nombre de usuario o para mostrar</string>
+    <string name="zap_split_search_and_add_user">Buscar y agregar usuario</string>
+    <string name="zap_split_search_and_add_user_placeholder">Nombre de usuario o para mostrar</string>
     <string name="missing_lud16">Lightning no está configurado</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">El usuario %1$s no tiene una dirección de Lightning configurada para recibir sats.</string>
     <string name="zap_split_weight">Porcentaje</string>
@@ -528,8 +528,8 @@
     <string name="cashu_failed_redemption">No se pudo canjear Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">La Mint proporcionó el siguiente mensaje de error: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Los tokens de Cashu ya se gastaron.</string>
-    <string name="cashu_sucessful_redemption">Cashu recibido</string>
-    <string name="cashu_sucessful_redemption_explainer">Se enviaron %1$s sats a tu billetera (comisión: %2$s sats).</string>
+    <string name="cashu_successful_redemption">Cashu recibido</string>
+    <string name="cashu_successful_redemption_explainer">Se enviaron %1$s sats a tu billetera (comisión: %2$s sats).</string>
     <string name="error_unable_to_fetch_invoice">No se puede obtener la factura de los servidores del destinatario</string>
     <string name="wallet_connect_pay_invoice_error_error">El proveedor de conexión de billetera devolvió el siguiente error: %1$s</string>
     <string name="could_not_connect_to_tor">No se pudo conectar a Tor</string>

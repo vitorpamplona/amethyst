@@ -492,8 +492,8 @@
     <string name="active_for_search">搜索</string>
     <string name="zap_split_title">拆分及转发打闪</string>
     <string name="zap_split_explainer">支持的客户端将会把打闪拆分及转发到在这里添加的用户，而不是你的</string>
-    <string name="zap_split_serarch_and_add_user">搜索并添加用户</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">用户名或显示名</string>
+    <string name="zap_split_search_and_add_user">搜索并添加用户</string>
+    <string name="zap_split_search_and_add_user_placeholder">用户名或显示名</string>
     <string name="missing_lud16">打闪设置缺失</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未设置接收聪的闪电地址</string>
     <string name="zap_split_weight">百分比</string>
@@ -517,8 +517,8 @@
     <string name="error_parsing_nip47_title">无法设置钱包连接</string>
     <string name="cashu_failed_redemption">无法兑换Cashu</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Cashu 令牌已经消耗。</string>
-    <string name="cashu_sucessful_redemption">已收到 Cashu</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s 聪 已被发送到您的钱包。(手续费︰ %2$s 聪)</string>
+    <string name="cashu_successful_redemption">已收到 Cashu</string>
+    <string name="cashu_successful_redemption_explainer">%1$s 聪 已被发送到您的钱包。(手续费︰ %2$s 聪)</string>
     <string name="error_unable_to_fetch_invoice">无法从接收者的服务器获取发票</string>
     <string name="wallet_connect_pay_invoice_error_error">您的钱包连接提供者返回了以下错误： %1$s</string>
     <string name="could_not_connect_to_tor">无法连接到 Tor</string>

@@ -499,8 +499,8 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="active_for_search">Cari</string>
     <string name="zap_split_title">Pisah dan alihkan Zap</string>
     <string name="zap_split_explainer">Klien yang didukung akan memisah dan mengalihkan zap kepada user yang ditambahkan disini</string>
-    <string name="zap_split_serarch_and_add_user">Cari dan Tambahkan Pengguna</string>
-    <string name="zap_split_serarch_and_add_user_placeholder">Username atau tampilan nama</string>
+    <string name="zap_split_search_and_add_user">Cari dan Tambahkan Pengguna</string>
+    <string name="zap_split_search_and_add_user_placeholder">Username atau tampilan nama</string>
     <string name="missing_lud16">Lightning tidak tersedia</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s belum mengatur alamat lightning untuk menerima sat</string>
     <string name="zap_split_weight">Persentase</string>
@@ -527,8 +527,8 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="cashu_failed_redemption">Tidak dapat meredeem Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint memberikan error: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Token Cashu sudah dipakai/habis.</string>
-    <string name="cashu_sucessful_redemption">Cashu Diterima</string>
-    <string name="cashu_sucessful_redemption_explainer">%1$s sat telah dikirim ke dompetmu. (Biaya: %2$s sat)</string>
+    <string name="cashu_successful_redemption">Cashu Diterima</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sat telah dikirim ke dompetmu. (Biaya: %2$s sat)</string>
     <string name="error_unable_to_fetch_invoice">Tidak dapat menghubung server faktur penerima</string>
     <string name="wallet_connect_pay_invoice_error_error">Penyedia Wallet Connect anda memberi error: %1$s</string>
     <string name="could_not_connect_to_tor">Tidak dapat terhubung ke Tor</string>
