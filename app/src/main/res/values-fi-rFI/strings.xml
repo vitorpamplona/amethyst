@@ -404,10 +404,13 @@
     <string name="minimum_pow">Vähimmäis PoW</string>
     <string name="auth">Autentikointi</string>
     <string name="payment">Maksu</string>
-    <string name="cashu">Cashu-tunniste</string>
+    <string name="cashu">Cashu-tunnus</string>
     <string name="cashu_redeem">Lunasta</string>
+    <string name="cashu_redeem_to_zap">Lähetä zap-lompakkoon</string>
+    <string name="cashu_redeem_to_cashu">Avaa Cashu-lompakossa</string>
+    <string name="cashu_copy_token">Kopioi tunnus</string>
     <string name="no_lightning_address_set">Ei Lightning-osoitetta asetettuna</string>
-    <string name="copied_token_to_clipboard">Kopioitu tunniste leikepöydälle</string>
+    <string name="copied_token_to_clipboard">Kopioitu tunnus leikepöydälle</string>
     <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">POISSA</string>
     <string name="live_stream_ended_tag">PÄÄTTYNYT</string>
@@ -417,6 +420,7 @@
     <string name="are_you_sure_you_want_to_log_out">Uloskirjautuminen poistaa kaikki paikalliset tiedot. Varmista, että sinulla on varmuuskopio yksityisavaimistasi välttääksesi tilisi menetyksen. Haluatko jatkaa?</string>
     <string name="followed_tags">Seuratut tagit</string>
     <string name="relay_setup">Releet</string>
+    <string name="discover_marketplace">Markkinapaikka</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Yhteisö</string>
     <string name="discover_chat">Keskustelut</string>
@@ -475,6 +479,7 @@
     <string name="automatically_play_videos_description">Toista videot ja GIF-animaatiot automaattisesti</string>
     <string name="automatically_show_url_preview_description">Näytä URL-esikatselut</string>
     <string name="load_image_description">Koska kuvat ladataan</string>
+    <string name="copy_to_clipboard">Kopioi leikepöydälle</string>
     <string name="copy_url_to_clipboard">Kopioi URL leikepöydälle</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopioi viestin tunniste leikepöydälle</string>
     <string name="created_at">Luotu</string>
@@ -512,4 +517,24 @@
     <string name="error_opening_external_signer">Virhe avattaessa allekirjoitussovellusta</string>
     <string name="error_opening_external_signer_description">Allekirjoittajasovellusta ei löytynyt. Tarkista, että sovellusta ei ole poistettu</string>
     <string name="sign_request_rejected">Allekirjoittajasovellus hylätty</string>
+    <string name="sign_request_rejected_description">Varmista, että allekirjoittajasovellus on valtuuttanut tämän tapahtuman</string>
+    <string name="no_wallet_found_with_error">Ei löytynyt lompakkoja Lightning-laskun maksamiseksi (käyttäjä: %1$s). Asenna Lightning-lompakko zapatäksesi</string>
+    <string name="no_wallet_found">Ei löytynyt lompakkoja Lightning-laskun maksamiseksi. Asenna Lightning-lompakko zapatäksesi</string>
+    <string name="hidden_words">Piilotetut sanat</string>
+    <string name="hide_new_word_label">Piilota uusi sana tai lause</string>
+    <string name="automatically_show_profile_picture">Profiilikuva</string>
+    <string name="automatically_show_profile_picture_description">Näytä profiilikuvat</string>
+    <string name="select_an_option">Valitse vaihtoehto</string>
+    <string name="error_dialog_pay_invoice_error">Laskua ei voitu maksaa</string>
+    <string name="error_dialog_pay_withdraw_error">Ei voitu perua</string>
+    <string name="error_parsing_nip47_title">Wallet Connectin asennus epäonnistui</string>
+    <string name="error_parsing_nip47">Virhe jäsennettäessä NIP-47 yhteyttä. Tarkista, onko tämä oikein lompakon tarjoajallasi: %1$s. Virhe: %2$s</string>
+    <string name="cashu_failed_redemption">Cashu epäonnistui lunastuksessa</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Paja (mint) antoi seuraavan virheilmoituksen: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu tunnukset on jo käytetty.</string>
+    <string name="cashu_no_wallet_found">Yhteensopivaa Cashu-lompakkoa ei löytynyt järjestelmästä</string>
+    <string name="error_unable_to_fetch_invoice">Laskua ei voi noutaa vastaanottimen palvelimilta</string>
+    <string name="wallet_connect_pay_invoice_error_error">Lompakkosi yhteyden tarjoaja palautti seuraavan virheen: %1$s</string>
+    <string name="could_not_connect_to_tor">Toriin ei saatu yhteyttä</string>
+    <string name="unable_to_download_relay_document">Reledokumenttia ei saatu ladattua</string>
 </resources>

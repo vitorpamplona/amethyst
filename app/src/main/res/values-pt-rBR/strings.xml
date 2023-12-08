@@ -420,6 +420,7 @@
     <string name="are_you_sure_you_want_to_log_out">Sair exclui todas as suas informações locais. Certifique-se de fazer backup de suas chaves privadas para evitar a perda de sua conta. Você quer continuar?</string>
     <string name="followed_tags">Tags Seguidas</string>
     <string name="relay_setup">Relays</string>
+    <string name="discover_marketplace">Mercado</string>
     <string name="discover_live">Ao vivo</string>
     <string name="discover_community">Comunidade</string>
     <string name="discover_chat">Conversas</string>
@@ -568,9 +569,11 @@
     <string name="hi_there_is_this_still_available">Olá, ainda está disponível?</string>
     <string name="classifieds">Vender um Item</string>
     <string name="classifieds_title">Título</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Condição</string>
     <string name="classifieds_category">Categoria</string>
     <string name="classifieds_price">Preço (em Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Localização</string>
     <string name="classifieds_location_placeholder">Cidade, Estado, País</string>
     <string name="classifieds_condition_new">Novo</string>
@@ -589,6 +592,7 @@
     <string name="classifieds_category_books">Livros</string>
     <string name="classifieds_category_pets">Animais de Estimação</string>
     <string name="classifieds_category_sports">Esportes</string>
+    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_art">Arte</string>
     <string name="classifieds_category_crafts">Artesanato</string>
     <string name="classifieds_category_home">Casa</string>
