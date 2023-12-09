@@ -407,6 +407,7 @@
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Vyměnit</string>
     <string name="cashu_redeem_to_zap">Poslat do Zap peněženky</string>
+    <string name="cashu_redeem_to_cashu">Otevřít v Cashu Wallet</string>
     <string name="cashu_copy_token">Kopírovat token</string>
     <string name="no_lightning_address_set">Není nastavena žádná Lightning adresa</string>
     <string name="copied_token_to_clipboard">Token zkopírován do schránky</string>
@@ -419,6 +420,7 @@
     <string name="are_you_sure_you_want_to_log_out">Odhlášení vymaže všechny vaše místní informace. Ujistěte se, že máte zálohované své privátní klíče, abyste se vyhnuli ztrátě účtu. Chcete pokračovat?</string>
     <string name="followed_tags">Sledované značky</string>
     <string name="relay_setup">Rele</string>
+    <string name="discover_marketplace">Trh</string>
     <string name="discover_live">Živě</string>
     <string name="discover_community">Komunita</string>
     <string name="discover_chat">Chaty</string>

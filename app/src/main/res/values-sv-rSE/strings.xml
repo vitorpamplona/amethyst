@@ -418,6 +418,7 @@
     <string name="are_you_sure_you_want_to_log_out">Att logga ut raderar all din lokala information. Se till att ha dina privata nycklar säkerhetskopierade för att undvika att förlora ditt konto. Vill du fortsätta?</string>
     <string name="followed_tags">Följda taggar</string>
     <string name="relay_setup">Reläer</string>
+    <string name="discover_marketplace">Marknadsplats</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Gemenskap</string>
     <string name="discover_chat">Chattar</string>
@@ -566,9 +567,11 @@
     <string name="hi_there_is_this_still_available">Hallå där, är detta fortfarande tillgängligt?</string>
     <string name="classifieds">Sälj en artikel</string>
     <string name="classifieds_title">Titel</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Skick</string>
     <string name="classifieds_category">Kategori</string>
     <string name="classifieds_price">Pris (i Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Plats</string>
     <string name="classifieds_location_placeholder">Stad, Region, Land</string>
     <string name="classifieds_condition_new">Ny</string>
@@ -587,6 +590,7 @@
     <string name="classifieds_category_books">Böcker</string>
     <string name="classifieds_category_pets">Husdjur</string>
     <string name="classifieds_category_sports">Sport</string>
+    <string name="classifieds_category_fitness">Träning</string>
     <string name="classifieds_category_art">Konst</string>
     <string name="classifieds_category_crafts">Hantverk</string>
     <string name="classifieds_category_home">Hem</string>
