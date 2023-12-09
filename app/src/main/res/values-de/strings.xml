@@ -424,6 +424,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="are_you_sure_you_want_to_log_out">Das Abmelden löscht alle Ihre lokalen Informationen. Stellen Sie sicher, dass Sie Ihre privaten Schlüssel gesichert haben, um einen Kontoverlust zu vermeiden. Möchten Sie fortfahren?</string>
     <string name="followed_tags">Gefolgte Tags</string>
     <string name="relay_setup">Relais</string>
+    <string name="discover_marketplace">Marktplatz</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Gemeinschaft</string>
     <string name="discover_chat">Chats</string>
@@ -572,9 +573,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="hi_there_is_this_still_available">Hallo, ist das noch verfügbar?</string>
     <string name="classifieds">Artikel verkaufen</string>
     <string name="classifieds_title">Titel</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Zustand</string>
     <string name="classifieds_category">Kategorie</string>
     <string name="classifieds_price">Preis (in Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Ort</string>
     <string name="classifieds_location_placeholder">Stadt, Staat, Land</string>
     <string name="classifieds_condition_new">Neu</string>
@@ -583,6 +586,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="classifieds_condition_like_new_explainer">Es wurde benutzt, aber es gibt keine Anzeichen von Nutzung</string>
     <string name="classifieds_condition_good">Gut</string>
     <string name="classifieds_condition_good_explainer">Es hat einige oberflächliche Gebrauchsspuren</string>
+    <string name="classifieds_condition_fair">Faire</string>
     <string name="classifieds_condition_fair_explainer">Es ist immer noch in akzeptablem und funktionalem Zustand</string>
     <string name="classifieds_category_clothing">Kleidung</string>
     <string name="classifieds_category_accessories">Accessoires</string>
@@ -592,6 +596,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="classifieds_category_books">Bücher</string>
     <string name="classifieds_category_pets">Haustiere</string>
     <string name="classifieds_category_sports">Sport</string>
+    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_art">Kunst</string>
     <string name="classifieds_category_crafts">Handwerk</string>
     <string name="classifieds_category_home">Zuhause</string>
