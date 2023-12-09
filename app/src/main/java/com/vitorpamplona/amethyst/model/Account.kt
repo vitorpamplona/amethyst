@@ -4,8 +4,6 @@ import android.content.res.Resources
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
@@ -15,6 +13,7 @@ import androidx.lifecycle.switchMap
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Client
@@ -132,7 +131,7 @@ class Account(
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
     var reactionChoices: List<String> = DefaultReactions,
     var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PRIVATE,
-    var defaultFileServer: ServersAvailable = ServersAvailable.NOSTR_BUILD,
+    var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
     var defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
     var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     var defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
@@ -711,7 +710,7 @@ class Account(
         }
     }
 
-    fun createHTTPAuthorization(url: String, method: String, body: String? = null, onReady: (HTTPAuthorizationEvent) -> Unit) {
+    fun createHTTPAuthorization(url: String, method: String, body: ByteArray? = null, onReady: (HTTPAuthorizationEvent) -> Unit) {
         if (!isWriteable()) return
 
         HTTPAuthorizationEvent.create(url, method, body, signer, onReady = onReady)
@@ -967,7 +966,13 @@ class Account(
         }
     }
 
-    fun createNip95(byteArray: ByteArray, headerInfo: FileHeader, onReady: (Pair<FileStorageEvent, FileStorageHeaderEvent>) -> Unit) {
+    fun createNip95(
+        byteArray: ByteArray,
+        headerInfo: FileHeader,
+        alt: String?,
+        sensitiveContent: Boolean,
+        onReady: (Pair<FileStorageEvent, FileStorageHeaderEvent>) -> Unit
+    ) {
         if (!isWriteable()) return
 
         FileStorageEvent.create(
@@ -982,8 +987,8 @@ class Account(
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
                 blurhash = headerInfo.blurHash,
-                alt = headerInfo.alt,
-                sensitiveContent = headerInfo.sensitiveContent,
+                alt = alt,
+                sensitiveContent = sensitiveContent,
                 signer = signer
             ) { signedEvent ->
                 onReady(
@@ -993,7 +998,7 @@ class Account(
         }
     }
 
-    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
+    fun consumeAndSendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null): Note? {
         if (!isWriteable()) return null
 
         Client.send(data, relayList = relayList)
@@ -1005,7 +1010,19 @@ class Account(
         return LocalCache.notes[signedEvent.id]
     }
 
-    private fun sendHeader(signedEvent: FileHeaderEvent, relayList: List<Relay>? = null, onReady: (Note) -> Unit) {
+    fun consumeNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent): Note? {
+        LocalCache.consume(data, null)
+        LocalCache.consume(signedEvent, null)
+
+        return LocalCache.notes[signedEvent.id]
+    }
+
+    fun sendNip95(data: FileStorageEvent, signedEvent: FileStorageHeaderEvent, relayList: List<Relay>? = null) {
+        Client.send(data, relayList = relayList)
+        Client.send(signedEvent, relayList = relayList)
+    }
+
+    fun sendHeader(signedEvent: FileHeaderEvent, relayList: List<Relay>? = null, onReady: (Note) -> Unit) {
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
@@ -1014,18 +1031,57 @@ class Account(
         }
     }
 
-    fun sendHeader(headerInfo: FileHeader, relayList: List<Relay>? = null, onReady: (Note) -> Unit) {
+    fun createHeader(
+        imageUrl: String,
+        magnetUri: String?,
+        headerInfo: FileHeader,
+        alt: String?,
+        sensitiveContent: Boolean,
+        originalHash: String? = null,
+        onReady: (FileHeaderEvent) -> Unit
+    ) {
         if (!isWriteable()) return
 
         FileHeaderEvent.create(
-            url = headerInfo.url,
+            url = imageUrl,
+            magnetUri = magnetUri,
             mimeType = headerInfo.mimeType,
             hash = headerInfo.hash,
             size = headerInfo.size.toString(),
             dimensions = headerInfo.dim,
             blurhash = headerInfo.blurHash,
-            alt = headerInfo.alt,
-            sensitiveContent = headerInfo.sensitiveContent,
+            alt = alt,
+            originalHash = originalHash,
+            sensitiveContent = sensitiveContent,
+            signer = signer
+        ) { event ->
+            onReady(event)
+        }
+    }
+
+    fun sendHeader(
+        imageUrl: String,
+        magnetUri: String?,
+        headerInfo: FileHeader,
+        alt: String?,
+        sensitiveContent: Boolean,
+        originalHash: String? = null,
+        relayList: List<Relay>? = null,
+        onReady: (Note) -> Unit
+    ) {
+        if (!isWriteable()) return
+
+        FileHeaderEvent.create(
+            url = imageUrl,
+            magnetUri = magnetUri,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            alt = alt,
+            originalHash = originalHash,
+            sensitiveContent = sensitiveContent,
             signer = signer
         ) { event ->
             sendHeader(event, relayList = relayList, onReady)
@@ -1046,7 +1102,8 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
-        geohash: String? = null
+        geohash: String? = null,
+        nip94attachments: List<Event>? = null
     ) {
         if (!isWriteable()) return
 
@@ -1072,6 +1129,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             directMentions = directMentions,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer
         ) {
             Client.send(it, relayList = relayList)
@@ -1102,7 +1160,8 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         relayList: List<Relay>? = null,
-        geohash: String? = null
+        geohash: String? = null,
+        nip94attachments: List<Event>? = null
     ) {
         if (!isWriteable()) return
 
@@ -1123,6 +1182,7 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer
         ) {
             Client.send(it, relayList = relayList)
@@ -1160,7 +1220,8 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
-        geohash: String? = null
+        geohash: String? = null,
+        nip94attachments: List<Event>? = null
     ) {
         if (!isWriteable()) return
 
@@ -1182,7 +1243,8 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
-            geohash = geohash
+            geohash = geohash,
+            nip94attachments = nip94attachments
         ) {
             Client.send(it, relayList = relayList)
             LocalCache.justConsume(it, null)
@@ -1201,7 +1263,7 @@ class Account(
         }
     }
 
-    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+    fun sendChannelMessage(message: String, toChannel: String, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null, nip94attachments: List<Event>? = null) {
         if (!isWriteable()) return
 
         val repliesToHex = replyTo?.map { it.idHex }
@@ -1216,6 +1278,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer
         ) {
             Client.send(it)
@@ -1223,7 +1286,7 @@ class Account(
         }
     }
 
-    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null) {
+    fun sendLiveMessage(message: String, toChannel: ATag, replyTo: List<Note>?, mentions: List<User>?, zapReceiver: List<ZapSplitSetup>? = null, wantsToMarkAsSensitive: Boolean, zapRaiserAmount: Long? = null, geohash: String? = null, nip94attachments: List<Event>? = null) {
         if (!isWriteable()) return
 
         // val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
@@ -1239,6 +1302,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer
         ) {
             Client.send(it)
@@ -1674,7 +1738,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun changeDefaultFileServer(server: ServersAvailable) {
+    fun changeDefaultFileServer(server: Nip96MediaServers.ServerName) {
         defaultFileServer = server
         live.invalidateData()
         saveable.invalidateData()

@@ -46,7 +46,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ServersAvailable
+import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
@@ -146,7 +146,7 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                         onPost = {
                             onClose()
                             postViewModel.upload(context, relayList)
-                            postViewModel.selectedServer?.let { account.changeDefaultFileServer(it) }
+                            postViewModel.selectedServer?.let { account.changeDefaultFileServer(it.server) }
                         },
                         isActive = postViewModel.canPost()
                     )
@@ -170,26 +170,19 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
     }
 }
 
-fun isNIP94Server(selectedServer: ServersAvailable?): Boolean {
-    return selectedServer == ServersAvailable.NOSTRIMG_NIP_94 ||
-        // selectedServer == ServersAvailable.IMGUR_NIP_94 ||
-        selectedServer == ServersAvailable.NOSTR_BUILD_NIP_94 ||
-        selectedServer == ServersAvailable.NOSTRFILES_DEV_NIP_94 ||
-        selectedServer == ServersAvailable.NOSTRCHECK_ME_NIP_94
-}
-
 @Composable
 fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewModel) {
-    val fileServers = listOf(
-        // Triple(ServersAvailable.IMGUR_NIP_94, stringResource(id = R.string.upload_server_imgur_nip94), stringResource(id = R.string.upload_server_imgur_nip94_explainer)),
-        Triple(ServersAvailable.NOSTRIMG_NIP_94, stringResource(id = R.string.upload_server_nostrimg_nip94), stringResource(id = R.string.upload_server_nostrimg_nip94_explainer)),
-        Triple(ServersAvailable.NOSTR_BUILD_NIP_94, stringResource(id = R.string.upload_server_nostrbuild_nip94), stringResource(id = R.string.upload_server_nostrbuild_nip94_explainer)),
-        Triple(ServersAvailable.NOSTRFILES_DEV_NIP_94, stringResource(id = R.string.upload_server_nostrfilesdev_nip94), stringResource(id = R.string.upload_server_nostrfilesdev_nip94_explainer)),
-        Triple(ServersAvailable.NOSTRCHECK_ME_NIP_94, stringResource(id = R.string.upload_server_nostrcheckme_nip94), stringResource(id = R.string.upload_server_nostrcheckme_nip94_explainer)),
-        Triple(ServersAvailable.NIP95, stringResource(id = R.string.upload_server_relays_nip95), stringResource(id = R.string.upload_server_relays_nip95_explainer))
+    val fileServers = Nip96MediaServers.DEFAULT.map { ServerOption(it, false) } + listOf(
+        ServerOption(
+            Nip96MediaServers.ServerName(
+                "NIP95",
+                stringResource(id = R.string.upload_server_relays_nip95)
+            ),
+            true
+        )
     )
 
-    val fileServerOptions = remember { fileServers.map { TitleExplainer(it.second, it.third) }.toImmutableList() }
+    val fileServerOptions = remember { fileServers.map { TitleExplainer(it.server.name, it.server.baseUrl) }.toImmutableList() }
     val resolver = LocalContext.current.contentResolver
 
     Row(
@@ -252,10 +245,12 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
     ) {
         TextSpinner(
             label = stringResource(id = R.string.file_server),
-            placeholder = fileServers.firstOrNull { it.first == accountViewModel.account.defaultFileServer }?.second ?: fileServers[0].second,
+            placeholder = fileServers.firstOrNull {
+                it.server == accountViewModel.account.defaultFileServer
+            }?.server?.name ?: fileServers[0].server.name,
             options = fileServerOptions,
             onSelect = {
-                postViewModel.selectedServer = fileServers[it].first
+                postViewModel.selectedServer = fileServers[it]
             },
             modifier = Modifier
                 .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
@@ -263,44 +258,40 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
         )
     }
 
-    if (isNIP94Server(postViewModel.selectedServer) ||
-        postViewModel.selectedServer == ServersAvailable.NIP95
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SettingSwitchItem(
-                checked = postViewModel.sensitiveContent,
-                onCheckedChange = { postViewModel.sensitiveContent = it },
-                title = R.string.add_sensitive_content_label,
-                description = R.string.add_sensitive_content_description
-            )
-        }
+        SettingSwitchItem(
+            checked = postViewModel.sensitiveContent,
+            onCheckedChange = { postViewModel.sensitiveContent = it },
+            title = R.string.add_sensitive_content_label,
+            description = R.string.add_sensitive_content_description
+        )
+    }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+    ) {
+        OutlinedTextField(
+            label = { Text(text = stringResource(R.string.content_description)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-        ) {
-            OutlinedTextField(
-                label = { Text(text = stringResource(R.string.content_description)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-                value = postViewModel.alt,
-                onValueChange = { postViewModel.alt = it },
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.content_description_example),
-                        color = MaterialTheme.colorScheme.placeholderText
-                    )
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Sentences
+                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+            value = postViewModel.alt,
+            onValueChange = { postViewModel.alt = it },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.content_description_example),
+                    color = MaterialTheme.colorScheme.placeholderText
                 )
+            },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences
             )
-        }
+        )
     }
 }

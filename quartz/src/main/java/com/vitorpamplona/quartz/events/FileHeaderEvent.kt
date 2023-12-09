@@ -19,6 +19,8 @@ class FileHeaderEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
 
     fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
+    fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }
+
     fun encryptionKey() = tags.firstOrNull { it.size > 2 && it[0] == ENCRYPTION_KEY }?.let { AESGCM(it[1], it[2]) }
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
@@ -43,16 +45,19 @@ class FileHeaderEvent(
         private const val MAGNET_URI = "magnet"
         private const val TORRENT_INFOHASH = "i"
         private const val BLUR_HASH = "blurhash"
+        private const val ORIGINAL_HASH = "ox"
         private const val ALT = "alt"
 
         fun create(
             url: String,
+            magnetUri: String? = null,
             mimeType: String? = null,
             alt: String? = null,
             hash: String? = null,
             size: String? = null,
             dimensions: String? = null,
             blurhash: String? = null,
+            originalHash: String? = null,
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
             encryptionKey: AESGCM? = null,
@@ -63,12 +68,14 @@ class FileHeaderEvent(
         ) {
             val tags = listOfNotNull(
                 arrayOf(URL, url),
-                mimeType?.let { arrayOf(MIME_TYPE, mimeType) },
+                magnetUri?.let { arrayOf(MAGNET_URI, it) },
+                mimeType?.let { arrayOf(MIME_TYPE, it) },
                 alt?.ifBlank { null }?.let { arrayOf(ALT, it) },
                 hash?.let { arrayOf(HASH, it) },
                 size?.let { arrayOf(FILE_SIZE, it) },
                 dimensions?.let { arrayOf(DIMENSION, it) },
                 blurhash?.let { arrayOf(BLUR_HASH, it) },
+                originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
                 magnetURI?.let { arrayOf(MAGNET_URI, it) },
 
                 torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },

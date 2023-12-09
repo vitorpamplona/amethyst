@@ -60,6 +60,7 @@ class PollNoteEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
+            nip94attachments: List<Event>? = null,
             onReady: (PollNoteEvent) -> Unit
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -98,6 +99,11 @@ class PollNoteEvent(
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
+            }
+            nip94attachments?.let {
+                it.forEach {
+                    tags.add(arrayOf("nip94", it.toJson()))
+                }
             }
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)

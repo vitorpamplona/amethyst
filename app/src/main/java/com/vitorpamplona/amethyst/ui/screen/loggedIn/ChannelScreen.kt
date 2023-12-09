@@ -85,12 +85,12 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
@@ -401,24 +401,13 @@ fun EditFieldRow(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     modifier = EditFieldLeadingIconModifier
                 ) {
-                    val fileServer = if (isPrivate) {
-                        // TODO: Make private servers
-                        when (accountViewModel.account.defaultFileServer) {
-                            ServersAvailable.NOSTR_BUILD -> ServersAvailable.NOSTR_BUILD
-                            ServersAvailable.NOSTRIMG -> ServersAvailable.NOSTRIMG
-                            ServersAvailable.NOSTRFILES_DEV -> ServersAvailable.NOSTRFILES_DEV
-                            ServersAvailable.NOSTRCHECK_ME -> ServersAvailable.NOSTRCHECK_ME
-                            ServersAvailable.NOSTR_BUILD_NIP_94 -> ServersAvailable.NOSTR_BUILD
-                            ServersAvailable.NOSTRIMG_NIP_94 -> ServersAvailable.NOSTRIMG
-                            ServersAvailable.NOSTRFILES_DEV_NIP_94 -> ServersAvailable.NOSTRFILES_DEV
-                            ServersAvailable.NOSTRCHECK_ME_NIP_94 -> ServersAvailable.NOSTRCHECK_ME
-                            ServersAvailable.NIP95 -> ServersAvailable.NOSTR_BUILD
-                        }
-                    } else {
-                        accountViewModel.account.defaultFileServer
-                    }
-
-                    channelScreenModel.upload(it, "", false, fileServer, context)
+                    channelScreenModel.upload(
+                        galleryUri = it,
+                        alt = null,
+                        sensitiveContent = false,
+                        server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                        context = context
+                    )
                 }
             },
             colors = TextFieldDefaults.colors(

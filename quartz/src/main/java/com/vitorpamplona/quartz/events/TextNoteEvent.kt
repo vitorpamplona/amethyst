@@ -39,6 +39,7 @@ class TextNoteEvent(
             root: String?,
             directMentions: Set<HexKey>,
             geohash: String? = null,
+            nip94attachments: List<Event>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteEvent) -> Unit
@@ -95,6 +96,11 @@ class TextNoteEvent(
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
+            }
+            nip94attachments?.let {
+                it.forEach {
+                    tags.add(arrayOf("nip94", it.toJson()))
+                }
             }
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)

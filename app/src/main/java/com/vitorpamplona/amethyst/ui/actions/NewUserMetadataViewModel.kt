@@ -184,23 +184,35 @@ class NewUserMetadataViewModel : ViewModel() {
             context.applicationContext,
             onReady = { fileUri, contentType, size ->
                 viewModelScope.launch(Dispatchers.IO) {
-                    ImageUploader(account).uploadImage(
-                        uri = fileUri,
-                        contentType = contentType,
-                        size = size,
-                        server = account.defaultFileServer,
-                        contentResolver = contentResolver,
-                        onSuccess = { imageUrl, mimeType ->
+                    try {
+                        val result = Nip96Uploader(account).uploadImage(
+                            uri = fileUri,
+                            contentType = contentType,
+                            size = size,
+                            alt = null,
+                            sensitiveContent = null,
+                            server = account.defaultFileServer,
+                            contentResolver = contentResolver,
+                            onProgress = { }
+                        )
+
+                        val url = result.tags?.firstOrNull() { it.size > 1 && it[0] == "url" }?.get(1)
+
+                        if (url != null) {
                             onUploading(false)
-                            onUploaded(imageUrl)
-                        },
-                        onError = {
+                            onUploaded(url)
+                        } else {
                             onUploading(false)
                             viewModelScope.launch {
                                 imageUploadingError.emit("Failed to upload the image / video")
                             }
                         }
-                    )
+                    } catch (e: Exception) {
+                        onUploading(false)
+                        viewModelScope.launch {
+                            imageUploadingError.emit("Failed to upload the image / video")
+                        }
+                    }
                 }
             },
             onError = {

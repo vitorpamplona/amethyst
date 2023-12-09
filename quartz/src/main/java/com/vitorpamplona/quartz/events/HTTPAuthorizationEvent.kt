@@ -24,14 +24,14 @@ class HTTPAuthorizationEvent(
         fun create(
             url: String,
             method: String,
-            body: String? = null,
+            file: ByteArray? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (HTTPAuthorizationEvent) -> Unit
         ) {
             var hash = ""
-            body?.let {
-                hash = CryptoUtils.sha256(it.toByteArray()).toHexKey()
+            file?.let {
+                hash = CryptoUtils.sha256(file).toHexKey()
             }
 
             val tags = listOfNotNull(

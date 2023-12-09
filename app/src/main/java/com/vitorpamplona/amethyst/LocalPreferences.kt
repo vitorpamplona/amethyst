@@ -15,13 +15,13 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.hexToByteArray
@@ -264,7 +264,7 @@ object LocalPreferences {
             putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(account.zapAmountChoices))
             putString(PrefKeys.REACTION_CHOICES, Event.mapper.writeValueAsString(account.reactionChoices))
             putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.name)
-            putString(PrefKeys.DEFAULT_FILE_SERVER, account.defaultFileServer.name)
+            putString(PrefKeys.DEFAULT_FILE_SERVER, Event.mapper.writeValueAsString(account.defaultFileServer))
             putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList.value)
             putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList.value)
             putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, account.defaultNotificationFollowList.value)
@@ -427,9 +427,15 @@ object LocalPreferences {
                 LnZapEvent.ZapType.values().firstOrNull() { it.name == serverName }
             } ?: LnZapEvent.ZapType.PUBLIC
 
-            val defaultFileServer = getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
-                ServersAvailable.values().firstOrNull() { it.name == serverName }
-            } ?: ServersAvailable.NOSTR_BUILD
+            val defaultFileServer = try {
+                getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
+                    Event.mapper.readValue<Nip96MediaServers.ServerName>(serverName)
+                } ?: Nip96MediaServers.DEFAULT[0]
+            } catch (e: Exception) {
+                Log.w("LocalPreferences", "Failed to decode saved File Server", e)
+                e.printStackTrace()
+                Nip96MediaServers.DEFAULT[0]
+            }
 
             val zapPaymentRequestServer = try {
                 getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {

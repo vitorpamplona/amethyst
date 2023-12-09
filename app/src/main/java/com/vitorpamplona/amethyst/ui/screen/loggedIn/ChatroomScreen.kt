@@ -65,12 +65,12 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -379,26 +379,14 @@ fun PrivateMessageEditFieldRow(
                             .size(30.dp)
                             .padding(start = 2.dp)
                     ) {
-                        val fileServer = if (isPrivate) {
-                            // TODO: Make private servers
-                            when (accountViewModel.account.defaultFileServer) {
-                                ServersAvailable.NOSTR_BUILD -> ServersAvailable.NOSTR_BUILD
-                                ServersAvailable.NOSTRIMG -> ServersAvailable.NOSTRIMG
-                                ServersAvailable.NOSTRFILES_DEV -> ServersAvailable.NOSTRFILES_DEV
-                                ServersAvailable.NOSTRCHECK_ME -> ServersAvailable.NOSTRCHECK_ME
-
-                                ServersAvailable.NOSTR_BUILD_NIP_94 -> ServersAvailable.NOSTR_BUILD
-                                ServersAvailable.NOSTRIMG_NIP_94 -> ServersAvailable.NOSTRIMG
-                                ServersAvailable.NOSTRFILES_DEV_NIP_94 -> ServersAvailable.NOSTRFILES_DEV
-                                ServersAvailable.NOSTRCHECK_ME_NIP_94 -> ServersAvailable.NOSTRCHECK_ME
-
-                                ServersAvailable.NIP95 -> ServersAvailable.NOSTR_BUILD
-                            }
-                        } else {
-                            accountViewModel.account.defaultFileServer
-                        }
-
-                        channelScreenModel.upload(it, "", false, fileServer, context)
+                        channelScreenModel.upload(
+                            galleryUri = it,
+                            alt = null,
+                            sensitiveContent = false,
+                            isPrivate = isPrivate,
+                            server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                            context = context
+                        )
                     }
 
                     var wantsToActivateNIP24 by remember {

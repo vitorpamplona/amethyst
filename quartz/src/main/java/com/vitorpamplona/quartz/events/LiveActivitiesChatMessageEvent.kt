@@ -56,6 +56,7 @@ class LiveActivitiesChatMessageEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
+            nip94attachments: List<Event>? = null,
             onReady: (LiveActivitiesChatMessageEvent) -> Unit
         ) {
             val content = message
@@ -79,6 +80,11 @@ class LiveActivitiesChatMessageEvent(
             }
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
+            }
+            nip94attachments?.let {
+                it.forEach {
+                    tags.add(arrayOf("nip94", it.toJson()))
+                }
             }
 
             signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)

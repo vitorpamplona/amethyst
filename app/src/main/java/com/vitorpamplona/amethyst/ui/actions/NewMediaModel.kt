@@ -10,14 +10,19 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+
+data class ServerOption(
+    val server: Nip96MediaServers.ServerName,
+    val isNip95: Boolean
+)
 
 @Stable
 open class NewMediaModel : ViewModel() {
@@ -27,7 +32,7 @@ open class NewMediaModel : ViewModel() {
     val imageUploadingError = MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     var mediaType by mutableStateOf<String?>(null)
 
-    var selectedServer by mutableStateOf<ServersAvailable?>(null)
+    var selectedServer by mutableStateOf<ServerOption?>(null)
     var alt by mutableStateOf("")
     var sensitiveContent by mutableStateOf(false)
 
@@ -43,20 +48,7 @@ open class NewMediaModel : ViewModel() {
         this.account = account
         this.galleryUri = uri
         this.mediaType = contentType
-        this.selectedServer = defaultServer()
-
-        // if (selectedServer == ServersAvailable.IMGUR) {
-        //    selectedServer = ServersAvailable.IMGUR_NIP_94
-        // } else
-        if (selectedServer == ServersAvailable.NOSTRIMG) {
-            selectedServer = ServersAvailable.NOSTRIMG_NIP_94
-        } else if (selectedServer == ServersAvailable.NOSTR_BUILD) {
-            selectedServer = ServersAvailable.NOSTR_BUILD_NIP_94
-        } else if (selectedServer == ServersAvailable.NOSTRFILES_DEV) {
-            selectedServer = ServersAvailable.NOSTRFILES_DEV_NIP_94
-        } else if (selectedServer == ServersAvailable.NOSTRCHECK_ME) {
-            selectedServer = ServersAvailable.NOSTRCHECK_ME_NIP_94
-        }
+        this.selectedServer = ServerOption(defaultServer(), false)
     }
 
     fun upload(context: Context, relayList: List<Relay>? = null) {
@@ -76,8 +68,7 @@ open class NewMediaModel : ViewModel() {
                 contentType,
                 context.applicationContext,
                 onReady = { fileUri, contentType, size ->
-
-                    if (selectedServer == ServersAvailable.NIP95) {
+                    if (serverToUse.isNip95) {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Loading"
                         contentResolver.openInputStream(fileUri)?.use {
@@ -95,30 +86,35 @@ open class NewMediaModel : ViewModel() {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Uploading"
                         viewModelScope.launch(Dispatchers.IO) {
-                            ImageUploader(account).uploadImage(
-                                uri = fileUri,
-                                contentType = contentType,
-                                size = size,
-                                server = serverToUse,
-                                contentResolver = contentResolver,
-                                onSuccess = { imageUrl, mimeType ->
-                                    createNIP94Record(
-                                        imageUrl,
-                                        mimeType,
-                                        alt,
-                                        sensitiveContent,
-                                        relayList = relayList
-                                    )
-                                },
-                                onError = {
-                                    isUploadingImage = false
-                                    uploadingPercentage.value = 0.00f
-                                    uploadingDescription.value = null
-                                    viewModelScope.launch {
-                                        imageUploadingError.emit("Failed to upload the image / video")
+                            try {
+                                val result = Nip96Uploader(account).uploadImage(
+                                    uri = fileUri,
+                                    contentType = contentType,
+                                    size = size,
+                                    alt = alt,
+                                    sensitiveContent = if (sensitiveContent) "" else null,
+                                    server = serverToUse.server,
+                                    contentResolver = contentResolver,
+                                    onProgress = { percent: Float ->
+                                        uploadingPercentage.value = 0.2f + (0.2f * percent)
                                     }
+                                )
+
+                                createNIP94Record(
+                                    uploadingResult = result,
+                                    localContentType = contentType,
+                                    alt = alt,
+                                    sensitiveContent = sensitiveContent,
+                                    relayList = relayList
+                                )
+                            } catch (e: Exception) {
+                                isUploadingImage = false
+                                uploadingPercentage.value = 0.00f
+                                uploadingDescription.value = null
+                                viewModelScope.launch {
+                                    imageUploadingError.emit("Failed to upload: ${e.message}")
                                 }
-                            )
+                            }
                         }
                     }
                 },
@@ -142,63 +138,83 @@ open class NewMediaModel : ViewModel() {
         uploadingPercentage.value = 0.0f
 
         alt = ""
-        selectedServer = account?.defaultFileServer
+        selectedServer = ServerOption(defaultServer(), false)
     }
 
     fun canPost(): Boolean {
         return !isUploadingImage && galleryUri != null && selectedServer != null
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    suspend fun createNIP94Record(
+        uploadingResult: Nip96Uploader.PartialEvent,
+        localContentType: String?,
+        alt: String,
+        sensitiveContent: Boolean,
+        relayList: List<Relay>? = null
+    ) {
         uploadingPercentage.value = 0.40f
-        viewModelScope.launch(Dispatchers.IO) {
-            uploadingDescription.value = "Server Processing"
-            // Images don't seem to be ready immediately after upload
+        uploadingDescription.value = "Server Processing"
+        // Images don't seem to be ready immediately after upload
 
-            val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl)
+        val imageUrl = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "url" }?.get(1)
+        val remoteMimeType = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
+        val originalHash = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "ox" }?.get(1)?.ifBlank { null }
+        val dim = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
+        val magnet = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "magnet" }?.get(1)?.ifBlank { null }
 
-            uploadingDescription.value = "Downloading"
-            uploadingPercentage.value = 0.60f
+        if (imageUrl.isNullOrBlank()) {
+            Log.e("ImageDownload", "Couldn't download image from server")
+            cancel()
+            uploadingPercentage.value = 0.00f
+            uploadingDescription.value = null
+            isUploadingImage = false
+            viewModelScope.launch {
+                imageUploadingError.emit("Failed to upload the image / video")
+            }
+            return
+        }
 
-            if (imageData != null) {
-                uploadingPercentage.value = 0.80f
-                uploadingDescription.value = "Hashing"
+        uploadingDescription.value = "Downloading"
+        uploadingPercentage.value = 0.60f
 
-                FileHeader.prepare(
-                    imageData,
-                    imageUrl,
-                    mimeType,
-                    alt,
-                    sensitiveContent,
-                    onReady = {
-                        uploadingPercentage.value = 0.90f
-                        uploadingDescription.value = "Sending"
-                        account?.sendHeader(it, relayList) {
-                            uploadingPercentage.value = 1.00f
-                            isUploadingImage = false
-                            onceUploaded()
-                            cancel()
-                        }
-                    },
-                    onError = {
-                        cancel()
-                        uploadingPercentage.value = 0.00f
-                        uploadingDescription.value = null
+        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl)
+
+        if (imageData != null) {
+            uploadingPercentage.value = 0.80f
+            uploadingDescription.value = "Hashing"
+
+            FileHeader.prepare(
+                data = imageData,
+                mimeType = remoteMimeType ?: localContentType,
+                dimPrecomputed = dim,
+                onReady = {
+                    uploadingPercentage.value = 0.90f
+                    uploadingDescription.value = "Sending"
+                    account?.sendHeader(imageUrl, magnet, it, alt, sensitiveContent, originalHash, relayList) {
+                        uploadingPercentage.value = 1.00f
                         isUploadingImage = false
-                        viewModelScope.launch {
-                            imageUploadingError.emit("Failed to upload the image / video")
-                        }
+                        onceUploaded()
+                        cancel()
                     }
-                )
-            } else {
-                Log.e("ImageDownload", "Couldn't download image from server")
-                cancel()
-                uploadingPercentage.value = 0.00f
-                uploadingDescription.value = null
-                isUploadingImage = false
-                viewModelScope.launch {
-                    imageUploadingError.emit("Failed to upload the image / video")
+                },
+                onError = {
+                    cancel()
+                    uploadingPercentage.value = 0.00f
+                    uploadingDescription.value = null
+                    isUploadingImage = false
+                    viewModelScope.launch {
+                        imageUploadingError.emit("Failed to upload the image / video")
+                    }
                 }
+            )
+        } else {
+            Log.e("ImageDownload", "Couldn't download image from server")
+            cancel()
+            uploadingPercentage.value = 0.00f
+            uploadingDescription.value = null
+            isUploadingImage = false
+            viewModelScope.launch {
+                imageUploadingError.emit("Failed to upload the image / video")
             }
         }
     }
@@ -210,17 +226,15 @@ open class NewMediaModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
-                "",
                 mimeType,
-                alt,
-                sensitiveContent,
+                null,
                 onReady = {
                     uploadingDescription.value = "Signing"
                     uploadingPercentage.value = 0.40f
-                    account?.createNip95(bytes, headerInfo = it) { nip95 ->
+                    account?.createNip95(bytes, headerInfo = it, alt, sensitiveContent) { nip95 ->
                         uploadingDescription.value = "Sending"
                         uploadingPercentage.value = 0.60f
-                        account?.sendNip95(nip95.first, nip95.second, relayList)
+                        account?.consumeAndSendNip95(nip95.first, nip95.second, relayList)
 
                         uploadingPercentage.value = 1.00f
                         isUploadingImage = false
@@ -243,7 +257,7 @@ open class NewMediaModel : ViewModel() {
 
     fun isImage() = mediaType?.startsWith("image")
     fun isVideo() = mediaType?.startsWith("video")
-    fun defaultServer() = account?.defaultFileServer
+    fun defaultServer() = account?.defaultFileServer ?: Nip96MediaServers.DEFAULT[0]
     fun onceUploaded(onceUploaded: () -> Unit) {
         this.onceUploaded = onceUploaded
     }

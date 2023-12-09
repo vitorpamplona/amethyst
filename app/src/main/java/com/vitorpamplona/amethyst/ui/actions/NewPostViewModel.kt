@@ -18,7 +18,6 @@ import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ServersAvailable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
@@ -35,10 +34,14 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileStorageEvent
+import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
+import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -62,6 +65,9 @@ open class NewPostViewModel() : ViewModel() {
 
     var mentions by mutableStateOf<List<User>?>(null)
     var replyTos by mutableStateOf<List<Note>?>(null)
+
+    var nip94attachments by mutableStateOf<List<FileHeaderEvent>>(emptyList())
+    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
@@ -219,11 +225,25 @@ open class NewPostViewModel() : ViewModel() {
 
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
+        nip95attachments.forEach {
+            if (replyTos?.contains(LocalCache.getNoteIfExists(it.second.id)) == true) {
+                account?.sendNip95(it.first, it.second, relayList)
+            }
+        }
+
+        val urls = findURLs(tagger.message)
+        val usedAttachments = nip94attachments.filter {
+            it.urls().intersect(urls).isNotEmpty()
+        }
+        usedAttachments.forEach {
+            account?.sendHeader(it, relayList, { })
+        }
+
         if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
-                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, nip94attachments = usedAttachments)
             } else {
-                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, nip94attachments = usedAttachments)
             }
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
@@ -281,7 +301,8 @@ open class NewPostViewModel() : ViewModel() {
                     wantsToMarkAsSensitive,
                     localZapRaiserAmount,
                     relayList,
-                    geoHash
+                    geoHash,
+                    nip94attachments = usedAttachments
                 )
             } else if (wantsProduct) {
                 account?.sendClassifieds(
@@ -298,7 +319,8 @@ open class NewPostViewModel() : ViewModel() {
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapRaiserAmount = localZapRaiserAmount,
                     relayList = relayList,
-                    geohash = geoHash
+                    geohash = geoHash,
+                    nip94attachments = usedAttachments
                 )
             } else {
                 // adds markers
@@ -322,7 +344,8 @@ open class NewPostViewModel() : ViewModel() {
                     root = rootId,
                     directMentions = tagger.directMentions,
                     relayList = relayList,
-                    geohash = geoHash
+                    geohash = geoHash,
+                    nip94attachments = usedAttachments
                 )
             }
         }
@@ -330,7 +353,15 @@ open class NewPostViewModel() : ViewModel() {
         cancel()
     }
 
-    fun upload(galleryUri: Uri, alt: String, sensitiveContent: Boolean, server: ServersAvailable, context: Context, relayList: List<Relay>? = null) {
+    fun upload(
+        galleryUri: Uri,
+        alt: String?,
+        sensitiveContent: Boolean,
+        isPrivate: Boolean = false,
+        server: ServerOption,
+        context: Context,
+        relayList: List<Relay>? = null
+    ) {
         isUploadingImage = true
         contentToAddUrl = null
 
@@ -343,35 +374,49 @@ open class NewPostViewModel() : ViewModel() {
                 contentType,
                 context.applicationContext,
                 onReady = { fileUri, contentType, size ->
-                    if (server == ServersAvailable.NIP95) {
+                    if (server.isNip95) {
                         contentResolver.openInputStream(fileUri)?.use {
                             createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList)
                         }
                     } else {
                         viewModelScope.launch(Dispatchers.IO) {
-                            ImageUploader(account).uploadImage(
-                                uri = fileUri,
-                                contentType = contentType,
-                                size = size,
-                                server = server,
-                                contentResolver = contentResolver,
-                                onSuccess = { imageUrl, mimeType ->
-                                    if (isNIP94Server(server)) {
-                                        createNIP94Record(imageUrl, mimeType, alt, sensitiveContent)
-                                    } else {
-                                        isUploadingImage = false
-                                        message = TextFieldValue(message.text + "\n" + imageUrl)
-                                        urlPreview = findUrlInMessage()
-                                    }
-                                },
-                                onError = {
-                                    Log.e("ImageUploader", "Failed to upload the image / video", it)
+                            try {
+                                val result = Nip96Uploader(account).uploadImage(
+                                    uri = fileUri,
+                                    contentType = contentType,
+                                    size = size,
+                                    alt = alt,
+                                    sensitiveContent = if (sensitiveContent) "" else null,
+                                    server = server.server,
+                                    contentResolver = contentResolver,
+                                    onProgress = { }
+                                )
+
+                                if (!isPrivate) {
+                                    createNIP94Record(
+                                        uploadingResult = result,
+                                        localContentType = contentType,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent
+                                    )
+                                } else {
+                                    val url = result.tags?.firstOrNull() { it.size > 1 && it[0] == "url" }?.get(1)
+
                                     isUploadingImage = false
-                                    viewModelScope.launch {
-                                        imageUploadingError.emit("Failed to upload the image / video")
-                                    }
+                                    message = TextFieldValue(message.text + "\n" + url)
+                                    urlPreview = findUrlInMessage()
                                 }
-                            )
+                            } catch (e: Exception) {
+                                Log.e(
+                                    "ImageUploader",
+                                    "Failed to upload ${e.message}",
+                                    e
+                                )
+                                isUploadingImage = false
+                                viewModelScope.launch {
+                                    imageUploadingError.emit("Failed to upload: ${e.message}")
+                                }
+                            }
                         }
                     }
                 },
@@ -576,44 +621,66 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun createNIP94Record(imageUrl: String, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            // Images don't seem to be ready immediately after upload
-            FileHeader.prepare(
-                imageUrl,
-                mimeType,
-                alt,
-                sensitiveContent,
-                onReady = {
-                    account?.sendHeader(it, relayList = relayList) { note ->
-                        isUploadingImage = false
+    suspend fun createNIP94Record(
+        uploadingResult: Nip96Uploader.PartialEvent,
+        localContentType: String?,
+        alt: String?,
+        sensitiveContent: Boolean
+    ) {
+        // Images don't seem to be ready immediately after upload
+        val imageUrl = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "url" }?.get(1)
+        val remoteMimeType = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
+        val originalHash = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "ox" }?.get(1)?.ifBlank { null }
+        val dim = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
+        val magnet = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "magnet" }?.get(1)?.ifBlank { null }
 
-                        message = TextFieldValue(message.text + "\nnostr:" + note.toNEvent())
-
-                        urlPreview = findUrlInMessage()
-                    }
-                },
-                onError = {
-                    isUploadingImage = false
-                    viewModelScope.launch {
-                        imageUploadingError.emit("Failed to upload the image / video")
-                    }
-                }
-            )
+        if (imageUrl.isNullOrBlank()) {
+            Log.e("ImageDownload", "Couldn't download image from server")
+            cancel()
+            isUploadingImage = false
+            viewModelScope.launch {
+                imageUploadingError.emit("Failed to upload the image / video")
+            }
+            return
         }
+
+        FileHeader.prepare(
+            fileUrl = imageUrl,
+            mimeType = remoteMimeType ?: localContentType,
+            dimPrecomputed = dim,
+            onReady = { header: FileHeader ->
+                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
+                    isUploadingImage = false
+                    nip94attachments = nip94attachments + event
+                    message = TextFieldValue(message.text + "\n" + imageUrl)
+                    urlPreview = findUrlInMessage()
+                }
+            },
+            onError = {
+                isUploadingImage = false
+                viewModelScope.launch {
+                    imageUploadingError.emit("Failed to upload the image / video")
+                }
+            }
+        )
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    fun createNIP95Record(
+        bytes: ByteArray,
+        mimeType: String?,
+        alt: String?,
+        sensitiveContent: Boolean,
+        relayList: List<Relay>? = null
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
-                "",
                 mimeType,
-                alt,
-                sensitiveContent,
+                null,
                 onReady = {
-                    account?.createNip95(bytes, headerInfo = it) { nip95 ->
-                        val note = nip95.let { it1 -> account?.sendNip95(it1.first, it1.second, relayList = relayList) }
+                    account?.createNip95(bytes, headerInfo = it, alt, sensitiveContent) { nip95 ->
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
                         isUploadingImage = false
 
