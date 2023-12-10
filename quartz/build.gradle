@@ -42,7 +42,7 @@ dependencies {
 
     // LibSodium for XChaCha encryption
     implementation "com.goterl:lazysodium-android:5.1.0@aar"
-    implementation 'net.java.dev.jna:jna:5.13.0@aar'
+    implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
     api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0'
 
