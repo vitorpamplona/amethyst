@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
@@ -102,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -528,7 +530,17 @@ private fun AddedImageFeatures(
     showImage: MutableState<Boolean>
 ) {
     if (!showImage.value) {
-        ImageUrlWithDownloadButton(content.url, showImage)
+        if (content.blurhash != null) {
+            DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+            IconButton(
+                modifier = Modifier.size(Size75dp),
+                onClick = { showImage.value = true }
+            ) {
+                DownloadForOfflineIcon(Size75dp, Color.White)
+            }
+        } else {
+            ImageUrlWithDownloadButton(content.url, showImage)
+        }
     } else {
         var verifiedHash by remember {
             mutableStateOf<Boolean?>(null)

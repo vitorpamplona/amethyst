@@ -78,12 +78,12 @@ fun MessageIcon(modifier: Modifier) {
 }
 
 @Composable
-fun DownloadForOfflineIcon(iconSize: Dp) {
+fun DownloadForOfflineIcon(iconSize: Dp, tint: Color = MaterialTheme.colorScheme.primary) {
     Icon(
         imageVector = Icons.Default.DownloadForOffline,
         null,
         modifier = remember(iconSize) { Modifier.size(iconSize) },
-        tint = MaterialTheme.colorScheme.primary
+        tint = tint
     )
 }
 

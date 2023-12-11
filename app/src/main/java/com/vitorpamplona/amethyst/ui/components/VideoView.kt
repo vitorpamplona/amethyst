@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
+import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
 import com.vitorpamplona.amethyst.ui.note.MuteIcon
@@ -79,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
@@ -180,7 +183,26 @@ fun VideoView(
     }
 
     if (!automaticallyStartPlayback.value) {
-        ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+        if (blurhash != null) {
+            val ratio = aspectRatio(dimensions)
+            val modifier = if (ratio != null && roundedCorner) {
+                Modifier.aspectRatio(ratio)
+            } else {
+                Modifier
+            }
+
+            Box(modifier, contentAlignment = Alignment.Center) {
+                DisplayBlurHash(blurhash, null, ContentScale.Crop, MaterialTheme.colorScheme.imageModifier)
+                IconButton(
+                    modifier = Modifier.size(Size75dp),
+                    onClick = { automaticallyStartPlayback.value = true }
+                ) {
+                    DownloadForOfflineIcon(Size75dp, Color.White)
+                }
+            }
+        } else {
+            ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+        }
     } else {
         val ratio = aspectRatio(dimensions)
         val modifier = if (ratio != null && roundedCorner) {
