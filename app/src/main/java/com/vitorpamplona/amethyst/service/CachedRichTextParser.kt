@@ -104,8 +104,8 @@ class RichTextParser() {
                     url = fullUrl,
                     description = frags["alt"]?.let { URLDecoder.decode(it, "UTF-8") },
                     hash = frags["x"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    dim = frags["blurhash"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    uri = frags["dim"]?.let { URLDecoder.decode(it, "UTF-8") }
+                    blurhash = frags["blurhash"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    dim = frags["dim"]?.let { URLDecoder.decode(it, "UTF-8") }
                 )
             } else {
                 null

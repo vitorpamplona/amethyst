@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,6 +45,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -160,6 +163,8 @@ fun VideoView(
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
+    dimensions: String? = null,
+    blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
@@ -168,22 +173,42 @@ fun VideoView(
 ) {
     val defaultToStart by remember(videoUri) { mutableStateOf(DefaultMutedSetting.value) }
 
-    VideoViewInner(
-        videoUri = videoUri,
-        defaultToStart = defaultToStart,
-        title = title,
-        thumb = thumb,
-        roundedCorner = roundedCorner,
-        topPaddingForControllers = topPaddingForControllers,
-        waveform = waveform,
-        artworkUri = artworkUri,
-        authorName = authorName,
-        nostrUriCallback = nostrUriCallback,
-        alwaysShowVideo = alwaysShowVideo,
-        accountViewModel = accountViewModel,
-        onControllerVisibilityChanged = onControllerVisibilityChanged,
-        onDialog = onDialog
-    )
+    val automaticallyStartPlayback = remember {
+        mutableStateOf<Boolean>(
+            if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback.value
+        )
+    }
+
+    if (!automaticallyStartPlayback.value) {
+        ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+    } else {
+        val ratio = aspectRatio(dimensions)
+        val modifier = if (ratio != null && roundedCorner) {
+            Modifier.aspectRatio(ratio)
+        } else {
+            Modifier
+        }
+
+        Box(modifier) {
+            VideoViewInner(
+                videoUri = videoUri,
+                defaultToStart = defaultToStart,
+                title = title,
+                thumb = thumb,
+                roundedCorner = roundedCorner,
+                topPaddingForControllers = topPaddingForControllers,
+                waveform = waveform,
+                artworkUri = artworkUri,
+                authorName = authorName,
+                dimensions = dimensions,
+                blurhash = blurhash,
+                nostrUriCallback = nostrUriCallback,
+                automaticallyStartPlayback = automaticallyStartPlayback,
+                onControllerVisibilityChanged = onControllerVisibilityChanged,
+                onDialog = onDialog
+            )
+        }
+    }
 }
 
 @Composable
@@ -198,68 +223,61 @@ fun VideoViewInner(
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
+    dimensions: String? = null,
+    blurhash: String? = null,
     nostrUriCallback: String? = null,
-    alwaysShowVideo: Boolean = false,
-    accountViewModel: AccountViewModel,
+    automaticallyStartPlayback: State<Boolean>,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)? = null
 ) {
-    val automaticallyStartPlayback = remember {
-        mutableStateOf<Boolean>(
-            if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback.value
-        )
-    }
-
-    if (!automaticallyStartPlayback.value) {
-        ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
-    } else {
-        VideoPlayerActiveMutex(videoUri) { modifier, activeOnScreen ->
-            val mediaItem = remember(videoUri) {
-                mutableStateOf(
-                    MediaItem.Builder()
-                        .setMediaId(videoUri)
-                        .setUri(videoUri)
-                        .setMediaMetadata(
-                            MediaMetadata.Builder()
-                                .setArtist(authorName?.ifBlank { null })
-                                .setTitle(title?.ifBlank { null } ?: videoUri)
-                                .setArtworkUri(
-                                    try {
-                                        if (artworkUri != null) {
-                                            Uri.parse(artworkUri)
-                                        } else {
-                                            null
-                                        }
-                                    } catch (e: Exception) {
+    VideoPlayerActiveMutex(videoUri) { modifier, activeOnScreen ->
+        val mediaItem = remember(videoUri) {
+            mutableStateOf(
+                MediaItem.Builder()
+                    .setMediaId(videoUri)
+                    .setUri(videoUri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setArtist(authorName?.ifBlank { null })
+                            .setTitle(title?.ifBlank { null } ?: videoUri)
+                            .setArtworkUri(
+                                try {
+                                    if (artworkUri != null) {
+                                        Uri.parse(artworkUri)
+                                    } else {
                                         null
                                     }
-                                )
-                                .build()
-                        )
-                        .build()
-                )
-            }
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            )
+                            .build()
+                    )
+                    .build()
+            )
+        }
 
-            GetVideoController(
-                mediaItem = mediaItem,
-                videoUri = videoUri,
-                defaultToStart = defaultToStart,
-                nostrUriCallback = nostrUriCallback
-            ) { controller, keepPlaying ->
-                RenderVideoPlayer(
-                    controller = controller,
-                    thumbData = thumb,
-                    roundedCorner = roundedCorner,
-                    topPaddingForControllers = topPaddingForControllers,
-                    waveform = waveform,
-                    keepPlaying = keepPlaying,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
-                    activeOnScreen = activeOnScreen,
-                    modifier = modifier,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    onDialog = onDialog
-                )
-            }
+        GetVideoController(
+            mediaItem = mediaItem,
+            videoUri = videoUri,
+            defaultToStart = defaultToStart,
+            nostrUriCallback = nostrUriCallback
+        ) { controller, keepPlaying ->
+            RenderVideoPlayer(
+                controller = controller,
+                thumbData = thumb,
+                roundedCorner = roundedCorner,
+                dimensions = dimensions,
+                blurhash = blurhash,
+                topPaddingForControllers = topPaddingForControllers,
+                waveform = waveform,
+                keepPlaying = keepPlaying,
+                automaticallyStartPlayback = automaticallyStartPlayback,
+                activeOnScreen = activeOnScreen,
+                modifier = modifier,
+                onControllerVisibilityChanged = onControllerVisibilityChanged,
+                onDialog = onDialog
+            )
         }
     }
 }
@@ -534,6 +552,8 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     roundedCorner: Boolean,
+    dimensions: String? = null,
+    blurhash: String? = null,
     topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
@@ -586,6 +606,8 @@ private fun RenderVideoPlayer(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     )
+                    setBackgroundColor(Color.Transparent.toArgb())
+                    setShutterBackgroundColor(Color.Transparent.toArgb())
                     controllerAutoShow = false
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
@@ -607,6 +629,19 @@ private fun RenderVideoPlayer(
                     )
                 }
             }
+        }
+
+        val ratio = remember {
+            aspectRatio(dimensions)
+        }
+
+        if (ratio != null) {
+            DisplayBlurHash(
+                blurhash,
+                null,
+                ContentScale.Crop,
+                myModifier.aspectRatio(ratio)
+            )
         }
 
         AndroidView(

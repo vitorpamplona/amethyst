@@ -134,7 +134,7 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
         }
         Log.d("Rendering Metrics", "All Galeries: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed - ")
 
-        Row(remember { Modifier.fillMaxWidth() }) {
+        Row(Modifier.fillMaxWidth()) {
             Spacer(modifier = WidthAuthorPictureModifierWithPadding)
 
             val (value, elapsed) = measureTimedValue {

@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
@@ -77,6 +79,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -145,7 +148,8 @@ class ZoomableUrlVideo(
     dim: String? = null,
     uri: String? = null,
     val artworkUri: String? = null,
-    val authorName: String? = null
+    val authorName: String? = null,
+    val blurhash: String? = null
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
 @Immutable
@@ -246,6 +250,8 @@ fun ZoomableContentView(
             title = content.description,
             artworkUri = content.artworkUri,
             authorName = content.authorName,
+            dimensions = content.dim,
+            blurhash = content.blurhash,
             roundedCorner = roundedCorner,
             nostrUriCallback = content.uri,
             onDialog = { dialogOpen = true },
@@ -569,8 +575,9 @@ private fun AddedImageFeatures(
     }
 }
 
-private fun aspectRatio(dim: String?): Float? {
+fun aspectRatio(dim: String?): Float? {
     if (dim == null) return null
+    if (dim == "0x0") return null
 
     val parts = dim.split("x")
     if (parts.size != 2) return null
@@ -578,7 +585,12 @@ private fun aspectRatio(dim: String?): Float? {
     return try {
         val width = parts[0].toFloat()
         val height = parts[1].toFloat()
-        width / height
+
+        if (width < 0.1 || height < 0.1) {
+            null
+        } else {
+            width / height
+        }
     } catch (e: Exception) {
         null
     }
@@ -664,7 +676,7 @@ private fun InlineLoadingIcon() =
     }
 
 @Composable
-private fun DisplayBlurHash(
+fun DisplayBlurHash(
     blurhash: String?,
     description: String?,
     contentScale: ContentScale,
@@ -694,7 +706,6 @@ fun ZoomableImageDialog(
     accountViewModel: AccountViewModel
 ) {
     val orientation = LocalConfiguration.current.orientation
-    println("This Log only exists to force orientation listener $orientation")
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -704,6 +715,8 @@ fun ZoomableImageDialog(
         )
     ) {
         val view = LocalView.current
+        val insets = ViewCompat.getRootWindowInsets(view)
+
         val orientation = LocalConfiguration.current.orientation
         println("This Log only exists to force orientation listener $orientation")
 
@@ -810,6 +823,7 @@ private fun DialogContent(
         Row(
             modifier = Modifier
                 .padding(10.dp)
+                .statusBarsPadding().systemBarsPadding()
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -947,6 +961,10 @@ private fun RenderImageOrVideo(
     onToggleControllerVisibility: (() -> Unit)? = null,
     accountViewModel: AccountViewModel
 ) {
+    val automaticallyStartPlayback = remember {
+        mutableStateOf<Boolean>(true)
+    }
+
     if (content is ZoomableUrlImage) {
         val mainModifier = Modifier
             .fillMaxSize()
@@ -968,16 +986,15 @@ private fun RenderImageOrVideo(
         )
     } else if (content is ZoomableUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-            VideoView(
+            VideoViewInner(
                 videoUri = content.url,
                 title = content.description,
                 artworkUri = content.artworkUri,
                 authorName = content.authorName,
                 roundedCorner = roundedCorner,
                 topPaddingForControllers = topPaddingForControllers,
-                onControllerVisibilityChanged = onControllerVisibilityChanged,
-                accountViewModel = accountViewModel,
-                alwaysShowVideo = true
+                automaticallyStartPlayback = automaticallyStartPlayback,
+                onControllerVisibilityChanged = onControllerVisibilityChanged
             )
         }
     } else if (content is ZoomableLocalImage) {
@@ -1002,16 +1019,15 @@ private fun RenderImageOrVideo(
     } else if (content is ZoomableLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
-                VideoView(
+                VideoViewInner(
                     videoUri = it.toUri().toString(),
                     title = content.description,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
                     roundedCorner = roundedCorner,
                     topPaddingForControllers = topPaddingForControllers,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    accountViewModel = accountViewModel,
-                    alwaysShowVideo = true
+                    automaticallyStartPlayback = automaticallyStartPlayback,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged
                 )
             }
         }
