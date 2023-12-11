@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -427,6 +428,7 @@ object LocalCache {
     }
 
     fun consume(event: MuteListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    fun consume(event: FileServersEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
     fun consume(event: PeopleListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
     private fun consume(event: AdvertisedRelayListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
     private fun consume(event: CommunityDefinitionEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
@@ -1548,6 +1550,7 @@ object LocalCache {
                 is SealedGossipEvent -> consume(event, relay)
 
                 is FileHeaderEvent -> consume(event, relay)
+                is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)
                 is GiftWrapEvent -> consume(event, relay)

@@ -51,6 +51,7 @@ class EventFactory {
             SealedGossipEvent.kind -> SealedGossipEvent(id, pubKey, createdAt, tags, content, sig)
 
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FileServersEvent.kind -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageEvent.kind -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             GenericRepostEvent.kind -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)

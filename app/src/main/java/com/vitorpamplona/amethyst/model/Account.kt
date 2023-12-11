@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GeneralListEvent
@@ -1610,12 +1611,26 @@ class Account(
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
+    fun getFileServersNote(): AddressableNote {
+        val aTag = ATag(
+            FileServersEvent.kind,
+            userProfile().pubkeyHex,
+            "",
+            null
+        )
+        return LocalCache.getOrCreateAddressableNote(aTag)
+    }
+
     fun getBlockList(): PeopleListEvent? {
         return getBlockListNote().event as? PeopleListEvent
     }
 
     fun getMuteList(): MuteListEvent? {
         return getMuteListNote().event as? MuteListEvent
+    }
+
+    fun getFileServersList(): FileServersEvent? {
+        return getFileServersNote().event as? FileServersEvent
     }
 
     fun hideWord(word: String) {
