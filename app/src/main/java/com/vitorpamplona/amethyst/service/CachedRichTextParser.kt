@@ -91,7 +91,6 @@ class RichTextParser() {
             val removedParamsFromUrl = removeQueryParams(fullUrl)
             if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                 val frags = URI(fullUrl).fragments()
-                println("Image $fullUrl $frags")
                 ZoomableUrlImage(
                     url = fullUrl,
                     description = frags["alt"]?.let { URLDecoder.decode(it, "UTF-8") },

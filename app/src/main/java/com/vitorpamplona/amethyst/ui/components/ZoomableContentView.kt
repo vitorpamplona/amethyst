@@ -389,7 +389,6 @@ private fun UrlImageView(
         }
 
         if (showImage.value) {
-            /*
             AsyncImage(
                 model = content.url,
                 contentDescription = content.description,
@@ -399,8 +398,6 @@ private fun UrlImageView(
                     painterState.value = it
                 }
             )
-
-             */
         }
 
         AddedImageFeatures(
