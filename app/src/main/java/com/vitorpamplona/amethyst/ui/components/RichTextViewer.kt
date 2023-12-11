@@ -95,6 +95,16 @@ val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "
 val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
 val hashTagsPattern: Pattern = Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 
+fun removeQueryParams(fullUrl: String): String {
+    return if (fullUrl.contains("?")) {
+        fullUrl.split("?")[0].lowercase()
+    } else if (fullUrl.contains("#")) {
+        fullUrl.split("#")[0].lowercase()
+    } else {
+        fullUrl
+    }
+}
+
 fun isValidURL(url: String?): Boolean {
     return try {
         URL(url).toURI()

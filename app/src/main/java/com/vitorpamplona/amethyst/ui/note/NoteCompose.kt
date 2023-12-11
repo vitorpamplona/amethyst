@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
+import com.vitorpamplona.amethyst.ui.components.removeQueryParams
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -3454,7 +3455,7 @@ fun FileHeaderDisplay(note: Note, roundedCorner: Boolean, accountViewModel: Acco
         val hash = event.hash()
         val dimensions = event.dimensions()
         val description = event.alt() ?: event.content
-        val isImage = imageExtensions.any { fullUrl.split("?")[0].lowercase().endsWith(it) }
+        val isImage = imageExtensions.any { removeQueryParams(fullUrl).lowercase().endsWith(it) }
         val uri = note.toNostrUri()
 
         mutableStateOf<ZoomableContent>(

@@ -119,7 +119,13 @@ class ClassifiedsEvent(
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
             findURLs(message).forEach {
-                val removedParamsFromUrl = it.split("?")[0].lowercase()
+                val removedParamsFromUrl =  if (it.contains("?"))
+                    it.split("?")[0].lowercase()
+                else if (it.contains("#"))
+                    it.split("#")[0].lowercase()
+                else
+                    it
+
                 if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                     tags.add(arrayOf("image", it))
                 }
@@ -136,7 +142,7 @@ class ClassifiedsEvent(
             }
             nip94attachments?.let {
                 it.forEach {
-                    tags.add(arrayOf("nip94", it.toJson()))
+                    //tags.add(arrayOf("nip94", it.toJson()))
                 }
             }
 

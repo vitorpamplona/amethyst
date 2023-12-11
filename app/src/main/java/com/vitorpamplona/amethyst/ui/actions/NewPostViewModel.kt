@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -376,7 +377,7 @@ open class NewPostViewModel() : ViewModel() {
                 onReady = { fileUri, contentType, size ->
                     if (server.isNip95) {
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList)
+                            createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent)
                         }
                     } else {
                         viewModelScope.launch(Dispatchers.IO) {
@@ -400,11 +401,12 @@ open class NewPostViewModel() : ViewModel() {
                                         sensitiveContent = sensitiveContent
                                     )
                                 } else {
-                                    val url = result.tags?.firstOrNull() { it.size > 1 && it[0] == "url" }?.get(1)
-
-                                    isUploadingImage = false
-                                    message = TextFieldValue(message.text + "\n" + url)
-                                    urlPreview = findUrlInMessage()
+                                    noNIP94(
+                                        uploadingResult = result,
+                                        localContentType = contentType,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent
+                                    )
                                 }
                             } catch (e: Exception) {
                                 Log.e(
@@ -652,7 +654,8 @@ open class NewPostViewModel() : ViewModel() {
                 account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
                     isUploadingImage = false
                     nip94attachments = nip94attachments + event
-                    message = TextFieldValue(message.text + "\n" + imageUrl)
+                    val contentWarning = if (sensitiveContent) "" else null
+                    message = TextFieldValue(message.text + "\n" + addInlineMetadataAsNIP54(imageUrl, header.dim, header.mimeType, alt, header.blurHash, header.hash, contentWarning))
                     urlPreview = findUrlInMessage()
                 }
             },
@@ -665,12 +668,76 @@ open class NewPostViewModel() : ViewModel() {
         )
     }
 
+    suspend fun noNIP94(
+        uploadingResult: Nip96Uploader.PartialEvent,
+        localContentType: String?,
+        alt: String?,
+        sensitiveContent: Boolean
+    ) {
+        // Images don't seem to be ready immediately after upload
+        val imageUrl = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "url" }?.get(1)
+        val remoteMimeType = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
+        val dim = uploadingResult.tags?.firstOrNull() { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
+
+        if (imageUrl.isNullOrBlank()) {
+            Log.e("ImageDownload", "Couldn't download image from server")
+            cancel()
+            isUploadingImage = false
+            viewModelScope.launch {
+                imageUploadingError.emit("Server failed to return a url")
+            }
+            return
+        }
+
+        FileHeader.prepare(
+            fileUrl = imageUrl,
+            mimeType = remoteMimeType ?: localContentType,
+            dimPrecomputed = dim,
+            onReady = { header: FileHeader ->
+                isUploadingImage = false
+                val contentWarning = if (sensitiveContent) "" else null
+                message = TextFieldValue(message.text + "\n" + addInlineMetadataAsNIP54(imageUrl, header.dim, header.mimeType, alt, header.blurHash, header.hash, contentWarning))
+                urlPreview = findUrlInMessage()
+            },
+            onError = {
+                isUploadingImage = false
+                viewModelScope.launch {
+                    imageUploadingError.emit("Failed to upload the image / video")
+                }
+            }
+        )
+    }
+
+    fun addInlineMetadataAsNIP54(
+        imageUrl: String,
+        dim: String?,
+        m: String?,
+        alt: String?,
+        blurHash: String?,
+        x: String?,
+        sensitiveContent: String?
+    ): String {
+        val extension = listOfNotNull(
+            m?.ifBlank { null }?.let { "m=${URLEncoder.encode(it, "utf-8")}" },
+            dim?.ifBlank { null }?.let { "dim=${URLEncoder.encode(it, "utf-8")}" },
+            alt?.ifBlank { null }?.let { "alt=${URLEncoder.encode(it, "utf-8")}" },
+            blurHash?.ifBlank { null }?.let { "blurhash=${URLEncoder.encode(it, "utf-8")}" },
+            x?.ifBlank { null }?.let { "x=${URLEncoder.encode(it, "utf-8")}" },
+            sensitiveContent?.ifBlank { null }?.let { "content-warning=${URLEncoder.encode(it, "utf-8")}" }
+        ).joinToString("&")
+
+        return if (imageUrl.contains("#")) {
+            "$imageUrl&$extension"
+        } else {
+            "$imageUrl#$extension"
+        }
+    }
+
     fun createNIP95Record(
         bytes: ByteArray,
         mimeType: String?,
         alt: String?,
-        sensitiveContent: Boolean,
-        relayList: List<Relay>? = null
+        sensitiveContent: Boolean
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(

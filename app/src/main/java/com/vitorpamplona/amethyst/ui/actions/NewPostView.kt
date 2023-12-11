@@ -460,8 +460,14 @@ fun NewPostView(
                                 if (myUrlPreview != null) {
                                     Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                         if (isValidURL(myUrlPreview)) {
-                                            val removedParamsFromUrl =
+                                            val removedParamsFromUrl = if (myUrlPreview.contains("?")) {
                                                 myUrlPreview.split("?")[0].lowercase()
+                                            } else if (myUrlPreview.contains("#")) {
+                                                myUrlPreview.split("#")[0].lowercase()
+                                            } else {
+                                                myUrlPreview
+                                            }
+
                                             if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                                 AsyncImage(
                                                     model = myUrlPreview,

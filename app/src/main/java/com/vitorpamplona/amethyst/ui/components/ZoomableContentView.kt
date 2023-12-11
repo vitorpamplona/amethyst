@@ -182,7 +182,7 @@ class ZoomableLocalVideo(
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
 fun figureOutMimeType(fullUrl: String): ZoomableContent {
-    val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+    val removedParamsFromUrl = removeQueryParams(fullUrl)
     val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
     val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
 
@@ -389,6 +389,7 @@ private fun UrlImageView(
         }
 
         if (showImage.value) {
+            /*
             AsyncImage(
                 model = content.url,
                 contentDescription = content.description,
@@ -398,6 +399,8 @@ private fun UrlImageView(
                     painterState.value = it
                 }
             )
+
+             */
         }
 
         AddedImageFeatures(

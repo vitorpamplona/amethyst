@@ -93,7 +93,7 @@ class MarkdownParser {
         content.split('\n').forEach { paragraph ->
             paragraph.split(' ').forEach { word: String ->
                 if (isValidURL(word)) {
-                    val removedParamsFromUrl = word.split("?")[0].lowercase()
+                    val removedParamsFromUrl = removeQueryParams(word)
                     if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                         returnContent += "![]($word) "
                     } else {

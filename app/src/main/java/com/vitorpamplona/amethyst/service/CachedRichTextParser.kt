@@ -11,6 +11,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.hashTagsPattern
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
+import com.vitorpamplona.amethyst.ui.components.removeQueryParams
 import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -21,6 +22,8 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
+import java.net.URI
+import java.net.URLDecoder
 import java.util.regex.Pattern
 
 @Immutable
@@ -85,11 +88,26 @@ class RichTextParser() {
         }
 
         val imagesForPager = urlSet.mapNotNull { fullUrl ->
-            val removedParamsFromUrl = fullUrl.split("?")[0].lowercase()
+            val removedParamsFromUrl = removeQueryParams(fullUrl)
             if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                ZoomableUrlImage(fullUrl)
+                val frags = URI(fullUrl).fragments()
+                println("Image $fullUrl $frags")
+                ZoomableUrlImage(
+                    url = fullUrl,
+                    description = frags["alt"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    hash = frags["x"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    blurhash = frags["blurhash"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    dim = frags["dim"]?.let { URLDecoder.decode(it, "UTF-8") }
+                )
             } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                ZoomableUrlVideo(fullUrl)
+                val frags = URI(fullUrl).fragments()
+                ZoomableUrlVideo(
+                    url = fullUrl,
+                    description = frags["alt"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    hash = frags["x"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    dim = frags["blurhash"]?.let { URLDecoder.decode(it, "UTF-8") },
+                    uri = frags["dim"]?.let { URLDecoder.decode(it, "UTF-8") }
+                )
             } else {
                 null
             }
@@ -108,6 +126,16 @@ class RichTextParser() {
             emojiMap.toImmutableMap(),
             segments
         )
+    }
+
+    private fun URI.fragments(): Map<String, String> {
+        if (rawFragment == null) return emptyMap()
+        return rawFragment.split('&').associate {
+            val parts = it.split('=')
+            val name = parts.firstOrNull() ?: ""
+            val value = parts.getOrNull(1) ?: ""
+            Pair(name, value)
+        }
     }
 
     private fun findTextSegments(content: String, images: Set<String>, urls: Set<String>, emojis: Map<String, String>, tags: ImmutableListOfLists<String>): ImmutableList<ParagraphState> {

@@ -99,7 +99,7 @@ class TextNoteEvent(
             }
             nip94attachments?.let {
                 it.forEach {
-                    tags.add(arrayOf("nip94", it.toJson()))
+                    //tags.add(arrayOf("nip94", it.toJson()))
                 }
             }
 
