@@ -9,6 +9,7 @@ import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import com.vitorpamplona.amethyst.ui.actions.Nip96Uploader
 import com.vitorpamplona.quartz.crypto.KeyPair
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -32,7 +33,9 @@ class ImageUploadTesting {
         val bytes = Base64.getDecoder().decode(imagePng)
         val inputStream = bytes.inputStream()
 
-        val result = Nip96Uploader(Account(KeyPair())).uploadImage(
+        val account = Account(KeyPair())
+
+        val result = Nip96Uploader(account).uploadImage(
             inputStream,
             bytes.size.toLong(),
             contentTypePng,
@@ -44,9 +47,11 @@ class ImageUploadTesting {
         )
 
         val url = result.tags!!.first() { it[0] == "url" }.get(1)
-        val size = result.tags!!.firstOrNull() { it[0] == "size" }?.get(1)
-        val dim = result.tags!!.firstOrNull() { it[0] == "dim" }?.get(1)
-        val hash = result.tags!!.firstOrNull() { it[0] == "x" }?.get(1)
+        val size = result.tags!!.firstOrNull() { it[0] == "size" }?.get(1)?.ifBlank { null }
+        val dim = result.tags!!.firstOrNull() { it[0] == "dim" }?.get(1)?.ifBlank { null }
+        val hash = result.tags!!.firstOrNull() { it[0] == "x" }?.get(1)?.ifBlank { null }
+        val contentType = result.tags!!.first() { it[0] == "m" }.get(1)
+        val ox = result.tags!!.first() { it[0] == "ox" }.get(1)
 
         Assert.assertTrue(url.startsWith("http"))
 
@@ -74,6 +79,10 @@ class ImageUploadTesting {
                 fail("It should not fail")
             }
         )
+
+        // delay(1000)
+
+        // assertTrue(Nip96Uploader(account).delete(ox, contentType, serverInfo))
     }
 
     @Test()

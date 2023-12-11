@@ -154,6 +154,42 @@ class Nip96Uploader(val account: Account?) {
         }
     }
 
+    suspend fun delete(
+        hash: String,
+        contentType: String?,
+        server: Nip96Retriever.ServerInfo
+    ): Boolean {
+        val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+
+        val client = HttpClient.getHttpClient()
+
+        val requestBuilder = Request.Builder()
+
+        nip98Header(server.apiUrl)?.let {
+            requestBuilder.addHeader("Authorization", it)
+        }
+
+        println(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
+
+        val request = requestBuilder
+            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+            .url(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
+            .delete()
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                response.body.use { body ->
+                    val str = body.string()
+                    val result = parseDeleteResults(str)
+                    return result.status == "success"
+                }
+            } else {
+                throw RuntimeException("Error Uploading image: ${response.code}")
+            }
+        }
+    }
+
     private suspend fun waitProcessing(
         result: Nip96Result,
         server: Nip96Retriever.ServerInfo,
@@ -213,6 +249,16 @@ class Nip96Uploader(val account: Account?) {
             val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
             onReady("Nostr $encodedNIP98Event")
         }
+    }
+
+    data class DeleteResult(
+        val status: String,
+        val message: String
+    )
+
+    private fun parseDeleteResults(body: String): DeleteResult {
+        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        return mapper.readValue(body, DeleteResult::class.java)
     }
 
     data class Nip96Result(
