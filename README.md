@@ -204,7 +204,7 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 
 # Screenshots
 
-| Home Feed                                 | Messages                                     | Live Streams                                    | Notifications                                          |
+| FollowFeeds                              | ChatsGroup                              | LiveStreams                                    | Notifications                                          |
 |-------------------------------------------|----------------------------------------------|-------------------------------------------------|--------------------------------------------------------|
 | ![Home Feed](./docs/screenshots/home.png) | ![Messages](./docs/screenshots/messages.png) | ![Live Streams](./docs/screenshots/replies.png) | ![Notifications](./docs/screenshots/notifications.png) |
 
