@@ -182,26 +182,36 @@ fun VideoView(
         )
     }
 
-    if (!automaticallyStartPlayback.value) {
-        if (blurhash != null) {
-            val ratio = aspectRatio(dimensions)
-            val modifier = if (ratio != null && roundedCorner) {
-                Modifier.aspectRatio(ratio)
-            } else {
-                Modifier
-            }
-
-            Box(modifier, contentAlignment = Alignment.Center) {
-                DisplayBlurHash(blurhash, null, ContentScale.Crop, MaterialTheme.colorScheme.imageModifier)
-                IconButton(
-                    modifier = Modifier.size(Size75dp),
-                    onClick = { automaticallyStartPlayback.value = true }
-                ) {
-                    DownloadForOfflineIcon(Size75dp, Color.White)
-                }
-            }
+    if (blurhash == null) {
+        val ratio = aspectRatio(dimensions)
+        val modifier = if (ratio != null && roundedCorner) {
+            Modifier.aspectRatio(ratio)
         } else {
-            ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+            Modifier
+        }
+
+        Box(modifier) {
+            if (!automaticallyStartPlayback.value) {
+                ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+            } else {
+                VideoViewInner(
+                    videoUri = videoUri,
+                    defaultToStart = defaultToStart,
+                    title = title,
+                    thumb = thumb,
+                    roundedCorner = roundedCorner,
+                    topPaddingForControllers = topPaddingForControllers,
+                    waveform = waveform,
+                    artworkUri = artworkUri,
+                    authorName = authorName,
+                    dimensions = dimensions,
+                    blurhash = blurhash,
+                    nostrUriCallback = nostrUriCallback,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged,
+                    onDialog = onDialog
+                )
+            }
         }
     } else {
         val ratio = aspectRatio(dimensions)
@@ -211,24 +221,34 @@ fun VideoView(
             Modifier
         }
 
-        Box(modifier) {
-            VideoViewInner(
-                videoUri = videoUri,
-                defaultToStart = defaultToStart,
-                title = title,
-                thumb = thumb,
-                roundedCorner = roundedCorner,
-                topPaddingForControllers = topPaddingForControllers,
-                waveform = waveform,
-                artworkUri = artworkUri,
-                authorName = authorName,
-                dimensions = dimensions,
-                blurhash = blurhash,
-                nostrUriCallback = nostrUriCallback,
-                automaticallyStartPlayback = automaticallyStartPlayback,
-                onControllerVisibilityChanged = onControllerVisibilityChanged,
-                onDialog = onDialog
-            )
+        Box(modifier, contentAlignment = Alignment.Center) {
+            if (!automaticallyStartPlayback.value) {
+                DisplayBlurHash(blurhash, null, ContentScale.Crop, MaterialTheme.colorScheme.imageModifier)
+                IconButton(
+                    modifier = Modifier.size(Size75dp),
+                    onClick = { automaticallyStartPlayback.value = true }
+                ) {
+                    DownloadForOfflineIcon(Size75dp, Color.White)
+                }
+            } else {
+                VideoViewInner(
+                    videoUri = videoUri,
+                    defaultToStart = defaultToStart,
+                    title = title,
+                    thumb = thumb,
+                    roundedCorner = roundedCorner,
+                    topPaddingForControllers = topPaddingForControllers,
+                    waveform = waveform,
+                    artworkUri = artworkUri,
+                    authorName = authorName,
+                    dimensions = dimensions,
+                    blurhash = blurhash,
+                    nostrUriCallback = nostrUriCallback,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged,
+                    onDialog = onDialog
+                )
+            }
         }
     }
 }
