@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -489,13 +490,31 @@ private fun AddedImageFeatures(
     verifiedModifier: Modifier,
     showImage: MutableState<Boolean>
 ) {
+    val ratio = remember {
+        aspectRatio(content.dim)
+    }
+
     if (!showImage.value) {
-        ImageUrlWithDownloadButton(content.uri, showImage)
+        if (content.blurhash != null && ratio != null) {
+            DisplayBlurHash(content.blurhash, content.description, ContentScale.Crop, myModifier.aspectRatio(ratio))
+            IconButton(
+                modifier = Modifier.size(Size75dp),
+                onClick = { showImage.value = true }
+            ) {
+                DownloadForOfflineIcon(Size75dp, Color.White)
+            }
+        } else {
+            ImageUrlWithDownloadButton(content.uri, showImage)
+        }
     } else {
         when (painter.value) {
             null, is AsyncImagePainter.State.Loading -> {
                 if (content.blurhash != null) {
-                    DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                    if (ratio != null) {
+                        DisplayBlurHash(content.blurhash, content.description, ContentScale.Crop, myModifier.aspectRatio(ratio))
+                    } else {
+                        DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                    }
                 } else {
                     FlowRow() {
                         DisplayUrlWithLoadingSymbol(content)
@@ -529,9 +548,13 @@ private fun AddedImageFeatures(
     verifiedModifier: Modifier,
     showImage: MutableState<Boolean>
 ) {
+    val ratio = remember {
+        aspectRatio(content.dim)
+    }
+
     if (!showImage.value) {
-        if (content.blurhash != null) {
-            DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+        if (content.blurhash != null && ratio != null) {
+            DisplayBlurHash(content.blurhash, content.description, ContentScale.Crop, myModifier.aspectRatio(ratio))
             IconButton(
                 modifier = Modifier.size(Size75dp),
                 onClick = { showImage.value = true }
@@ -549,7 +572,11 @@ private fun AddedImageFeatures(
         when (painter.value) {
             null, is AsyncImagePainter.State.Loading -> {
                 if (content.blurhash != null) {
-                    DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                    if (ratio != null) {
+                        DisplayBlurHash(content.blurhash, content.description, ContentScale.Crop, myModifier.aspectRatio(ratio))
+                    } else {
+                        DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                    }
                 } else {
                     FlowRow(Modifier.fillMaxWidth()) {
                         DisplayUrlWithLoadingSymbol(content)
