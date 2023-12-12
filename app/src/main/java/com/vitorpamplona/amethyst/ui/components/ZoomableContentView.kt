@@ -496,7 +496,14 @@ private fun AddedImageFeatures(
 
     if (!showImage.value) {
         if (content.blurhash != null && ratio != null) {
-            DisplayBlurHash(content.blurhash, content.description, ContentScale.Crop, myModifier.aspectRatio(ratio))
+            DisplayBlurHash(
+                content.blurhash,
+                content.description,
+                ContentScale.Crop,
+                myModifier.aspectRatio(ratio).clickable {
+                    showImage.value = true
+                }
+            )
             IconButton(
                 modifier = Modifier.size(Size75dp),
                 onClick = { showImage.value = true }
@@ -554,7 +561,14 @@ private fun AddedImageFeatures(
 
     if (!showImage.value) {
         if (content.blurhash != null && ratio != null) {
-            DisplayBlurHash(content.blurhash, content.description, ContentScale.Crop, myModifier.aspectRatio(ratio))
+            DisplayBlurHash(
+                content.blurhash,
+                content.description,
+                ContentScale.Crop,
+                myModifier.aspectRatio(ratio).clickable {
+                    showImage.value = true
+                }
+            )
             IconButton(
                 modifier = Modifier.size(Size75dp),
                 onClick = { showImage.value = true }
