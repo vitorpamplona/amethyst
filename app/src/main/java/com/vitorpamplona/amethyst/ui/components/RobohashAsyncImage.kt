@@ -90,12 +90,12 @@ fun RobohashFallbackAsyncImage(
         }
 
         if (isBase64) {
-            val painter = rememberAsyncImagePainter(
+            val base64Painter = rememberAsyncImagePainter(
                 model = Base64Requester.imageRequest(context, model)
             )
 
             Image(
-                painter = painter,
+                painter = base64Painter,
                 contentDescription = null,
                 modifier = modifier,
                 alignment = alignment,
@@ -127,33 +127,6 @@ fun RobohashFallbackAsyncImage(
             colorFilter = colorFilter
         )
     }
-}
-
-@Composable
-fun RobohashAsyncImageProxy(
-    robot: String,
-    model: String?,
-    contentDescription: String?,
-    modifier: Modifier = Modifier,
-    alignment: Alignment = Alignment.Center,
-    contentScale: ContentScale = ContentScale.Fit,
-    alpha: Float = DefaultAlpha,
-    colorFilter: ColorFilter? = null,
-    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
-    loadProfilePicture: Boolean
-) {
-    RobohashFallbackAsyncImage(
-        robot = robot,
-        model = model,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        alignment = alignment,
-        contentScale = contentScale,
-        alpha = alpha,
-        colorFilter = colorFilter,
-        filterQuality = filterQuality,
-        loadProfilePicture = loadProfilePicture
-    )
 }
 
 object Base64Requester {

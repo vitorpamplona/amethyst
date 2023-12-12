@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.qrcode
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -27,6 +28,12 @@ import com.google.zxing.qrcode.encoder.Encoder
 import com.google.zxing.qrcode.encoder.QRCode
 
 const val QR_MARGIN_PX = 100f
+
+@Preview
+@Composable
+fun QrCodeDrawerPreview() {
+    QrCodeDrawer("Test QR data")
+}
 
 @Composable
 fun QrCodeDrawer(contents: String, modifier: Modifier = Modifier) {

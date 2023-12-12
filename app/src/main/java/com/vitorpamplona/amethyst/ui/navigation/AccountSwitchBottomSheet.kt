@@ -48,7 +48,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -220,7 +220,7 @@ private fun ActiveMarker(acc: AccountInfo, accountViewModel: AccountViewModel) {
 private fun AccountPicture(user: User, loadProfilePicture: Boolean) {
     val profilePicture by user.live().profilePictureChanges.observeAsState()
 
-    RobohashAsyncImageProxy(
+    RobohashFallbackAsyncImage(
         robot = remember(user) { user.pubkeyHex },
         model = profilePicture,
         contentDescription = stringResource(R.string.profile_image),

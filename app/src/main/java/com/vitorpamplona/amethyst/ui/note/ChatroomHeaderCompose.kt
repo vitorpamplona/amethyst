@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -450,7 +450,7 @@ fun ChannelName(
 ) {
     ChannelName(
         channelPicture = {
-            RobohashAsyncImageProxy(
+            RobohashFallbackAsyncImage(
                 robot = channelIdHex,
                 model = channelPicture,
                 contentDescription = stringResource(R.string.channel_image),

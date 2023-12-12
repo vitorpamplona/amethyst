@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.qrcode
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -35,10 +36,31 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
-import com.vitorpamplona.amethyst.ui.qrcode.NIP19QrCodeScanner
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
+
+@Preview
+@Composable
+fun ShowQRDialogPreview() {
+    val user = User("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+
+    user.info = UserMetadata().apply {
+        name = "My Name"
+        picture = "Picture"
+        banner = "http://banner.com/test"
+        website = "http://mywebsite.com/test"
+        about = "This is the about me"
+    }
+
+    ShowQRDialog(
+        user = user,
+        loadProfilePicture = false,
+        onScan = {},
+        onClose = {}
+    )
+}
 
 @Composable
 fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Unit, onClose: () -> Unit) {
@@ -48,16 +70,10 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background)
-                    .fillMaxSize()
-            ) {
+        Surface {
+            Column {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
+                    modifier = Modifier.padding(10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -65,15 +81,16 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
                 }
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 10.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
                     verticalArrangement = Arrangement.SpaceAround
                 ) {
                     if (presenting) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                                RobohashAsyncImageProxy(
+                        Column() {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RobohashFallbackAsyncImage(
                                     robot = user.pubkeyHex,
                                     model = user.profilePicture(),
                                     contentDescription = stringResource(R.string.profile_image),
@@ -86,7 +103,10 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
                                     loadProfilePicture = loadProfilePicture
                                 )
                             }
-                            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
+                            ) {
                                 CreateTextWithEmoji(
                                     text = user.bestDisplayName() ?: user.bestUsername() ?: "",
                                     tags = user.info?.latestMetadata?.tags?.toImmutableListOfLists(),
@@ -98,25 +118,16 @@ fun ShowQRDialog(user: User, loadProfilePicture: Boolean, onScan: (String) -> Un
 
                         Row(
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Size35dp)
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = Size35dp)
                         ) {
                             QrCodeDrawer("nostr:${user.pubkeyNpub()}")
                         }
 
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 30.dp)
-                        ) {
+                        Row(modifier = Modifier.padding(horizontal = 30.dp)) {
                             Button(
                                 onClick = { presenting = false },
                                 shape = RoundedCornerShape(Size35dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp),
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
                                 colors = ButtonDefaults
                                     .buttonColors(
                                         containerColor = MaterialTheme.colorScheme.primary

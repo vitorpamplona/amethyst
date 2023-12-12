@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -336,7 +336,7 @@ fun InnerUserPicture(
         accountViewModel.settings.showProfilePictures.value
     }
 
-    RobohashAsyncImageProxy(
+    RobohashFallbackAsyncImage(
         robot = userHex,
         model = userPicture,
         contentDescription = stringResource(id = R.string.profile_image),

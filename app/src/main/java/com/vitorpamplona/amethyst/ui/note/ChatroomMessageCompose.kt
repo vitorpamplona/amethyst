@@ -48,7 +48,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -784,7 +784,7 @@ private fun UserIcon(
     nav: (String) -> Unit,
     route: String
 ) {
-    RobohashAsyncImageProxy(
+    RobohashFallbackAsyncImage(
         robot = pubkeyHex,
         model = userProfilePicture,
         contentDescription = stringResource(id = R.string.profile_image),

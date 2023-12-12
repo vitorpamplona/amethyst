@@ -93,7 +93,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -699,7 +699,7 @@ fun ShortChannelHeader(
             }
         } else {
             channel.profilePicture()?.let {
-                RobohashAsyncImageProxy(
+                RobohashFallbackAsyncImage(
                     robot = channel.idHex,
                     model = it,
                     contentDescription = stringResource(R.string.profile_image),

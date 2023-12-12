@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
@@ -529,7 +529,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
 
     WatchUserMetadata(author) { baseUserPicture ->
         // Crossfade(targetState = baseUserPicture) { userPicture ->
-        RobohashAsyncImageProxy(
+        RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
             contentDescription = stringResource(id = R.string.profile_image),

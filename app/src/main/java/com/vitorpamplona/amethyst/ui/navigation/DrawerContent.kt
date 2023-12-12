@@ -67,8 +67,9 @@ import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
+import com.vitorpamplona.amethyst.ui.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
@@ -204,7 +205,7 @@ fun ProfileContentTemplate(
         }
 
         Column(modifier = modifier) {
-            RobohashAsyncImageProxy(
+            RobohashFallbackAsyncImage(
                 robot = profilePubHex,
                 model = profilePicture,
                 contentDescription = stringResource(id = R.string.profile_image),

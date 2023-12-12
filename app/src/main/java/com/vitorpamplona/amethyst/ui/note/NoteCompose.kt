@@ -99,7 +99,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.MeasureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -739,7 +739,7 @@ fun ShortCommunityHeader(baseNote: AddressableNote, accountViewModel: AccountVie
 
     Row(verticalAlignment = CenterVertically) {
         noteEvent.image()?.let {
-            RobohashAsyncImageProxy(
+            RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
                 model = it,
                 contentDescription = stringResource(R.string.profile_image),
@@ -2896,7 +2896,7 @@ private fun ChannelNotePicture(baseChannel: Channel, loadProfilePicture: Boolean
     }
 
     Box(Size30Modifier) {
-        RobohashAsyncImageProxy(
+        RobohashFallbackAsyncImage(
             robot = baseChannel.idHex,
             model = model,
             contentDescription = stringResource(R.string.group_picture),

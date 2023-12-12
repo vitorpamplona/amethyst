@@ -81,7 +81,7 @@ import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImageProxy
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.AmethystIcon
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -526,7 +526,7 @@ private fun LoggedInUserPictureDrawer(
     IconButton(
         onClick = onClick
     ) {
-        RobohashAsyncImageProxy(
+        RobohashFallbackAsyncImage(
             robot = pubkeyHex,
             model = profilePicture,
             contentDescription = stringResource(id = R.string.profile_image),
