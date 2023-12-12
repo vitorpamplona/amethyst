@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import kotlinx.coroutines.Dispatchers

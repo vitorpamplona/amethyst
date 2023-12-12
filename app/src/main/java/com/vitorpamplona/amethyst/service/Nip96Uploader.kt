@@ -1,4 +1,4 @@
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.service
 
 import android.content.ContentResolver
 import android.net.Uri
@@ -10,10 +10,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
-import com.vitorpamplona.amethyst.service.Nip96Retriever
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -252,8 +248,8 @@ class Nip96Uploader(val account: Account?) {
     }
 
     data class DeleteResult(
-        val status: String,
-        val message: String
+        val status: String?,
+        val message: String?
     )
 
     private fun parseDeleteResults(body: String): DeleteResult {
@@ -262,7 +258,7 @@ class Nip96Uploader(val account: Account?) {
     }
 
     data class Nip96Result(
-        val status: String,
+        val status: String? = null,
         val message: String? = null,
         @JsonProperty("processing_url")
         val processingUrl: String? = null,

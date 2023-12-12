@@ -21,6 +21,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
+import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.service.relays.Relay

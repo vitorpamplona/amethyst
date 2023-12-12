@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.MastodonIdentity
