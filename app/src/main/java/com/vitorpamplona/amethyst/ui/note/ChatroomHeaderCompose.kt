@@ -2,19 +2,14 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Divider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,16 +46,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
-import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.emptyLineItemModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -118,7 +107,7 @@ private fun ChatroomPrivateMessages(
         }
     }
 
-    Crossfade(userRoom) { room ->
+    Crossfade(userRoom, label = "ChatroomPrivateMessages") { room ->
         if (room != null) {
             UserRoomCompose(baseNote, room, accountViewModel, nav)
         } else {
@@ -200,7 +189,7 @@ private fun ChannelRoomCompose(
             ChannelTitleWithLabelInfo(channelName, modifier)
         },
         channelLastTime = remember(note) { note.createdAt() },
-        channelLastContent = remember(note) { "$authorName: $description" },
+        channelLastContent = remember(note, authorState) { "$authorName: $description" },
         hasNewMessages = hasNewMessages,
         loadProfilePicture = automaticallyShowProfilePicture,
         onClick = { nav(route) }
@@ -473,40 +462,25 @@ fun ChannelName(
     hasNewMessages: MutableState<Boolean>,
     onClick: () -> Unit
 ) {
-    Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
-        Row(modifier = ChatHeadlineBorders) {
-            Column(Size55Modifier) {
-                channelPicture()
-            }
-
-            Spacer(modifier = DoubleHorzSpacer)
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.SpaceAround
+    ChatHeaderLayout(
+        channelPicture = channelPicture,
+        firstRow = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    FirstRow(channelTitle, channelLastTime, remember { Modifier.weight(1f) })
-                }
-
-                Spacer(modifier = Height4dpModifier)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SecondRow(channelLastContent, hasNewMessages, remember { Modifier.weight(1f) })
-                }
+                FirstRow(channelTitle, channelLastTime, remember { Modifier.weight(1f) })
             }
-        }
-
-        Divider(
-            modifier = StdTopPadding,
-            thickness = DividerThickness
-        )
-    }
+        },
+        secondRow = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SecondRow(channelLastContent, hasNewMessages, remember { Modifier.weight(1f) })
+            }
+        },
+        onClick = onClick
+    )
 }
 
 @Composable
