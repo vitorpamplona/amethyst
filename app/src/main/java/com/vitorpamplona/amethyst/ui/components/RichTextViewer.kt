@@ -101,7 +101,7 @@ fun removeQueryParams(fullUrl: String): String {
     } else if (fullUrl.contains("#")) {
         fullUrl.split("#")[0].lowercase()
     } else {
-        fullUrl
+        fullUrl.lowercase()
     }
 }
 
