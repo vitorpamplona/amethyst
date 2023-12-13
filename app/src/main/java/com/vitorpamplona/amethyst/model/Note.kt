@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.model
 
+import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
@@ -41,7 +42,6 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
@@ -93,7 +93,7 @@ open class Note(val idHex: String) {
     var zapPayments = mapOf<Note, Note?>()
         private set
 
-    var relays = listOf<String>()
+    var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         private set
 
     var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
@@ -110,13 +110,13 @@ open class Note(val idHex: String) {
                     host.id,
                     host.pubKey,
                     host.kind(),
-                    relays.firstOrNull()
+                    relays.firstOrNull()?.url
                 )
             } else {
-                Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+                Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
             }
         } else {
-            Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull())
+            Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
         }
     }
 
@@ -271,7 +271,7 @@ open class Note(val idHex: String) {
         zaps = mapOf<Note, Note?>()
         zapPayments = mapOf<Note, Note?>()
         zapsAmount = BigDecimal.ZERO
-        relays = listOf<String>()
+        relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         lastReactionsDownloadTime = emptyMap()
 
         liveSet?.innerReplies?.invalidateData()
@@ -428,15 +428,15 @@ open class Note(val idHex: String) {
     }
 
     @Synchronized
-    fun addRelaySync(url: String) {
-        if (url !in relays) {
-            relays = relays + url
+    fun addRelaySync(briefInfo: RelayBriefInfoCache.RelayBriefInfo) {
+        if (briefInfo !in relays) {
+            relays = relays + briefInfo
         }
     }
 
     fun addRelay(relay: Relay) {
-        if (relay.url !in relays) {
-            addRelaySync(relay.url)
+        if (relay.brief !in relays) {
+            addRelaySync(relay.brief)
             liveSet?.innerRelays?.invalidateData()
         }
     }
@@ -870,14 +870,8 @@ class NoteLiveSet(u: Note) {
         it.note.boosts.size
     }.distinctUntilChanged()
 
-    val boostList = innerBoosts.map {
-        it.note.boosts.toImmutableList()
-    }.distinctUntilChanged()
-
     val relayInfo = innerRelays.map {
-        it.note.relays.map {
-            RelayBriefInfo(it)
-        }.toImmutableList()
+        it.note.relays
     }
 
     val content = innerMetadata.map {
@@ -897,8 +891,7 @@ class NoteLiveSet(u: Note) {
             hasReactions.hasObservers() ||
             replyCount.hasObservers() ||
             reactionCount.hasObservers() ||
-            boostCount.hasObservers() ||
-            boostList.hasObservers()
+            boostCount.hasObservers()
     }
 
     fun destroy() {
@@ -986,9 +979,22 @@ class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveDat
 @Immutable
 class NoteState(val note: Note)
 
-@Immutable
-data class RelayBriefInfo(
-    val url: String,
-    val displayUrl: String = url.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/").intern(),
-    val favIcon: String = "https://$displayUrl/favicon.ico".intern()
-)
+object RelayBriefInfoCache {
+    val cache = LruCache<String, RelayBriefInfo?>(50)
+
+    @Immutable
+    data class RelayBriefInfo(
+        val url: String,
+        val displayUrl: String = url.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/").intern(),
+        val favIcon: String = "https://$displayUrl/favicon.ico".intern()
+    )
+
+    fun get(url: String): RelayBriefInfo {
+        val info = cache[url]
+        if (info != null) return info
+
+        val newInfo = RelayBriefInfo(url)
+        cache.put(url, newInfo)
+        return newInfo
+    }
+}

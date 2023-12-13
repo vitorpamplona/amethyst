@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.RelayBriefInfo
+import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -43,7 +43,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 @Composable
 fun RelayInformationDialog(
     onClose: () -> Unit,
-    relayBriefInfo: RelayBriefInfo,
+    relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
     relayInfo: RelayInformation,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit

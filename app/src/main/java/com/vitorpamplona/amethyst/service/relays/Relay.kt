@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.HttpClient
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -23,11 +24,13 @@ enum class FeedType {
 val COMMON_FEED_TYPES = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
 
 class Relay(
-    var url: String,
-    var read: Boolean = true,
-    var write: Boolean = true,
-    var activeTypes: Set<FeedType> = FeedType.values().toSet()
+    val url: String,
+    val read: Boolean = true,
+    val write: Boolean = true,
+    val activeTypes: Set<FeedType> = FeedType.values().toSet()
 ) {
+    val brief = RelayBriefInfoCache.get(url)
+
     companion object {
         // waits 3 minutes to reconnect once things fail
         const val RECONNECTING_IN_SECONDS = 60 * 3

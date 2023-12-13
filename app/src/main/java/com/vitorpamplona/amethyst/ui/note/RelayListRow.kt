@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.RelayBriefInfo
+import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -65,11 +64,20 @@ fun RenderRelayList(baseNote: Note, expanded: MutableState<Boolean>, accountView
     val noteRelays by baseNote.live().relayInfo.observeAsState()
 
     FlowRow(StdStartPadding, verticalArrangement = Arrangement.Center) {
-        val relaysToDisplay = remember(noteRelays, expanded.value) {
-            if (expanded.value) noteRelays else noteRelays?.take(3)?.toImmutableList()
-        }
-        relaysToDisplay?.forEach {
-            RenderRelay(it, accountViewModel, nav)
+        if (expanded.value) {
+            noteRelays?.forEach {
+                RenderRelay(it, accountViewModel, nav)
+            }
+        } else {
+            noteRelays?.getOrNull(0)?.let {
+                RenderRelay(it, accountViewModel, nav)
+            }
+            noteRelays?.getOrNull(1)?.let {
+                RenderRelay(it, accountViewModel, nav)
+            }
+            noteRelays?.getOrNull(2)?.let {
+                RenderRelay(it, accountViewModel, nav)
+            }
         }
     }
 }
@@ -105,7 +113,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun RenderRelay(relay: RelayBriefInfo, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
+fun RenderRelay(relay: RelayBriefInfoCache.RelayBriefInfo, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
 
     if (relayInfo != null) {

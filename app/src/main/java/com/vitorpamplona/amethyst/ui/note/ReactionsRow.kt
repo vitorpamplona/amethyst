@@ -406,10 +406,10 @@ private fun WatchBoostsAndRenderGallery(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val boostsEvents by baseNote.live().boostList.observeAsState()
+    val boostsEvents by baseNote.live().boosts.observeAsState()
 
     boostsEvents?.let {
-        if (it.isNotEmpty()) {
+        if (it.note.boosts.isNotEmpty()) {
             RenderBoostGallery(
                 it,
                 nav,

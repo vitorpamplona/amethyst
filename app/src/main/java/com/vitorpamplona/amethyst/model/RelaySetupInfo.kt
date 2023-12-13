@@ -15,5 +15,5 @@ data class RelaySetupInfo(
     val feedTypes: Set<FeedType>,
     val paidRelay: Boolean = false
 ) {
-    val briefInfo: RelayBriefInfo = RelayBriefInfo(url)
+    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
 }

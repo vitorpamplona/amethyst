@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
@@ -304,6 +305,31 @@ fun RenderBoostGallery(
 }
 
 @Composable
+fun RenderBoostGallery(
+    noteToGetBoostEvents: NoteState,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = NotificationIconModifierSmaller
+        ) {
+            RepostedIcon(
+                modifier = remember {
+                    Modifier
+                        .size(Size19dp)
+                        .align(Alignment.TopEnd)
+                }
+            )
+        }
+
+        AuthorGallery(noteToGetBoostEvents, nav, accountViewModel)
+    }
+}
+
+@Composable
 fun MapZaps(
     zaps: ImmutableList<CombinedZap>,
     accountViewModel: AccountViewModel,
@@ -485,6 +511,22 @@ fun AuthorGallery(
     Column(modifier = StdStartPadding) {
         FlowRow() {
             authorNotes.forEach { note ->
+                BoxedAuthor(note, nav, accountViewModel)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AuthorGallery(
+    noteToGetBoostEvents: NoteState,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel
+) {
+    Column(modifier = StdStartPadding) {
+        FlowRow() {
+            noteToGetBoostEvents.note.boosts.forEach { note ->
                 BoxedAuthor(note, nav, accountViewModel)
             }
         }

@@ -57,7 +57,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.RelayBriefInfo
+import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Constants
@@ -329,7 +329,7 @@ fun ServerConfig(
             accountViewModel.retrieveRelayDocument(
                 item.url,
                 onInfo = {
-                    relayInfo = RelayInfoDialog(RelayBriefInfo(item.url), it)
+                    relayInfo = RelayInfoDialog(RelayBriefInfoCache.RelayBriefInfo(item.url), it)
                 },
                 onError = { url, errorCode, exceptionMessage ->
                     val msg = when (errorCode) {

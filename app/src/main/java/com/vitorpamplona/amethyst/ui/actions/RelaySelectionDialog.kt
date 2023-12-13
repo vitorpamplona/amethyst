@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.RelayBriefInfo
+import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -37,12 +37,12 @@ import kotlinx.collections.immutable.toImmutableList
 
 data class RelayList(
     val relay: Relay,
-    val relayInfo: RelayBriefInfo,
+    val relayInfo: RelayBriefInfoCache.RelayBriefInfo,
     val isSelected: Boolean
 )
 
 data class RelayInfoDialog(
-    val relayBriefInfo: RelayBriefInfo,
+    val relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
     val relayInfo: RelayInformation
 )
 
@@ -61,7 +61,7 @@ fun RelaySelectionDialog(
             accountViewModel.account.activeWriteRelays().map {
                 RelayList(
                     relay = it,
-                    relayInfo = RelayBriefInfo(it.url),
+                    relayInfo = RelayBriefInfoCache.RelayBriefInfo(it.url),
                     isSelected = preSelectedList.any { relay -> it.url == relay.url }
                 )
             }
@@ -167,7 +167,12 @@ fun RelaySelectionDialog(
                                 accountViewModel.retrieveRelayDocument(
                                     item.relay.url,
                                     onInfo = {
-                                        relayInfo = RelayInfoDialog(RelayBriefInfo(item.relay.url), it)
+                                        relayInfo = RelayInfoDialog(
+                                            RelayBriefInfoCache.RelayBriefInfo(
+                                                item.relay.url
+                                            ),
+                                            it
+                                        )
                                     },
                                     onError = { url, errorCode, exceptionMessage ->
                                         val msg = when (errorCode) {

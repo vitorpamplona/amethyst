@@ -88,7 +88,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.RelayBriefInfo
+import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
@@ -1746,7 +1746,7 @@ fun DisplayRelaySet(
 
     val relays by remember(baseNote) {
         mutableStateOf(
-            noteEvent.relays().map { RelayBriefInfo(it) }.toImmutableList()
+            noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList()
         )
     }
 
