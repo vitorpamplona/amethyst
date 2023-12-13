@@ -30,17 +30,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.em
@@ -95,7 +96,7 @@ val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "
 val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
 val hashTagsPattern: Pattern = Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 
-fun removeQueryParams(fullUrl: String): String {
+fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
     return if (fullUrl.contains("?")) {
         fullUrl.split("?")[0].lowercase()
     } else if (fullUrl.contains("#")) {
@@ -170,59 +171,59 @@ private fun RenderRegular(
         )
     }
 
-    MeasureSpaceWidth() { spaceWidth ->
-        Column() {
-            if (canPreview) {
-                // FlowRow doesn't work well with paragraphs. So we need to split them
-                state.paragraphs.forEach { paragraph ->
-                    val direction = if (paragraph.isRTL) {
-                        LayoutDirection.Rtl
-                    } else {
-                        LayoutDirection.Ltr
-                    }
+    val spaceWidth = measureSpaceWidth(textStyle)
 
-                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                        FlowRow(
-                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                            horizontalArrangement = Arrangement.spacedBy(spaceWidth)
-                        ) {
-                            paragraph.words.forEach { word ->
-                                RenderWordWithPreview(
-                                    word,
-                                    state,
-                                    backgroundColor,
-                                    textStyle,
-                                    accountViewModel,
-                                    nav
-                                )
-                            }
+    Column() {
+        if (canPreview) {
+            // FlowRow doesn't work well with paragraphs. So we need to split them
+            state.paragraphs.forEach { paragraph ->
+                val direction = if (paragraph.isRTL) {
+                    LayoutDirection.Rtl
+                } else {
+                    LayoutDirection.Ltr
+                }
+
+                CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                    FlowRow(
+                        modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                        horizontalArrangement = Arrangement.spacedBy(spaceWidth)
+                    ) {
+                        paragraph.words.forEach { word ->
+                            RenderWordWithPreview(
+                                word,
+                                state,
+                                backgroundColor,
+                                textStyle,
+                                accountViewModel,
+                                nav
+                            )
                         }
                     }
                 }
-            } else {
-                // FlowRow doesn't work well with paragraphs. So we need to split them
-                state.paragraphs.forEach { paragraph ->
-                    val direction = if (paragraph.isRTL) {
-                        LayoutDirection.Rtl
-                    } else {
-                        LayoutDirection.Ltr
-                    }
+            }
+        } else {
+            // FlowRow doesn't work well with paragraphs. So we need to split them
+            state.paragraphs.forEach { paragraph ->
+                val direction = if (paragraph.isRTL) {
+                    LayoutDirection.Rtl
+                } else {
+                    LayoutDirection.Ltr
+                }
 
-                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start)
-                        ) {
-                            paragraph.words.forEach { word ->
-                                RenderWordWithoutPreview(
-                                    word,
-                                    state,
-                                    backgroundColor,
-                                    textStyle,
-                                    accountViewModel,
-                                    nav
-                                )
-                            }
+                CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                        modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start)
+                    ) {
+                        paragraph.words.forEach { word ->
+                            RenderWordWithoutPreview(
+                                word,
+                                state,
+                                backgroundColor,
+                                textStyle,
+                                accountViewModel,
+                                nav
+                            )
                         }
                     }
                 }
@@ -232,17 +233,15 @@ private fun RenderRegular(
 }
 
 @Composable
-fun MeasureSpaceWidth(
-    content: @Composable (measuredWidth: Dp) -> Unit
-) {
-    SubcomposeLayout { constraints ->
-        val measuredWidth = subcompose("viewToMeasure", { Text(" ") })[0].measure(Constraints()).width.toDp()
+fun measureSpaceWidth(textStyle: TextStyle): Dp {
+    val fontFamilyResolver = LocalFontFamilyResolver.current
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
 
-        val contentPlaceable = subcompose("content") {
-            content(measuredWidth)
-        }[0].measure(constraints)
-        layout(contentPlaceable.width, contentPlaceable.height) {
-            contentPlaceable.place(0, 0)
+    return remember(fontFamilyResolver, density, layoutDirection, textStyle) {
+        val widthPx = TextMeasurer(fontFamilyResolver, density, layoutDirection, 1).measure(" ", textStyle).size.width
+        with(density) {
+            widthPx.toDp()
         }
     }
 }
@@ -567,7 +566,7 @@ private fun RenderHashtag(
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.onBackground
-    val hashtagIcon = remember(segment.hashtag) {
+    val hashtagIcon: HashtagIcon? = remember(segment.hashtag) {
         checkForHashtagWithIcon(segment.hashtag, primary)
     }
 

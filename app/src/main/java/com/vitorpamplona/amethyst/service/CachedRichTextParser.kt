@@ -11,7 +11,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.hashTagsPattern
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
-import com.vitorpamplona.amethyst.ui.components.removeQueryParams
+import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
 import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -88,7 +88,7 @@ class RichTextParser() {
         }
 
         val imagesForPager = urlSet.mapNotNull { fullUrl ->
-            val removedParamsFromUrl = removeQueryParams(fullUrl)
+            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
             if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                 val frags = URI(fullUrl).fragments()
                 ZoomableUrlImage(

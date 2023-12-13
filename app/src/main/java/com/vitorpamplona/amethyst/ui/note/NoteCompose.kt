@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
-import com.vitorpamplona.amethyst.ui.components.MeasureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -113,7 +112,8 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
-import com.vitorpamplona.amethyst.ui.components.removeQueryParams
+import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -3024,19 +3024,19 @@ private fun DisplayQuoteAuthor(
         }
     }
 
-    MeasureSpaceWidth {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(it), verticalArrangement = Arrangement.Center) {
-            userBase?.let { userBase ->
-                LoadAndDisplayUser(userBase, nav)
-            }
+    val spaceWidth = measureSpaceWidth(textStyle = LocalTextStyle.current)
 
-            url?.let { url ->
-                LoadAndDisplayUrl(url)
-            }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(spaceWidth), verticalArrangement = Arrangement.Center) {
+        userBase?.let { userBase ->
+            LoadAndDisplayUser(userBase, nav)
+        }
 
-            postAddress?.let { address ->
-                LoadAndDisplayPost(address, accountViewModel, nav)
-            }
+        url?.let { url ->
+            LoadAndDisplayUrl(url)
+        }
+
+        postAddress?.let { address ->
+            LoadAndDisplayPost(address, accountViewModel, nav)
         }
     }
 }
@@ -3455,7 +3455,7 @@ fun FileHeaderDisplay(note: Note, roundedCorner: Boolean, accountViewModel: Acco
         val hash = event.hash()
         val dimensions = event.dimensions()
         val description = event.alt() ?: event.content
-        val isImage = imageExtensions.any { removeQueryParams(fullUrl).lowercase().endsWith(it) }
+        val isImage = imageExtensions.any { removeQueryParamsForExtensionComparison(fullUrl).lowercase().endsWith(it) }
         val uri = note.toNostrUri()
 
         mutableStateOf<ZoomableContent>(
