@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,15 +79,17 @@ fun ExpandableRichTextViewer(
     }
 
     Box {
-        RichTextViewer(
-            text,
-            canPreview,
-            modifier.align(Alignment.TopStart),
-            tags,
-            backgroundColor,
-            accountViewModel,
-            nav
-        )
+        Crossfade(text, label = "ExpandableRichTextViewer") {
+            RichTextViewer(
+                it,
+                canPreview,
+                modifier.align(Alignment.TopStart),
+                tags,
+                backgroundColor,
+                accountViewModel,
+                nav
+            )
+        }
 
         if (content.length > whereToCut && !showFullText) {
             Row(

@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NIP30Parser
+import com.vitorpamplona.amethyst.service.Nip30CustomEmoji
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -550,7 +550,7 @@ fun CreateClickableTextWithEmoji(
 }
 
 suspend fun assembleAnnotatedList(text: String, emojis: Map<String, String>): ImmutableList<Renderable> {
-    return NIP30Parser().buildArray(text).map {
+    return Nip30CustomEmoji().buildArray(text).map {
         val url = emojis[it]
         if (url != null) {
             ImageUrlType(url)

@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.service.InvoiceSegment
 import com.vitorpamplona.amethyst.service.LinkSegment
 import com.vitorpamplona.amethyst.service.PhoneSegment
 import com.vitorpamplona.amethyst.service.RegularTextSegment
+import com.vitorpamplona.amethyst.service.RichTextParser
 import com.vitorpamplona.amethyst.service.RichTextViewerState
 import com.vitorpamplona.amethyst.service.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.service.Segment
@@ -104,6 +105,12 @@ fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
     } else {
         fullUrl.lowercase()
     }
+}
+
+fun isImageOrVideoUrl(url: String): Boolean {
+    val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
+
+    return imageExtensions.any { removedParamsFromUrl.endsWith(it) } || videoExtensions.any { removedParamsFromUrl.endsWith(it) }
 }
 
 fun isValidURL(url: String?): Boolean {
@@ -343,6 +350,13 @@ fun RenderCustomEmoji(word: String, state: RichTextViewerState) {
     )
 }
 
+val markdownParseOptions = MarkdownParseOptions(
+    autolink = true,
+    isImage = { url ->
+        isImageOrVideoUrl(url)
+    }
+)
+
 @Composable
 private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<String>?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     val uri = LocalUriHandler.current
@@ -359,14 +373,22 @@ private fun RenderContentAsMarkdown(content: String, tags: ImmutableListOfLists<
     }
 
     ProvideTextStyle(MarkdownTextStyle) {
-        Material3RichText(
-            style = MaterialTheme.colorScheme.markdownStyle
-        ) {
+        Material3RichText(style = MaterialTheme.colorScheme.markdownStyle) {
             RefreshableContent(content, tags, accountViewModel) {
                 Markdown(
                     content = it,
-                    markdownParseOptions = MarkdownParseOptions.Default,
-                    onLinkClicked = onClick
+                    markdownParseOptions = markdownParseOptions,
+                    onLinkClicked = onClick,
+                    onMediaCompose = { title, destination ->
+                        ZoomableContentView(
+                            content = remember(destination) {
+                                RichTextParser().parseMediaUrl(destination)
+                                    ?: ZoomableUrlImage(url = destination)
+                            },
+                            roundedCorner = true,
+                            accountViewModel = accountViewModel
+                        )
+                    }
                 )
             }
         }

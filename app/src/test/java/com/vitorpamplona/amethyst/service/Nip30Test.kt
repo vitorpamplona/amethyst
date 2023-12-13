@@ -10,7 +10,7 @@ class Nip30Test {
 
         assertEquals(
             listOf("Alex Gleason ", ":soapbox:", ""),
-            NIP30Parser().buildArray(input)
+            Nip30CustomEmoji().buildArray(input)
         )
     }
 
@@ -20,7 +20,7 @@ class Nip30Test {
 
         assertEquals(
             listOf("", ":soapbox:", "Alex Gleason"),
-            NIP30Parser().buildArray(input)
+            Nip30CustomEmoji().buildArray(input)
         )
     }
 
@@ -30,10 +30,10 @@ class Nip30Test {
 
         assertEquals(
             listOf("Hello ", ":gleasonator:", " 😂 ", ":ablobcatrainbow:", " ", ":disputed:", " yolo"),
-            NIP30Parser().buildArray(input)
+            Nip30CustomEmoji().buildArray(input)
         )
 
-        println(NIP30Parser().buildArray(input).joinToString(","))
+        println(Nip30CustomEmoji().buildArray(input).joinToString(","))
     }
 
     @Test()
@@ -42,7 +42,7 @@ class Nip30Test {
 
         assertEquals(
             listOf("hello vitor: how can I help:"),
-            NIP30Parser().buildArray(input)
+            Nip30CustomEmoji().buildArray(input)
         )
     }
 
@@ -52,7 +52,7 @@ class Nip30Test {
 
         assertEquals(
             listOf("\uD883\uDEDE\uD883\uDEDE麺の", ":x30EDE:", "。:\uD883\uDEDE:(Violation of NIP-30)"),
-            NIP30Parser().buildArray(input)
+            Nip30CustomEmoji().buildArray(input)
         )
     }
 }

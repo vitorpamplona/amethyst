@@ -22,8 +22,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
-import java.net.URI
-import java.net.URLDecoder
 import java.util.regex.Pattern
 
 @Immutable
@@ -64,6 +62,31 @@ val noProtocolUrlValidator = try {
 val HTTPRegex = "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?".toRegex(RegexOption.IGNORE_CASE)
 
 class RichTextParser() {
+    fun parseMediaUrl(fullUrl: String): ZoomableUrlContent? {
+        val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
+        return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+            val frags = Nip44UrlParser().parse(fullUrl)
+            ZoomableUrlImage(
+                url = fullUrl,
+                description = frags["alt"],
+                hash = frags["x"],
+                blurhash = frags["blurhash"],
+                dim = frags["dim"]
+            )
+        } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+            val frags = Nip44UrlParser().parse(fullUrl)
+            ZoomableUrlVideo(
+                url = fullUrl,
+                description = frags["alt"],
+                hash = frags["x"],
+                blurhash = frags["blurhash"],
+                dim = frags["dim"]
+            )
+        } else {
+            null
+        }
+    }
+
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>
@@ -88,28 +111,7 @@ class RichTextParser() {
         }
 
         val imagesForPager = urlSet.mapNotNull { fullUrl ->
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-            if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                val frags = URI(fullUrl).fragments()
-                ZoomableUrlImage(
-                    url = fullUrl,
-                    description = frags["alt"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    hash = frags["x"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    blurhash = frags["blurhash"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    dim = frags["dim"]?.let { URLDecoder.decode(it, "UTF-8") }
-                )
-            } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                val frags = URI(fullUrl).fragments()
-                ZoomableUrlVideo(
-                    url = fullUrl,
-                    description = frags["alt"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    hash = frags["x"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    blurhash = frags["blurhash"]?.let { URLDecoder.decode(it, "UTF-8") },
-                    dim = frags["dim"]?.let { URLDecoder.decode(it, "UTF-8") }
-                )
-            } else {
-                null
-            }
+            parseMediaUrl(fullUrl)
         }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
@@ -125,16 +127,6 @@ class RichTextParser() {
             emojiMap.toImmutableMap(),
             segments
         )
-    }
-
-    private fun URI.fragments(): Map<String, String> {
-        if (rawFragment == null) return emptyMap()
-        return rawFragment.split('&').associate {
-            val parts = it.split('=')
-            val name = parts.firstOrNull() ?: ""
-            val value = parts.getOrNull(1) ?: ""
-            Pair(name, value)
-        }
     }
 
     private fun findTextSegments(content: String, images: Set<String>, urls: Set<String>, emojis: Map<String, String>, tags: ImmutableListOfLists<String>): ImmutableList<ParagraphState> {

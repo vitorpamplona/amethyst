@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.HttpClient
-import com.vitorpamplona.amethyst.service.Nip05Verifier
+import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
@@ -707,7 +707,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         val nip05 = userMetadata.nip05?.ifBlank { null } ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-            Nip05Verifier().verifyNip05(
+            Nip05NostrAddressVerifier().verifyNip05(
                 nip05,
                 onSuccess = {
                     // Marks user as verified

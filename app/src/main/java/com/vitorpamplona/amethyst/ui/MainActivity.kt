@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.components.DefaultMutedSetting
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
-import com.vitorpamplona.amethyst.ui.note.Nip47
+import com.vitorpamplona.amethyst.ui.note.Nip47WalletConnectParser
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -319,7 +319,7 @@ fun uriToRoute(uri: String?): String? {
             }
         } ?: try {
             uri?.let {
-                Nip47.parse(it)
+                Nip47WalletConnectParser.parse(it)
                 val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
                 Route.Home.base + "?nip47=" + encodedUri
             }

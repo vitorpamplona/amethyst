@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import java.util.regex.Pattern
 
 @Immutable
-class NIP30Parser {
+class Nip30CustomEmoji {
     val customEmojiPattern: Pattern = Pattern.compile("\\:([A-Za-z0-9_\\-]+)\\:", Pattern.CASE_INSENSITIVE)
 
     fun buildArray(input: String): List<String> {

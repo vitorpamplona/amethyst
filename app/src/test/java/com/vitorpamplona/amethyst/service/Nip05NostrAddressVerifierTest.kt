@@ -16,12 +16,12 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
-class Nip05VerifierTest {
+class Nip05NostrAddressVerifierTest {
     private val ALL_UPPER_CASE_USER_NAME = "ONETWO"
     private val ALL_LOWER_CASE_USER_NAME = "onetwo"
 
     @SpyK
-    var nip05Verifier = Nip05Verifier()
+    var nip05Verifier = Nip05NostrAddressVerifier()
 
     @Before
     fun setUp() {

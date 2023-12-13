@@ -233,9 +233,9 @@ dependencies {
     //implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
 
     // Markdown (With fix for full-image bleeds)
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:a0954aba63')
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material3:a0954aba63')
-    implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:a0954aba63')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui:48702a8ced')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-ui-material3:48702a8ced')
+    implementation('com.github.vitorpamplona.compose-richtext:richtext-commonmark:48702a8ced')
 
     // Language picker and Theme chooser
     implementation 'androidx.appcompat:appcompat:1.6.1'

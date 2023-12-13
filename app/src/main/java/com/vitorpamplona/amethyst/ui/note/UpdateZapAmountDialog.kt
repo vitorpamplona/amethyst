@@ -176,7 +176,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     }
 
     fun updateNIP47(uri: String) {
-        val contact = Nip47.parse(uri)
+        val contact = Nip47WalletConnectParser.parse(uri)
         if (contact != null) {
             walletConnectPubkey =
                 TextFieldValue(contact.pubKeyHex)

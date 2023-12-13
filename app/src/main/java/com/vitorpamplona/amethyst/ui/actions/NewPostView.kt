@@ -126,6 +126,7 @@ import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.components.isValidURL
+import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
@@ -460,14 +461,7 @@ fun NewPostView(
                                 if (myUrlPreview != null) {
                                     Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
                                         if (isValidURL(myUrlPreview)) {
-                                            val removedParamsFromUrl = if (myUrlPreview.contains("?")) {
-                                                myUrlPreview.split("?")[0].lowercase()
-                                            } else if (myUrlPreview.contains("#")) {
-                                                myUrlPreview.split("#")[0].lowercase()
-                                            } else {
-                                                myUrlPreview
-                                            }
-
+                                            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(myUrlPreview)
                                             if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
                                                 AsyncImage(
                                                     model = myUrlPreview,
