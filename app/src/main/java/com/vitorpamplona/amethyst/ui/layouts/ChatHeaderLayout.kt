@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Divider
@@ -45,16 +46,12 @@ fun ChannelNamePreview() {
                 )
             },
             firstRow = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("This is my author", Modifier.weight(1f))
-                    TimeAgo(TimeUtils.now())
-                }
+                Text("This is my author", Modifier.weight(1f))
+                TimeAgo(TimeUtils.now())
             },
             secondRow = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("This is a message from this person", Modifier.weight(1f))
-                    NewItemsBubble()
-                }
+                Text("This is a message from this person", Modifier.weight(1f))
+                NewItemsBubble()
             },
             onClick = {
             }
@@ -90,8 +87,8 @@ fun ChannelNamePreview() {
 @Composable
 fun ChatHeaderLayout(
     channelPicture: @Composable () -> Unit,
-    firstRow: @Composable () -> Unit,
-    secondRow: @Composable () -> Unit,
+    firstRow: @Composable RowScope.() -> Unit,
+    secondRow: @Composable RowScope.() -> Unit,
     onClick: () -> Unit
 ) {
     Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
@@ -108,11 +105,19 @@ fun ChatHeaderLayout(
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                firstRow()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    firstRow()
+                }
 
                 Spacer(modifier = Height4dpModifier)
 
-                secondRow()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    secondRow()
+                }
             }
         }
 

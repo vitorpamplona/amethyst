@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -282,8 +281,8 @@ fun RoomNameDisplay(room: ChatroomKey, modifier: Modifier, accountViewModel: Acc
         it.user.privateChatrooms[room]?.subject
     }.distinctUntilChanged().observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
 
-    Crossfade(targetState = roomSubject, modifier) {
-        if (it != null && it.isNotBlank()) {
+    Crossfade(targetState = roomSubject, modifier, label = "RoomNameDisplay") {
+        if (!it.isNullOrBlank()) {
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)
             } else {
@@ -465,48 +464,35 @@ fun ChannelName(
     ChatHeaderLayout(
         channelPicture = channelPicture,
         firstRow = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FirstRow(channelTitle, channelLastTime, remember { Modifier.weight(1f) })
-            }
+            channelTitle(Modifier.weight(1f))
+            TimeAgo(channelLastTime)
         },
         secondRow = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SecondRow(channelLastContent, hasNewMessages, remember { Modifier.weight(1f) })
+            if (channelLastContent != null) {
+                Text(
+                    channelLastContent,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                Text(
+                    stringResource(R.string.referenced_event_not_found),
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (hasNewMessages.value) {
+                NewItemsBubble()
             }
         },
         onClick = onClick
     )
-}
-
-@Composable
-private fun SecondRow(channelLastContent: String?, hasNewMessages: MutableState<Boolean>, modifier: Modifier) {
-    if (channelLastContent != null) {
-        Text(
-            channelLastContent,
-            color = MaterialTheme.colorScheme.grayText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-            modifier = modifier
-        )
-    } else {
-        Text(
-            stringResource(R.string.referenced_event_not_found),
-            color = MaterialTheme.colorScheme.grayText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier
-        )
-    }
-
-    if (hasNewMessages.value) {
-        NewItemsBubble()
-    }
 }
 
 @Composable
@@ -515,8 +501,6 @@ private fun FirstRow(
     channelLastTime: Long?,
     modifier: Modifier
 ) {
-    channelTitle(modifier)
-    TimeAgo(channelLastTime)
 }
 
 @Composable

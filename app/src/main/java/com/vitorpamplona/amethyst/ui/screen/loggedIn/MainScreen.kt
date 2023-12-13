@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -254,7 +255,7 @@ fun MainScreen(
     }
 
     val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
-    val bottomBarOffsetHeightPx = remember { mutableStateOf(0f) }
+    val bottomBarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
     val shouldShow = remember { mutableStateOf(true) }
 
     val nestedScrollConnection = remember {
