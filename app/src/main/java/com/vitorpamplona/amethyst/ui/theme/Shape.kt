@@ -158,3 +158,5 @@ val IconRowTextModifier = Modifier.padding(start = 16.dp)
 val IconRowModifier = Modifier
     .fillMaxWidth()
     .padding(vertical = 15.dp, horizontal = 25.dp)
+
+val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()

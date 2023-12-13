@@ -57,9 +57,11 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
+import com.vitorpamplona.amethyst.ui.theme.emptyLineItemModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -120,11 +122,7 @@ private fun ChatroomPrivateMessages(
         if (room != null) {
             UserRoomCompose(baseNote, room, accountViewModel, nav)
         } else {
-            Box(
-                Modifier
-                    .height(Size75dp)
-                    .fillMaxWidth()
-            ) {
+            Box(emptyLineItemModifier) {
                 // Makes sure just a max amount of objects are loaded.
             }
         }
@@ -454,12 +452,7 @@ fun ChannelName(
                 robot = channelIdHex,
                 model = channelPicture,
                 contentDescription = stringResource(R.string.channel_image),
-                modifier = remember {
-                    Modifier
-                        .width(Size55dp)
-                        .height(Size55dp)
-                        .clip(shape = CircleShape)
-                },
+                modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture
             )
         },
