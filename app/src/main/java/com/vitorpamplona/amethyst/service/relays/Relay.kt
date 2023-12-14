@@ -279,10 +279,12 @@ class Relay(
         if (read) {
             if (isConnected()) {
                 if (isReady) {
-                    val filters = Client.getSubscriptionFilters(requestId).filter { activeTypes.intersect(it.types).isNotEmpty() }
+                    val filters = Client.getSubscriptionFilters(requestId).filter { filter ->
+                        activeTypes.any { it in filter.types }
+                    }
                     if (filters.isNotEmpty()) {
                         val request =
-                            """["REQ","$requestId",${filters.take(10).joinToString(",") { it.filter.toJson(url) }}]"""
+                            """["REQ","$requestId",${filters.joinToString(",", limit = 10, truncated = "") { it.filter.toJson(url) }}]"""
 
                         // Log.d("Relay", "onFilterSent $url $requestId $request")
 
