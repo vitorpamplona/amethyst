@@ -183,7 +183,7 @@ class Relay(
     }
 
     fun markConnectionAsReady(pingInMs: Long, usingCompression: Boolean) {
-        this.afterEOSEPerSubscription.clear()
+        this.resetEOSEStatuses()
         this.isReady = true
         this.pingInMs = pingInMs
         this.usingCompression = usingCompression
@@ -193,7 +193,7 @@ class Relay(
         this.socket = null
         this.isReady = false
         this.usingCompression = false
-        this.afterEOSEPerSubscription.clear()
+        this.resetEOSEStatuses()
         this.closingTimeInSeconds = TimeUtils.now()
     }
 
@@ -270,7 +270,13 @@ class Relay(
         socket = null
         isReady = false
         usingCompression = false
-        afterEOSEPerSubscription.clear()
+        resetEOSEStatuses()
+    }
+
+    fun resetEOSEStatuses() {
+        afterEOSEPerSubscription.forEach {
+            afterEOSEPerSubscription[it.key] = false
+        }
     }
 
     fun sendFilter(requestId: String) {
@@ -290,7 +296,7 @@ class Relay(
 
                         socket?.send(request)
                         eventUploadCounterInBytes += request.bytesUsedInMemory()
-                        afterEOSEPerSubscription.clear()
+                        resetEOSEStatuses()
                     }
                 }
             } else {

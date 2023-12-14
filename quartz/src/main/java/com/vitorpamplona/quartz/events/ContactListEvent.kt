@@ -346,7 +346,7 @@ class UserMetadata {
 }
 
 @Stable
-data class ImmutableListOfLists<T>(val lists: Array<Array<T>>)
+class ImmutableListOfLists<T>(val lists: Array<Array<T>>)
 
 val EmptyTagList = ImmutableListOfLists<String>(emptyArray())
 
