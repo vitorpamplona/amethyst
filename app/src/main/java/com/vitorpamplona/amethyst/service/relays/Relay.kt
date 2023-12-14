@@ -359,7 +359,7 @@ class Relay(
         checkNotInMainThread()
 
         val msg = """["CLOSE","$subscriptionId"]"""
-        Log.d("Relay", "Close Subscription $url $msg")
+        // Log.d("Relay", "Close Subscription $url $msg")
         socket?.send(msg)
     }
 
