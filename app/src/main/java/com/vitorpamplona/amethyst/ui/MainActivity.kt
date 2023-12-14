@@ -183,7 +183,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         Log.d("Lifetime Event", "MainActivity.onDestroy")
 
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.Main) {
             keepPlayingMutex?.stop()
             keepPlayingMutex?.release()
             keepPlayingMutex = null
