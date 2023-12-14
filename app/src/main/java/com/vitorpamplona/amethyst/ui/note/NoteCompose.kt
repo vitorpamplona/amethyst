@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -411,18 +412,18 @@ fun RenderReportState(
             val canPreview = (!state.isAcceptable && showReportedNote) || state.canPreview
 
             NormalNote(
-                note,
-                routeForLastRead,
-                modifier,
-                isBoostedNote,
-                isQuotedNote,
-                unPackReply,
-                makeItShort,
-                addMarginTop,
-                canPreview,
-                parentBackgroundColor,
-                accountViewModel,
-                nav
+                baseNote = note,
+                routeForLastRead = routeForLastRead,
+                modifier = modifier,
+                isBoostedNote = isBoostedNote,
+                isQuotedNote = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                addMarginTop = addMarginTop,
+                canPreview = canPreview,
+                parentBackgroundColor = parentBackgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
             )
         }
     }
@@ -522,19 +523,19 @@ fun NormalNote(
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
-                        baseNote,
-                        routeForLastRead,
-                        modifier,
-                        isBoostedNote,
-                        isQuotedNote,
-                        unPackReply,
-                        makeItShort,
-                        addMarginTop,
-                        canPreview,
-                        parentBackgroundColor,
-                        accountViewModel,
-                        showPopup,
-                        nav
+                        baseNote = baseNote,
+                        routeForLastRead = routeForLastRead,
+                        modifier = modifier,
+                        isBoostedNote = isBoostedNote,
+                        isQuotedNote = isQuotedNote,
+                        unPackReply = unPackReply,
+                        makeItShort = makeItShort,
+                        addMarginTop = addMarginTop,
+                        canPreview = canPreview,
+                        parentBackgroundColor = parentBackgroundColor,
+                        accountViewModel = accountViewModel,
+                        showPopup = showPopup,
+                        nav = nav
                     )
                 }
         }
@@ -2880,27 +2881,12 @@ private fun ChannelNotePicture(baseChannel: Channel, loadProfilePicture: Boolean
         it.channel.profilePicture()
     }.distinctUntilChanged().observeAsState()
 
-    val backgroundColor = MaterialTheme.colorScheme.background
-
-    val modifier = remember {
-        Modifier
-            .width(30.dp)
-            .height(30.dp)
-            .clip(shape = CircleShape)
-            .background(backgroundColor)
-            .border(
-                2.dp,
-                backgroundColor,
-                CircleShape
-            )
-    }
-
     Box(Size30Modifier) {
         RobohashFallbackAsyncImage(
             robot = baseChannel.idHex,
             model = model,
             contentDescription = stringResource(R.string.group_picture),
-            modifier = modifier,
+            modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
             loadProfilePicture = loadProfilePicture
         )
     }
@@ -2987,9 +2973,7 @@ fun DisplayHighlight(
     val quote =
         remember {
             highlight
-                .split("\n")
-                .map { "> *${it.removeSuffix(" ")}*" }
-                .joinToString("\n")
+                .split("\n").joinToString("\n") { "> *${it.removeSuffix(" ")}*" }
         }
 
     TranslatableRichTextViewer(

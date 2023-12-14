@@ -95,35 +95,18 @@ private val LightZapraiserBackground = BitcoinOrange.copy(0.52f).compositeOver(L
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
 
-val RepostPictureBorderDark = Modifier.border(
-    2.dp,
-    DarkColorPalette.background,
-    CircleShape
-)
-
-val RepostPictureBorderLight = Modifier.border(
-    2.dp,
-    LightColorPalette.background,
-    CircleShape
-)
+val RepostPictureBorderDark = Modifier.border(2.dp, DarkColorPalette.background, CircleShape)
+val RepostPictureBorderLight = Modifier.border(2.dp, LightColorPalette.background, CircleShape)
 
 val DarkImageModifier = Modifier
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
-    .border(
-        1.dp,
-        DarkSubtleBorder,
-        QuoteBorder
-    )
+    .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightImageModifier = Modifier
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
-    .border(
-        1.dp,
-        LightSubtleBorder,
-        QuoteBorder
-    )
+    .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkProfile35dpModifier = Modifier
     .size(Size35dp)
@@ -137,41 +120,37 @@ val DarkReplyBorderModifier = Modifier
     .padding(top = 5.dp)
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
-    .border(
-        1.dp,
-        DarkSubtleBorder,
-        QuoteBorder
-    )
+    .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightReplyBorderModifier = Modifier
     .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
-    .border(
-        1.dp,
-        LightSubtleBorder,
-        QuoteBorder
-    )
+    .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkInnerPostBorderModifier = Modifier
     .padding(top = 5.dp)
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
-    .border(
-        1.dp,
-        DarkSubtleBorder,
-        QuoteBorder
-    )
+    .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightInnerPostBorderModifier = Modifier
     .padding(top = 5.dp)
     .fillMaxWidth()
     .clip(shape = QuoteBorder)
-    .border(
-        1.dp,
-        LightSubtleBorder,
-        QuoteBorder
-    )
+    .border(1.dp, LightSubtleBorder, QuoteBorder)
+
+val DarkChannelNotePictureModifier = Modifier
+    .size(30.dp)
+    .clip(shape = CircleShape)
+    .background(DarkColorPalette.background)
+    .border(2.dp, DarkColorPalette.background, CircleShape)
+
+val LightChannelNotePictureModifier = Modifier
+    .size(30.dp)
+    .clip(shape = CircleShape)
+    .background(LightColorPalette.background)
+    .border(2.dp, LightColorPalette.background, CircleShape)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
@@ -190,11 +169,7 @@ val MarkDownStyleOnDark = RichTextDefaults.copy(
             .padding(0.dp)
             .fillMaxWidth()
             .clip(shape = QuoteBorder)
-            .border(
-                1.dp,
-                DarkSubtleBorder,
-                QuoteBorder
-            )
+            .border(1.dp, DarkSubtleBorder, QuoteBorder)
             .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
     ),
     stringStyle = RichTextDefaults.stringStyle?.copy(
@@ -224,11 +199,7 @@ val MarkDownStyleOnLight = RichTextDefaults.copy(
             .padding(0.dp)
             .fillMaxWidth()
             .clip(shape = QuoteBorder)
-            .border(
-                1.dp,
-                LightSubtleBorder,
-                QuoteBorder
-            )
+            .border(1.dp, LightSubtleBorder, QuoteBorder)
             .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
     ),
     stringStyle = RichTextDefaults.stringStyle?.copy(
@@ -319,6 +290,9 @@ val ColorScheme.replyModifier: Modifier
 
 val ColorScheme.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
+
+val ColorScheme.channelNotePictureModifier: Modifier
+    get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
 
 val ColorScheme.chartStyle: ChartStyle
     get() {
