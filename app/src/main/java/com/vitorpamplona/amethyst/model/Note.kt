@@ -287,7 +287,7 @@ open class Note(val idHex: String) {
         val tags = note.event?.tags() ?: emptyArray()
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
-        if (reaction in reactions.keys && reactions[reaction]?.contains(note) == true) {
+        if (reactions[reaction]?.contains(note) == true) {
             reactions[reaction]?.let {
                 if (note in it) {
                     val newList = it.minus(note)
@@ -306,7 +306,7 @@ open class Note(val idHex: String) {
     fun removeReport(deleteNote: Note) {
         val author = deleteNote.author ?: return
 
-        if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
+        if (reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
                 liveSet?.innerReports?.invalidateData()
@@ -327,12 +327,11 @@ open class Note(val idHex: String) {
     }
 
     fun removeZapPayment(note: Note) {
-        if (zapPayments[note] != null) {
+        if (zapPayments.containsKey(note)) {
             zapPayments = zapPayments.minus(note)
             liveSet?.innerZaps?.invalidateData()
         } else if (zapPayments.containsValue(note)) {
-            val toRemove = zapPayments.filterValues { it == note }
-            zapPayments = zapPayments.minus(toRemove.keys)
+            zapPayments = zapPayments.filterValues { it != note }
             liveSet?.innerZaps?.invalidateData()
         }
     }
@@ -346,10 +345,7 @@ open class Note(val idHex: String) {
 
     @Synchronized
     private fun innerAddZap(zapRequest: Note, zap: Note?): Boolean {
-        if (zapRequest !in zaps.keys) {
-            zaps = zaps + Pair(zapRequest, zap)
-            return true
-        } else if (zaps[zapRequest] == null) {
+        if (zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
             return true
         }
@@ -359,13 +355,8 @@ open class Note(val idHex: String) {
 
     fun addZap(zapRequest: Note, zap: Note?) {
         checkNotInMainThread()
-        if (zapRequest !in zaps.keys) {
-            val inserted = innerAddZap(zapRequest, zap)
-            if (inserted) {
-                updateZapTotal()
-                liveSet?.innerZaps?.invalidateData()
-            }
-        } else if (zaps[zapRequest] == null) {
+
+        if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
                 updateZapTotal()
@@ -376,10 +367,7 @@ open class Note(val idHex: String) {
 
     @Synchronized
     private fun innerAddZapPayment(zapPaymentRequest: Note, zapPayment: Note?): Boolean {
-        if (zapPaymentRequest !in zapPayments.keys) {
-            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
-            return true
-        } else if (zapPayments[zapPaymentRequest] == null) {
+        if (zapPayments[zapPaymentRequest] == null) {
             zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
             return true
         }
@@ -389,12 +377,7 @@ open class Note(val idHex: String) {
 
     fun addZapPayment(zapPaymentRequest: Note, zapPayment: Note?) {
         checkNotInMainThread()
-        if (zapPaymentRequest !in zapPayments.keys) {
-            val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
-            if (inserted) {
-                liveSet?.innerZaps?.invalidateData()
-            }
-        } else if (zapPayments[zapPaymentRequest] == null) {
+        if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
                 liveSet?.innerZaps?.invalidateData()
@@ -406,11 +389,12 @@ open class Note(val idHex: String) {
         val tags = note.event?.tags() ?: emptyArray()
         val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
-        if (reaction !in reactions.keys) {
+        val listOfAuthors = reactions[reaction]
+        if (listOfAuthors == null) {
             reactions = reactions + Pair(reaction, listOf(note))
             liveSet?.innerReactions?.invalidateData()
-        } else if (reactions[reaction]?.contains(note) == false) {
-            reactions = reactions + Pair(reaction, (reactions[reaction] ?: emptySet()) + note)
+        } else if (!listOfAuthors.contains(note)) {
+            reactions = reactions + Pair(reaction, listOfAuthors + note)
             liveSet?.innerReactions?.invalidateData()
         }
     }
@@ -418,11 +402,13 @@ open class Note(val idHex: String) {
     fun addReport(note: Note) {
         val author = note.author ?: return
 
-        if (author !in reports.keys) {
+        val reportsByAuthor = reports[author]
+
+        if (reportsByAuthor == null) {
             reports = reports + Pair(author, listOf(note))
             liveSet?.innerReports?.invalidateData()
-        } else if (reports[author]?.contains(note) == false) {
-            reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
+        } else if (!reportsByAuthor.contains(note)) {
+            reports = reports + Pair(author, reportsByAuthor + note)
             liveSet?.innerReports?.invalidateData()
         }
     }
@@ -523,17 +509,17 @@ open class Note(val idHex: String) {
         return reports[user]?.isNotEmpty() ?: false
     }
 
-    fun reportAuthorsBy(users: Set<HexKey>): List<User> {
-        return reports.keys.filter { it.pubkeyHex in users }
-    }
-
     fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.keys.count { it.pubkeyHex in users }
+        return reports.count { it.key.pubkeyHex in users }
     }
 
     fun reportsBy(users: Set<HexKey>): List<Note> {
-        return reportAuthorsBy(users).mapNotNull {
-            reports[it]
+        return reports.mapNotNull {
+            if (it.key.pubkeyHex in users) {
+                it.value
+            } else {
+                null
+            }
         }.flatten()
     }
 
@@ -541,8 +527,8 @@ open class Note(val idHex: String) {
         var sumOfAmounts = BigDecimal.ZERO
 
         // Regular Zap Receipts
-        zaps.values.forEach {
-            val noteEvent = it?.event
+        zaps.forEach {
+            val noteEvent = it?.value?.event
             if (noteEvent is LnZapEvent) {
                 sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
             }
@@ -647,8 +633,8 @@ open class Note(val idHex: String) {
         val dayAgo = TimeUtils.oneDayAgo()
         return reports.isNotEmpty() ||
             (
-                author?.reports?.values?.any {
-                    it.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
+                author?.reports?.any {
+                    it.value.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null
                 } ?: false
                 )
     }
@@ -863,7 +849,9 @@ class NoteLiveSet(u: Note) {
     }.distinctUntilChanged()
 
     val reactionCount = innerReactions.map {
-        it.note.reactions.values.sumOf { it.size }
+        var total = 0
+        it.note.reactions.forEach { total += it.value.size }
+        total
     }.distinctUntilChanged()
 
     val boostCount = innerBoosts.map {
