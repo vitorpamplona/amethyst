@@ -36,7 +36,7 @@ abstract class NostrDataSource(val debugName: String) {
 
     private val clientListener = object : Client.Listener() {
         override fun onEvent(event: Event, subscriptionId: String, relay: Relay, afterEOSE: Boolean) {
-            if (subscriptionId in subscriptions.keys) {
+            if (subscriptions.containsKey(subscriptionId)) {
                 val key = "$debugName $subscriptionId ${event.kind}"
                 val keyValue = eventCounter.get(key)
                 if (keyValue != null) {
