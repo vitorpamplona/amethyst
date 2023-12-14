@@ -20,19 +20,17 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         val me = account.userProfile()
         val followingKeySet = account.followingKeySet()
 
-        val privateChatrooms = me.privateChatrooms
-        val messagingWith = privateChatrooms.keys.filter {
+        val messagingWith = me.privateChatrooms.filter {
             (
-                privateChatrooms[it]?.senderIntersects(followingKeySet) == true ||
-                    me.hasSentMessagesTo(it)
-                ) && !account.isAllHidden(it.users)
+                it.value.senderIntersects(followingKeySet) || me.hasSentMessagesTo(it.key)
+                ) && !account.isAllHidden(it.key.users)
         }
 
         val privateMessages = messagingWith.mapNotNull { it ->
-            privateChatrooms[it]
-                ?.roomMessages
-                ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                ?.lastOrNull { it.event != null }
+            it.value
+                .roomMessages
+                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+                .lastOrNull { it.event != null }
         }
 
         val publicChannels = account.selectedChatsFollowList().mapNotNull {

@@ -21,7 +21,7 @@ class ChannelFeedFilter(val channel: Channel, val account: Account) : AdditiveFe
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
         return collection
-            .filter { it.idHex in channel.notes.keys && account.isAcceptable(it) }
+            .filter { channel.notes.containsKey(it.idHex) && account.isAcceptable(it) }
             .toSet()
     }
 

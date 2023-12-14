@@ -64,7 +64,7 @@ abstract class NostrDataSource(val debugName: String) {
             //  Relay.Type.EOSE -> "sent all events it had stored."
             // }}")
 
-            if (type == Relay.StateType.EOSE && subscriptionId != null && subscriptionId in subscriptions.keys) {
+            if (type == Relay.StateType.EOSE && subscriptionId != null && subscriptions.containsKey(subscriptionId)) {
                 markAsEOSE(subscriptionId, relay)
             }
         }
@@ -177,7 +177,7 @@ abstract class NostrDataSource(val debugName: String) {
         subscriptions.values.forEach { updatedSubscription ->
             val updatedSubscriptionNewFilters = updatedSubscription.typedFilters
 
-            if (updatedSubscription.id in currentFilters.keys) {
+            if (currentFilters.containsKey(updatedSubscription.id)) {
                 if (updatedSubscriptionNewFilters == null) {
                     // was active and is not active anymore, just close.
                     Client.close(updatedSubscription.id)

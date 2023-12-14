@@ -130,11 +130,12 @@ class User(val pubkeyHex: String) {
     fun addReport(note: Note) {
         val author = note.author ?: return
 
-        if (author !in reports.keys) {
+        val reportsBy = reports[author]
+        if (reportsBy == null) {
             reports = reports + Pair(author, setOf(note))
             liveSet?.innerReports?.invalidateData()
-        } else if (reports[author]?.contains(note) == false) {
-            reports = reports + Pair(author, (reports[author] ?: emptySet()) + note)
+        } else if (!reportsBy.contains(note)) {
+            reports = reports + Pair(author, reportsBy + note)
             liveSet?.innerReports?.invalidateData()
         }
     }
@@ -142,7 +143,7 @@ class User(val pubkeyHex: String) {
     fun removeReport(deleteNote: Note) {
         val author = deleteNote.author ?: return
 
-        if (author in reports.keys && reports[author]?.contains(deleteNote) == true) {
+        if (reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
                 liveSet?.innerReports?.invalidateData()
@@ -151,48 +152,49 @@ class User(val pubkeyHex: String) {
     }
 
     fun addZap(zapRequest: Note, zap: Note?) {
-        if (zapRequest !in zaps.keys) {
-            zaps = zaps + Pair(zapRequest, zap)
-            liveSet?.innerZaps?.invalidateData()
-        } else if (zapRequest in zaps.keys && zaps[zapRequest] == null) {
+        if (zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
             liveSet?.innerZaps?.invalidateData()
         }
     }
 
     fun removeZap(zapRequestOrZapEvent: Note) {
-        if (zapRequestOrZapEvent in zaps.keys) {
+        if (zaps.containsKey(zapRequestOrZapEvent)) {
             zaps = zaps.minus(zapRequestOrZapEvent)
             liveSet?.innerZaps?.invalidateData()
-        } else if (zapRequestOrZapEvent in zaps.values) {
+        } else if (zaps.containsValue(zapRequestOrZapEvent)) {
             zaps = zaps.filter { it.value != zapRequestOrZapEvent }
             liveSet?.innerZaps?.invalidateData()
         }
     }
 
     fun zappedAmount(): BigDecimal {
-        return zaps.mapNotNull { it.value?.event }
-            .filterIsInstance<LnZapEvent>()
-            .mapNotNull {
-                it.amount
-            }.sumOf { it }
+        var amount = BigDecimal.ZERO
+        zaps.forEach {
+            val itemValue = (it.value?.event as? LnZapEvent)?.amount
+            if (itemValue != null) {
+                amount += itemValue
+            }
+        }
+
+        return amount
     }
 
     fun reportsBy(user: User): Set<Note> {
         return reports[user] ?: emptySet()
     }
 
-    fun reportAuthorsBy(users: Set<HexKey>): List<User> {
-        return reports.keys.filter { it.pubkeyHex in users }
-    }
-
     fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.keys.count { it.pubkeyHex in users }
+        return reports.count { it.key.pubkeyHex in users }
     }
 
     fun reportsBy(users: Set<HexKey>): List<Note> {
-        return reportAuthorsBy(users).mapNotNull {
-            reports[it]
+        return reports.mapNotNull {
+            if (it.key.pubkeyHex in users) {
+                it.value
+            } else {
+                null
+            }
         }.flatten()
     }
 
@@ -314,7 +316,7 @@ class User(val pubkeyHex: String) {
     }
 
     suspend fun transientFollowerCount(): Int {
-        return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
+        return LocalCache.users.count { it.value.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun cachedFollowingKeySet(): Set<HexKey> {
@@ -338,7 +340,7 @@ class User(val pubkeyHex: String) {
     }
 
     suspend fun cachedFollowerCount(): Int {
-        return LocalCache.users.values.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
+        return LocalCache.users.count { it.value.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {

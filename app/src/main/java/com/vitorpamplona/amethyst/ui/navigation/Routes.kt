@@ -335,8 +335,9 @@ private fun getRouteWithArguments(
 ): String? {
     var route = destination.route ?: return null
     arguments?.let { bundle ->
-        destination.arguments.keys.forEach { key ->
-            val value = destination.arguments[key]?.type?.get(bundle, key)?.toString()
+        destination.arguments.forEach {
+            val key = it.key
+            val value = it.value.type[bundle, key]?.toString()
             if (value == null) {
                 val keyStart = route.indexOf("{$key}")
                 // if it is a parameter, removes the complete segment `var={key}` and adjust connectors `#`, `&` or `&`

@@ -213,8 +213,8 @@ object Client : RelayPool.Listener {
         listeners = listeners.minus(listener)
     }
 
-    fun allSubscriptions(): List<String> {
-        return subscriptions.keys.toList()
+    fun allSubscriptions(): Set<String> {
+        return subscriptions.keys
     }
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter> {
