@@ -26,6 +26,7 @@ class ChannelHideMessageEvent(
 
     companion object {
         const val kind = 43
+        const val alt = "Hide message instruction for public chats"
 
         fun create(
             reason: String,
@@ -35,9 +36,9 @@ class ChannelHideMessageEvent(
             onReady: (ChannelHideMessageEvent) -> Unit
         ) {
             val tags =
-                messagesToHide?.map {
+                (messagesToHide?.map {
                     arrayOf("e", it)
-                }?.toTypedArray() ?: emptyArray()
+                }?.toTypedArray() ?: emptyArray()) + arrayOf(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags, reason, onReady)
         }

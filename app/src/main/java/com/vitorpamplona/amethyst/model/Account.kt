@@ -477,10 +477,10 @@ class Account(
         }
     }
 
-    suspend fun sendNewUserMetadata(toString: String, identities: List<IdentityClaim>) {
+    suspend fun sendNewUserMetadata(toString: String, newName: String, identities: List<IdentityClaim>) {
         if (!isWriteable()) return
 
-        MetadataEvent.create(toString, identities, signer) {
+        MetadataEvent.create(toString, newName, identities, signer) {
             Client.send(it)
             LocalCache.justConsume(it, null)
         }

@@ -90,7 +90,7 @@ class PrivateDmEvent(
 
     companion object {
         const val kind = 4
-
+        const val alt = "Private Message"
         const val nip18Advertisement = "[//]: # (nip18)\n"
 
         fun create(
@@ -131,6 +131,7 @@ class PrivateDmEvent(
             geohash?.let {
                 tags.addAll(geohashMipMap(it))
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.nip04Encrypt(message, recipientPubKey) { content ->
                 signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)

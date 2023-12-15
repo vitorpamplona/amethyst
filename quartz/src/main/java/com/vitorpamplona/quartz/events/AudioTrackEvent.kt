@@ -28,6 +28,7 @@ class AudioTrackEvent(
 
     companion object {
         const val kind = 31337
+        const val alt = "Audio track"
 
         private const val TYPE = "c"
         private const val PRICE = "price"
@@ -50,7 +51,8 @@ class AudioTrackEvent(
                 arrayOf(TYPE, type),
                 price?.let { arrayOf(PRICE, it) },
                 cover?.let { arrayOf(COVER, it) },
-                subject?.let { arrayOf(SUBJECT, it) }
+                subject?.let { arrayOf(SUBJECT, it) },
+                arrayOf("alt", alt)
             ).toTypedArray()
 
             signer.sign(createdAt, kind, tags, "", onReady)

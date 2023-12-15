@@ -36,6 +36,7 @@ class LongTextNoteEvent(
 
         fun create(
             msg: String,
+            title: String?,
             replyTos: List<String>?,
             mentions: List<String>?,
             signer: NostrSigner,
@@ -49,6 +50,10 @@ class LongTextNoteEvent(
             mentions?.forEach {
                 tags.add(arrayOf("p", it))
             }
+            title?.let {
+                tags.add(arrayOf("title", it))
+            }
+            tags.add(arrayOf("alt","Blog post: $title"))
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
     }

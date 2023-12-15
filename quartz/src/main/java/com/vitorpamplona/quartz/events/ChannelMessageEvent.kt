@@ -25,6 +25,7 @@ class ChannelMessageEvent(
 
     companion object {
         const val kind = 42
+        const val alt = "Public chat message"
 
         fun create(
             message: String,
@@ -66,6 +67,9 @@ class ChannelMessageEvent(
                     //tags.add(arrayOf("nip94", it.toJson()))
                 }
             }
+            tags.add(
+                arrayOf("alt", alt)
+            )
 
             signer.sign(createdAt, kind, tags.toTypedArray(), message, onReady)
         }

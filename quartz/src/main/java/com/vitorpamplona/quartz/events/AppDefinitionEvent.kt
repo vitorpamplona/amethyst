@@ -50,11 +50,14 @@ class AppDefinitionEvent(
         const val kind = 31990
 
         fun create(
+            details: UserMetadata,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (AppDefinitionEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(
+                arrayOf("alt", "App definition event for ${details.name}")
+            )
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

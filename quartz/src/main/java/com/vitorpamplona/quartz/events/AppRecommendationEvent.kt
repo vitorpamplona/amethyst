@@ -21,13 +21,16 @@ class AppRecommendationEvent(
 
     companion object {
         const val kind = 31989
+        const val alt = "App recommendations by the author"
 
         fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (AppRecommendationEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(
+                arrayOf("alt", alt)
+            )
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

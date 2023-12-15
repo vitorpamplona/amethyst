@@ -20,5 +20,6 @@ class BadgeDefinitionEvent(
 
     companion object {
         const val kind = 30009
+        const val alt = "Badge definition"
     }
 }

@@ -44,6 +44,7 @@ class LiveActivitiesChatMessageEvent(
 
     companion object {
         const val kind = 1311
+        const val alt = "Live activity chat message"
 
         fun create(
             message: String,
@@ -86,6 +87,7 @@ class LiveActivitiesChatMessageEvent(
                     //tags.add(arrayOf("nip94", it.toJson()))
                 }
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }

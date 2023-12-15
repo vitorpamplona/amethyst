@@ -29,6 +29,7 @@ class RepostEvent(
 
     companion object {
         const val kind = 6
+        const val alt = "Repost event"
 
         fun create(
             boostedPost: EventInterface,
@@ -44,8 +45,10 @@ class RepostEvent(
             var tags: Array<Array<String>> = arrayOf(replyToPost, replyToAuthor)
 
             if (boostedPost is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", boostedPost.address().toTag()))
+                tags += listOf(arrayOf("a", boostedPost.address().toTag()))
             }
+
+            tags += listOf(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags, content, onReady)
         }

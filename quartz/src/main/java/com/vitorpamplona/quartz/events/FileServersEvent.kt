@@ -23,6 +23,7 @@ class FileServersEvent(
     companion object {
         const val kind = 10096
         const val fixedDTag = ""
+        const val alt = "File servers used by the author"
 
         fun create(
             listOfServers: List<String>,
@@ -36,6 +37,7 @@ class FileServersEvent(
             listOfServers.forEach {
                 tags.add(arrayOf("server", it))
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }

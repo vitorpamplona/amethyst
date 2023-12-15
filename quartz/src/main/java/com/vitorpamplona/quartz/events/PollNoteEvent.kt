@@ -43,6 +43,7 @@ class PollNoteEvent(
 
     companion object {
         const val kind = 6969
+        const val alt = "Poll event"
 
         fun create(
             msg: String,
@@ -105,6 +106,7 @@ class PollNoteEvent(
                     //tags.add(arrayOf("nip94", it.toJson()))
                 }
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }

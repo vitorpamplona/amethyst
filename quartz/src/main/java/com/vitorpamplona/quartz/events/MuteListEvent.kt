@@ -54,6 +54,7 @@ class MuteListEvent(
     companion object {
         const val kind = 10000
         const val fixedDTag = ""
+        const val alt = "Mute List"
 
         fun blockListFor(pubKeyHex: HexKey): String {
             return "10000:$pubKeyHex:"
@@ -209,7 +210,13 @@ class MuteListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit
         ) {
-            signer.sign(createdAt, kind, tags, content, onReady)
+            val newTags = if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                tags
+            } else {
+                tags + arrayOf("alt", alt)
+            }
+
+            signer.sign(createdAt, kind, newTags, content, onReady)
         }
     }
 }

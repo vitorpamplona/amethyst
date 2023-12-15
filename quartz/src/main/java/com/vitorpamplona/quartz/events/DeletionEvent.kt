@@ -21,10 +21,11 @@ class DeletionEvent(
 
     companion object {
         const val kind = 5
+        const val alt = "Deletion event"
 
         fun create(deleteEvents: List<String>, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (DeletionEvent) -> Unit) {
             val content = ""
-            val tags = deleteEvents.map { arrayOf("e", it) }.toTypedArray()
+            val tags = deleteEvents.map { arrayOf("e", it) }.plusElement(arrayOf("alt", alt)).toTypedArray()
             signer.sign(createdAt, kind, tags, content, onReady)
         }
     }

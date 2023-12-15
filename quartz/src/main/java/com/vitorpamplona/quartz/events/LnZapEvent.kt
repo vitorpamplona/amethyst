@@ -63,6 +63,7 @@ class LnZapEvent(
 
     companion object {
         const val kind = 9735
+        const val alt = "Zap event"
     }
 
     enum class ZapType() {

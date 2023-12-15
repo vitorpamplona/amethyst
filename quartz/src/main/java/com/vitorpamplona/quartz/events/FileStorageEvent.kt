@@ -33,6 +33,7 @@ class FileStorageEvent(
 
     companion object {
         const val kind = 1064
+        const val alt = "Binary data"
 
         private const val TYPE = "type"
         private const val DECRYPT = "decrypt"
@@ -49,7 +50,8 @@ class FileStorageEvent(
             onReady: (FileStorageEvent) -> Unit
         ) {
             val tags = listOfNotNull(
-                arrayOf(TYPE, mimeType)
+                arrayOf(TYPE, mimeType),
+                arrayOf("alt", alt)
             )
 
             val content = encode(data)

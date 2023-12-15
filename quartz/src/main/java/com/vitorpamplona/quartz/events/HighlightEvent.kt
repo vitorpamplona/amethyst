@@ -25,6 +25,7 @@ class HighlightEvent(
 
     companion object {
         const val kind = 9802
+        const val alt = "Highlight/quote event"
 
         fun create(
             msg: String,
@@ -32,7 +33,7 @@ class HighlightEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (HighlightEvent) -> Unit
         ) {
-            signer.sign(createdAt, kind, emptyArray(), msg, onReady)
+            signer.sign(createdAt, kind, arrayOf(arrayOf("alt", alt)), msg, onReady)
         }
     }
 }

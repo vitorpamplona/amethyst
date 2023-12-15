@@ -31,6 +31,7 @@ class FileStorageHeaderEvent(
 
     companion object {
         const val kind = 1065
+        const val altDescription = "Descriptors for a binary file"
 
         private const val ENCRYPTION_KEY = "aes-256-gcm"
         private const val MIME_TYPE = "m"
@@ -62,7 +63,7 @@ class FileStorageHeaderEvent(
                 arrayOf("e", storageEvent.id),
                 mimeType?.let { arrayOf(MIME_TYPE, mimeType) },
                 hash?.let { arrayOf(HASH, it) },
-                alt?.let { arrayOf(ALT, it) },
+                alt?.let { arrayOf(ALT, it) } ?: arrayOf("alt", altDescription),
                 size?.let { arrayOf(FILE_SIZE, it) },
                 dimensions?.let { arrayOf(DIMENSION, it) },
                 blurhash?.let { arrayOf(BLUR_HASH, it) },

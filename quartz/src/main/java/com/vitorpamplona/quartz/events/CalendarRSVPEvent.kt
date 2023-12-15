@@ -29,13 +29,14 @@ class CalendarRSVPEvent(
 
     companion object {
         const val kind = 31925
+        const val alt = "Calendar event's invitation response"
 
         fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CalendarRSVPEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(arrayOf("alt", alt))
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

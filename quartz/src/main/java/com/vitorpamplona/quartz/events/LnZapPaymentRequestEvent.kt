@@ -56,6 +56,7 @@ class LnZapPaymentRequestEvent(
 
     companion object {
         const val kind = 23194
+        const val alt = "Zap payment request"
 
         fun create(
             lnInvoice: String,
@@ -66,7 +67,7 @@ class LnZapPaymentRequestEvent(
         ) {
             val serializedRequest = mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
 
-            val tags = arrayOf(arrayOf("p", walletServicePubkey))
+            val tags = arrayOf(arrayOf("p", walletServicePubkey), arrayOf("alt", alt))
 
             signer.nip04Encrypt(
                 serializedRequest,

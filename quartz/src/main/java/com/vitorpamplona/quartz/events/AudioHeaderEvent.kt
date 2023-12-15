@@ -24,6 +24,7 @@ class AudioHeaderEvent(
 
     companion object {
         const val kind = 1808
+        const val alt = "Audio header"
 
         private const val DOWNLOAD_URL = "download_url"
         private const val STREAM_URL = "stream_url"
@@ -49,7 +50,8 @@ class AudioHeaderEvent(
                     } else {
                         null
                     }
-                }
+                },
+                arrayOf("alt", alt)
             ).toTypedArray()
 
             signer.sign(createdAt, kind, tags, description, onReady)

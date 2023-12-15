@@ -23,13 +23,14 @@ class NNSEvent(
 
     companion object {
         const val kind = 30053
+        const val alt = "DNS records"
 
         fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (NNSEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(arrayOf("alt", alt))
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

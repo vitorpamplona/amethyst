@@ -74,6 +74,7 @@ class LnZapRequestEvent(
 
     companion object {
         const val kind = 9734
+        const val alt = "Zap request"
 
         fun create(
             originalNote: EventInterface,
@@ -91,7 +92,8 @@ class LnZapRequestEvent(
             var tags = listOf(
                 arrayOf("e", originalNote.id()),
                 arrayOf("p", toUserPubHex ?: originalNote.pubKey()),
-                arrayOf("relays") + relays
+                arrayOf("relays") + relays,
+                arrayOf("alt", alt)
             )
             if (originalNote is AddressableEvent) {
                 tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))

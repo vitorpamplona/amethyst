@@ -63,6 +63,7 @@ class LnZapPaymentResponseEvent(
 
     companion object {
         const val kind = 23195
+        const val alt = "Zap payment response"
     }
 }
 

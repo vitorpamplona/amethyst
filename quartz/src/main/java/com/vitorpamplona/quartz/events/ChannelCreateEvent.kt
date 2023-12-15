@@ -65,7 +65,11 @@ class ChannelCreateEvent(
                 ""
             }
 
-            signer.sign(createdAt, kind, emptyArray(), content, onReady)
+            val tags = arrayOf(
+                arrayOf("alt", "Public chat creation event ${channelInfo?.name?.let { "about ${it}" }}")
+            )
+
+            signer.sign(createdAt, kind, tags, content, onReady)
         }
     }
 

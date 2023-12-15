@@ -92,6 +92,7 @@ class ContactListEvent(
 
     companion object {
         const val kind = 3
+        const val alt = "Follow List"
 
         fun createFromScratch(
             followUsers: List<Contact>,
@@ -282,7 +283,13 @@ class ContactListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ContactListEvent) -> Unit
         ) {
-            signer.sign(createdAt, kind, tags, content, onReady)
+            val newTags = if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                tags
+            } else {
+                tags + arrayOf("alt", alt)
+            }
+
+            signer.sign(createdAt, kind, newTags, content, onReady)
         }
     }
 

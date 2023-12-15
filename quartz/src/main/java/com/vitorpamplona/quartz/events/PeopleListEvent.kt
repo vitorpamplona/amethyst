@@ -87,6 +87,7 @@ class PeopleListEvent(
     companion object {
         const val kind = 30000
         const val blockList = "mute"
+        const val alt = "List of people"
 
         fun blockListFor(pubKeyHex: HexKey): String {
             return "30000:$pubKeyHex:$blockList"
@@ -242,7 +243,13 @@ class PeopleListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit
         ) {
-            signer.sign(createdAt, kind, tags, content, onReady)
+            val newTags = if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                tags
+            } else {
+                tags + arrayOf("alt", alt)
+            }
+
+            signer.sign(createdAt, kind, newTags, content, onReady)
         }
     }
 }

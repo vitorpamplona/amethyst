@@ -22,6 +22,7 @@ class RelaySetEvent(
 
     companion object {
         const val kind = 30022
+        const val alt = "Relay list"
 
         fun create(
             relays: List<String>,
@@ -33,6 +34,7 @@ class RelaySetEvent(
             relays.forEach {
                 tags.add(arrayOf("r", it))
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }

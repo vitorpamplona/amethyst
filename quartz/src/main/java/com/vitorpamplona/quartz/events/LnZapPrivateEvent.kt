@@ -28,6 +28,7 @@ class LnZapPrivateEvent(
 
     companion object {
         const val kind = 9733
+        const val alt = "Private zap"
 
         fun create(
             signer: NostrSigner,

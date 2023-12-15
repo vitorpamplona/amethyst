@@ -23,6 +23,7 @@ class EmojiPackSelectionEvent(
     companion object {
         const val kind = 10030
         const val fixedDTag = ""
+        const val alt = "Emoji selection"
 
         fun create(
             listOfEmojiPacks: List<ATag>?,
@@ -36,6 +37,8 @@ class EmojiPackSelectionEvent(
             listOfEmojiPacks?.forEach {
                 tags.add(arrayOf("a", it.toTag()))
             }
+
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }

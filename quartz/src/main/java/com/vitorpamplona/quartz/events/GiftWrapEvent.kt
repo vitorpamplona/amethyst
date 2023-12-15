@@ -62,6 +62,7 @@ class GiftWrapEvent(
 
     companion object {
         const val kind = 1059
+        const val alt = "Encrypted event"
 
         fun create(
             event: Event,
@@ -71,7 +72,7 @@ class GiftWrapEvent(
         ) {
             val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
             val serializedContent = toJson(event)
-            val tags = arrayOf(arrayOf("p", recipientPubKey))
+            val tags = arrayOf(arrayOf("p", recipientPubKey), arrayOf("alt", alt))
 
             signer.nip44Encrypt(serializedContent, recipientPubKey) {
                 signer.sign(createdAt, kind, tags, it, onReady)

@@ -19,13 +19,14 @@ class CalendarEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     companion object {
         const val kind = 31924
+        const val alt = "Calendar"
 
         fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CalendarEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(arrayOf("alt", alt))
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

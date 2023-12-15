@@ -18,5 +18,6 @@ class BadgeAwardEvent(
 
     companion object {
         const val kind = 8
+        const val alt = "Badge award"
     }
 }

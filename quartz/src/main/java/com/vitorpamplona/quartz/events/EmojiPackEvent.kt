@@ -19,6 +19,7 @@ class EmojiPackEvent(
 
     companion object {
         const val kind = 30030
+        const val alt = "Emoji pack"
 
         fun create(
             name: String = "",
@@ -30,6 +31,7 @@ class EmojiPackEvent(
 
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("d", name))
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }

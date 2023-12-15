@@ -24,5 +24,6 @@ class BadgeProfilesEvent(
     companion object {
         const val kind = 30008
         const val standardDTAg = "profile_badges"
+        const val alt = "List of accepted badges by the author"
     }
 }

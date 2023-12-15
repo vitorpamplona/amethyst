@@ -31,13 +31,14 @@ class CalendarTimeSlotEvent(
 
     companion object {
         const val kind = 31923
+        const val alt = "Calendar time-slot event"
 
         fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CalendarTimeSlotEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(arrayOf("alt", alt))
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

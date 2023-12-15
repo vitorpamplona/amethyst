@@ -69,8 +69,10 @@ class ReportEvent(
             var tags: Array<Array<String>> = arrayOf(reportPostTag, reportAuthorTag)
 
             if (reportedPost is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", reportedPost.address().toTag()))
+                tags += listOf(arrayOf("a", reportedPost.address().toTag()))
             }
+
+            tags += listOf(arrayOf("alt", "Report for ${type.name}"))
 
             signer.sign(createdAt, kind, tags, content, onReady)
         }
@@ -85,8 +87,9 @@ class ReportEvent(
             val content = ""
 
             val reportAuthorTag = arrayOf("p", reportedUser, type.name.lowercase())
+            val alt = arrayOf("alt", "Report for ${type.name}")
 
-            val tags: Array<Array<String>> = arrayOf(reportAuthorTag)
+            val tags: Array<Array<String>> = arrayOf(reportAuthorTag, alt)
             signer.sign(createdAt, kind, tags, content, onReady)
         }
     }

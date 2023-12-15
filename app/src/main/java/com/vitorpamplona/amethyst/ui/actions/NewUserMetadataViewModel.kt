@@ -124,7 +124,7 @@ class NewUserMetadataViewModel : ViewModel() {
         ObjectMapper().writeValue(writer, currentJson)
 
         viewModelScope.launch(Dispatchers.IO) {
-            account.sendNewUserMetadata(writer.buffer.toString(), newClaims)
+            account.sendNewUserMetadata(writer.buffer.toString(), displayName.value.trim(), newClaims)
         }
         clear()
     }

@@ -152,12 +152,17 @@ class MetadataEvent(
 
         fun create(
             contactMetaData: String,
+            newName: String,
             identities: List<IdentityClaim>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MetadataEvent) -> Unit
         ) {
             val tags = mutableListOf<Array<String>>()
+
+            tags.add(
+                arrayOf("alt", "User profile for ${newName}")
+            )
 
             identities.forEach {
                 tags.add(arrayOf("i", it.platformIdentity(), it.proof))

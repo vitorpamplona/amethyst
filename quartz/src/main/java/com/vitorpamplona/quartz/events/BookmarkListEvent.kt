@@ -19,6 +19,7 @@ class BookmarkListEvent(
 ) : GeneralListEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     companion object {
         const val kind = 30001
+        const val alt = "List of bookmarks"
 
         fun addEvent(
             earlierVersion: BookmarkListEvent?,
@@ -166,7 +167,13 @@ class BookmarkListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (BookmarkListEvent) -> Unit
         ) {
-            signer.sign(createdAt, kind, tags, content, onReady)
+            val newTags = if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                tags
+            } else {
+                tags + arrayOf("alt", alt)
+            }
+
+            signer.sign(createdAt, kind, newTags, content, onReady)
         }
 
         fun create(
@@ -196,6 +203,7 @@ class BookmarkListEvent(
             addresses?.forEach {
                 tags.add(arrayOf("a", it.toTag()))
             }
+            tags.add(arrayOf("alt", alt))
 
             createPrivateTags(privEvents, privUsers, privAddresses, signer) { content ->
                 signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)

@@ -35,6 +35,7 @@ class FileHeaderEvent(
 
     companion object {
         const val kind = 1063
+        const val altDescription = "Verifiable file url"
 
         private const val URL = "url"
         private const val ENCRYPTION_KEY = "aes-256-gcm"
@@ -70,7 +71,7 @@ class FileHeaderEvent(
                 arrayOf(URL, url),
                 magnetUri?.let { arrayOf(MAGNET_URI, it) },
                 mimeType?.let { arrayOf(MIME_TYPE, it) },
-                alt?.ifBlank { null }?.let { arrayOf(ALT, it) },
+                alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: arrayOf("alt", altDescription),
                 hash?.let { arrayOf(HASH, it) },
                 size?.let { arrayOf(FILE_SIZE, it) },
                 dimensions?.let { arrayOf(DIMENSION, it) },

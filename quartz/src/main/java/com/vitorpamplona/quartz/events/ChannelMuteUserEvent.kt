@@ -26,6 +26,7 @@ class ChannelMuteUserEvent(
 
     companion object {
         const val kind = 44
+        const val alt = "Mute user instruction for public chats"
 
         fun create(
             reason: String,
@@ -35,9 +36,9 @@ class ChannelMuteUserEvent(
             onReady: (ChannelMuteUserEvent) -> Unit
         ) {
             val content = reason
-            val tags = usersToMute?.map {
+            val tags = (usersToMute?.map {
                 arrayOf("p", it)
-            }?.toTypedArray() ?: emptyArray()
+            }?.toTypedArray() ?: emptyArray()) + arrayOf(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags, content, onReady)
         }

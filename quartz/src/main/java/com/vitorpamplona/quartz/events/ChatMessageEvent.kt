@@ -49,6 +49,7 @@ class ChatMessageEvent(
 
     companion object {
         const val kind = 14
+        const val alt = "Direct message"
 
         fun create(
             msg: String,
@@ -89,6 +90,7 @@ class ChatMessageEvent(
             subject?.let {
                 tags.add(arrayOf("subject", it))
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }

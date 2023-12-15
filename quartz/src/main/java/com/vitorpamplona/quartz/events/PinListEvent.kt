@@ -22,6 +22,7 @@ class PinListEvent(
 
     companion object {
         const val kind = 33888
+        const val alt = "Pinned Posts"
 
         fun create(
             pins: List<String>,
@@ -33,6 +34,7 @@ class PinListEvent(
             pins.forEach {
                 tags.add(arrayOf("pin", it))
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }

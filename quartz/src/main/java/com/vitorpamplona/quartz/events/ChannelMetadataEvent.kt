@@ -30,6 +30,7 @@ class ChannelMetadataEvent(
 
     companion object {
         const val kind = 41
+        const val alt = "This is a public chat definition update"
 
         fun create(
             name: String?,
@@ -65,7 +66,10 @@ class ChannelMetadataEvent(
                     ""
                 }
 
-            val tags = listOf(arrayOf("e", originalChannelIdHex, "", "root"))
+            val tags = listOf(
+                arrayOf("e", originalChannelIdHex, "", "root"),
+                arrayOf("alt", "Public chat update to ${newChannelInfo?.name}")
+            )
             signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }

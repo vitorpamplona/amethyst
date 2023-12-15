@@ -29,6 +29,7 @@ class GenericRepostEvent(
 
     companion object {
         const val kind = 16
+        const val alt = "Generic repost"
 
         fun create(
             boostedPost: EventInterface,
@@ -38,16 +39,17 @@ class GenericRepostEvent(
         ) {
             val content = boostedPost.toJson()
 
-            val replyToPost = arrayOf("e", boostedPost.id())
-            val replyToAuthor = arrayOf("p", boostedPost.pubKey())
-
-            var tags: List<Array<String>> = listOf(replyToPost, replyToAuthor)
+            val tags = mutableListOf(
+                arrayOf("e", boostedPost.id()),
+                arrayOf("p", boostedPost.pubKey())
+            )
 
             if (boostedPost is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", boostedPost.address().toTag()))
+                tags.add(arrayOf("a", boostedPost.address().toTag()))
             }
 
-            tags = tags + listOf(arrayOf("k", "${boostedPost.kind()}"))
+            tags.add(arrayOf("k", "${boostedPost.kind()}"))
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
         }

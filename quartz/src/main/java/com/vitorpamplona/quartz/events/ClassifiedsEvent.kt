@@ -43,6 +43,7 @@ class ClassifiedsEvent(
     companion object {
         const val kind = 30402
         private val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
+        const val alt = "Classifieds listing"
 
         fun create(
             dTag: String,
@@ -145,6 +146,7 @@ class ClassifiedsEvent(
                     //tags.add(arrayOf("nip94", it.toJson()))
                 }
             }
+            tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), message, onReady)
         }

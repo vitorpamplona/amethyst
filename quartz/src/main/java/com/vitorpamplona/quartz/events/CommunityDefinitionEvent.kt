@@ -25,14 +25,16 @@ class CommunityDefinitionEvent(
 
     companion object {
         const val kind = 34550
+        const val alt = "Community definition"
 
         fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CommunityDefinitionEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
-            signer.sign(createdAt, kind, tags, "", onReady)
+            val tags = mutableListOf<Array<String>>()
+            tags.add(arrayOf("alt", alt))
+            signer.sign(createdAt, kind, tags.toTypedArray(), "", onReady)
         }
     }
 }

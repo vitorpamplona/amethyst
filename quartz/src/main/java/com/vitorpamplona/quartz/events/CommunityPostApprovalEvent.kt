@@ -45,6 +45,7 @@ class CommunityPostApprovalEvent(
 
     companion object {
         const val kind = 4550
+        const val alt = "Community post approval"
 
         fun create(
             approvedPost: Event,
@@ -59,8 +60,9 @@ class CommunityPostApprovalEvent(
             val replyToPost = arrayOf("e", approvedPost.id())
             val replyToAuthor = arrayOf("p", approvedPost.pubKey())
             val innerKind = arrayOf("k", "${approvedPost.kind()}")
+            val alt = arrayOf("alt", alt)
 
-            val tags: Array<Array<String>> = arrayOf(communities, replyToPost, replyToAuthor, innerKind)
+            val tags: Array<Array<String>> = arrayOf(communities, replyToPost, replyToAuthor, innerKind, alt)
 
             signer.sign(createdAt, kind, tags, content, onReady)
         }

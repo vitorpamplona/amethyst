@@ -45,6 +45,7 @@ class LiveActivitiesEvent(
 
     companion object {
         const val kind = 30311
+        const val alt = "Live activity event"
 
         const val STATUS_LIVE = "live"
         const val STATUS_PLANNED = "planned"
@@ -55,7 +56,7 @@ class LiveActivitiesEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (LiveActivitiesEvent) -> Unit
         ) {
-            val tags = emptyArray<Array<String>>()
+            val tags = arrayOf(arrayOf("alt", alt))
             signer.sign(createdAt, kind, tags, "", onReady)
         }
     }

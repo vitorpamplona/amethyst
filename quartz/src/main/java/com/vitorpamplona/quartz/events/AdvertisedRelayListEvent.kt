@@ -51,7 +51,7 @@ class AdvertisedRelayListEvent(
                 } else {
                     arrayOf(it.relayUrl, it.type.code)
                 }
-            }.toTypedArray()
+            }.plusElement(arrayOf("alt", "Relay list event with ${list.size} relays")).toTypedArray()
             val msg = ""
 
             signer.sign(createdAt, kind, tags, msg, onReady)
