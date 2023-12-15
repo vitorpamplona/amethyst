@@ -7,7 +7,6 @@ import com.vitorpamplona.amethyst.ui.actions.updated
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
-import kotlin.time.measureTimedValue
 
 class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
 
@@ -46,58 +45,53 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun updateListWith(oldList: List<Note>, newItems: Set<Note>): List<Note> {
-        val (feed, elapsed) = measureTimedValue {
-            val me = account.userProfile()
+        val me = account.userProfile()
 
-            // Gets the latest message by channel from the new items.
-            val newRelevantPublicMessages = filterRelevantPublicMessages(newItems, account)
+        // Gets the latest message by channel from the new items.
+        val newRelevantPublicMessages = filterRelevantPublicMessages(newItems, account)
 
-            // Gets the latest message by room from the new items.
-            val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
+        // Gets the latest message by room from the new items.
+        val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
 
-            if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty()) {
-                return oldList
-            }
-
-            var myNewList = oldList
-
-            newRelevantPublicMessages.forEach { newNotePair ->
-                var hasUpdated = false
-                oldList.forEach { oldNote ->
-                    if (newNotePair.key == oldNote.channelHex()) {
-                        hasUpdated = true
-                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
-                            myNewList = myNewList.updated(oldNote, newNotePair.value)
-                        }
-                    }
-                }
-                if (!hasUpdated) {
-                    myNewList = myNewList.plus(newNotePair.value)
-                }
-            }
-
-            newRelevantPrivateMessages.forEach { newNotePair ->
-                var hasUpdated = false
-                oldList.forEach { oldNote ->
-                    val oldRoom = (oldNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
-
-                    if (newNotePair.key == oldRoom) {
-                        hasUpdated = true
-                        if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
-                            myNewList = myNewList.updated(oldNote, newNotePair.value)
-                        }
-                    }
-                }
-                if (!hasUpdated) {
-                    myNewList = myNewList.plus(newNotePair.value)
-                }
-            }
-
-            sort(myNewList.toSet()).take(1000)
+        if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty()) {
+            return oldList
         }
 
-        // Log.d("Time", "${this.javaClass.simpleName} Modified Additive Feed in $elapsed with ${feed.size} objects")
-        return feed
+        var myNewList = oldList
+
+        newRelevantPublicMessages.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                if (newNotePair.key == oldNote.channelHex()) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
+        newRelevantPrivateMessages.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                val oldRoom = (oldNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
+
+                if (newNotePair.key == oldRoom) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
+        return sort(myNewList.toSet()).take(1000)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {

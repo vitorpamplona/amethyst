@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -38,7 +37,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @Composable
 fun RefresheableFeedView(
@@ -224,27 +222,23 @@ private fun FeedLoaded(
         state = listState
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val (value, elapsed) = measureTimedValue {
-                val defaultModifier = remember {
-                    Modifier
-                        .fillMaxWidth()
-                        .animateItemPlacement()
-                }
-
-                Row(defaultModifier) {
-                    NoteCompose(
-                        item,
-                        routeForLastRead = routeForLastRead,
-                        modifier = Modifier,
-                        isBoostedNote = false,
-                        showHidden = state.showHidden.value,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
-                }
+            val defaultModifier = remember {
+                Modifier
+                    .fillMaxWidth()
+                    .animateItemPlacement()
             }
 
-            Log.d("Rendering Metrics", "Complete: ${item.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+            Row(defaultModifier) {
+                NoteCompose(
+                    item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier,
+                    isBoostedNote = false,
+                    showHidden = state.showHidden.value,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
         }
     }
 }

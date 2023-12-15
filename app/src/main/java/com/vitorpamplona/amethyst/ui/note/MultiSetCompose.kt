@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -76,7 +75,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
@@ -130,27 +128,21 @@ fun MultiSetCompose(multiSetCard: MultiSetCard, routeForLastRead: String, showHi
     }
 
     Column(modifier = columnModifier) {
-        val (value, elapsed) = measureTimedValue {
-            Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
-        }
-        Log.d("Rendering Metrics", "All Galeries: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed - ")
+        Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
 
         Row(Modifier.fillMaxWidth()) {
             Spacer(modifier = WidthAuthorPictureModifierWithPadding)
 
-            val (value, elapsed) = measureTimedValue {
-                NoteCompose(
-                    baseNote = baseNote,
-                    routeForLastRead = null,
-                    modifier = remember { Modifier.padding(top = 5.dp) },
-                    isBoostedNote = true,
-                    showHidden = showHidden,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
-            Log.d("Rendering Metrics", "Complete: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+            NoteCompose(
+                baseNote = baseNote,
+                routeForLastRead = null,
+                modifier = remember { Modifier.padding(top = 5.dp) },
+                isBoostedNote = true,
+                showHidden = showHidden,
+                parentBackgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
 
             NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
         }
@@ -168,9 +160,6 @@ private fun Galeries(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val boostEvents by remember { derivedStateOf { multiSetCard.boostEvents } }
-    val likeEvents by remember { derivedStateOf { multiSetCard.likeEventsByType } }
-
     val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
     val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
     val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
@@ -188,26 +177,17 @@ private fun Galeries(
             }
         }
 
-        val (value, elapsed) = measureTimedValue {
-            RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
-        }
-        Log.d("Rendering Metrics", "Galeries Zaps:   ${multiSetCard.note.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+        RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
     }
 
     if (hasBoostEvents) {
-        val (value, elapsed) = measureTimedValue {
-            RenderBoostGallery(boostEvents, nav, accountViewModel)
-        }
-        Log.d("Rendering Metrics", "Galeries Repost: ${multiSetCard.note.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+        RenderBoostGallery(multiSetCard.boostEvents, nav, accountViewModel)
     }
 
     if (hasLikeEvents) {
-        val (value, elapsed) = measureTimedValue {
-            likeEvents.forEach {
-                RenderLikeGallery(it.key, it.value, nav, accountViewModel)
-            }
+        multiSetCard.likeEventsByType.forEach {
+            RenderLikeGallery(it.key, it.value, nav, accountViewModel)
         }
-        Log.d("Rendering Metrics", "Galeries Like:   ${multiSetCard.note.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
     }
 }
 

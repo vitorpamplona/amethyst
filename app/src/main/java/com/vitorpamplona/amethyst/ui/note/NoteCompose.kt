@@ -220,7 +220,6 @@ import java.math.BigDecimal
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
-import kotlin.time.measureTimedValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -961,30 +960,24 @@ fun InnerNoteWithReactions(
     ) {
         if (notBoostedNorQuote) {
             Column(WidthAuthorPictureModifier) {
-                val (value, elapsed) = measureTimedValue {
-                    AuthorAndRelayInformation(baseNote, accountViewModel, nav)
-                }
-                Log.d("Rendering Metrics", "Author:   ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+                AuthorAndRelayInformation(baseNote, accountViewModel, nav)
             }
             Spacer(modifier = DoubleHorzSpacer)
         }
 
         Column(Modifier.fillMaxWidth()) {
             val showSecondRow = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && !isBoostedNote && !isQuotedNote
-            val (value, elapsed) = measureTimedValue {
-                NoteBody(
-                    baseNote = baseNote,
-                    showAuthorPicture = isQuotedNote,
-                    unPackReply = unPackReply,
-                    makeItShort = makeItShort,
-                    canPreview = canPreview,
-                    showSecondRow = showSecondRow,
-                    backgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
-            Log.d("Rendering Metrics", "TextBody: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+            NoteBody(
+                baseNote = baseNote,
+                showAuthorPicture = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                canPreview = canPreview,
+                showSecondRow = showSecondRow,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 
@@ -997,15 +990,12 @@ fun InnerNoteWithReactions(
                 Spacer(modifier = DoubleVertSpacer)
             }
         } else {
-            val (value, elapsed) = measureTimedValue {
-                ReactionsRow(
-                    baseNote = baseNote,
-                    showReactionDetail = notBoostedNorQuote,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
-            Log.d("Rendering Metrics", "Reaction: ${baseNote.event?.content()?.split("\n")?.getOrNull(0)?.take(15)}.. $elapsed")
+            ReactionsRow(
+                baseNote = baseNote,
+                showReactionDetail = notBoostedNorQuote,
+                accountViewModel = accountViewModel,
+                nav = nav
+            )
         }
     }
 
