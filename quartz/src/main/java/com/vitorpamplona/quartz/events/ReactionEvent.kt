@@ -33,7 +33,11 @@ class ReactionEvent(
         }
 
         fun create(content: String, originalNote: EventInterface, signer: NostrSigner, createdAt: Long = TimeUtils.now(), onReady: (ReactionEvent) -> Unit) {
-            var tags = listOf(arrayOf("e", originalNote.id()), arrayOf("p", originalNote.pubKey()))
+            var tags = listOf(
+                arrayOf("e", originalNote.id()),
+                arrayOf("p", originalNote.pubKey()),
+                arrayOf("k", originalNote.kind().toString())
+            )
             if (originalNote is AddressableEvent) {
                 tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
             }
