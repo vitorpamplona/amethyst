@@ -18,87 +18,90 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 
 # Current Features
 
-- [x] Event Builders / WebSocket Subscriptions (NIP-01)
-- [x] Home Feed
-- [x] Notifications Feed
-- [x] Global Feed
-- [x] Replies and mentions (NIP-10)
-- [x] Reactions (NIP-25)
-- [x] Reposts (NIP-18)
-- [x] Image/Video/Url/LnInvoice Previews
-- [x] View Threads
+- [x] Events / Relay Subscriptions (NIP-01)
+- [x] Follow List (NIP-02)
+- [ ] OpenTimestamps Attestations (NIP-03)
 - [x] Private Messages (NIP-04)
-- [x] User Profiles (edit/follow/unfollow - NIP-02)
-- [x] Public Chats (NIP-28)
-- [x] Bech Encoding support (NIP-19)
-- [x] Notification Dots
-- [x] Reporting and Hide User capability (NIP-56)
-- [x] Automatic Translations
-- [x] Relay Sets (home, dms, public chats, global)
-- [x] User/Note Tagging (NIP-08, NIP-10)
-- [x] Lightning Tips
-- [x] Zaps (private, public, anon, non-zap) (NIP-57)
-- [x] URI Support (NIP-21)
-- [x] Created_at Limits (NIP-22)
+- [x] DNS Address (NIP-05)
+- [ ] Mnemonic seed phrase (NIP-06)
+- [o] WebBrowser Signer (NIP-07, Not applicable)
+- [x] Old-style mentions (NIP-08)
 - [x] Event Deletion (NIP-09)
-- [x] Nostr Address (NIP-05)
+- [x] Replies, mentions, Threads and Notifications (NIP-10)
+- [x] Relay Information Document (NIP-11)
+- [x] Generic Tag Queries (NIP-12)
+- [x] Proof of Work Display (NIP-13)
+- [ ] Proof of Work Calculations (NIP-13)
+- [x] Events with a Subject (NIP-14)
+- [ ] Marketplace (NIP-15)
+- [x] Event Treatment (NIP-16)
+- [x] Image/Video/Url/LnInvoice Previews
+- [x] Reposts, Quotes, Generic Reposts (NIP-18)
+- [x] Bech Encoding support (NIP-19)
+- [x] Command Results (NIP-20)
+- [x] URI Support (NIP-21)
 - [x] Long-form Content (NIP-23)
+- [x] User Profile Fields / Relay list (NIP-24)
+- [x] Reactions (NIP-25)
+- [o] Delegated Event Signing (NIP-26, Will not implement)
+- [x] Text Note References (NIP-27)
+- [x] Public Chats (NIP-28)
+- [x] Custom Emoji (NIP-30)
+- [x] Event kind summaries (NIP-31)
+- [ ] Labeling (NIP-32)
 - [x] Parameterized Replaceable Events (NIP-33)
-- [x] Online Relay Search (NIP-50)
-- [x] Internationalization
-- [x] Badges (NIP-58)
-- [x] Hashtag Following and Custom Hashtags
-- [x] Polls (NIP-69)
-- [x] Verifiable static content in URLs (NIP-94)
-- [x] Login with QR
+- [x] Sensitive Content (NIP-36)
+- [x] User Status Event (NIP-38)
+- [x] External Identities (NIP-39)
+- [x] Expiration Support (NIP-40)
+- [x] Relay Authentication (NIP-42)
+- [o] Event Counts (NIP-45, Will not implement)
+- [ ] Nostr Connect (NIP-46)
 - [x] Wallet Connect API (NIP-47)
-- [x] Accessible uploads
+- [ ] Proxy Tags (NIP-48, Not applicable)
+- [x] Online Relay Search (NIP-50)
+- [x] Lists (NIP-51)
+- [ ] Calendar Events (NIP-52)
+- [x] Live Activities & Live Chats (NIP-53)
+- [x] Inline Metadata (NIP-55 - Draft)
+- [x] Reporting (NIP-56)
+- [x] Lightning Tips
+- [x] Zaps (NIP-57)
+- [x] Private Zaps
+- [x] Zap Splits (NIP-57)
+- [x] Zapraiser (NIP-TBD)
+- [x] Badges (NIP-58)
+- [ ] Relay List Metadata (NIP-65)
+- [x] Polls (NIP-69)
+- [x] Moderated Communities (NIP-72)
+- [ ] Zap Goals (NIP-75)
+- [ ] Arbitrary Custom App Data (NIP-78)
+- [x] Highlights (NIP-84)
+- [x] Recommended Application Handlers (NIP-89)
+- [ ] Data Vending Machine (NIP-90)
+- [x] Verifiable file URLs (NIP-94)
+- [x] Binary Blobs (NIP-95)
+- [x] HTTP File Storage Integration (NIP-96 Draft)
+- [x] HTTP Auth (NIP-98)
+- [x] Classifieds (NIP-99)
+- [x] Private Messages and Small Groups (NIP-24/Draft)
+- [x] Gift Wraps & Seals (NIP-59/Draft)
+- [x] Versioned Encrypted Payloads (NIP-44/Draft)
+- [x] Audio Tracks (zapstr.live) (Kind:31337)
+- [x] Push Notifications (Google and Unified Push)
+- [x] In-Device Automatic Translations
+- [x] Hashtag Following and Custom Hashtags
+- [x] Login with QR
 - [x] Bounty support (nostrbounties.com)
 - [x] De-googled F-Droid flavor
-- [x] External Identity Support (NIP-39)
 - [x] Multiple Accounts
 - [x] Markdown Support
-- [x] Relay Authentication (NIP-42)
-- [x] Content stored in relays themselves (NIP-95)
-- [x] Custom Emoji (NIP-30)
-- [x] Zap Forwarding (NIP-57)
-- [x] Text Note References (NIP-27)
-- [x] Audio Tracks (zapstr.live) (Kind:31337)
-- [x] Push Notifications (Zaps and Messages)
-- [x] Generic Tags (NIP-12)
-- [x] Sensitive Content (NIP-36)
-- [x] View Individual Reactions (Like, Boost, Zaps, Reports) per Post
-- [x] Recommended Application Handlers (NIP-89)
-- [x] Events with a Subject (NIP-14)
-- [x] Generic Reposts (kind:16)
-- [x] Live Activities & Live Chats (NIP-53)
-- [x] Relay Pages (NIP-11)
-- [x] HTTP Auth (NIP-98)
-- [x] Zapraiser (NIP-TBD)
-- [x] Moderated Communities (NIP-72)
 - [x] Emoji Packs (Kind:30030)
 - [x] Personal Emoji Lists (Kind:10030)
-- [x] Classifieds (Kind:30402)
-- [x] Private Messages and Small Groups (NIP-24)
-- [x] Gift Wraps & Seals (NIP-59)
-- [x] Versioned Encrypted Payloads (NIP-44)
-- [x] Expiration Support (NIP-40)
-- [x] Status Event (NIP-38)
-- [ ] Marketplace (NIP-15)
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
-- [ ] Bookmarks, Pinned Posts, Muted Events (NIP-51)
-- [ ] Proof of Work in the Phone (NIP-13, NIP-20)
 - [ ] Workspaces
 - [ ] Infinity Scroll
-- [ ] Relay List Metadata (NIP-65)
-- [ ] Signing Requests (NIP-46)
-- [ ] Delegated Event Signing (NIP-26)
-- [ ] Account Creation / Backup Guidance
-- [ ] Mnemonic seed phrase (NIP-06)
-- [ ] Message Sent feedback (NIP-20)
-- [ ] OpenTimestamps Attestations (NIP-03)
-
 
 # Development Overview
 
