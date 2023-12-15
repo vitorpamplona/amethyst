@@ -261,7 +261,7 @@ fun MainScreen(
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val newOffset = bottomBarOffsetHeightPx.value + available.y
+                val newOffset = bottomBarOffsetHeightPx.floatValue + available.y
 
                 if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
                     val newBottomBarOffset = if (navState.value?.destination?.route !in InvertedLayouts) {
@@ -270,16 +270,16 @@ fun MainScreen(
                         newOffset.coerceIn(0f, bottomBarHeightPx)
                     }
 
-                    if (newBottomBarOffset != bottomBarOffsetHeightPx.value) {
-                        bottomBarOffsetHeightPx.value = newBottomBarOffset
+                    if (newBottomBarOffset != bottomBarOffsetHeightPx.floatValue) {
+                        bottomBarOffsetHeightPx.floatValue = newBottomBarOffset
                     }
                 } else {
-                    if (abs(bottomBarOffsetHeightPx.value) > 0.1) {
-                        bottomBarOffsetHeightPx.value = 0f
+                    if (abs(bottomBarOffsetHeightPx.floatValue) > 0.1) {
+                        bottomBarOffsetHeightPx.floatValue = 0f
                     }
                 }
 
-                val newShouldShow = abs(bottomBarOffsetHeightPx.value) < bottomBarHeightPx / 2.0f
+                val newShouldShow = abs(bottomBarOffsetHeightPx.floatValue) < bottomBarHeightPx / 2.0f
 
                 if (shouldShow.value != newShouldShow) {
                     shouldShow.value = newShouldShow
