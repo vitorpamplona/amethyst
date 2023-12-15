@@ -15,6 +15,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.lang.StringBuilder
 import java.util.concurrent.atomic.AtomicBoolean
 
 enum class FeedType {
@@ -289,8 +290,12 @@ class Relay(
                         activeTypes.any { it in filter.types }
                     }
                     if (filters.isNotEmpty()) {
-                        val request =
-                            """["REQ","$requestId",${filters.joinToString(",", limit = 10, truncated = "") { it.filter.toJson(url) }}]"""
+                        val request = filters.joinToStringLimited(
+                            separator = ",",
+                            limit = 10,
+                            prefix = """["REQ","$requestId",""",
+                            postfix = "]"
+                        ) { it.filter.toJson(url) }
 
                         // Log.d("Relay", "onFilterSent $url $requestId $request")
 
@@ -307,6 +312,33 @@ class Relay(
                 }
             }
         }
+    }
+
+    fun <T> Iterable<T>.joinToStringLimited(
+        separator: CharSequence = ", ",
+        prefix: CharSequence = "",
+        postfix: CharSequence = "",
+        limit: Int = -1,
+        transform: ((T) -> CharSequence)? = null
+    ): String {
+        val buffer = StringBuilder()
+        buffer.append(prefix)
+        var count = 0
+        for (element in this) {
+            if (limit < 0 || count <= limit) {
+                if (++count > 1) buffer.append(separator)
+                when {
+                    transform != null -> buffer.append(transform(element))
+                    element is CharSequence? -> buffer.append(element)
+                    element is Char -> buffer.append(element)
+                    else -> buffer.append(element.toString())
+                }
+            } else {
+                break
+            }
+        }
+        buffer.append(postfix)
+        return buffer.toString()
     }
 
     fun sendFilterOnlyIfDisconnected() {
