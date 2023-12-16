@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -143,15 +142,11 @@ private fun RowScope.HasNewItemsIcon(
 
     NavigationBarItem(
         icon = {
-            ObserveNewItems(route, accountViewModel) { hasNewItems ->
-                NotifiableIcon(
-                    route.icon,
-                    route.notifSize,
-                    route.iconSize,
-                    selected,
-                    hasNewItems
-                )
-            }
+            NotifiableIcon(
+                selected,
+                route,
+                accountViewModel
+            )
         },
         selected = selected,
         onClick = { nav(route, selected) }
@@ -159,33 +154,33 @@ private fun RowScope.HasNewItemsIcon(
 }
 
 @Composable
-fun ObserveNewItems(route: Route, accountViewModel: AccountViewModel, inner: @Composable (hasNewItems: State<Boolean>?) -> Unit) {
-    val hasNewItems = accountViewModel.notificationDots.hasNewItems[route]?.collectAsStateWithLifecycle()
-
-    inner(hasNewItems)
-}
-
-@Composable
 private fun NotifiableIcon(
-    icon: Int,
-    size: Dp,
-    iconSize: Dp,
     selected: Boolean,
-    hasNewItems: State<Boolean>?
+    route: Route,
+    accountViewModel: AccountViewModel
 ) {
-    Box(remember { Modifier.size(size) }) {
+    Box(route.notifSize) {
         Icon(
-            painter = painterResource(id = icon),
+            painter = painterResource(id = route.icon),
             contentDescription = null,
-            modifier = remember { Modifier.size(iconSize) },
+            modifier = route.iconSize,
             tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified
         )
 
-        if (hasNewItems?.value == true) {
-            NotificationDotIcon(
-                Modifier.align(Alignment.TopEnd)
-            )
-        }
+        AddNotifIconIfNeeded(route, accountViewModel, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+@Composable
+fun AddNotifIconIfNeeded(
+    route: Route,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier
+) {
+    val flow = accountViewModel.notificationDots.hasNewItems[route] ?: return
+    val hasNewItems by flow.collectAsStateWithLifecycle()
+    if (hasNewItems) {
+        NotificationDotIcon(modifier)
     }
 }
 

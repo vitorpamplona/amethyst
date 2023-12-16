@@ -1,11 +1,12 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.os.Bundle
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.Modifier
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
@@ -37,16 +38,16 @@ sealed class Route(
     val route: String,
     val base: String = route.substringBefore("?"),
     val icon: Int,
-    val notifSize: Dp = Size23dp,
-    val iconSize: Dp = Size20dp,
+    val notifSize: Modifier = Modifier.size(Size23dp),
+    val iconSize: Modifier = Modifier.size(Size20dp),
     val hasNewItems: (Account, Set<com.vitorpamplona.amethyst.model.Note>) -> Boolean = { _, _ -> false },
     val arguments: ImmutableList<NamedNavArgument> = persistentListOf()
 ) {
     object Home : Route(
         route = "Home?nip47={nip47}",
         icon = R.drawable.ic_home,
-        notifSize = Size25dp,
-        iconSize = Size24dp,
+        notifSize = Modifier.size(Size25dp),
+        iconSize = Modifier.size(Size24dp),
         arguments = listOf(
             navArgument("nip47") { type = NavType.StringType; nullable = true; defaultValue = null }
         ).toImmutableList(),
