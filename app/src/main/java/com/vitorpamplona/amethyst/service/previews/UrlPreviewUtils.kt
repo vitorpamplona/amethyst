@@ -3,6 +3,8 @@ package com.vitorpamplona.amethyst.service.previews
 import com.vitorpamplona.amethyst.service.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -46,21 +48,31 @@ private val META_X_IMAGE = arrayOf(
 
 private const val CONTENT = "content"
 
-suspend fun getDocument(url: String, timeOut: Int = 30000): Document =
+suspend fun getDocument(url: String, timeOut: Int = 30000): UrlInfoItem =
     withContext(Dispatchers.IO) {
         val request: Request = Request.Builder().url(url).get().build()
-        val html = HttpClient.getHttpClient().newCall(request).execute().use {
+        HttpClient.getHttpClient().newCall(request).execute().use {
             if (it.isSuccessful) {
-                it.body.string()
+                val mimeType = it.headers.get("Content-Type")?.toMediaType()
+                    ?: throw IllegalArgumentException("Website returned unknown mimetype: ${it.headers.get("Content-Type")}")
+
+                if (mimeType.type == "text" && mimeType.subtype == "html") {
+                    val document = Jsoup.parse(it.body.string())
+                    parseHtml(url, document, mimeType)
+                } else if (mimeType.type == "image") {
+                    UrlInfoItem(url, image = url, mimeType = mimeType)
+                } else if (mimeType.type == "video") {
+                    UrlInfoItem(url, image = url, mimeType = mimeType)
+                } else {
+                    throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
+                }
             } else {
                 throw IllegalArgumentException("Website returned: " + it.code)
             }
         }
-
-        Jsoup.parse(html)
     }
 
-suspend fun parseHtml(url: String, document: Document): UrlInfoItem =
+suspend fun parseHtml(url: String, document: Document, type: MediaType): UrlInfoItem =
     withContext(Dispatchers.IO) {
         val metaTags = document.getElementsByTag(ELEMENT_TAG_META)
 
@@ -106,8 +118,8 @@ suspend fun parseHtml(url: String, document: Document): UrlInfoItem =
             }
 
             if (title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()) {
-                return@withContext UrlInfoItem(url, title, description, image)
+                return@withContext UrlInfoItem(url, title, description, image, type)
             }
         }
-        return@withContext UrlInfoItem(url, title, description, image)
+        return@withContext UrlInfoItem(url, title, description, image, type)
     }

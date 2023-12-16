@@ -2,6 +2,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -10,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun LoadUrlPreview(url: String, urlText: String, accountViewModel: AccountViewModel) {
@@ -42,7 +45,17 @@ fun LoadUrlPreview(url: String, urlText: String, accountViewModel: AccountViewMo
         ) { state ->
             when (state) {
                 is UrlPreviewState.Loaded -> {
-                    UrlPreviewCard(url, state.previewInfo)
+                    if (state.previewInfo.mimeType.type == "image") {
+                        Box(modifier = HalfVertPadding) {
+                            ZoomableContentView(ZoomableUrlImage(url), persistentListOf(), roundedCorner = true, accountViewModel)
+                        }
+                    } else if (state.previewInfo.mimeType.type == "video") {
+                        Box(modifier = HalfVertPadding) {
+                            ZoomableContentView(ZoomableUrlVideo(url), persistentListOf(), roundedCorner = true, accountViewModel)
+                        }
+                    } else {
+                        UrlPreviewCard(url, state.previewInfo)
+                    }
                 }
 
                 else -> {

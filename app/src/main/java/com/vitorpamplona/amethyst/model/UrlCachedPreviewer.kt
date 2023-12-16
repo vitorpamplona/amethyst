@@ -34,7 +34,7 @@ object UrlCachedPreviewer {
                         }
                     }
 
-                    val state = if (urlInfo.allFetchComplete() && urlInfo.url == url) {
+                    val state = if (urlInfo.fetchComplete() && urlInfo.url == url) {
                         UrlPreviewState.Loaded(urlInfo)
                     } else {
                         UrlPreviewState.Empty
