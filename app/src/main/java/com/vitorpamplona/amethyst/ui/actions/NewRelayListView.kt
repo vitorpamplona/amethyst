@@ -74,11 +74,11 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
 import kotlinx.coroutines.launch
@@ -369,7 +369,11 @@ fun ServerConfigClickableLine(
             modifier = Modifier.padding(vertical = 5.dp)
         ) {
             Column(Modifier.clickable(onClick = onClick)) {
-                RenderRelayIcon(iconUrl = item.briefInfo.favIcon, loadProfilePicture, Size55dp)
+                RenderRelayIcon(
+                    iconUrl = item.briefInfo.favIcon,
+                    loadProfilePicture,
+                    MaterialTheme.colorScheme.largeRelayIconModifier
+                )
             }
 
             Spacer(modifier = HalfHorzPadding)

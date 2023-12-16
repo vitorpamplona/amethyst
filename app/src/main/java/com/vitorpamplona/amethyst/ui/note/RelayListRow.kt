@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.ripple.rememberRipple
@@ -25,11 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
@@ -41,11 +37,11 @@ import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
-import com.vitorpamplona.amethyst.ui.theme.Size13dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
 
 @Composable
 public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -178,16 +174,11 @@ fun RenderRelay(relay: RelayBriefInfoCache.RelayBriefInfo, accountViewModel: Acc
 }
 
 @Composable
-fun RenderRelayIcon(iconUrl: String, loadProfilePicture: Boolean, size: Dp = Size13dp) {
-    val backgroundColor = MaterialTheme.colorScheme.background
-
-    val iconModifier = remember {
-        Modifier
-            .size(size)
-            .clip(shape = CircleShape)
-            .background(backgroundColor)
-    }
-
+fun RenderRelayIcon(
+    iconUrl: String,
+    loadProfilePicture: Boolean,
+    iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier
+) {
     RobohashFallbackAsyncImage(
         robot = iconUrl,
         model = iconUrl,

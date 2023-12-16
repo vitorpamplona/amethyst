@@ -152,6 +152,26 @@ val LightChannelNotePictureModifier = Modifier
     .background(LightColorPalette.background)
     .border(2.dp, LightColorPalette.background, CircleShape)
 
+val LightRelayIconModifier = Modifier
+    .size(Size13dp)
+    .clip(shape = CircleShape)
+    .background(LightColorPalette.background)
+
+val DarkRelayIconModifier = Modifier
+    .size(Size13dp)
+    .clip(shape = CircleShape)
+    .background(DarkColorPalette.background)
+
+val LightLargeRelayIconModifier = Modifier
+    .size(Size55dp)
+    .clip(shape = CircleShape)
+    .background(LightColorPalette.background)
+
+val DarkLargeRelayIconModifier = Modifier
+    .size(Size55dp)
+    .clip(shape = CircleShape)
+    .background(DarkColorPalette.background)
+
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
 val MarkDownStyleOnDark = RichTextDefaults.copy(
@@ -293,6 +313,12 @@ val ColorScheme.innerPostModifier: Modifier
 
 val ColorScheme.channelNotePictureModifier: Modifier
     get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
+
+val ColorScheme.relayIconModifier: Modifier
+    get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
+
+val ColorScheme.largeRelayIconModifier: Modifier
+    get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
 
 val ColorScheme.chartStyle: ChartStyle
     get() {
