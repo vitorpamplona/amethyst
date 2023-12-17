@@ -184,7 +184,7 @@ fun VideoView(
 
     if (blurhash == null) {
         val ratio = aspectRatio(dimensions)
-        val modifier = if (ratio != null && roundedCorner) {
+        val modifier = if (ratio != null && roundedCorner && automaticallyStartPlayback.value) {
             Modifier.aspectRatio(ratio)
         } else {
             Modifier
