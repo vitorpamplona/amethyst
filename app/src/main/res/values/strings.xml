@@ -684,4 +684,12 @@
     <string name="classifieds_category_food">Food</string>
     <string name="classifieds_category_misc">Miscellaneous</string>
     <string name="classifieds_category_other">Other</string>
+
+    <string name="failed_to_upload_media_no_details">Failed to upload media</string>
+    <string name="could_not_open_the_compressed_file">Could not open the compressed file</string>
+    <string name="error_when_compressing_media">Error when compressing media: %1$s</string>
+    <string name="failed_to_upload_media">Uploading error: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
+    <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
+    <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
 </resources>

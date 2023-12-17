@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.util.Size
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,7 +54,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
@@ -67,14 +65,8 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
 
     LaunchedEffect(uri) {
         val mediaType = resolver.getType(uri) ?: ""
-        postViewModel.load(account, uri, mediaType)
-
-        launch(Dispatchers.IO) {
-            postViewModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                }
-            }
+        postViewModel.load(account, uri, mediaType) {
+            accountViewModel.toast(context.getString(R.string.failed_to_upload_media_no_details), it)
         }
     }
 
@@ -146,7 +138,11 @@ fun NewMediaView(uri: Uri, onClose: () -> Unit, postViewModel: NewMediaModel, ac
                         onPost = {
                             onClose()
                             postViewModel.upload(context, relayList)
-                            postViewModel.selectedServer?.let { account.changeDefaultFileServer(it.server) }
+                            postViewModel.selectedServer?.let {
+                                if (!it.isNip95) {
+                                    account.changeDefaultFileServer(it.server)
+                                }
+                            }
                         },
                         isActive = postViewModel.canPost()
                     )
@@ -211,7 +207,6 @@ fun ImageVideoPost(postViewModel: NewMediaModel, accountViewModel: AccountViewMo
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
                         } catch (e: Exception) {
-                            postViewModel.imageUploadingError.emit("Unable to load thumbnail, but the video can be uploaded")
                             Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                         }
                     }

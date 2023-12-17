@@ -405,8 +405,10 @@ fun NewPostView(
                                             url,
                                             accountViewModel.account.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent ->
-                                                postViewModel.upload(url, alt, sensitiveContent, false, server, context, relayList)
-                                                accountViewModel.account.changeDefaultFileServer(server.server)
+                                                postViewModel.upload(url, alt, sensitiveContent, false, server, context)
+                                                if (!server.isNip95) {
+                                                    accountViewModel.account.changeDefaultFileServer(server.server)
+                                                }
                                             },
                                             onCancel = {
                                                 postViewModel.contentToAddUrl = null

@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -206,7 +207,7 @@ open class NewPostViewModel() : ViewModel() {
         val dmUsers = toUsersTagger.mentions
 
         val zapReceiver = if (wantsForwardZapTo) {
-            forwardZapTo?.items?.map {
+            forwardZapTo.items.map {
                 ZapSplitSetup(
                     lnAddressOrPubKeyHex = it.key.pubkeyHex,
                     relay = it.key.relaysBeingUsed.keys.firstOrNull(),
@@ -361,8 +362,7 @@ open class NewPostViewModel() : ViewModel() {
         sensitiveContent: Boolean,
         isPrivate: Boolean = false,
         server: ServerOption,
-        context: Context,
-        relayList: List<Relay>? = null
+        context: Context
     ) {
         isUploadingImage = true
         contentToAddUrl = null
@@ -569,7 +569,7 @@ open class NewPostViewModel() : ViewModel() {
                     TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
                 )
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
-                forwardZapTo?.addItem(item)
+                forwardZapTo.addItem(item)
                 forwardZapToEditting = TextFieldValue("")
                 /*
                 val lastWord = forwardZapToEditting.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
@@ -740,6 +740,14 @@ open class NewPostViewModel() : ViewModel() {
         alt: String?,
         sensitiveContent: Boolean
     ) {
+        if (bytes.size > 80000) {
+            viewModelScope.launch {
+                imageUploadingError.emit("Media is too big for NIP-95")
+                isUploadingImage = false
+            }
+            return
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             FileHeader.prepare(
                 bytes,
@@ -773,6 +781,7 @@ open class NewPostViewModel() : ViewModel() {
         contentToAddUrl = uri
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun startLocation(context: Context) {
         locUtil = LocationUtil(context)
         locUtil?.let {

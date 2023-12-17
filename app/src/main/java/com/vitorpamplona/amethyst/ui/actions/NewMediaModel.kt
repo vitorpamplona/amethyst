@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
@@ -16,8 +17,6 @@ import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
 data class ServerOption(
@@ -30,7 +29,6 @@ open class NewMediaModel : ViewModel() {
     var account: Account? = null
 
     var isUploadingImage by mutableStateOf(false)
-    val imageUploadingError = MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     var mediaType by mutableStateOf<String?>(null)
 
     var selectedServer by mutableStateOf<ServerOption?>(null)
@@ -44,12 +42,14 @@ open class NewMediaModel : ViewModel() {
     var uploadingDescription = mutableStateOf<String?>(null)
 
     var onceUploaded: () -> Unit = {}
+    var onError: (String) -> Unit = {}
 
-    open fun load(account: Account, uri: Uri, contentType: String?) {
+    open fun load(account: Account, uri: Uri, contentType: String?, onError: (String) -> Unit) {
         this.account = account
         this.galleryUri = uri
         this.mediaType = contentType
         this.selectedServer = ServerOption(defaultServer(), false)
+        this.onError = onError
     }
 
     fun upload(context: Context, relayList: List<Relay>? = null) {
@@ -73,11 +73,11 @@ open class NewMediaModel : ViewModel() {
                         uploadingPercentage.value = 0.2f
                         uploadingDescription.value = "Loading"
                         contentResolver.openInputStream(fileUri)?.use {
-                            createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList)
+                            createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent, relayList = relayList, context)
                         }
                             ?: run {
                                 viewModelScope.launch {
-                                    imageUploadingError.emit("Failed to upload the image / video")
+                                    onError(context.getString(R.string.could_not_open_the_compressed_file))
                                     isUploadingImage = false
                                     uploadingPercentage.value = 0.00f
                                     uploadingDescription.value = null
@@ -106,15 +106,14 @@ open class NewMediaModel : ViewModel() {
                                     localContentType = contentType,
                                     alt = alt,
                                     sensitiveContent = sensitiveContent,
-                                    relayList = relayList
+                                    relayList = relayList,
+                                    context
                                 )
                             } catch (e: Exception) {
                                 isUploadingImage = false
                                 uploadingPercentage.value = 0.00f
                                 uploadingDescription.value = null
-                                viewModelScope.launch {
-                                    imageUploadingError.emit("Failed to upload: ${e.message}")
-                                }
+                                onError(context.getString(R.string.failed_to_upload_media, e.message))
                             }
                         }
                     }
@@ -123,9 +122,7 @@ open class NewMediaModel : ViewModel() {
                     isUploadingImage = false
                     uploadingPercentage.value = 0.00f
                     uploadingDescription.value = null
-                    viewModelScope.launch {
-                        imageUploadingError.emit("Failed to upload the image / video")
-                    }
+                    onError(context.getString(R.string.error_when_compressing_media, it))
                 }
             )
         }
@@ -151,7 +148,8 @@ open class NewMediaModel : ViewModel() {
         localContentType: String?,
         alt: String,
         sensitiveContent: Boolean,
-        relayList: List<Relay>? = null
+        relayList: List<Relay>? = null,
+        context: Context
     ) {
         uploadingPercentage.value = 0.40f
         uploadingDescription.value = "Server Processing"
@@ -169,9 +167,7 @@ open class NewMediaModel : ViewModel() {
             uploadingPercentage.value = 0.00f
             uploadingDescription.value = null
             isUploadingImage = false
-            viewModelScope.launch {
-                imageUploadingError.emit("Failed to upload the image / video")
-            }
+            onError(context.getString(R.string.server_did_not_provide_a_url_after_uploading))
             return
         }
 
@@ -203,9 +199,7 @@ open class NewMediaModel : ViewModel() {
                     uploadingPercentage.value = 0.00f
                     uploadingDescription.value = null
                     isUploadingImage = false
-                    viewModelScope.launch {
-                        imageUploadingError.emit("Failed to upload the image / video")
-                    }
+                    onError(context.getString(R.string.could_not_prepare_local_file_to_upload, it))
                 }
             )
         } else {
@@ -214,13 +208,28 @@ open class NewMediaModel : ViewModel() {
             uploadingPercentage.value = 0.00f
             uploadingDescription.value = null
             isUploadingImage = false
-            viewModelScope.launch {
-                imageUploadingError.emit("Failed to upload the image / video")
-            }
+            onError(context.getString(R.string.could_not_download_from_the_server))
         }
     }
 
-    fun createNIP95Record(bytes: ByteArray, mimeType: String?, alt: String, sensitiveContent: Boolean, relayList: List<Relay>? = null) {
+    fun createNIP95Record(
+        bytes: ByteArray,
+        mimeType: String?,
+        alt: String,
+        sensitiveContent: Boolean,
+        relayList: List<Relay>? = null,
+        context: Context
+    ) {
+        if (bytes.size > 80000) {
+            viewModelScope.launch {
+                onError("Media is too big for NIP-95")
+                isUploadingImage = false
+                uploadingPercentage.value = 0.00f
+                uploadingDescription.value = null
+            }
+            return
+        }
+
         uploadingPercentage.value = 0.30f
         uploadingDescription.value = "Hashing"
 
@@ -248,9 +257,7 @@ open class NewMediaModel : ViewModel() {
                     uploadingPercentage.value = 0.00f
                     isUploadingImage = false
                     cancel()
-                    viewModelScope.launch {
-                        imageUploadingError.emit("Failed to upload the image / video")
-                    }
+                    onError(context.getString(R.string.could_not_prepare_local_file_to_upload, it))
                 }
             )
         }
