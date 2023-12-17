@@ -340,36 +340,6 @@
     <string name="file_server">File Server</string>
     <string name="zap_forward_lnAddress">LnAddress or @User</string>
 
-    <string name="upload_server_imgur">imgur.com - trusted</string>
-    <string name="upload_server_imgur_explainer">Imgur can modify the file</string>
-
-    <string name="upload_server_nostrimg">nostrimg.com - trusted</string>
-    <string name="upload_server_nostrimg_explainer">NostrImg can modify the file</string>
-
-    <string name="upload_server_nostrbuild">nostr.build - trusted</string>
-    <string name="upload_server_nostrbuild_explainer">Nostr.build can modify the file</string>
-
-    <string name="upload_server_nostrfilesdev">nostrfiles.dev - trusted</string>
-    <string name="upload_server_nostrfilesdev_explainer">Nostrfiles.dev can modify the file</string>
-
-    <string name="upload_server_nostrcheckme">nostrcheck.me - trusted</string>
-    <string name="upload_server_nostrcheckme_explainer">nostrcheck.me can modify the file</string>
-
-
-    <string name="upload_server_imgur_nip94">Verifiable Imgur (NIP-94)</string>
-    <string name="upload_server_imgur_nip94_explainer">Checks if Imgur modified the file. New NIP: other clients might not see it</string>
-
-    <string name="upload_server_nostrimg_nip94">Verifiable NostrImg (NIP-94)</string>
-    <string name="upload_server_nostrimg_nip94_explainer">Checks if NostrImg modified the file. New NIP: other clients might not see it</string>
-
-    <string name="upload_server_nostrbuild_nip94">Verifiable Nostr.build (NIP-94)</string>
-    <string name="upload_server_nostrbuild_nip94_explainer">Checks if Nostr.build modified the file. New NIP: other clients might not see it</string>
-
-    <string name="upload_server_nostrfilesdev_nip94">Verifiable Nostrfiles.dev (NIP-94)</string>
-    <string name="upload_server_nostrfilesdev_nip94_explainer">Checks if Nostrfiles.dev modified the file. New NIP: other clients might not see it</string>
-
-    <string name="upload_server_nostrcheckme_nip94">Verifiable Nostrcheck.me (NIP-94)</string>
-    <string name="upload_server_nostrcheckme_nip94_explainer">Checks if Nostrcheck.me modified the file. New NIP: other clients might not see it</string>
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>

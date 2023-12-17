@@ -293,18 +293,6 @@
     <string name="zap_type_anonymous_explainer">المستقبل والجمهور لا يعرفان من الذي قام بإرسال الدفع</string>
     <string name="zap_type_nonzap_explainer">لا يوجد أثر في نوستر،  فقط على شبكة الLightning</string>
     <string name="file_server">خادم الملفات</string>
-    <string name="upload_server_imgur">imgur.com - موثوق به</string>
-    <string name="upload_server_imgur_explainer">يمكن لـ Imgur تعديل الملف</string>
-    <string name="upload_server_nostrimg">nostrimg.com - (موثوق به)</string>
-    <string name="upload_server_nostrimg_explainer">يمكن لـ NostrImg تعديل الملف</string>
-    <string name="upload_server_nostrbuild">nostr.build- (موثوق به)</string>
-    <string name="upload_server_nostrbuild_explainer">يمكن لـ Nostr.build تعديل الملف</string>
-    <string name="upload_server_nostrfilesdev">nostrfiles.dev - (موثوق به)</string>
-    <string name="upload_server_nostrfilesdev_explainer">يمكن لـ Nostrfiles.dev تعديل الملف</string>
-    <string name="upload_server_nostrcheckme">nostrcheck.me - (موثوق به)</string>
-    <string name="upload_server_nostrcheckme_explainer">يمكن لـ nostrcheck.me تعديل الملف</string>
-    <string name="upload_server_imgur_nip94_explainer">تحقق مما إذا قام Imgur بتعديل الملف. 
-NIP جديد: قد لا يراه العملاء الآخرون</string>
     <string name="upload_server_relays_nip95">المرحلات الخاصة بك (NIP-95)</string>
     <string name="connect_via_tor_short">إعداد Tor/Orbot</string>
     <string name="connect_via_tor">الاتصال من خلال إعدادات Orbot الخاص بك</string>
