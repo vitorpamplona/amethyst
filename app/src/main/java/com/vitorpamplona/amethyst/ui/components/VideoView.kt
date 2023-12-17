@@ -37,6 +37,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -223,7 +224,12 @@ fun VideoView(
 
         Box(modifier, contentAlignment = Alignment.Center) {
             if (!automaticallyStartPlayback.value) {
-                DisplayBlurHash(blurhash, null, ContentScale.Crop, MaterialTheme.colorScheme.imageModifier)
+                DisplayBlurHash(
+                    blurhash,
+                    null,
+                    ContentScale.Crop,
+                    MaterialTheme.colorScheme.imageModifier
+                )
                 IconButton(
                     modifier = Modifier.size(Size75dp),
                     onClick = { automaticallyStartPlayback.value = true }
@@ -273,54 +279,73 @@ fun VideoViewInner(
     onDialog: ((Boolean) -> Unit)? = null
 ) {
     VideoPlayerActiveMutex(videoUri) { modifier, activeOnScreen ->
-        val mediaItem = remember(videoUri) {
-            mutableStateOf(
-                MediaItem.Builder()
-                    .setMediaId(videoUri)
-                    .setUri(videoUri)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setArtist(authorName?.ifBlank { null })
-                            .setTitle(title?.ifBlank { null } ?: videoUri)
-                            .setArtworkUri(
-                                try {
-                                    if (artworkUri != null) {
-                                        Uri.parse(artworkUri)
-                                    } else {
-                                        null
-                                    }
-                                } catch (e: Exception) {
-                                    null
-                                }
-                            )
-                            .build()
+        GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
+            GetVideoController(
+                mediaItem = mediaItem,
+                videoUri = videoUri,
+                defaultToStart = defaultToStart,
+                nostrUriCallback = nostrUriCallback
+            ) { controller, keepPlaying ->
+                RenderVideoPlayer(
+                    controller = controller,
+                    thumbData = thumb,
+                    roundedCorner = roundedCorner,
+                    dimensions = dimensions,
+                    blurhash = blurhash,
+                    topPaddingForControllers = topPaddingForControllers,
+                    waveform = waveform,
+                    keepPlaying = keepPlaying,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
+                    activeOnScreen = activeOnScreen,
+                    modifier = modifier,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged,
+                    onDialog = onDialog
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GetMediaItem(
+    videoUri: String,
+    title: String?,
+    artworkUri: String?,
+    authorName: String?,
+    inner: @Composable (State<MediaItem>) -> Unit
+) {
+    val mediaItem = produceState<MediaItem?>(
+        initialValue = null,
+        key1 = videoUri
+    ) {
+        this.value = MediaItem.Builder()
+            .setMediaId(videoUri)
+            .setUri(videoUri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setArtist(authorName?.ifBlank { null })
+                    .setTitle(title?.ifBlank { null } ?: videoUri)
+                    .setArtworkUri(
+                        try {
+                            if (artworkUri != null) {
+                                Uri.parse(artworkUri)
+                            } else {
+                                null
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
                     )
                     .build()
             )
-        }
+            .build()
+    }
 
-        GetVideoController(
-            mediaItem = mediaItem,
-            videoUri = videoUri,
-            defaultToStart = defaultToStart,
-            nostrUriCallback = nostrUriCallback
-        ) { controller, keepPlaying ->
-            RenderVideoPlayer(
-                controller = controller,
-                thumbData = thumb,
-                roundedCorner = roundedCorner,
-                dimensions = dimensions,
-                blurhash = blurhash,
-                topPaddingForControllers = topPaddingForControllers,
-                waveform = waveform,
-                keepPlaying = keepPlaying,
-                automaticallyStartPlayback = automaticallyStartPlayback,
-                activeOnScreen = activeOnScreen,
-                modifier = modifier,
-                onControllerVisibilityChanged = onControllerVisibilityChanged,
-                onDialog = onDialog
-            )
+    mediaItem.value?.let {
+        val myState = remember(videoUri) {
+            mutableStateOf(it)
         }
+        inner(myState)
     }
 }
 
@@ -339,7 +364,7 @@ sealed class MediaControllerState {
 @Composable
 @OptIn(UnstableApi::class)
 fun GetVideoController(
-    mediaItem: MutableState<MediaItem>,
+    mediaItem: State<MediaItem>,
     videoUri: String,
     defaultToStart: Boolean = false,
     nostrUriCallback: String? = null,
