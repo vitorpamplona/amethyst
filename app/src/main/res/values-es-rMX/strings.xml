@@ -41,7 +41,7 @@
     <string name="zaps">Zaps</string>
     <string name="view_count">Ver recuento</string>
     <string name="boost">Impulsar</string>
-    <string name="boosted">impulsada</string>
+    <string name="boosted">Impulsada</string>
     <string name="quote">Citar</string>
     <string name="new_amount_in_sats">Nueva cantidad en sats</string>
     <string name="add">Agregar</string>
@@ -386,6 +386,9 @@
     <string name="payment">Pago</string>
     <string name="cashu">Token de Cashu</string>
     <string name="cashu_redeem">Canjear</string>
+    <string name="cashu_redeem_to_zap">Enviar a billetera de zaps</string>
+    <string name="cashu_redeem_to_cashu">Abrir en billetera de Cashu</string>
+    <string name="cashu_copy_token">Copiar token</string>
     <string name="no_lightning_address_set">La dirección de Lightning no está configurada</string>
     <string name="copied_token_to_clipboard">Token copiado al portapapeles</string>
     <string name="live_stream_live_tag">EN VIVO</string>
@@ -397,6 +400,7 @@
     <string name="are_you_sure_you_want_to_log_out">Al cerrar la sesión se borra toda tu información local. Asegúrate de tener una copia de seguridad de tus claves privadas para que no pierdas la cuenta. ¿Quieres continuar?</string>
     <string name="followed_tags">Etiquetas seguidas</string>
     <string name="relay_setup">Relés</string>
+    <string name="discover_marketplace">Mercado</string>
     <string name="discover_live">En vivo</string>
     <string name="discover_community">Comunidad</string>
     <string name="discover_chat">Chats</string>
@@ -455,9 +459,10 @@
     <string name="automatically_play_videos_description">Reproducir automáticamente videos y GIF</string>
     <string name="automatically_show_url_preview_description">Mostrar vistas previas de URL</string>
     <string name="load_image_description">Cuándo cargar imágenes</string>
+    <string name="copy_to_clipboard">Copiar al portapapeles</string>
     <string name="copy_url_to_clipboard">Copiar URL al portapapeles</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID de la nota al portapapeles</string>
-    <string name="created_at">Creado el</string>
+    <string name="created_at">Creado</string>
     <string name="rules">Reglas</string>
     <string name="login_with_external_signer">Iniciar sesión con Amber</string>
     <string name="status_update">Actualiza tu estado</string>
@@ -510,6 +515,7 @@
     <string name="cashu_failed_redemption_explainer_already_spent">Los tokens de Cashu ya se gastaron.</string>
     <string name="cashu_successful_redemption">Cashu recibido</string>
     <string name="cashu_successful_redemption_explainer">Se enviaron %1$s sats a tu billetera (comisión: %2$s sats).</string>
+    <string name="cashu_no_wallet_found">No se encontró ninguna billetera Cashu compatible en el sistema</string>
     <string name="error_unable_to_fetch_invoice">No se puede obtener la factura de los servidores del destinatario</string>
     <string name="wallet_connect_pay_invoice_error_error">El proveedor de conexión de billetera devolvió el siguiente error: %1$s</string>
     <string name="could_not_connect_to_tor">No se pudo conectar a Tor</string>
@@ -536,4 +542,42 @@
     <string name="push_server_install_app_description">        Para recibir notificaciones push, instala cualquier aplicación compatible con [Unified Push](https://unifiedpush.org/), como [Nfty](https://ntfy.sh/).
         Tras la instalación, selecciona la aplicación que deseas usar en la configuración.
     </string>
+    <string name="payment_required_title">Mensaje de %1$s</string>
+    <string name="thread_title">Hilo</string>
+    <string name="send_the_seller_a_message">Envía un mensaje al vendedor</string>
+    <string name="hi_seller_is_this_still_available">Hola, %1$s, ¿esto todavía está disponible?</string>
+    <string name="hi_there_is_this_still_available">Hola, ¿esto todavía está disponible?</string>
+    <string name="classifieds">Vender un artículo</string>
+    <string name="classifieds_title">Título</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">Estado</string>
+    <string name="classifieds_category">Categoría</string>
+    <string name="classifieds_price">Precio (en sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">Ubicación</string>
+    <string name="classifieds_location_placeholder">Ciudad, estado, país.</string>
+    <string name="classifieds_condition_new">Nuevo</string>
+    <string name="classifieds_condition_new_explainer">Producto totalmente nuevo, en la caja original.</string>
+    <string name="classifieds_condition_like_new">Como nuevo</string>
+    <string name="classifieds_condition_like_new_explainer">Usado, pero sin señales de uso.</string>
+    <string name="classifieds_condition_good">Bueno</string>
+    <string name="classifieds_condition_good_explainer">Tiene algunas marcas de uso superficiales.</string>
+    <string name="classifieds_condition_fair">Aceptable</string>
+    <string name="classifieds_condition_fair_explainer">Todavía está en forma aceptable y funcional.</string>
+    <string name="classifieds_category_clothing">Ropa</string>
+    <string name="classifieds_category_accessories">Accesorios</string>
+    <string name="classifieds_category_electronics">Artículos electrónicos</string>
+    <string name="classifieds_category_furniture">Muebles</string>
+    <string name="classifieds_category_collectibles">Objetos de colección</string>
+    <string name="classifieds_category_books">Libros</string>
+    <string name="classifieds_category_pets">Mascotas</string>
+    <string name="classifieds_category_sports">Deportes</string>
+    <string name="classifieds_category_fitness">Acondicionamiento físico</string>
+    <string name="classifieds_category_art">Arte</string>
+    <string name="classifieds_category_crafts">Artesanías</string>
+    <string name="classifieds_category_home">Hogar</string>
+    <string name="classifieds_category_office">Oficina</string>
+    <string name="classifieds_category_food">Comida</string>
+    <string name="classifieds_category_misc">Varios</string>
+    <string name="classifieds_category_other">Otros</string>
 </resources>
