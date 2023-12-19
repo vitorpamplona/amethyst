@@ -169,18 +169,19 @@ fun RenderRelay(relay: RelayBriefInfoCache.RelayBriefInfo, accountViewModel: Acc
         modifier = clickableModifier,
         contentAlignment = Alignment.Center
     ) {
-        RenderRelayIcon(relay.favIcon, automaticallyShowProfilePicture)
+        RenderRelayIcon(relay.displayUrl, relay.favIcon, automaticallyShowProfilePicture)
     }
 }
 
 @Composable
 fun RenderRelayIcon(
+    displayUrl: String,
     iconUrl: String,
     loadProfilePicture: Boolean,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier
 ) {
     RobohashFallbackAsyncImage(
-        robot = iconUrl,
+        robot = displayUrl,
         model = iconUrl,
         contentDescription = stringResource(id = R.string.relay_icon),
         colorFilter = RelayIconFilter,

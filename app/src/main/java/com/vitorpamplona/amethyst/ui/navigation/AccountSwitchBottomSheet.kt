@@ -221,7 +221,7 @@ private fun AccountPicture(user: User, loadProfilePicture: Boolean) {
     val profilePicture by user.live().profilePictureChanges.observeAsState()
 
     RobohashFallbackAsyncImage(
-        robot = remember(user) { user.pubkeyHex },
+        robot = user.pubkeyHex,
         model = profilePicture,
         contentDescription = stringResource(R.string.profile_image),
         modifier = AccountPictureModifier,

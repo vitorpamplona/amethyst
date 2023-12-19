@@ -370,7 +370,8 @@ fun ServerConfigClickableLine(
         ) {
             Column(Modifier.clickable(onClick = onClick)) {
                 RenderRelayIcon(
-                    iconUrl = item.briefInfo.favIcon,
+                    item.briefInfo.displayUrl,
+                    item.briefInfo.favIcon,
                     loadProfilePicture,
                     MaterialTheme.colorScheme.largeRelayIconModifier
                 )

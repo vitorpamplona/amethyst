@@ -23,7 +23,8 @@ object HexValidator {
         if (hex == null) return false
         if (hex.length % 2 != 0) return false // must be even
         var isHex = true
-        for (c in hex.toCharArray()) {
+
+        for (c in hex) {
             if (!isHexChar(c)) {
                 isHex = false
                 break
@@ -34,7 +35,7 @@ object HexValidator {
 }
 
 object Hex {
-    private val hexCode = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
+    val hexCode = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
 
     // Faster if no calculations are needed.
     private fun hexToBin(ch: Char): Int = when (ch) {

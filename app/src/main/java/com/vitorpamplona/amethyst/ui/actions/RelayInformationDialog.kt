@@ -82,6 +82,7 @@ fun RelayInformationDialog(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = StdPadding.fillMaxWidth()) {
                     Column() {
                         RenderRelayIcon(
+                            relayBriefInfo.displayUrl,
                             relayBriefInfo.favIcon,
                             automaticallyShowProfilePicture,
                             MaterialTheme.colorScheme.largeRelayIconModifier
