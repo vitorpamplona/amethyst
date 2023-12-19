@@ -580,4 +580,11 @@
     <string name="classifieds_category_food">Étel</string>
     <string name="classifieds_category_misc">Vegyes</string>
     <string name="classifieds_category_other">Egyéb</string>
+    <string name="failed_to_upload_media_no_details">Nem sikerült a médiát feltölteni</string>
+    <string name="could_not_open_the_compressed_file">Nem sikerült a tömörített fájlt megnyitni</string>
+    <string name="error_when_compressing_media">Hiba a média tömörítésekor: %1$s</string>
+    <string name="failed_to_upload_media">Feltöltési hiba: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">A szerver a feltöltés után nem adott URL-t</string>
+    <string name="could_not_download_from_the_server">Nem sikerült a szerverről a feltöltött médiát letölteni</string>
+    <string name="could_not_prepare_local_file_to_upload">Nem sikerült előkészíteni a helyi fájlt a feltöltésre: %1$s</string>
 </resources>
