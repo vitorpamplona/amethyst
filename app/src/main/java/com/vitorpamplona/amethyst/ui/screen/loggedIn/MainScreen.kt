@@ -291,7 +291,7 @@ fun MainScreen(
     }
 
     WatchNavStateToUpdateBarVisibility(navState) {
-        bottomBarOffsetHeightPx.value = 0f
+        bottomBarOffsetHeightPx.floatValue = 0f
         shouldShow.value = true
     }
 
