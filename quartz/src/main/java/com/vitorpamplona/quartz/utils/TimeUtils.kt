@@ -9,6 +9,8 @@ object TimeUtils {
     const val eightHours = 8 * oneHour
     const val oneDay = 24 * oneHour
     const val oneWeek = 7 * oneDay
+    const val oneMonth = 30 * oneDay
+    const val oneYear = 365 * oneDay
 
     fun now() = System.currentTimeMillis() / 1000
     fun oneMinuteAgo() = now() - oneMinute

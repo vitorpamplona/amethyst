@@ -508,10 +508,8 @@ private fun TimeAgo(channelLastTime: Long?) {
     if (channelLastTime == null) return
 
     val context = LocalContext.current
-    val timeAgo by remember(channelLastTime) {
-        derivedStateOf {
-            timeAgo(channelLastTime, context)
-        }
+    val timeAgo = remember(channelLastTime) {
+        timeAgo(channelLastTime, context)
     }
     Text(
         text = timeAgo,
