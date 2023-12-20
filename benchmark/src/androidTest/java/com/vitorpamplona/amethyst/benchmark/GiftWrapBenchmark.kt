@@ -54,7 +54,7 @@ class GiftWrapBenchmark {
 
         val countDownLatch2 = CountDownLatch(1)
 
-        Assert.assertEquals(expectedLength, events!!.wraps.map { it.toJson() }.joinToString("").length)
+        Assert.assertEquals(expectedLength, events!!.wraps.map { println("TEST ${it.toJson()}"); it.toJson() }.joinToString("").length)
 
         // Simulate Receiver
         events!!.wraps.forEach {

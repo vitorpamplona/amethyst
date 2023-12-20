@@ -275,9 +275,7 @@ class Relay(
     }
 
     fun resetEOSEStatuses() {
-        afterEOSEPerSubscription.keys.toList().forEach {
-            afterEOSEPerSubscription[it] = false
-        }
+        afterEOSEPerSubscription = LinkedHashMap(afterEOSEPerSubscription.size)
     }
 
     fun sendFilter(requestId: String) {

@@ -90,7 +90,7 @@ class ChatMessageEvent(
             subject?.let {
                 tags.add(arrayOf("subject", it))
             }
-            tags.add(arrayOf("alt", alt))
+            //tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }

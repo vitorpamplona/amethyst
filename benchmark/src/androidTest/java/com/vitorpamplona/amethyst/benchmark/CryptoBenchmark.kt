@@ -5,12 +5,6 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Bech32
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.bechToBytes
-import com.vitorpamplona.quartz.encoders.toNpub
-import com.vitorpamplona.quartz.events.Event
-import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import org.junit.Rule
 import org.junit.Test
@@ -38,7 +32,7 @@ class CryptoBenchmark {
         val keyPair2 = KeyPair()
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.getSharedSecretNIP44(keyPair1.privKey!!, keyPair2.pubKey))
+            assertNotNull(CryptoUtils.getSharedSecretNIP44v1(keyPair1.privKey!!, keyPair2.pubKey))
         }
     }
 
@@ -58,7 +52,7 @@ class CryptoBenchmark {
         val keyPair2 = KeyPair()
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.computeSharedSecretNIP44(keyPair1.privKey!!, keyPair2.pubKey))
+            assertNotNull(CryptoUtils.computeSharedSecretNIP44v1(keyPair1.privKey!!, keyPair2.pubKey))
         }
     }
 

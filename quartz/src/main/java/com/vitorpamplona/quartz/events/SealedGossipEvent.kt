@@ -4,15 +4,9 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.Nip44Version
-import com.vitorpamplona.quartz.crypto.decodeNIP44
-import com.vitorpamplona.quartz.crypto.encodeNIP44
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
-import java.util.UUID
 
 @Immutable
 class SealedGossipEvent(

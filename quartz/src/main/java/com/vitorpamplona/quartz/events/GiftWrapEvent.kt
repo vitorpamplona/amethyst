@@ -1,15 +1,8 @@
 package com.vitorpamplona.quartz.events
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.crypto.Nip44Version
-import com.vitorpamplona.quartz.crypto.decodeNIP44
-import com.vitorpamplona.quartz.crypto.encodeNIP44
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
@@ -31,7 +24,6 @@ class GiftWrapEvent(
             onReady(it)
             return
         }
-
         unwrap(signer) { gift ->
             if (gift is WrappedEvent) {
                 gift.host = this
@@ -72,7 +64,7 @@ class GiftWrapEvent(
         ) {
             val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
             val serializedContent = toJson(event)
-            val tags = arrayOf(arrayOf("p", recipientPubKey), arrayOf("alt", alt))
+            val tags = arrayOf(arrayOf("p", recipientPubKey))
 
             signer.nip44Encrypt(serializedContent, recipientPubKey) {
                 signer.sign(createdAt, kind, tags, it, onReady)

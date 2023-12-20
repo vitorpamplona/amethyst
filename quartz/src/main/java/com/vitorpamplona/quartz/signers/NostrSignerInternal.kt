@@ -3,19 +3,13 @@ package com.vitorpamplona.quartz.signers
 import android.util.Log
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.crypto.Nip44Version
-import com.vitorpamplona.quartz.crypto.decodeNIP44
-import com.vitorpamplona.quartz.crypto.encodeNIP44
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
 import com.vitorpamplona.quartz.events.LnZapPrivateEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHexKey()) {
     override fun <T: Event> sign(
@@ -94,28 +88,23 @@ class NostrSignerInternal(val keyPair: KeyPair): NostrSigner(keyPair.pubKey.toHe
     override fun nip44Encrypt(decryptedContent: String, toPublicKey: HexKey, onReady: (String)-> Unit) {
         if (keyPair.privKey == null) return
 
-        val sharedSecret = CryptoUtils.getSharedSecretNIP44(keyPair.privKey, toPublicKey.hexToByteArray())
-
         onReady(
-            encodeNIP44(
-                CryptoUtils.encryptNIP44(
-                    decryptedContent,
-                    sharedSecret
-                )
-            )
+            CryptoUtils.encryptNIP44v2(
+                decryptedContent,
+                keyPair.privKey,
+                toPublicKey.hexToByteArray()
+            ).encodePayload()
         )
     }
 
     override fun nip44Decrypt(encryptedContent: String, fromPublicKey: HexKey, onReady: (String)-> Unit) {
         if (keyPair.privKey == null) return
 
-        val toDecrypt = decodeNIP44(encryptedContent) ?: return
-
-        when (toDecrypt.v) {
-            Nip44Version.NIP04.versionCode -> CryptoUtils.decryptNIP04(toDecrypt, keyPair.privKey, fromPublicKey.hexToByteArray())
-            Nip44Version.NIP44.versionCode -> CryptoUtils.decryptNIP44(toDecrypt, keyPair.privKey, fromPublicKey.hexToByteArray())
-            else -> null
-        }?.let {
+        CryptoUtils.decryptNIP44(
+            payload = encryptedContent,
+            privateKey = keyPair.privKey,
+            pubKey = fromPublicKey.hexToByteArray()
+        )?.let {
             onReady(it)
         }
     }
