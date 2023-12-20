@@ -1,5 +1,6 @@
 package com.vitorpamplona.amethyst
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -9,8 +10,13 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.Event
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class ThreadAssemblerTest {
     val db = """
         [
@@ -85,7 +91,7 @@ class ThreadAssemblerTest {
     """.trimIndent()
 
     @Test
-    fun threadOrderTest() {
+    fun threadOrderTest() = runBlocking {
         val eventArray = Event.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
 
         var counter = 0
@@ -97,7 +103,12 @@ class ThreadAssemblerTest {
 
         val naddr = ATag(30023, "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93", "1680612926599", null)
 
-        val filter = ThreadFeedFilter(Account(KeyPair()), naddr.toTag())
+        val account = Account(KeyPair())
+        withContext(Dispatchers.Main) {
+            val user = account.userProfile().live()
+        }
+
+        val filter = ThreadFeedFilter(account, naddr.toTag())
         val calculatedFeed = filter.feed()
 
         val expecteedOrder = listOf(
