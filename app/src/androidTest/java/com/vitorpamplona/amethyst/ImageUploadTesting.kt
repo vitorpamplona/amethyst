@@ -5,8 +5,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.Nip96Retriever
+import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
-import com.vitorpamplona.amethyst.ui.actions.Nip96Uploader
 import com.vitorpamplona.quartz.crypto.KeyPair
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
