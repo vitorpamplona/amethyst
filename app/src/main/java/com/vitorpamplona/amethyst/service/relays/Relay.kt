@@ -275,8 +275,8 @@ class Relay(
     }
 
     fun resetEOSEStatuses() {
-        afterEOSEPerSubscription.forEach {
-            afterEOSEPerSubscription[it.key] = false
+        afterEOSEPerSubscription.keys.toList().forEach {
+            afterEOSEPerSubscription[it] = false
         }
     }
 
