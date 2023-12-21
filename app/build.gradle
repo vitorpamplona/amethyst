@@ -194,7 +194,7 @@ dependencies {
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
 
     // Websockets API
-    implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
+    implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.12'
 
     // HTML Parsing for Link Preview
     implementation 'org.jsoup:jsoup:1.17.1'
