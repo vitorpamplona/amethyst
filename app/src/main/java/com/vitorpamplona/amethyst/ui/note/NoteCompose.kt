@@ -133,6 +133,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -644,8 +645,13 @@ fun LongCommunityHeader(
                 )
             }
 
-            val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
-            DisplayUncitedHashtags(hashtags, summary ?: "", nav)
+            if (noteEvent.hasHashtags()) {
+                DisplayUncitedHashtags(
+                    remember(noteEvent) { noteEvent.hashtags().toImmutableList() },
+                    summary ?: "",
+                    nav
+                )
+            }
         }
 
         Column() {
@@ -1405,8 +1411,10 @@ fun RenderTextEvent(
                 )
             }
 
-            val hashtags = remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
-            DisplayUncitedHashtags(hashtags, eventContent, nav)
+            if (note.event?.hasHashtags() == true) {
+                val hashtags = remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                DisplayUncitedHashtags(hashtags, eventContent, nav)
+            }
         }
     }
 }
@@ -1456,8 +1464,10 @@ fun RenderPoll(
             )
         }
 
-        val hashtags = remember { noteEvent.hashtags().toImmutableList() }
-        DisplayUncitedHashtags(hashtags, eventContent, nav)
+        if (noteEvent.hasHashtags()) {
+            val hashtags = remember { noteEvent.hashtags().toImmutableList() }
+            DisplayUncitedHashtags(hashtags, eventContent, nav)
+        }
     }
 }
 
@@ -1675,7 +1685,6 @@ private fun RenderPrivateMessage(
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
     if (withMe) {
         LoadDecryptedContent(note, accountViewModel) { eventContent ->
-            val hashtags = remember(note.event?.id()) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
             val modifier = remember(note.event?.id()) { Modifier.fillMaxWidth() }
             val isAuthorTheLoggedUser = remember(note.event?.id()) { accountViewModel.isLoggedUser(note.author) }
 
@@ -1704,7 +1713,10 @@ private fun RenderPrivateMessage(
                     )
                 }
 
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                if (noteEvent.hasHashtags()) {
+                    val hashtags = remember(note.event?.id()) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                    DisplayUncitedHashtags(hashtags, eventContent, nav)
+                }
             }
         }
     } else {
@@ -3184,26 +3196,20 @@ fun DisplayUncitedHashtags(
     eventContent: String,
     nav: (String) -> Unit
 ) {
-    val hasHashtags = remember(eventContent) {
-        hashtags.isNotEmpty()
+    val unusedHashtags = remember(eventContent) {
+        hashtags.filter { !eventContent.contains(it, true) }
     }
 
-    if (hasHashtags) {
-        val unusedHashtags = remember(eventContent) {
-            hashtags.filter { !eventContent.contains(it, true) }
-        }
-
+    if (unusedHashtags.isNotEmpty()) {
         FlowRow(
-            modifier = remember { Modifier.padding(top = 5.dp) }
+            modifier = HalfTopPadding
         ) {
             unusedHashtags.forEach { hashtag ->
                 ClickableText(
                     text = remember { AnnotatedString("#$hashtag ") },
                     onClick = { nav("Hashtag/$hashtag") },
                     style = LocalTextStyle.current.copy(
-                        color = MaterialTheme.colorScheme.primary.copy(
-                            alpha = 0.52f
-                        )
+                        color = MaterialTheme.colorScheme.lessImportantLink
                     )
                 )
             }
@@ -3658,9 +3664,11 @@ fun AudioHeader(noteEvent: AudioHeaderEvent, note: Note, accountViewModel: Accou
                 }
             }
 
-            Row(Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
-                val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
-                DisplayUncitedHashtags(hashtags, content ?: "", nav)
+            if (noteEvent.hasHashtags()) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
+                    val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
+                    DisplayUncitedHashtags(hashtags, content ?: "", nav)
+                }
             }
         }
     }

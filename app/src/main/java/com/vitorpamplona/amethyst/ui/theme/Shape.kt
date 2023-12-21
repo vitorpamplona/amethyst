@@ -72,6 +72,7 @@ val Size75dp = 75.dp
 val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
 val StdTopPadding = Modifier.padding(top = 10.dp)
+val HalfTopPadding = Modifier.padding(top = 5.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)

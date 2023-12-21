@@ -788,7 +788,7 @@ fun LongChannelHeader(
                 )
             }
 
-            if (baseChannel is LiveActivitiesChannel) {
+            if (baseChannel is LiveActivitiesChannel && baseChannel.info?.hasHashtags() == true) {
                 val hashtags = remember(baseChannel.info) {
                     baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
                 }

@@ -55,6 +55,9 @@ interface EventInterface {
 
     fun expiration(): Long?
 
+    fun hasHashtags(): Boolean
+    fun hasGeohashes(): Boolean
+
     fun hashtags(): List<String>
     fun geohashes(): List<String>
 

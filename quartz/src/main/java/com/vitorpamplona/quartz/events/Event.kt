@@ -124,6 +124,9 @@ open class Event(
         ATag.parse(aTagValue, relay)
     }
 
+    override fun hasHashtags() = tags.any { it.size > 1 && it[0] == "t" }
+    override fun hasGeohashes() = tags.any { it.size > 1 && it[0] == "g" }
+
     override fun hashtags() = tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
     override fun geohashes() = tags.filter { it.size > 1 && it[0] == "g" }.map { it[1] }
 
