@@ -23,6 +23,7 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
     private val hkdf = Hkdf()
 
     private val h02 = Hex.decode("02")
+    private val saltPrefix = "nip44-v2".toByteArray(Charsets.UTF_8)
     private val hashLength = 32
 
     private val minPlaintextSize: Int = 0x0001 // 1b msg => padded to 32b
@@ -179,7 +180,7 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
      */
     fun computeConversationKey(privateKey: ByteArray, pubKey: ByteArray): ByteArray {
         val sharedX = secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
-        return hkdf.extract(sharedX, "nip44-v2".toByteArray(Charsets.UTF_8))
+        return hkdf.extract(sharedX, saltPrefix)
     }
 
     class EncryptedInfo(
