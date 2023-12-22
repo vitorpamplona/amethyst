@@ -64,7 +64,7 @@ class ServiceManager {
 
         // Resets Proxy Use
         HttpClient.start(account?.proxy)
-        OptOutFromFilters.start(account?.warnAboutPostsWithReports ?: true, account?.filterSpamFromStrangers ?: true)
+        OptOutFromFilters.start(account?.filterSpamFromStrangers ?: true)
         Coil.setImageLoader {
             Amethyst.instance.imageLoaderBuilder().components {
                 if (Build.VERSION.SDK_INT >= 28) {

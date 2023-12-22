@@ -426,7 +426,7 @@ class Account(
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports
         filterSpamFromStrangers = filterSpam
-        OptOutFromFilters.start(warnAboutPostsWithReports, filterSpamFromStrangers)
+        OptOutFromFilters.start(filterSpamFromStrangers)
         if (!filterSpamFromStrangers) {
             transientHiddenUsers = persistentSetOf()
         }
