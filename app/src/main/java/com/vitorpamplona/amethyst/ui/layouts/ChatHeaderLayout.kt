@@ -1,6 +1,5 @@
 package com.vitorpamplona.amethyst.ui.layouts
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +30,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@SuppressLint("UnrememberedMutableState")
 @Composable
 @Preview
 fun ChannelNamePreview() {

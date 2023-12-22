@@ -71,7 +71,7 @@ fun ChatroomHeaderCompose(
     if (hasEvent) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
-        BlankNote(Modifier)
+        BlankNote()
     }
 }
 
@@ -394,7 +394,7 @@ private fun WatchNotificationChanges(
     accountViewModel: AccountViewModel,
     onNewStatus: (Boolean) -> Unit
 ) {
-    LaunchedEffect(key1 = note, accountViewModel.accountMarkAsReadUpdates.value) {
+    LaunchedEffect(key1 = note, accountViewModel.accountMarkAsReadUpdates.intValue) {
         launch(Dispatchers.IO) {
             note.event?.createdAt()?.let {
                 val lastTime = accountViewModel.account.loadLastRead(route)
@@ -493,14 +493,6 @@ fun ChannelName(
         },
         onClick = onClick
     )
-}
-
-@Composable
-private fun FirstRow(
-    channelTitle: @Composable (Modifier) -> Unit,
-    channelLastTime: Long?,
-    modifier: Modifier
-) {
 }
 
 @Composable
