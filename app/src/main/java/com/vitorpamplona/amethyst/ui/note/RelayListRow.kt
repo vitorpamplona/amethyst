@@ -57,7 +57,7 @@ public fun RelayBadgesHorizontal(baseNote: Note, accountViewModel: AccountViewMo
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderRelayList(baseNote: Note, expanded: MutableState<Boolean>, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val noteRelays by baseNote.live().relayInfo.observeAsState()
+    val noteRelays by baseNote.live().relayInfo.observeAsState(baseNote.relays)
 
     FlowRow(StdStartPadding, verticalArrangement = Arrangement.Center) {
         if (expanded.value) {

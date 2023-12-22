@@ -24,14 +24,13 @@ import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconButtonModifier
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.collections.immutable.persistentListOf
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RelayBadges(baseNote: Note, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    val relayList by baseNote.live().relayInfo.observeAsState(persistentListOf())
+    val relayList by baseNote.live().relayInfo.observeAsState(baseNote.relays)
 
     Spacer(DoubleVertSpacer)
 
