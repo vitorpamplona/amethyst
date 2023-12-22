@@ -29,13 +29,13 @@
     <string name="report_impersonation">举报冒充</string>
     <string name="report_explicit_content">举报明确内容</string>
     <string name="report_illegal_behaviour">举报非法行为</string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">使用私钥登录以便回复</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">使用私钥登录以便提升帖子</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">你正在使用公钥，公钥是只读的。使用私钥登录以便回复</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公钥，公钥是只读的。使用私钥登录以便提升帖子</string>
     <string name="login_with_a_private_key_to_like_posts">使用私钥登录以便点赞帖子</string>
     <string name="no_zap_amount_setup_long_press_to_change">没有设置Zap金额。长按以更改</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">使用私钥登录以便发送打闪</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">使用私钥登录以便能够关注</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">使用私钥登录以便能够取消关注</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">你正在使用公钥，公钥是只读的。使用私钥登录以便发送打闪</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够关注</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够取消关注</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">你正在使用公钥，公钥是只读的。使用私钥登录以便能够隐藏单词或句子</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">你正在使用公钥，公钥是只读的。使用私钥登录以便能够显示单词或句子</string>
     <string name="zaps">打闪</string>
@@ -509,14 +509,14 @@
     <string name="error_parsing_nip47_title">无法设置钱包连接</string>
     <string name="error_parsing_nip47">解析 NIP-47 连接字符串时出错。请与你的钱包提供商检查这是否正确: %1$s。错误：%2$s</string>
     <string name="error_parsing_nip47_no_error">解析 NIP-47 连接字符串时出错。请与你的钱包提供商检查这是否正确: %1$s。</string>
-    <string name="cashu_failed_redemption">无法兑换Cashu</string>
+    <string name="cashu_failed_redemption">无法兑换 Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">铸币厂提供了以下错误信息： %1$s</string>
-    <string name="cashu_failed_redemption_explainer_already_spent">Cashu 令牌已经消耗。</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu 代币已花费。</string>
     <string name="cashu_successful_redemption">已收到 Cashu</string>
-    <string name="cashu_successful_redemption_explainer">%1$s 聪 已被发送到您的钱包。(手续费︰ %2$s 聪)</string>
+    <string name="cashu_successful_redemption_explainer">%1$s 聪已被发送到你的钱包。(费用︰ %2$s 聪)</string>
     <string name="cashu_no_wallet_found">系统上没有找到兼容的 Cashu 钱包</string>
-    <string name="error_unable_to_fetch_invoice">无法从接收者的服务器获取发票</string>
-    <string name="wallet_connect_pay_invoice_error_error">您的钱包连接提供者返回了以下错误： %1$s</string>
+    <string name="error_unable_to_fetch_invoice">无法从接收方的服务器获取发票</string>
+    <string name="wallet_connect_pay_invoice_error_error">你的钱包连接提供者返回了以下错误： %1$s</string>
     <string name="could_not_connect_to_tor">无法连接到 Tor</string>
     <string name="unable_to_download_relay_document">无法下载中继文件</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">无法从闪电地址集合LNURL\"%1$s\"。请检查用户设置</string>
@@ -525,7 +525,7 @@
     <string name="could_not_fetch_invoice_from">无法从 %1$s 获取发票</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">从闪电地址解析JSON出错。请检查用户的打闪设置</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用户闪电地址服务器配置中找不到回调URL</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">从闪电地址解析JSON出错。请检查用户的闪电设置</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">从闪电地址的发票获取解析JSON 发生错误。请检查用户的闪电设置</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">来自 %2$s 的错误的发票金额（%1$s 聪）。它本应该是 %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">无法在发送打闪前创建闪电发票。接收者闪电钱包发送了以下错误： %1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">无法在发送打闪前创建闪电发票。在生成的 JSON 中找不到 Element pr。</string>
@@ -533,13 +533,13 @@
     <string name="no_reactions_setup">没有设置回应</string>
     <string name="select_push_server">选择一个统一推送应用</string>
     <string name="push_server_title">推送通知</string>
-    <string name="push_server_explainer">从已安装的统一推送应用中选择</string>
+    <string name="push_server_explainer">从已安装的 UnifiedPush 应用中选择</string>
     <string name="push_server_none">无</string>
     <string name="push_server_none_explainer">关闭推送通知</string>
     <string name="push_server_uses_app_explainer">使用应用 %1$s</string>
     <string name="push_server_install_app">推送通知设置</string>
-    <string name="push_server_install_app_description">        若要接收推送通知，请安装支持[Unified Push](https://unifiedpus)的任何应用。 rg/, 例如 [Nfty](https://ntfy.sh/)。
-        安装后，请选择您想要在设置中使用的应用程序。
+    <string name="push_server_install_app_description">        若要接收推送通知，请安装任何支持 [Unified Push](https://unifiedpus)的应用, 例如 [Nfty](https://ntfy.sh/)。
+        安装后，请在设置中选择你想要使用的应用程序。
     </string>
     <string name="payment_required_title">来自 %1$s 的消息</string>
     <string name="thread_title">主题帖</string>
