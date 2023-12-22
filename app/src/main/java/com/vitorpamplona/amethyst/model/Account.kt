@@ -11,7 +11,6 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -426,7 +425,7 @@ class Account(
     fun updateOptOutOptions(warnReports: Boolean, filterSpam: Boolean) {
         warnAboutPostsWithReports = warnReports
         filterSpamFromStrangers = filterSpam
-        OptOutFromFilters.start(filterSpamFromStrangers)
+        LocalCache.antiSpam.active = filterSpamFromStrangers
         if (!filterSpamFromStrangers) {
             transientHiddenUsers = persistentSetOf()
         }

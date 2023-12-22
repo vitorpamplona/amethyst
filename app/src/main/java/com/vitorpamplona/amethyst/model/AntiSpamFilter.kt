@@ -4,7 +4,6 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
-import com.vitorpamplona.amethyst.OptOutFromFilters
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
@@ -19,10 +18,12 @@ class AntiSpamFilter {
     val recentMessages = LruCache<Int, String>(1000)
     val spamMessages = LruCache<Int, Spammer>(1000)
 
+    var active: Boolean = true
+
     fun isSpam(event: Event, relay: Relay?): Boolean {
         checkNotInMainThread()
 
-        if (!OptOutFromFilters.filterSpamFromStrangers) return false
+        if (!active) return false
 
         val idHex = event.id
 
