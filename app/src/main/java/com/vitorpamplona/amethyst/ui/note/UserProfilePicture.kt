@@ -139,19 +139,13 @@ fun UserPicture(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val route by remember(user) {
-        derivedStateOf {
-            "User/${user.pubkeyHex}"
-        }
-    }
-
     ClickableUserPicture(
         baseUser = user,
         size = size,
         accountViewModel = accountViewModel,
         modifier = pictureModifier,
         onClick = {
-            nav(route)
+            nav("User/${user.pubkeyHex}")
         }
     )
 }
@@ -365,7 +359,10 @@ fun WatchUserFollows(userHex: String, accountViewModel: AccountViewModel, onFoll
         accountViewModel.userFollows.map {
             it.user.isFollowingCached(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
         }.distinctUntilChanged()
-    }.observeAsState(false)
+    }.observeAsState(
+        accountViewModel.account.userProfile().isFollowingCached(userHex) ||
+            (userHex == accountViewModel.account.userProfile().pubkeyHex)
+    )
 
     onFollowChanges(showFollowingMark)
 }
