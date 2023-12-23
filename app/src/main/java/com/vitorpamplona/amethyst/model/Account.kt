@@ -102,7 +102,7 @@ val DefaultChannels = setOf(
     "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5" // -> Amethyst's Group
 )
 
-val DefaultReactions = listOf("\uD83D\uDE80", "\uD83E\uDEC2", "\uD83D\uDC40", "\uD83D\uDE02")
+val DefaultReactions = listOf("\uD83D\uDE80", "\uD83E\uDEC2", "\uD83D\uDC40", "\uD83D\uDE02", "\uD83C\uDF89", "\uD83E\uDD14", "\uD83D\uDE31")
 
 val DefaultZapAmounts = listOf(500L, 1000L, 5000L)
 
