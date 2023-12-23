@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -36,6 +35,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import kotlinx.coroutines.Dispatchers
@@ -119,7 +119,7 @@ fun InvoicePreview(lnInvoice: String, amount: String?) {
                 Icon(
                     painter = painterResource(R.drawable.lightning),
                     null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Size20Modifier,
                     tint = Color.Unspecified
                 )
 

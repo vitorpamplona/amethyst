@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -158,7 +157,7 @@ fun CashuPreview(
                 Icon(
                     painter = painterResource(R.drawable.cashu),
                     null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Size20Modifier,
                     tint = Color.Unspecified
                 )
 
@@ -206,7 +205,7 @@ fun CashuPreview(
                     if (isRedeeming) {
                         LoadingAnimation()
                     } else {
-                        ZapIcon(Size20dp, tint = Color.White)
+                        ZapIcon(Size20Modifier, tint = Color.White)
                     }
                     Spacer(DoubleHorzSpacer)
 
@@ -320,7 +319,7 @@ fun CashuPreviewNew(
                     if (isRedeeming) {
                         LoadingAnimation()
                     } else {
-                        ZapIcon(Size20dp, tint = MaterialTheme.colorScheme.onBackground)
+                        ZapIcon(Size20Modifier, tint = MaterialTheme.colorScheme.onBackground)
                     }
                     Spacer(StdHorzSpacer)
 

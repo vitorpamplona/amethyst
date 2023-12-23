@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -725,12 +726,12 @@ fun SimpleTextSpinner(
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Spacer(modifier = Modifier.size(20.dp))
+            Spacer(modifier = Size20Modifier)
             Text(currentText)
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 null,
-                modifier = Modifier.size(20.dp),
+                modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText
             )
         }

@@ -123,11 +123,11 @@ fun LikedIcon(modifier: Modifier) {
 }
 
 @Composable
-fun LikeIcon(iconSize: Dp, grayTint: Color) {
+fun LikeIcon(iconSizeModifier: Modifier, grayTint: Color) {
     Icon(
         painter = painterResource(R.drawable.ic_like),
         null,
-        modifier = remember(iconSize) { Modifier.size(iconSize) },
+        modifier = iconSizeModifier,
         tint = grayTint
     )
 }
@@ -160,11 +160,6 @@ fun ZappedIcon(iconSize: Dp) {
 @Composable
 fun ZappedIcon(modifier: Modifier) {
     ZapIcon(modifier = modifier, BitcoinOrange)
-}
-
-@Composable
-fun ZapIcon(iconSize: Dp, tint: Color = Color.Unspecified) {
-    ZapIcon(modifier = remember(iconSize) { Modifier.size(iconSize) }, tint)
 }
 
 @Composable
@@ -228,11 +223,11 @@ fun ExpandMoreIcon(modifier: Modifier) {
 }
 
 @Composable
-fun CommentIcon(iconSize: Dp, tint: Color) {
+fun CommentIcon(iconSizeModifier: Modifier, tint: Color) {
     Icon(
         painter = painterResource(R.drawable.ic_comment),
         contentDescription = null,
-        modifier = remember { Modifier.size(iconSize) },
+        modifier = iconSizeModifier,
         tint = tint
     )
 }

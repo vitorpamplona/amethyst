@@ -69,7 +69,11 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size39Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -270,7 +274,7 @@ fun RenderReportState(
 
     Crossfade(targetState = (!state.isAcceptable || state.isHiddenAuthor) && !showReportedNote) { showHiddenNote ->
         if (showHiddenNote) {
-            Column(remember { Modifier.fillMaxSize() }, verticalArrangement = Arrangement.Center) {
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
                 HiddenNote(
                     state.relevantReports,
                     state.isHiddenAuthor,
@@ -432,17 +436,49 @@ fun ReactionsColumn(baseNote: Note, accountViewModel: AccountViewModel, nav: (St
     Spacer(modifier = Modifier.height(8.dp))
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 75.dp, end = 20.dp)) {
-        ReplyReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp) {
+        ReplyReaction(
+            baseNote = baseNote,
+            grayTint = MaterialTheme.colorScheme.onBackground,
+            accountViewModel = accountViewModel,
+            iconSizeModifier = Size40Modifier
+        ) {
             routeFor(
                 baseNote,
                 accountViewModel.userProfile()
             )?.let { nav(it) }
         }
-        BoostReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp) {
+        BoostReaction(
+            baseNote = baseNote,
+            grayTint = MaterialTheme.colorScheme.onBackground,
+            accountViewModel = accountViewModel,
+            iconSizeModifier = Size40Modifier,
+            iconSize = Size40dp
+        ) {
             wantsToQuote = baseNote
         }
-        LikeReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, nav, iconSize = 40.dp, heartSize = Size35dp, 28.sp)
-        ZapReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, accountViewModel, iconSize = 40.dp, animationSize = Size35dp, nav = nav)
-        ViewCountReaction(baseNote, grayTint = MaterialTheme.colorScheme.onBackground, barChartModifier = Modifier.size(39.dp), viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter)
+        LikeReaction(
+            baseNote = baseNote,
+            grayTint = MaterialTheme.colorScheme.onBackground,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            iconSize = Size40dp,
+            heartSizeModifier = Size35Modifier,
+            28.sp
+        )
+        ZapReaction(
+            baseNote = baseNote,
+            grayTint = MaterialTheme.colorScheme.onBackground,
+            accountViewModel = accountViewModel,
+            iconSize = Size40dp,
+            iconSizeModifier = Size40Modifier,
+            animationSize = Size35dp,
+            nav = nav
+        )
+        ViewCountReaction(
+            note = baseNote,
+            grayTint = MaterialTheme.colorScheme.onBackground,
+            barChartModifier = Size39Modifier,
+            viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter
+        )
     }
 }

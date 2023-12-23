@@ -59,7 +59,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size15dp
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -450,7 +450,7 @@ private fun MessageBubbleLines(
                 grayTint = MaterialTheme.colorScheme.placeholderText,
                 accountViewModel = accountViewModel,
                 showCounter = false,
-                iconSize = Size15dp
+                iconSizeModifier = Size15Modifier
             ) {
                 onWantsToReply(baseNote)
             }

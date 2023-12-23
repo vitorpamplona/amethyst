@@ -89,14 +89,16 @@ import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.Height24dpModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserSize
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
-import com.vitorpamplona.amethyst.ui.theme.Size17dp
-import com.vitorpamplona.amethyst.ui.theme.Size19dp
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
@@ -532,13 +534,11 @@ fun ReplyReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
-    iconSize: Dp = Size17dp,
+    iconSizeModifier: Modifier = Size17Modifier,
     onPress: () -> Unit
 ) {
     IconButton(
-        modifier = remember {
-            Modifier.size(iconSize)
-        },
+        modifier = iconSizeModifier,
         onClick = {
             if (accountViewModel.isWriteable()) {
                 onPress()
@@ -550,7 +550,7 @@ fun ReplyReaction(
             }
         }
     ) {
-        CommentIcon(iconSize, grayTint)
+        CommentIcon(iconSizeModifier, grayTint)
     }
 
     if (showCounter) {
@@ -596,7 +596,7 @@ val slideAnimation: ContentTransform =
 @Composable
 private fun TextCount(count: Int, textColor: Color) {
     Text(
-        text = remember(count) { showCount(count) },
+        text = showCount(count),
         fontSize = Font14SP,
         color = textColor,
         modifier = HalfStartPadding,
@@ -625,17 +625,14 @@ fun BoostReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    iconSize: Dp = 20.dp,
+    iconSizeModifier: Modifier = Size20Modifier,
+    iconSize: Dp = Size20dp,
     onQuotePress: () -> Unit
 ) {
     var wantsToBoost by remember { mutableStateOf(false) }
 
-    val iconButtonModifier = remember {
-        Modifier.size(iconSize)
-    }
-
     IconButton(
-        modifier = iconButtonModifier,
+        modifier = iconSizeModifier,
         onClick = {
             accountViewModel.tryBoost(baseNote) {
                 wantsToBoost = true
@@ -643,7 +640,7 @@ fun BoostReaction(
         }
     ) {
         ObserveBoostIcon(baseNote, accountViewModel) { hasBoosted ->
-            RepostedIcon(iconButtonModifier, if (hasBoosted) Color.Unspecified else grayTint)
+            RepostedIcon(iconSizeModifier, if (hasBoosted) Color.Unspecified else grayTint)
         }
 
         if (wantsToBoost) {
@@ -695,20 +692,16 @@ fun LikeReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    iconSize: Dp = 20.dp,
-    heartSize: Dp = 16.dp,
+    iconSize: Dp = Size20dp,
+    heartSizeModifier: Modifier = Size16Modifier,
     iconFontSize: TextUnit = Font14SP
 ) {
-    val iconButtonModifier = remember {
-        Modifier.size(iconSize)
-    }
-
     var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
     var wantsToReact by remember { mutableStateOf(false) }
 
     Box(
         contentAlignment = Center,
-        modifier = iconButtonModifier.combinedClickable(
+        modifier = Modifier.size(iconSize).combinedClickable(
             role = Role.Button,
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(bounded = false, radius = Size24dp),
@@ -731,39 +724,39 @@ fun LikeReaction(
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
             Crossfade(targetState = reactionType.value, label = "LikeIcon") {
                 if (it != null) {
-                    RenderReactionType(it, heartSize, iconFontSize)
+                    RenderReactionType(it, heartSizeModifier, iconFontSize)
                 } else {
-                    LikeIcon(heartSize, grayTint)
+                    LikeIcon(heartSizeModifier, grayTint)
                 }
             }
+        }
+
+        if (wantsToChangeReactionSymbol) {
+            UpdateReactionTypeDialog(
+                { wantsToChangeReactionSymbol = false },
+                accountViewModel = accountViewModel,
+                nav
+            )
+        }
+
+        if (wantsToReact) {
+            ReactionChoicePopup(
+                baseNote,
+                iconSize,
+                accountViewModel,
+                onDismiss = {
+                    wantsToReact = false
+                },
+                onChangeAmount = {
+                    wantsToReact = false
+                    wantsToChangeReactionSymbol = true
+                }
+            )
         }
     }
 
     ObserveLikeText(baseNote) { reactionCount ->
         SlidingAnimationCount(reactionCount, grayTint)
-    }
-
-    if (wantsToChangeReactionSymbol) {
-        UpdateReactionTypeDialog(
-            { wantsToChangeReactionSymbol = false },
-            accountViewModel = accountViewModel,
-            nav
-        )
-    }
-
-    if (wantsToReact) {
-        ReactionChoicePopup(
-            baseNote,
-            iconSize,
-            accountViewModel,
-            onDismiss = {
-                wantsToReact = false
-            },
-            onChangeAmount = {
-                wantsToReact = false
-                wantsToChangeReactionSymbol = true
-            }
-        )
     }
 }
 
@@ -793,14 +786,10 @@ fun ObserveLikeIcon(
 @Composable
 private fun RenderReactionType(
     reactionType: String,
-    iconSize: Dp = Size20dp,
+    iconSizeModifier: Modifier = Size20Modifier,
     iconFontSize: TextUnit
 ) {
-    val isCustom = remember(reactionType) {
-        reactionType.startsWith(":")
-    }
-
-    if (isCustom) {
+    if (reactionType.isNotEmpty() && reactionType[0] == ':') {
         val renderable = remember(reactionType) {
             listOf(
                 ImageUrlType(reactionType.removePrefix(":").substringAfter(":"))
@@ -815,7 +804,7 @@ private fun RenderReactionType(
         )
     } else {
         when (reactionType) {
-            "+" -> LikedIcon(iconSize)
+            "+" -> LikedIcon(iconSizeModifier)
             "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
             else -> Text(text = reactionType, fontSize = iconFontSize)
         }
@@ -857,14 +846,11 @@ fun ZapReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    iconSize: Dp = 20.dp,
+    iconSize: Dp = Size20dp,
+    iconSizeModifier: Modifier = Size20Modifier,
     animationSize: Dp = 14.dp,
     nav: (String) -> Unit
 ) {
-    val iconButtonModifier = remember {
-        Modifier.size(iconSize)
-    }
-
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
@@ -882,7 +868,7 @@ fun ZapReaction(
 
     Row(
         verticalAlignment = CenterVertically,
-        modifier = iconButtonModifier.combinedClickable(
+        modifier = iconSizeModifier.combinedClickable(
             role = Role.Button,
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(bounded = false, radius = Size24dp),
@@ -920,8 +906,9 @@ fun ZapReaction(
     ) {
         if (wantsToZap) {
             ZapAmountChoicePopup(
-                baseNote,
-                accountViewModel,
+                baseNote = baseNote,
+                iconSize = iconSize,
+                accountViewModel = accountViewModel,
                 onDismiss = {
                     wantsToZap = false
                     zappingProgress = 0f
@@ -1028,9 +1015,9 @@ fun ZapReaction(
             ) { wasZappedByLoggedInUser ->
                 Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
                     if (it) {
-                        ZappedIcon(iconSize)
+                        ZappedIcon(iconSizeModifier)
                     } else {
-                        ZapIcon(iconSize, grayTint)
+                        ZapIcon(iconSizeModifier, grayTint)
                     }
                 }
             }
@@ -1129,8 +1116,8 @@ private fun ObserveZapAmountText(
 fun ViewCountReaction(
     note: Note,
     grayTint: Color,
-    barChartModifier: Modifier = Modifier.size(Size19dp),
-    numberSizeModifier: Modifier = Modifier.height(Size24dp),
+    barChartModifier: Modifier = Size19Modifier,
+    numberSizeModifier: Modifier = Height24dpModifier,
     viewCountColorFilter: ColorFilter
 ) {
     ViewCountIcon(barChartModifier, grayTint)
@@ -1348,6 +1335,7 @@ private fun ActionableReactionButton(
 fun ZapAmountChoicePopup(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    iconSize: Dp,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String) -> Unit,
@@ -1357,9 +1345,13 @@ fun ZapAmountChoicePopup(
     val context = LocalContext.current
     val zapMessage = ""
 
+    val iconSizePx = with(LocalDensity.current) {
+        -iconSize.toPx().toInt()
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, -50),
+        offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
