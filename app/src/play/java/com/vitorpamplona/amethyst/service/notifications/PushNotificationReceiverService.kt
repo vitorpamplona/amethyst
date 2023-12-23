@@ -24,6 +24,7 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
 
     // this is called when a message is received
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        Log.d("Time", "Notification received $remoteMessage")
         scope.launch(Dispatchers.IO) {
             val (value, elapsed) = measureTimedValue {
                 parseMessage(remoteMessage.data)?.let {
