@@ -161,3 +161,24 @@ val IconRowModifier = Modifier
     .padding(vertical = 15.dp, horizontal = 25.dp)
 
 val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
+
+val normalNoteModifier = Modifier.fillMaxWidth()
+    .padding(
+        start = 12.dp,
+        end = 12.dp,
+        top = 0.dp
+    )
+
+val normalWithTopMarginNoteModifier = Modifier.fillMaxWidth()
+    .padding(
+        start = 12.dp,
+        end = 12.dp,
+        top = 10.dp
+    )
+
+val boostedNoteModifier = Modifier.fillMaxWidth()
+    .padding(
+        start = 0.dp,
+        end = 0.dp,
+        top = 0.dp
+    )

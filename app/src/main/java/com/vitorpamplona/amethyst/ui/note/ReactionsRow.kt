@@ -126,7 +126,7 @@ fun ReactionsRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    val wantsToSeeReactions = remember {
+    val wantsToSeeReactions = remember(baseNote) {
         mutableStateOf(false)
     }
 

@@ -153,10 +153,13 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
+import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -277,7 +280,7 @@ fun CheckHiddenNoteCompose(
 ) {
     if (showHidden) {
         // Ignores reports as well
-        val state by remember {
+        val state by remember(note) {
             mutableStateOf(
                 AccountViewModel.NoteComposeReportState()
             )
@@ -338,7 +341,7 @@ fun LoadedNoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var state by remember {
+    var state by remember(note) {
         mutableStateOf(
             AccountViewModel.NoteComposeReportState()
         )
@@ -383,7 +386,7 @@ fun RenderReportState(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    var showReportedNote by remember { mutableStateOf(false) }
+    var showReportedNote by remember(note) { mutableStateOf(false) }
 
     Crossfade(targetState = !state.isAcceptable && !showReportedNote, label = "RenderReportState") { showHiddenNote ->
         if (showHiddenNote) {
@@ -941,15 +944,12 @@ fun InnerNoteWithReactions(
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
 
     Row(
-        modifier = remember {
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = if (!isBoostedNote) 12.dp else 0.dp,
-                    end = if (!isBoostedNote) 12.dp else 0.dp,
-                    top = if (addMarginTop && !isBoostedNote) 10.dp else 0.dp
-                    // Don't add margin to the bottom because of the Divider down below
-                )
+        modifier = if (!isBoostedNote && addMarginTop) {
+            normalWithTopMarginNoteModifier
+        } else if (!isBoostedNote) {
+            normalNoteModifier
+        } else {
+            boostedNoteModifier
         }
     ) {
         if (notBoostedNorQuote) {
@@ -2671,31 +2671,24 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel
 ) {
-    val baseRepost by remember {
-        derivedStateOf {
-            baseNote.replyTo?.lastOrNull()
-        }
-    }
-
     val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
 
-    if (isRepost && baseRepost != null) {
-        RepostNoteAuthorPicture(baseNote, baseRepost!!, accountViewModel, nav)
+    if (isRepost) {
+        val baseRepost = baseNote.replyTo?.lastOrNull()
+        if (baseRepost != null) {
+            RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
+        } else {
+            NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
+        }
     } else {
         NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
     }
 
-    val isChannel = baseNote.event is ChannelMessageEvent && baseNote.channelHex() != null
-
-    val automaticallyShowProfilePicture = remember {
-        accountViewModel.settings.showProfilePictures.value
-    }
-
-    if (isChannel) {
-        val baseChannelHex = remember { baseNote.channelHex() }
+    if (baseNote.event is ChannelMessageEvent) {
+        val baseChannelHex = remember(baseNote) { baseNote.channelHex() }
         if (baseChannelHex != null) {
             LoadChannel(baseChannelHex, accountViewModel) { channel ->
-                ChannelNotePicture(channel, loadProfilePicture = automaticallyShowProfilePicture)
+                ChannelNotePicture(channel, loadProfilePicture = accountViewModel.settings.showProfilePictures.value)
             }
         }
     }
