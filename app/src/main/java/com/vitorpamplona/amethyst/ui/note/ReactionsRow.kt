@@ -861,6 +861,10 @@ fun ZapReaction(
     animationSize: Dp = 14.dp,
     nav: (String) -> Unit
 ) {
+    val iconButtonModifier = remember {
+        Modifier.size(iconSize)
+    }
+
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
@@ -878,43 +882,41 @@ fun ZapReaction(
 
     Row(
         verticalAlignment = CenterVertically,
-        modifier = Modifier
-            .size(iconSize)
-            .combinedClickable(
-                role = Role.Button,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = Size24dp),
-                onClick = {
-                    zapClick(
-                        baseNote,
-                        accountViewModel,
-                        context,
-                        onZappingProgress = { progress: Float ->
-                            scope.launch {
-                                zappingProgress = progress
-                            }
-                        },
-                        onMultipleChoices = {
-                            wantsToZap = true
-                        },
-                        onError = { _, message ->
-                            scope.launch {
-                                zappingProgress = 0f
-                                showErrorMessageDialog = message
-                            }
-                        },
-                        onPayViaIntent = {
-                            wantsToPay = it
+        modifier = iconButtonModifier.combinedClickable(
+            role = Role.Button,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = rememberRipple(bounded = false, radius = Size24dp),
+            onClick = {
+                zapClick(
+                    baseNote,
+                    accountViewModel,
+                    context,
+                    onZappingProgress = { progress: Float ->
+                        scope.launch {
+                            zappingProgress = progress
                         }
-                    )
-                },
-                onLongClick = {
-                    wantsToChangeZapAmount = true
-                },
-                onDoubleClick = {
-                    wantsToSetCustomZap = true
-                }
-            )
+                    },
+                    onMultipleChoices = {
+                        wantsToZap = true
+                    },
+                    onError = { _, message ->
+                        scope.launch {
+                            zappingProgress = 0f
+                            showErrorMessageDialog = message
+                        }
+                    },
+                    onPayViaIntent = {
+                        wantsToPay = it
+                    }
+                )
+            },
+            onLongClick = {
+                wantsToChangeZapAmount = true
+            },
+            onDoubleClick = {
+                wantsToSetCustomZap = true
+            }
+        )
     ) {
         if (wantsToZap) {
             ZapAmountChoicePopup(
@@ -1353,8 +1355,6 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit
 ) {
     val context = LocalContext.current
-    val accountState by accountViewModel.accountLiveData.observeAsState()
-    val account = accountState?.account ?: return
     val zapMessage = ""
 
     Popup(
@@ -1363,7 +1363,7 @@ fun ZapAmountChoicePopup(
         onDismissRequest = { onDismiss() }
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
-            account.zapAmountChoices.forEach { amountInSats ->
+            accountViewModel.account.zapAmountChoices.forEach { amountInSats ->
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
@@ -1376,7 +1376,7 @@ fun ZapAmountChoicePopup(
                             onError,
                             onProgress,
                             onPayViaIntent,
-                            account.defaultZapType
+                            accountViewModel.account.defaultZapType
                         )
                         onDismiss()
                     },
@@ -1401,7 +1401,7 @@ fun ZapAmountChoicePopup(
                                     onError,
                                     onProgress,
                                     onPayViaIntent,
-                                    account.defaultZapType
+                                    accountViewModel.account.defaultZapType
                                 )
                                 onDismiss()
                             },
