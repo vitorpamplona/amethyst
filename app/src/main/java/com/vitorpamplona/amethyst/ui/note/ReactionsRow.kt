@@ -13,7 +13,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.TextType
+import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
@@ -714,17 +714,12 @@ fun LikeReaction(
             indication = rememberRipple(bounded = false, radius = Size24dp),
             onClick = {
                 likeClick(
-                    baseNote,
                     accountViewModel,
                     onMultipleChoices = {
                         wantsToReact = true
                     },
                     onWantsToSignReaction = {
-                        if (accountViewModel.account.reactionChoices.size == 1) {
-                            accountViewModel.reactToOrDelete(baseNote)
-                        } else if (accountViewModel.account.reactionChoices.size > 1) {
-                            wantsToReact = true
-                        }
+                        accountViewModel.reactToOrDelete(baseNote)
                     }
                 )
             },
@@ -835,7 +830,6 @@ fun ObserveLikeText(baseNote: Note, inner: @Composable (Int) -> Unit) {
 }
 
 private fun likeClick(
-    baseNote: Note,
     accountViewModel: AccountViewModel,
     onMultipleChoices: () -> Unit,
     onWantsToSignReaction: () -> Unit
@@ -851,7 +845,7 @@ private fun likeClick(
             R.string.login_with_a_private_key_to_like_posts
         )
     } else if (accountViewModel.account.reactionChoices.size == 1) {
-        accountViewModel.reactToOrDelete(baseNote)
+        onWantsToSignReaction()
     } else if (accountViewModel.account.reactionChoices.size > 1) {
         onMultipleChoices()
     }

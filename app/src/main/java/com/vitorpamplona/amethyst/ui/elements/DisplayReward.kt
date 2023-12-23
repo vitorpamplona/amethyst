@@ -1,5 +1,6 @@
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.ui.elements
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -9,19 +10,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -35,10 +43,102 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.note.ZapIcon
+import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+
+@Stable
+data class Reward(val amount: BigDecimal)
+
+@Composable
+fun DisplayReward(
+    baseReward: Reward,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    var popupExpanded by remember { mutableStateOf(false) }
+
+    Column() {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { popupExpanded = true }
+        ) {
+            ClickableText(
+                text = AnnotatedString("#bounty"),
+                onClick = { nav("Hashtag/bounty") },
+                style = LocalTextStyle.current.copy(
+                    color = MaterialTheme.colorScheme.primary.copy(
+                        alpha = 0.52f
+                    )
+                )
+            )
+
+            RenderPledgeAmount(baseNote, baseReward, accountViewModel)
+        }
+
+        if (popupExpanded) {
+            AddBountyAmountDialog(baseNote, accountViewModel) {
+                popupExpanded = false
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderPledgeAmount(
+    baseNote: Note,
+    baseReward: Reward,
+    accountViewModel: AccountViewModel
+) {
+    val repliesState by baseNote.live().replies.observeAsState()
+    var reward by remember {
+        mutableStateOf<String>(
+            showAmount(baseReward.amount)
+        )
+    }
+
+    var hasPledge by remember {
+        mutableStateOf<Boolean>(
+            false
+        )
+    }
+
+    LaunchedEffect(key1 = repliesState) {
+        launch(Dispatchers.IO) {
+            repliesState?.note?.pledgedAmountByOthers()?.let {
+                val newRewardAmount = showAmount(baseReward.amount.add(it))
+                if (newRewardAmount != reward) {
+                    reward = newRewardAmount
+                }
+            }
+            val newHasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
+            if (hasPledge != newHasPledge) {
+                launch(Dispatchers.Main) {
+                    hasPledge = newHasPledge
+                }
+            }
+        }
+    }
+
+    if (hasPledge) {
+        ZappedIcon(modifier = Size20Modifier)
+    } else {
+        ZapIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText)
+    }
+
+    Text(
+        text = reward,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1
+    )
+}
 
 class AddBountyAmountViewModel : ViewModel() {
     private var account: Account? = null

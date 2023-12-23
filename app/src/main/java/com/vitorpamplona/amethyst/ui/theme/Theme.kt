@@ -4,12 +4,14 @@ import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.style.ChartStyle
@@ -364,6 +367,30 @@ fun AmethystTheme(sharedPrefsViewModel: SharedPreferencesViewModel, content: @Co
             }
             window.navigationBarColor = colors.background.toArgb()
             insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+}
+
+@Composable
+fun ThemeComparison(
+    onDark: @Composable () -> Unit,
+    onLight: @Composable () -> Unit
+) {
+    Column() {
+        val darkTheme: SharedPreferencesViewModel = viewModel()
+        darkTheme.updateTheme(ThemeType.DARK)
+        AmethystTheme(darkTheme) {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                onDark()
+            }
+        }
+
+        val lightTheme: SharedPreferencesViewModel = viewModel()
+        lightTheme.updateTheme(ThemeType.LIGHT)
+        AmethystTheme(lightTheme) {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                onLight()
+            }
         }
     }
 }

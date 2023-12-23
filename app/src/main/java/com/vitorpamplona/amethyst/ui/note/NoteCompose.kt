@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,13 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +37,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -53,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.BottomEnd
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,7 +62,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -114,6 +104,17 @@ import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
+import com.vitorpamplona.amethyst.ui.elements.AddButton
+import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
+import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
+import com.vitorpamplona.amethyst.ui.elements.DisplayPoW
+import com.vitorpamplona.amethyst.ui.elements.DisplayReward
+import com.vitorpamplona.amethyst.ui.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.ui.elements.DisplayZapSplits
+import com.vitorpamplona.amethyst.ui.elements.RemoveButton
+import com.vitorpamplona.amethyst.ui.elements.Reward
+import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -124,8 +125,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -133,14 +132,11 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -159,7 +155,6 @@ import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -167,7 +162,6 @@ import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -178,8 +172,6 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
@@ -187,7 +179,6 @@ import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
 import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -212,14 +203,11 @@ import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import java.math.BigDecimal
 import java.net.URL
-import java.net.URLEncoder
 import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -1070,60 +1058,6 @@ private fun NoteBody(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun DisplayZapSplits(noteEvent: EventInterface, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val list = remember(noteEvent) { noteEvent.zapSplitSetup() }
-
-    if (list.isEmpty()) return
-
-    Row(verticalAlignment = CenterVertically) {
-        Box(
-            Modifier
-                .height(20.dp)
-                .width(25.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier
-                    .size(20.dp)
-                    .align(Alignment.CenterStart),
-                tint = BitcoinOrange
-            )
-            Icon(
-                imageVector = Icons.Outlined.ArrowForwardIos,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier
-                    .size(13.dp)
-                    .align(Alignment.CenterEnd),
-                tint = BitcoinOrange
-            )
-        }
-
-        Spacer(modifier = StdHorzSpacer)
-
-        FlowRow {
-            list.forEach {
-                if (it.isLnAddress) {
-                    ClickableText(
-                        text = AnnotatedString(it.lnAddressOrPubKeyHex),
-                        onClick = { },
-                        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
-                    )
-                } else {
-                    UserPicture(
-                        userHex = it.lnAddressOrPubKeyHex,
-                        size = Size25dp,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun RenderNoteRow(
     baseNote: Note,
@@ -1263,56 +1197,6 @@ private fun RenderNoteRow(
             )
         }
     }
-}
-
-fun routeFor(note: Note, loggedIn: User): String? {
-    val noteEvent = note.event
-
-    if (noteEvent is ChannelMessageEvent || noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) {
-        note.channelHex()?.let {
-            return "Channel/$it"
-        }
-    } else if (noteEvent is LiveActivitiesEvent || noteEvent is LiveActivitiesChatMessageEvent) {
-        note.channelHex()?.let {
-            return "Channel/${URLEncoder.encode(it, "utf-8")}"
-        }
-    } else if (noteEvent is ChatroomKeyable) {
-        val room = noteEvent.chatroomKey(loggedIn.pubkeyHex)
-        loggedIn.createChatroom(room)
-        return "Room/${room.hashCode()}"
-    } else if (noteEvent is CommunityDefinitionEvent) {
-        return "Community/${URLEncoder.encode(note.idHex, "utf-8")}"
-    } else {
-        return "Note/${URLEncoder.encode(note.idHex, "utf-8")}"
-    }
-
-    return null
-}
-
-fun routeToMessage(user: HexKey, draftMessage: String?, accountViewModel: AccountViewModel): String {
-    val withKey = ChatroomKey(persistentSetOf(user))
-    accountViewModel.account.userProfile().createChatroom(withKey)
-    return if (draftMessage != null) {
-        "Room/${withKey.hashCode()}?message=$draftMessage"
-    } else {
-        "Room/${withKey.hashCode()}"
-    }
-}
-
-fun routeToMessage(user: User, draftMessage: String?, accountViewModel: AccountViewModel): String {
-    return routeToMessage(user.pubkeyHex, draftMessage, accountViewModel)
-}
-
-fun routeFor(note: Channel): String {
-    return "Channel/${note.idHex}"
-}
-
-fun routeFor(user: User): String {
-    return "User/${user.pubkeyHex}"
-}
-
-fun authorRouteFor(note: Note): String {
-    return "User/${note.author?.pubkeyHex}"
 }
 
 @Composable
@@ -2289,45 +2173,6 @@ private fun EmojiListOptions(
     }
 }
 
-@Composable
-fun RemoveButton(onClick: () -> Unit) {
-    Button(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
-    ) {
-        Text(text = stringResource(R.string.remove), color = Color.White)
-    }
-}
-
-@Composable
-fun AddButton(
-    text: Int = R.string.add,
-    isActive: Boolean = true,
-    modifier: Modifier = Modifier.padding(start = 3.dp),
-    onClick: () -> Unit
-) {
-    Button(
-        modifier = modifier,
-        onClick = {
-            if (isActive) {
-                onClick()
-            }
-        },
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray
-        ),
-        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
-    ) {
-        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderPinListEvent(
@@ -2901,7 +2746,7 @@ private fun RepostNoteAuthorPicture(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit
 ) {
-    GenericRepostSection(
+    GenericRepostLayout(
         baseAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseNote,
@@ -2919,45 +2764,6 @@ private fun RepostNoteAuthorPicture(
             )
         }
     )
-}
-
-@Composable
-@Preview
-private fun GenericRepostSectionPreview() {
-    GenericRepostSection(
-        baseAuthorPicture = {
-            Text("ab")
-        },
-        repostAuthorPicture = {
-            Text("cd")
-        }
-    )
-}
-
-@Composable
-private fun GenericRepostSection(
-    baseAuthorPicture: @Composable () -> Unit,
-    repostAuthorPicture: @Composable () -> Unit
-) {
-    Box(modifier = Size55Modifier) {
-        Box(remember { Size35Modifier.align(Alignment.TopStart) }) {
-            baseAuthorPicture()
-        }
-
-        Box(
-            remember {
-                Size18Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(1.dp)
-            }
-        ) {
-            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colorScheme.placeholderText)
-        }
-
-        Box(remember { Size35Modifier.align(Alignment.BottomEnd) }, contentAlignment = BottomEnd) {
-            repostAuthorPicture()
-        }
-    }
 }
 
 @Composable
@@ -3093,232 +2899,6 @@ private fun LoadAndDisplayUser(
             tags = userTags
         )
     }
-}
-
-@Composable
-fun DisplayFollowingCommunityInPost(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    Column(HalfStartPadding) {
-        Row(verticalAlignment = CenterVertically) {
-            DisplayCommunity(baseNote, nav)
-        }
-    }
-}
-
-@Composable
-fun DisplayFollowingHashtagsInPost(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    val noteEvent = remember { baseNote.event } ?: return
-
-    val userFollowState by accountViewModel.userFollows.observeAsState()
-    var firstTag by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(key1 = userFollowState) {
-        launch(Dispatchers.Default) {
-            val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
-            val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
-
-            if (firstTag != newFirstTag) {
-                launch(Dispatchers.Main) {
-                    firstTag = newFirstTag
-                }
-            }
-        }
-    }
-
-    firstTag?.let {
-        Column(verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = CenterVertically) {
-                DisplayTagList(it, nav)
-            }
-        }
-    }
-}
-
-@Composable
-private fun DisplayTagList(firstTag: String, nav: (String) -> Unit) {
-    val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
-    val route = remember(firstTag) { "Hashtag/$firstTag" }
-
-    ClickableText(
-        text = displayTag,
-        onClick = { nav(route) },
-        style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colorScheme.primary.copy(
-                alpha = 0.52f
-            )
-        ),
-        maxLines = 1
-    )
-}
-
-@Composable
-private fun DisplayCommunity(note: Note, nav: (String) -> Unit) {
-    val communityTag = remember(note) {
-        note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.kind)
-    } ?: return
-
-    val displayTag = remember(note) { AnnotatedString(getCommunityShortName(communityTag)) }
-    val route = remember(note) { "Community/${communityTag.toTag()}" }
-
-    ClickableText(
-        text = displayTag,
-        onClick = { nav(route) },
-        style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colorScheme.primary.copy(
-                alpha = 0.52f
-            )
-        ),
-        maxLines = 1
-    )
-}
-
-private fun getCommunityShortName(communityTag: ATag): String {
-    val name = if (communityTag.dTag.length > 10) {
-        communityTag.dTag.take(10) + "..."
-    } else {
-        communityTag.dTag.take(10)
-    }
-
-    return "/n/$name"
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun DisplayUncitedHashtags(
-    hashtags: ImmutableList<String>,
-    eventContent: String,
-    nav: (String) -> Unit
-) {
-    val unusedHashtags = remember(eventContent) {
-        hashtags.filter { !eventContent.contains(it, true) }
-    }
-
-    if (unusedHashtags.isNotEmpty()) {
-        FlowRow(
-            modifier = HalfTopPadding
-        ) {
-            unusedHashtags.forEach { hashtag ->
-                ClickableText(
-                    text = remember { AnnotatedString("#$hashtag ") },
-                    onClick = { nav("Hashtag/$hashtag") },
-                    style = LocalTextStyle.current.copy(
-                        color = MaterialTheme.colorScheme.lessImportantLink
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun DisplayPoW(
-    pow: Int
-) {
-    val powStr = remember(pow) {
-        "PoW-$pow"
-    }
-
-    Text(
-        powStr,
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1
-    )
-}
-
-@Stable
-data class Reward(val amount: BigDecimal)
-
-@Composable
-fun DisplayReward(
-    baseReward: Reward,
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    var popupExpanded by remember { mutableStateOf(false) }
-
-    Column() {
-        Row(
-            verticalAlignment = CenterVertically,
-            modifier = Modifier.clickable { popupExpanded = true }
-        ) {
-            ClickableText(
-                text = AnnotatedString("#bounty"),
-                onClick = { nav("Hashtag/bounty") },
-                style = LocalTextStyle.current.copy(
-                    color = MaterialTheme.colorScheme.primary.copy(
-                        alpha = 0.52f
-                    )
-                )
-            )
-
-            RenderPledgeAmount(baseNote, baseReward, accountViewModel)
-        }
-
-        if (popupExpanded) {
-            AddBountyAmountDialog(baseNote, accountViewModel) {
-                popupExpanded = false
-            }
-        }
-    }
-}
-
-@Composable
-private fun RenderPledgeAmount(
-    baseNote: Note,
-    baseReward: Reward,
-    accountViewModel: AccountViewModel
-) {
-    val repliesState by baseNote.live().replies.observeAsState()
-    var reward by remember {
-        mutableStateOf<String>(
-            showAmount(baseReward.amount)
-        )
-    }
-
-    var hasPledge by remember {
-        mutableStateOf<Boolean>(
-            false
-        )
-    }
-
-    LaunchedEffect(key1 = repliesState) {
-        launch(Dispatchers.IO) {
-            repliesState?.note?.pledgedAmountByOthers()?.let {
-                val newRewardAmount = showAmount(baseReward.amount.add(it))
-                if (newRewardAmount != reward) {
-                    reward = newRewardAmount
-                }
-            }
-            val newHasPledge = repliesState?.note?.hasPledgeBy(accountViewModel.userProfile()) == true
-            if (hasPledge != newHasPledge) {
-                launch(Dispatchers.Main) {
-                    hasPledge = newHasPledge
-                }
-            }
-        }
-    }
-
-    if (hasPledge) {
-        ZappedIcon(modifier = Size20Modifier)
-    } else {
-        ZapIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText)
-    }
-
-    Text(
-        text = reward,
-        color = MaterialTheme.colorScheme.placeholderText,
-        maxLines = 1
-    )
 }
 
 @Composable

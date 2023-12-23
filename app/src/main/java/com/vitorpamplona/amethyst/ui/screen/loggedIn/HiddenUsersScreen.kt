@@ -47,7 +47,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.note.AddButton
+import com.vitorpamplona.amethyst.ui.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenWordsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
