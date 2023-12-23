@@ -321,7 +321,7 @@ val ColorScheme.relayIconModifier: Modifier
     get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
 
 val ColorScheme.largeRelayIconModifier: Modifier
-    get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
+    get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
 
 val ColorScheme.chartStyle: ChartStyle
     get() {
