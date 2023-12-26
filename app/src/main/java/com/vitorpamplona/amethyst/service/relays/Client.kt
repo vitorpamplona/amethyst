@@ -86,7 +86,7 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         subscriptions = subscriptions + Pair(subscriptionId, filters)
-        RelayPool.sendFilterOnlyIfDisconnected()
+        RelayPool.sendFilterOnlyIfDisconnected(subscriptionId)
     }
 
     fun send(
@@ -152,6 +152,10 @@ object Client : RelayPool.Listener {
         subscriptions = subscriptions.minus(subscriptionId)
     }
 
+    fun isActive(subscriptionId: String): Boolean {
+        return subscriptions.contains(subscriptionId)
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     override fun onEvent(event: Event, subscriptionId: String, relay: Relay, afterEOSE: Boolean) {
         // Releases the Web thread for the new payload.
@@ -207,6 +211,10 @@ object Client : RelayPool.Listener {
 
     fun subscribe(listener: Listener) {
         listeners = listeners.plus(listener)
+    }
+
+    fun isSubscribed(listener: Listener): Boolean {
+        return listeners.contains(listener)
     }
 
     fun unsubscribe(listener: Listener) {

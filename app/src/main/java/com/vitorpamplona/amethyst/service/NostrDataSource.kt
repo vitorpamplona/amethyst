@@ -30,7 +30,7 @@ abstract class NostrDataSource(val debugName: String) {
 
     fun printCounter() {
         eventCounter.forEach {
-            Log.d("STATE DUMP", "Received Events ${it.key}: ${it.value.counter}")
+            Log.d("STATE DUMP ${this.javaClass.simpleName}", "Received Events ${it.key}: ${it.value.counter}")
         }
     }
 
@@ -45,6 +45,8 @@ abstract class NostrDataSource(val debugName: String) {
                     eventCounter = eventCounter + Pair(key, Counter(1))
                 }
 
+                // Log.d(this@NostrDataSource.javaClass.simpleName, "Relay ${relay.url}: ${event.kind}")
+
                 consume(event, relay)
                 if (afterEOSE) {
                     markAsEOSE(subscriptionId, relay)
@@ -53,16 +55,18 @@ abstract class NostrDataSource(val debugName: String) {
         }
 
         override fun onError(error: Error, subscriptionId: String, relay: Relay) {
-            // Log.e("ERROR", "Relay ${relay.url}: ${error.message}")
+            // if (subscriptions.containsKey(subscriptionId)) {
+            // Log.e(
+            //    this@NostrDataSource.javaClass.simpleName,
+            //    "Relay OnError ${relay.url}: ${error.message}"
+            // )
+            // }
         }
 
         override fun onRelayStateChange(type: Relay.StateType, relay: Relay, subscriptionId: String?) {
-            // Log.d("RELAY", "Relay ${relay.url} ${when (type) {
-            //  Relay.Type.CONNECT -> "connected."
-            //  Relay.Type.DISCONNECT -> "disconnected."
-            //  Relay.Type.DISCONNECTING -> "disconnecting."
-            //  Relay.Type.EOSE -> "sent all events it had stored."
-            // }}")
+            // if (subscriptions.containsKey(subscriptionId)) {
+            //    Log.d(this@NostrDataSource.javaClass.simpleName, "Relay ${relay.url} ${subscriptionId} ${type.name}")
+            // }
 
             if (type == Relay.StateType.EOSE && subscriptionId != null && subscriptions.containsKey(subscriptionId)) {
                 markAsEOSE(subscriptionId, relay)
@@ -88,12 +92,13 @@ abstract class NostrDataSource(val debugName: String) {
     }
 
     init {
-        Log.d("Init", "${this.javaClass.simpleName} Subscribe")
+        Log.d(this.javaClass.simpleName, "${this.javaClass.simpleName} Subscribe")
         Client.subscribe(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
+        Log.d(this.javaClass.simpleName, "${this.javaClass.simpleName} Unsubscribe")
         stop()
         Client.unsubscribe(clientListener)
         scope.cancel()
@@ -177,32 +182,44 @@ abstract class NostrDataSource(val debugName: String) {
         subscriptions.values.forEach { updatedSubscription ->
             val updatedSubscriptionNewFilters = updatedSubscription.typedFilters
 
-            if (currentFilters.containsKey(updatedSubscription.id)) {
-                if (updatedSubscriptionNewFilters == null) {
-                    // was active and is not active anymore, just close.
-                    Client.close(updatedSubscription.id)
-                } else {
-                    // was active and is still active, check if it has changed.
-                    if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
-                        Client.close(updatedSubscription.id)
-                        if (active) {
-                            Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
-                        }
-                    } else {
-                        // hasn't changed, does nothing.
-                        if (active) {
-                            Client.sendFilterOnlyIfDisconnected(updatedSubscription.id, updatedSubscriptionNewFilters)
-                        }
-                    }
+            val isActive = Client.isActive(updatedSubscription.id)
+
+            if (!isActive && updatedSubscriptionNewFilters != null) {
+                // Filter was removed from the active list
+                if (active) {
+                    Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
                 }
             } else {
-                if (updatedSubscriptionNewFilters == null) {
-                    // was not active and is still not active, does nothing
+                if (currentFilters.containsKey(updatedSubscription.id)) {
+                    if (updatedSubscriptionNewFilters == null) {
+                        // was active and is not active anymore, just close.
+                        Client.close(updatedSubscription.id)
+                    } else {
+                        // was active and is still active, check if it has changed.
+                        if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
+                            Client.close(updatedSubscription.id)
+                            if (active) {
+                                Log.d(this@NostrDataSource.javaClass.simpleName, "Update Filter 1 ${updatedSubscription.id} ${Client.isSubscribed(clientListener)}")
+                                Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                            }
+                        } else {
+                            // hasn't changed, does nothing.
+                            if (active) {
+                                Log.d(this@NostrDataSource.javaClass.simpleName, "Update Filter 2 ${updatedSubscription.id} ${Client.isSubscribed(clientListener)}")
+                                Client.sendFilterOnlyIfDisconnected(updatedSubscription.id, updatedSubscriptionNewFilters)
+                            }
+                        }
+                    }
                 } else {
-                    // was not active and becomes active, sends the filter.
-                    if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
-                        if (active) {
-                            Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                    if (updatedSubscriptionNewFilters == null) {
+                        // was not active and is still not active, does nothing
+                    } else {
+                        // was not active and becomes active, sends the filter.
+                        if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
+                            if (active) {
+                                Log.d(this@NostrDataSource.javaClass.simpleName, "Update Filter 3 ${updatedSubscription.id} ${Client.isSubscribed(clientListener)}")
+                                Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                            }
                         }
                     }
                 }

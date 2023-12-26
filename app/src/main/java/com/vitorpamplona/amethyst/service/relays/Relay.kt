@@ -290,7 +290,7 @@ class Relay(
                     if (filters.isNotEmpty()) {
                         val request = filters.joinToStringLimited(
                             separator = ",",
-                            limit = 10,
+                            limit = 20,
                             prefix = """["REQ","$requestId",""",
                             postfix = "]"
                         ) { it.filter.toJson(url) }
@@ -339,7 +339,7 @@ class Relay(
         return buffer.toString()
     }
 
-    fun sendFilterOnlyIfDisconnected() {
+    fun sendFilterOnlyIfDisconnected(subscriptionId: String) {
         checkNotInMainThread()
 
         if (socket == null) {
