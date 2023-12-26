@@ -188,7 +188,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
     // Zoomable images
-    implementation 'net.engawapg.lib:zoomable:1.5.2'
+    implementation 'net.engawapg.lib:zoomable:1.5.3'
 
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
@@ -248,7 +248,7 @@ dependencies {
     playImplementation 'com.google.mlkit:translate:17.0.2'
 
     // PushNotifications
-    playImplementation platform('com.google.firebase:firebase-bom:32.6.0')
+    playImplementation platform('com.google.firebase:firebase-bom:32.7.0')
     playImplementation 'com.google.firebase:firebase-messaging-ktx'
 
     //PushNotifications(FDroid)
