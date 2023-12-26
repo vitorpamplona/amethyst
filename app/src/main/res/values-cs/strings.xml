@@ -581,4 +581,10 @@
     <string name="classifieds_category_misc">Různé</string>
     <string name="classifieds_category_other">Ostatní</string>
     <string name="failed_to_upload_media_no_details">Nepodařilo se nahrát média</string>
+    <string name="could_not_open_the_compressed_file">Nepodařilo se otevřít komprimovaný soubor</string>
+    <string name="error_when_compressing_media">Chyba při komprimování média: %1$s</string>
+    <string name="failed_to_upload_media">Chyba při nahrávání: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Server po nahrání neposkytl URL</string>
+    <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
+    <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
 </resources>

@@ -584,4 +584,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="classifieds_category_food">Lebensmittel</string>
     <string name="classifieds_category_misc">Verschiedenes</string>
     <string name="classifieds_category_other">Sonstiges</string>
+    <string name="failed_to_upload_media_no_details">Fehler beim Laden der Medien</string>
+    <string name="could_not_open_the_compressed_file">Konnte die komprimierte Datei nicht öffnen</string>
+    <string name="error_when_compressing_media">Fehler beim komprimieren der Medien: %1$s</string>
+    <string name="failed_to_upload_media">Fehler beim Hochladen: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Der Server hat nach dem Hochladen keine URL angegeben</string>
+    <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
+    <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
 </resources>
