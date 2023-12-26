@@ -578,4 +578,11 @@
     <string name="classifieds_category_food">Mat</string>
     <string name="classifieds_category_misc">Diverse</string>
     <string name="classifieds_category_other">Annat</string>
+    <string name="failed_to_upload_media_no_details">Det gick inte att ladda upp media</string>
+    <string name="could_not_open_the_compressed_file">Kunde inte öppna den komprimerade filen</string>
+    <string name="error_when_compressing_media">Fel vid komprimering av media: %1$s</string>
+    <string name="failed_to_upload_media">Fel vid uppladdning: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Servern gav inte en URL efter uppladdning</string>
+    <string name="could_not_download_from_the_server">Kunde inte ladda ner uppladdade medier från servern</string>
+    <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
 </resources>

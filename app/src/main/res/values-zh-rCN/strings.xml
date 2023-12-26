@@ -521,7 +521,7 @@
     <string name="unable_to_download_relay_document">无法下载中继文件</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">无法从闪电地址集合LNURL\"%1$s\"。请检查用户设置</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收者闪电服务不可用。它是根据雷电地址\"%2$s\"计算的。 错误: %3$s。请检查服务器是否已经上线，闪电地址是否正确</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">无法解析 %1$s。请检查你是否是已连接状态，服务器是否启动，以及闪电地址 %2$s 是否正确</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确</string>
     <string name="could_not_fetch_invoice_from">无法从 %1$s 获取发票</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">从闪电地址解析JSON出错。请检查用户的打闪设置</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用户闪电地址服务器配置中找不到回调URL</string>

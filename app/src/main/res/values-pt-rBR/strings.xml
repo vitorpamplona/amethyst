@@ -580,4 +580,11 @@
     <string name="classifieds_category_food">Alimentos</string>
     <string name="classifieds_category_misc">Diversos</string>
     <string name="classifieds_category_other">Outros</string>
+    <string name="failed_to_upload_media_no_details">Não foi possível carregar a multimídia</string>
+    <string name="could_not_open_the_compressed_file">Não foi possível abrir o arquivo compactado</string>
+    <string name="error_when_compressing_media">Erro ao comprimir a mídia: %1$s</string>
+    <string name="failed_to_upload_media">Erro ao carregar: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">O servidor não forneceu uma URL após o upload</string>
+    <string name="could_not_download_from_the_server">Não foi possível baixar o arquivo de mídia carregado do servidor</string>
+    <string name="could_not_prepare_local_file_to_upload">Não foi possível preparar o arquivo local para enviar: %1$s</string>
 </resources>
