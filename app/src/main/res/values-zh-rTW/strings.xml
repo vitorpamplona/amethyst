@@ -276,6 +276,7 @@
     <string name="poll_closing_time">後關閉</string>
     <string name="poll_closing_time_days">天</string>
     <string name="poll_unable_to_vote">無法投票</string>
+    <string name="poll_is_closed_explainer">該投票已結束</string>
     <string name="poll_zap_amount">打閃金額</string>
     <string name="one_vote_per_user_on_atomic_votes">這種投票只允許每個用戶一票</string>
     <string name="looking_for_event">"正在查找事件 %1$s"</string>
@@ -421,6 +422,8 @@
     <string name="automatically_load_images_gifs">圖像預覽</string>
     <string name="automatically_play_videos">視頻播放</string>
     <string name="automatically_show_url_preview">鏈接預覽</string>
+    <string name="automatically_hide_nav_bars">沉浸式捲動</string>
+    <string name="automatically_hide_nav_bars_description">捲動時隱藏導航欄</string>
     <string name="load_image">加載圖像</string>
     <string name="spamming_users">垃圾郵件</string>
     <string name="muted_button">靜音。點擊取消靜音</string>
@@ -456,6 +459,7 @@
     <string name="automatically_play_videos_description">自動播放視頻和 GIF</string>
     <string name="automatically_show_url_preview_description">顯示鏈接預覽</string>
     <string name="load_image_description">何時加載圖像</string>
+    <string name="copy_to_clipboard">複製至剪貼簿</string>
     <string name="copy_url_to_clipboard">將 URL 複製到剪貼簿</string>
     <string name="copy_the_note_id_to_the_clipboard">將筆記 ID 複製到剪貼簿</string>
     <string name="created_at">創建於</string>
@@ -481,6 +485,7 @@
     <string name="zap_split_explainer">支持的客戶端將會把打閃拆分及轉發到在這裡添加的用戶，而不是你的</string>
     <string name="zap_split_search_and_add_user">搜索並添加用戶</string>
     <string name="zap_split_search_and_add_user_placeholder">用戶名或顯示名</string>
+    <string name="missing_lud16">閃電設置缺失</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未設置接收聰的閃電地址</string>
     <string name="zap_split_weight">百分比</string>
     <string name="zap_split_weight_placeholder">25</string>
@@ -492,8 +497,14 @@
     <string name="error_opening_external_signer">打開簽署程式時出錯</string>
     <string name="error_opening_external_signer_description">找不到簽名應用。檢查應用是否已被預載。</string>
     <string name="sign_request_rejected">簽署請求被拒絕了</string>
+    <string name="sign_request_rejected_description">請確保簽名應用程式已授權此交易</string>
     <string name="no_wallet_found_with_error">找不到支付閃電發票的錢包（錯誤：%1$s）。請安裝一個閃電錢包來使用打閃</string>
     <string name="no_wallet_found">找不到支付閃電發票的錢包。請安裝一個閃電錢包來使用打閃</string>
+    <string name="hidden_words">隱藏單詞</string>
+    <string name="hide_new_word_label">隱藏新單詞或句子</string>
+    <string name="automatically_show_profile_picture">頭像</string>
+    <string name="automatically_show_profile_picture_description">顯示頭像圖片</string>
+    <string name="select_an_option">請選擇一個選項</string>
     <string name="error_dialog_pay_invoice_error">無法支付發票</string>
     <string name="error_dialog_pay_withdraw_error">無法提款</string>
     <string name="error_parsing_nip47_title">無法設置錢包連接</string>
@@ -507,12 +518,20 @@
     <string name="cashu_no_wallet_found">系統上沒有找到兼容的 Cashu 錢包</string>
     <string name="error_unable_to_fetch_invoice">無法從接收方的伺服器獲取發票</string>
     <string name="wallet_connect_pay_invoice_error_error">你的錢包連接提供者返回了以下錯誤：%1$s</string>
+    <string name="could_not_connect_to_tor">無法連線到 Tor</string>
+    <string name="unable_to_download_relay_document">無法下載中繼文件</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">無法從閃電地址集合 LNURL “%1$s”。請檢查用戶設置</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收方閃電服務不可用。它是根據閃電地址“%2$s”計算的。錯誤：%3$s。請檢查伺服器是否已上線，閃電地址是否正確</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">無法解析 %1$s。請檢查你是否已連接，伺服器是否啟動，以及閃電地址 %2$s 是否正確</string>
+    <string name="could_not_fetch_invoice_from">無法從 %1$s 獲取發票</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">從閃電地址解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用戶閃電地址伺服器配置中找不到回調 URL</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">從閃電地址的發票獲取解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">來自 %2$s 的錯誤的發票金額（%1$s 聰）。應該是 %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">無法在發送打閃前創建閃電發票。接收者閃電錢包發送了以下錯誤：%1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">無法在發送打閃前創建閃電發票。在生成的 JSON 中找不到 Element pr。</string>
     <string name="read_only_user">只讀用戶</string>
+    <string name="no_reactions_setup">沒有設置回應</string>
     <string name="select_push_server">選擇一個統一推送應用</string>
     <string name="push_server_title">推送通知</string>
     <string name="push_server_explainer">從已安裝的 UnifiedPush 應用中選擇</string>
@@ -526,6 +545,8 @@
     <string name="payment_required_title">來自 %1$s 的消息</string>
     <string name="thread_title">主題帖</string>
     <string name="send_the_seller_a_message">向賣方發送消息</string>
+    <string name="hi_seller_is_this_still_available">嗨，%1$s，這個還能買到嗎？</string>
+    <string name="hi_there_is_this_still_available">你好，這個還能買到嗎？</string>
     <string name="classifieds">出售物品</string>
     <string name="classifieds_title">標題</string>
     <string name="classifieds_title_placeholder">iPhone 13</string>
@@ -563,4 +584,7 @@
     <string name="could_not_open_the_compressed_file">無法打開壓縮文件</string>
     <string name="error_when_compressing_media">壓縮媒體時出錯：%1$s</string>
     <string name="failed_to_upload_media">上傳錯誤：%1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">上傳後伺服器沒有提供 URL</string>
+    <string name="could_not_download_from_the_server">無法從伺服器下載上傳的媒體</string>
+    <string name="could_not_prepare_local_file_to_upload">無法準備要上傳的本地文件：%1$s</string>
 </resources>
