@@ -22,13 +22,17 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var addressesToWatch = setOf<Note>()
 
     private fun createReactionsToWatchInAddressFilter(): List<TypedFilter>? {
-        val addressesToWatch = eventsToWatch.filter { it.address() != null } + addressesToWatch.filter { it.address() != null }
+        val addressesToWatch =
+            (
+                eventsToWatch.filter { it.address() != null } +
+                    addressesToWatch.filter { it.address() != null }
+                ).toSet()
 
         if (addressesToWatch.isEmpty()) {
             return null
         }
 
-        return groupByEOSEPresence(eventsToWatch).mapNotNull {
+        return groupByEOSEPresence(addressesToWatch).map {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter = JsonFilter(
