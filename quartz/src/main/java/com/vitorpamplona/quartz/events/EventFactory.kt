@@ -1,5 +1,6 @@
 package com.vitorpamplona.quartz.events
 
+import android.widget.VideoView
 import com.vitorpamplona.quartz.encoders.toHexKey
 
 class EventFactory {
@@ -23,8 +24,8 @@ class EventFactory {
             BadgeDefinitionEvent.kind -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.kind -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
             BookmarkListEvent.kind -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
-            CalendarEvent.kind -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarDateSlotEvent.kind -> CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarEvent.kind -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarTimeSlotEvent.kind -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarRSVPEvent.kind -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelCreateEvent.kind -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
@@ -45,10 +46,8 @@ class EventFactory {
             CommunityPostApprovalEvent.kind -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.kind -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.kind -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
-
             EmojiPackEvent.kind -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackSelectionEvent.kind -> EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
-            SealedGossipEvent.kind -> SealedGossipEvent(id, pubKey, createdAt, tags, content, sig)
 
             FileHeaderEvent.kind -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             FileServersEvent.kind -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
@@ -56,10 +55,11 @@ class EventFactory {
             FileStorageHeaderEvent.kind -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             GenericRepostEvent.kind -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             GiftWrapEvent.kind -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
+            GoalEvent.kind -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.kind -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             HTTPAuthorizationEvent.kind -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
-            LiveActivitiesEvent.kind -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesChatMessageEvent.kind -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesEvent.kind -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.kind -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentRequestEvent.kind -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPaymentResponseEvent.kind -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
@@ -79,8 +79,12 @@ class EventFactory {
             RelaySetEvent.kind -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.kind -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.kind -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
+            SealedGossipEvent.kind -> SealedGossipEvent(id, pubKey, createdAt, tags, content, sig)
             StatusEvent.kind -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.kind -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
+            VideoHorizontalEvent.kind -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
+            VideoVerticalEvent.kind -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
+            VideoViewEvent.kind -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
             else -> Event(id, pubKey, createdAt, kind, tags, content, sig)
         }
     }
