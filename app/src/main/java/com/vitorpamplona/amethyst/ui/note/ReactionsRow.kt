@@ -594,7 +594,7 @@ val slideAnimation: ContentTransform =
     )
 
 @Composable
-private fun TextCount(count: Int, textColor: Color) {
+fun TextCount(count: Int, textColor: Color) {
     Text(
         text = showCount(count),
         fontSize = Font14SP,

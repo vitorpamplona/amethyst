@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,7 +31,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
@@ -54,6 +52,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -64,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -689,12 +687,8 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
         )
     )
 
-    Row(Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.3f)
-                .aspectRatio(ratio = 1f)
-        ) {
+    LeftPictureLayout(
+        onImage = {
             card.cover?.let {
                 Box(contentAlignment = BottomStart) {
                     AsyncImage(
@@ -711,29 +705,22 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                     DisplayAuthorBanner(it)
                 }
             }
-        }
+        },
+        onTitleRow = {
+            Text(
+                text = card.name,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
 
-        Spacer(modifier = DoubleHorzSpacer)
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = card.name,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
-                Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
-            }
-
+            Spacer(modifier = StdHorzSpacer)
+            LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
+        },
+        onDescription = {
             card.description?.let {
                 Spacer(modifier = StdVertSpacer)
                 Row() {
@@ -746,17 +733,16 @@ fun RenderCommunitiesThumb(baseNote: Note, accountViewModel: AccountViewModel, n
                     )
                 }
             }
-
+        },
+        onBottomRow = {
+            Spacer(modifier = StdVertSpacer)
             LoadModerators(card.moderators, baseNote, accountViewModel) { participantUsers ->
                 if (participantUsers.isNotEmpty()) {
-                    Spacer(modifier = StdVertSpacer)
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Gallery(participantUsers, accountViewModel)
-                    }
+                    Gallery(participantUsers, accountViewModel)
                 }
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -901,12 +887,8 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
         }
     }
 
-    Row(Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.3f)
-                .aspectRatio(ratio = 1f)
-        ) {
+    LeftPictureLayout(
+        onImage = {
             cover?.let {
                 Box(contentAlignment = BottomStart) {
                     AsyncImage(
@@ -923,43 +905,33 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                     DisplayAuthorBanner(it)
                 }
             }
-        }
+        },
+        onTitleRow = {
+            Text(
+                text = name,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
 
-        Spacer(modifier = DoubleHorzSpacer)
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = name,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = StdHorzSpacer)
-                LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
-                Spacer(modifier = StdHorzSpacer)
-                ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
-            }
-
+            Spacer(modifier = StdHorzSpacer)
+            LikeReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav)
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(baseNote = baseNote, grayTint = MaterialTheme.colorScheme.onSurface, accountViewModel = accountViewModel, nav = nav)
+        },
+        onDescription = {
             description?.let {
-                Spacer(modifier = StdVertSpacer)
-                Row() {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 14.sp
-                    )
-                }
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 14.sp
+                )
             }
-
+        },
+        onBottomRow = {
             if (participantUsers.isNotEmpty()) {
                 Spacer(modifier = StdVertSpacer)
                 Row() {
@@ -967,7 +939,7 @@ fun RenderChannelThumb(baseNote: Note, channel: Channel, accountViewModel: Accou
                 }
             }
         }
-    }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -980,7 +952,7 @@ fun Gallery(users: ImmutableList<User>, accountViewModel: AccountViewModel) {
 
         if (users.size > 6) {
             Text(
-                text = remember(users) { " + " + (showCount(users.size - 6)).toString() },
+                text = remember(users) { " + " + (showCount(users.size - 6)) },
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )

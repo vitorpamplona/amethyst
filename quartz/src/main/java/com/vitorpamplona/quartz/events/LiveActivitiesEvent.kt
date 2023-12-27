@@ -29,7 +29,12 @@ class LiveActivitiesEvent(
 
     fun participants() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(3)) }
 
+    fun hasHost() = tags.any { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }
+
     fun host() = tags.firstOrNull { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }?.get(1)
+
+    fun hosts() = tags.filter { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }.map { it[1] }
+
 
     fun checkStatus(eventStatus: String?): String? {
         return if (eventStatus == STATUS_LIVE && createdAt < TimeUtils.eightHoursAgo()) {
