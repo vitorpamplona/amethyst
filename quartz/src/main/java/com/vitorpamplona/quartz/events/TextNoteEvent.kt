@@ -4,9 +4,6 @@ import androidx.compose.runtime.Immutable
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -45,16 +42,15 @@ class TextNoteEvent(
             onReady: (TextNoteEvent) -> Unit
         ) {
             val tags = mutableListOf<Array<String>>()
-            replyTos?.forEach {
-                if (it == root) {
-                    tags.add(arrayOf("e", it, "", "root"))
-                } else if (it == replyingTo) {
-                    tags.add(arrayOf("e", it, "", "reply"))
-                } else if (it in directMentions) {
-                    tags.add(arrayOf("e", it, "", "mention"))
-                } else {
-                    tags.add(arrayOf("e", it))
-                }
+            replyTos?.let {
+                tags.addAll(
+                    it.positionalMarkedTags(
+                        tagName = "e",
+                        root = root,
+                        replyingTo = replyingTo,
+                        directMentions = directMentions
+                    )
+                )
             }
             mentions?.forEach {
                 if (it in directMentions) {
@@ -63,17 +59,15 @@ class TextNoteEvent(
                     tags.add(arrayOf("p", it))
                 }
             }
-            addresses?.forEach {
-                val aTag = it.toTag()
-                if (aTag == root) {
-                    tags.add(arrayOf("a", aTag, "", "root"))
-                } else if (aTag == replyingTo) {
-                    tags.add(arrayOf("a", aTag, "", "reply"))
-                } else if (aTag in directMentions) {
-                    tags.add(arrayOf("a", aTag, "", "mention"))
-                } else {
-                    tags.add(arrayOf("a", aTag))
-                }
+            addresses?.map { it.toTag() }?.let {
+                tags.addAll(
+                    it.positionalMarkedTags(
+                        tagName = "a",
+                        root = root,
+                        replyingTo = replyingTo,
+                        directMentions = directMentions
+                    )
+                )
             }
             findHashtags(msg).forEach {
                 tags.add(arrayOf("t", it))
@@ -105,6 +99,41 @@ class TextNoteEvent(
 
             signer.sign(createdAt, kind, tags.toTypedArray(), msg, onReady)
         }
+
+        /**
+         * Returns a list of NIP-10 marked tags that are also ordered at best effort
+         * to support the deprecated method of positional tags to maximize backwards compatibility
+         * with clients that support replies but have not been updated to understand tag markers.
+         *
+         * https://github.com/nostr-protocol/nips/blob/master/10.md
+         *
+         * The tag to the root of the reply chain goes first.
+         * The tag to the reply event being responded to goes last.
+         * The order for any other tag does not matter, so keep the relative order.
+         */
+        private fun List<String>.positionalMarkedTags(
+            tagName: String,
+            root: String?,
+            replyingTo: String?,
+            directMentions: Set<HexKey>
+        ) =
+            sortedWith { o1, o2 ->
+                when {
+                    o1 == o2 -> 0
+                    o1 == root -> -1 // root goes first
+                    o2 == root -> 1 // root goes first
+                    o1 == replyingTo -> 1 // reply event being responded to goes last
+                    o2 == replyingTo -> -1 // reply event being responded to goes last
+                    else -> 0 // keep the relative order for any other tag
+                }
+            }.map {
+                when (it) {
+                    root -> arrayOf(tagName, it, "", "root")
+                    replyingTo -> arrayOf(tagName, it, "", "reply")
+                    in directMentions -> arrayOf(tagName, it, "", "mention")
+                    else -> arrayOf(tagName, it)
+                }
+            }
     }
 }
 
