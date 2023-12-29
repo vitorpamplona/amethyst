@@ -39,7 +39,7 @@ class GoalEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (GoalEvent) -> Unit
         ) {
-            var tags = mutableListOf(
+            val tags = mutableListOf(
                 arrayOf(AMOUNT, amount.toString()),
                 arrayOf("relays") + relays,
                 arrayOf("alt", alt)

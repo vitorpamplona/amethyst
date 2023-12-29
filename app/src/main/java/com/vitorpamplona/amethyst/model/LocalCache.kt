@@ -72,6 +72,8 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -438,6 +440,9 @@ object LocalCache {
     private fun consume(event: PinListEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
     private fun consume(event: RelaySetEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
     private fun consume(event: AudioTrackEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: VideoVerticalEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+    private fun consume(event: VideoHorizontalEvent, relay: Relay?) { consumeBaseReplaceable(event, relay) }
+
     fun consume(event: StatusEvent, relay: Relay?) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -1593,7 +1598,8 @@ object LocalCache {
                 }
                 is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
-
+                is VideoHorizontalEvent -> consume(event, relay)
+                is VideoVerticalEvent -> consume(event, relay)
                 else -> {
                     Log.w("Event Not Supported", event.toJson())
                 }

@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.note.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.RenderTextEvent
+import com.vitorpamplona.amethyst.ui.note.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -130,6 +131,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.VideoEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
@@ -423,6 +425,8 @@ fun NoteMaster(
                             accountViewModel = accountViewModel,
                             nav = nav
                         )
+                    } else if (noteEvent is VideoEvent) {
+                        VideoDisplay(baseNote, false, true, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is FileHeaderEvent) {
                         FileHeaderDisplay(baseNote, true, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {

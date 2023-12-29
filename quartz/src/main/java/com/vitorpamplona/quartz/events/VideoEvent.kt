@@ -28,6 +28,11 @@ abstract class VideoEvent(
     fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
     fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
 
+    fun title() = tags.firstOrNull { it.size > 1 && it[0] == TITLE }?.get(1)
+    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == SUMMARY }?.get(1)
+    fun image() = tags.firstOrNull { it.size > 1 && it[0] == IMAGE }?.get(1)
+    fun thumb() = tags.firstOrNull { it.size > 1 && it[0] == THUMB }?.get(1)
+
     fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
 
     companion object {

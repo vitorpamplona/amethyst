@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
@@ -203,6 +204,9 @@ import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.UserMetadata
+import com.vitorpamplona.quartz.events.VideoEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -636,7 +640,7 @@ fun LongCommunityHeader(
                 )
             }
 
-            if (noteEvent.hasHashtags()) {
+            if (summary != null && noteEvent.hasHashtags()) {
                 DisplayUncitedHashtags(
                     remember(noteEvent) { noteEvent.hashtags().toImmutableList() },
                     summary ?: "",
@@ -1169,6 +1173,14 @@ private fun RenderNoteRow(
 
         is FileHeaderEvent -> {
             FileHeaderDisplay(baseNote, true, accountViewModel)
+        }
+
+        is VideoHorizontalEvent -> {
+            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is VideoVerticalEvent -> {
+            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
         }
 
         is FileStorageHeaderEvent -> {
@@ -2384,7 +2396,21 @@ private fun ReplyRow(
     }
 
     if (showReply) {
-        val replyingDirectlyTo = remember { note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.kind } }
+        val replyingDirectlyTo = remember(note) {
+            if (noteEvent is BaseTextNoteEvent) {
+                val replyingTo = noteEvent.replyingTo()
+                if (replyingTo != null) {
+                    note.replyTo?.firstOrNull() {
+                        // important to test both ids in case it's a replaceable event.
+                        it.idHex == replyingTo || it.event?.id() == replyingTo
+                    }
+                } else {
+                    note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.kind }
+                }
+            } else {
+                note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.kind }
+            }
+        }
         if (replyingDirectlyTo != null && unPackReply) {
             ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)
@@ -3025,6 +3051,129 @@ fun FileHeaderDisplay(note: Note, roundedCorner: Boolean, accountViewModel: Acco
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
         ZoomableContentView(content = content, roundedCorner = roundedCorner, accountViewModel = accountViewModel)
+    }
+}
+
+@Composable
+fun VideoDisplay(
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit
+) {
+    val event = (note.event as? VideoEvent) ?: return
+    val fullUrl = event.url() ?: return
+
+    val title = event.title()
+    val summary = event.content.ifBlank { null }?.takeIf { title != it }
+    val image = event.thumb() ?: event.image()
+    val isYouTube = fullUrl.contains("youtube.com") || fullUrl.contains("youtu.be")
+    val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
+    val content by remember(note) {
+        val blurHash = event.blurhash()
+        val hash = event.hash()
+        val dimensions = event.dimensions()
+        val description = event.alt() ?: event.content
+        val isImage = imageExtensions.any {
+            removeQueryParamsForExtensionComparison(fullUrl).lowercase().endsWith(it)
+        }
+        val uri = note.toNostrUri()
+
+        mutableStateOf<ZoomableContent>(
+            if (isImage) {
+                ZoomableUrlImage(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    uri = uri
+                )
+            } else {
+                ZoomableUrlVideo(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    dim = dimensions,
+                    uri = uri,
+                    authorName = note.author?.toBestDisplayName(),
+                    artworkUri = event.thumb() ?: event.image()
+                )
+            }
+        )
+    }
+
+    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isYouTube) {
+                val uri = LocalUriHandler.current
+                Row(
+                    modifier = Modifier.clickable { runCatching { uri.openUri(fullUrl) } }
+                ) {
+                    image?.let {
+                        AsyncImage(
+                            model = it,
+                            contentDescription = stringResource(
+                                R.string.preview_card_image_for,
+                                it
+                            ),
+                            contentScale = ContentScale.FillWidth,
+                            modifier = MaterialTheme.colorScheme.imageModifier
+                        )
+                    } ?: CreateImageHeader(note, accountViewModel)
+                }
+            } else {
+                ZoomableContentView(
+                    content = content,
+                    roundedCorner = true,
+                    accountViewModel = accountViewModel
+                )
+            }
+
+            title?.let {
+                Text(
+                    text = it,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 5.dp)
+                )
+            }
+
+            summary?.let {
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = canPreview && !makeItShort,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav
+                )
+            }
+
+            if (event.hasHashtags()) {
+                Row(
+                    Modifier.fillMaxWidth()
+                ) {
+                    DisplayUncitedHashtags(
+                        remember(event) { event.hashtags().toImmutableList() },
+                        summary ?: "",
+                        nav
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -23,6 +23,13 @@ open class BaseTextNoteEvent(
     fun mentions() = taggedUsers()
     open fun replyTos() = taggedEvents()
 
+    fun replyingTo(): HexKey? {
+        val oldStylePositional = tags.lastOrNull() { it.size > 1 && it[0] == "e" }?.get(1)
+        val newStyle = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+
+        return newStyle ?: oldStylePositional
+    }
+
     @Transient
     private var citedUsersCache: Set<HexKey>? = null
 
