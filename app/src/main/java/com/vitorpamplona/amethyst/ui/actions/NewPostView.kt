@@ -335,7 +335,7 @@ fun NewPostView(
                                 }
 
                                 Row() {
-                                    Notifying(postViewModel.mentions?.toImmutableList()) {
+                                    Notifying(postViewModel.pTags?.toImmutableList()) {
                                         postViewModel.removeFromReplyList(it)
                                     }
                                 }

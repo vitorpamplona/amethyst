@@ -281,8 +281,8 @@ fun ChannelScreen(
             scope.launch(Dispatchers.IO) {
                 val tagger = NewMessageTagger(
                     message = newPostModel.message.text,
-                    mentions = listOfNotNull(replyTo.value?.author),
-                    replyTos = listOfNotNull(replyTo.value),
+                    pTags = listOfNotNull(replyTo.value?.author),
+                    eTags = listOfNotNull(replyTo.value),
                     channelHex = channel.idHex,
                     dao = accountViewModel
                 )
@@ -291,16 +291,16 @@ fun ChannelScreen(
                     accountViewModel.account.sendChannelMessage(
                         message = tagger.message,
                         toChannel = channel.idHex,
-                        replyTo = tagger.replyTos,
-                        mentions = tagger.mentions,
+                        replyTo = tagger.eTags,
+                        mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false
                     )
                 } else if (channel is LiveActivitiesChannel) {
                     accountViewModel.account.sendLiveMessage(
                         message = tagger.message,
                         toChannel = channel.address,
-                        replyTo = tagger.replyTos,
-                        mentions = tagger.mentions,
+                        replyTo = tagger.eTags,
+                        mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false
                     )
                 }

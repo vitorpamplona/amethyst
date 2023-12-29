@@ -12,8 +12,8 @@ import com.vitorpamplona.quartz.encoders.toNpub
 
 class NewMessageTagger(
     var message: String,
-    var mentions: List<User>? = null,
-    var replyTos: List<Note>? = null,
+    var pTags: List<User>? = null,
+    var eTags: List<Note>? = null,
     var channelHex: String? = null,
     var dao: Dao
 ) {
@@ -22,24 +22,24 @@ class NewMessageTagger(
 
     fun addUserToMentions(user: User) {
         directMentions.add(user.pubkeyHex)
-        mentions = if (mentions?.contains(user) == true) mentions else mentions?.plus(user) ?: listOf(user)
+        pTags = if (pTags?.contains(user) == true) pTags else pTags?.plus(user) ?: listOf(user)
     }
 
     fun addNoteToReplyTos(note: Note) {
         directMentions.add(note.idHex)
 
         note.author?.let { addUserToMentions(it) }
-        replyTos = if (replyTos?.contains(note) == true) replyTos else replyTos?.plus(note) ?: listOf(note)
+        eTags = if (eTags?.contains(note) == true) eTags else eTags?.plus(note) ?: listOf(note)
     }
 
     fun tagIndex(user: User): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (channelHex != null) 1 else 0) + (replyTos?.size ?: 0) + (mentions?.indexOf(user) ?: 0)
+        return (if (channelHex != null) 1 else 0) + (eTags?.size ?: 0) + (pTags?.indexOf(user) ?: 0)
     }
 
     fun tagIndex(note: Note): Int {
         // Postr Events assembles replies before mentions in the tag order
-        return (if (channelHex != null) 1 else 0) + (replyTos?.indexOf(note) ?: 0)
+        return (if (channelHex != null) 1 else 0) + (eTags?.indexOf(note) ?: 0)
     }
 
     suspend fun run() {

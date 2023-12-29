@@ -66,8 +66,8 @@ open class NewPostViewModel() : ViewModel() {
 
     var originalNote: Note? = null
 
-    var mentions by mutableStateOf<List<User>?>(null)
-    var replyTos by mutableStateOf<List<Note>?>(null)
+    var pTags by mutableStateOf<List<User>?>(null)
+    var eTags by mutableStateOf<List<Note>?>(null)
 
     var nip94attachments by mutableStateOf<List<FileHeaderEvent>>(emptyList())
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
@@ -145,9 +145,9 @@ open class NewPostViewModel() : ViewModel() {
         originalNote = replyingTo
         replyingTo?.let { replyNote ->
             if (replyNote.event is BaseTextNoteEvent) {
-                this.replyTos = (replyNote.replyTo ?: emptyList()).plus(replyNote)
+                this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
             } else {
-                this.replyTos = listOf(replyNote)
+                this.eTags = listOf(replyNote)
             }
 
             if (replyNote.event !is CommunityDefinitionEvent) {
@@ -157,15 +157,15 @@ open class NewPostViewModel() : ViewModel() {
                         ?.map { LocalCache.getOrCreateUser(it) } ?: emptyList()
 
                     if (currentMentions.contains(replyUser)) {
-                        this.mentions = currentMentions
+                        this.pTags = currentMentions
                     } else {
-                        this.mentions = currentMentions.plus(replyUser)
+                        this.pTags = currentMentions.plus(replyUser)
                     }
                 }
             }
         } ?: run {
-            replyTos = null
-            mentions = null
+            eTags = null
+            pTags = null
         }
 
         quote?.let {
@@ -199,12 +199,12 @@ open class NewPostViewModel() : ViewModel() {
             return
         }
 
-        val tagger = NewMessageTagger(message.text, mentions, replyTos, originalNote?.channelHex(), accountViewModel!!)
+        val tagger = NewMessageTagger(message.text, pTags, eTags, originalNote?.channelHex(), accountViewModel!!)
         tagger.run()
 
         val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null, accountViewModel!!)
         toUsersTagger.run()
-        val dmUsers = toUsersTagger.mentions
+        val dmUsers = toUsersTagger.pTags
 
         val zapReceiver = if (wantsForwardZapTo) {
             forwardZapTo.items.map {
@@ -229,7 +229,7 @@ open class NewPostViewModel() : ViewModel() {
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
         nip95attachments.forEach {
-            if (replyTos?.contains(LocalCache.getNoteIfExists(it.second.id)) == true) {
+            if (eTags?.contains(LocalCache.getNoteIfExists(it.second.id)) == true) {
                 account?.sendNip95(it.first, it.second, relayList)
             }
         }
@@ -244,12 +244,12 @@ open class NewPostViewModel() : ViewModel() {
 
         if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
-                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, nip94attachments = usedAttachments)
+                account?.sendLiveMessage(tagger.message, originalNote?.address()!!, tagger.eTags, tagger.pTags, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, nip94attachments = usedAttachments)
             } else {
-                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.replyTos, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, nip94attachments = usedAttachments)
+                account?.sendChannelMessage(tagger.message, tagger.channelHex!!, tagger.eTags, tagger.pTags, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash, nip94attachments = usedAttachments)
             }
         } else if (originalNote?.event is PrivateDmEvent) {
-            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.mentions, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
+            account?.sendPrivateMessage(tagger.message, originalNote!!.author!!, originalNote!!, tagger.pTags, zapReceiver, wantsToMarkAsSensitive, localZapRaiserAmount, geoHash)
         } else if (originalNote?.event is ChatMessageEvent) {
             val receivers = (originalNote?.event as ChatMessageEvent).recipientsPubKey().plus(originalNote?.author?.pubkeyHex).filterNotNull().toSet().toList()
 
@@ -258,7 +258,7 @@ open class NewPostViewModel() : ViewModel() {
                 toUsers = receivers,
                 subject = subject.text.ifBlank { null },
                 replyingTo = originalNote!!,
-                mentions = tagger.mentions,
+                mentions = tagger.pTags,
                 wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                 zapReceiver = zapReceiver,
                 zapRaiserAmount = localZapRaiserAmount,
@@ -270,8 +270,8 @@ open class NewPostViewModel() : ViewModel() {
                     message = tagger.message,
                     toUsers = dmUsers.map { it.pubkeyHex },
                     subject = subject.text.ifBlank { null },
-                    replyingTo = tagger.replyTos?.firstOrNull(),
-                    mentions = tagger.mentions,
+                    replyingTo = tagger.eTags?.firstOrNull(),
+                    mentions = tagger.pTags,
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
@@ -282,7 +282,7 @@ open class NewPostViewModel() : ViewModel() {
                     message = tagger.message,
                     toUser = dmUsers.first().pubkeyHex,
                     replyingTo = originalNote,
-                    mentions = tagger.mentions,
+                    mentions = tagger.pTags,
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
@@ -293,8 +293,8 @@ open class NewPostViewModel() : ViewModel() {
             if (wantsPoll) {
                 account?.sendPoll(
                     tagger.message,
-                    tagger.replyTos,
-                    tagger.mentions,
+                    tagger.eTags,
+                    tagger.pTags,
                     pollOptions,
                     valueMaximum,
                     valueMinimum,
@@ -313,8 +313,8 @@ open class NewPostViewModel() : ViewModel() {
                     price = Price(price.text, "SATS", null),
                     condition = condition,
                     message = tagger.message,
-                    replyTo = tagger.replyTos,
-                    mentions = tagger.mentions,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
                     location = locationText.text,
                     category = category.text,
                     directMentions = tagger.directMentions,
@@ -337,8 +337,8 @@ open class NewPostViewModel() : ViewModel() {
 
                 account?.sendPost(
                     message = tagger.message,
-                    replyTo = tagger.replyTos,
-                    mentions = tagger.mentions,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
                     tags = null,
                     zapReceiver = zapReceiver,
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
@@ -441,7 +441,7 @@ open class NewPostViewModel() : ViewModel() {
         contentToAddUrl = null
         urlPreview = null
         isUploadingImage = false
-        mentions = null
+        pTags = null
 
         wantsDirectMessage = false
 
@@ -483,7 +483,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     open fun removeFromReplyList(userToRemove: User) {
-        mentions = mentions?.filter { it != userToRemove }
+        pTags = pTags?.filter { it != userToRemove }
     }
 
     open fun updateMessage(it: TextFieldValue) {
