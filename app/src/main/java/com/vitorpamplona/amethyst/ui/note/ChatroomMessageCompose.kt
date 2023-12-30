@@ -399,15 +399,11 @@ private fun MessageBubbleLines(
     bubbleSize: MutableState<Int>,
     availableBubbleSize: MutableState<Int>
 ) {
-    val automaticallyShowProfilePicture = remember {
-        accountViewModel.settings.showProfilePictures.value
-    }
-
     if (drawAuthorInfo) {
         DrawAuthorInfo(
             baseNote,
             alignment,
-            automaticallyShowProfilePicture,
+            accountViewModel.settings.showProfilePictures.value,
             nav
         )
     } else {
