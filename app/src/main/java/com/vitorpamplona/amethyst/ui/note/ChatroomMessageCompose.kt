@@ -130,7 +130,7 @@ fun CheckHiddenChatMessage(
         accountViewModel.account.liveHiddenUsers.map {
             baseNote.isHiddenFor(it)
         }.distinctUntilChanged()
-    }.observeAsState(false)
+    }.observeAsState(accountViewModel.isNoteHidden(baseNote))
 
     if (!isHidden) {
         LoadedChatMessageCompose(
