@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,6 +54,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
+import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
+import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
@@ -218,7 +219,7 @@ fun NormalChatNote(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit
 ) {
-    val drawAuthorInfo by remember {
+    val drawAuthorInfo by remember(note) {
         derivedStateOf {
             val noteEvent = note.event
             if (accountViewModel.isLoggedUser(note.author)) {
@@ -267,31 +268,14 @@ fun NormalChatNote(
     }
 
     Column() {
-        val modif = remember {
-            if (innerQuote) {
-                Modifier.padding(top = 10.dp, end = 5.dp)
-            } else {
-                Modifier
-                    .fillMaxWidth(1f)
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 5.dp,
-                        bottom = 5.dp
-                    )
-            }
-        }
-
         Row(
-            modifier = modif,
+            modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
             horizontalArrangement = alignment
         ) {
             val availableBubbleSize = remember { mutableIntStateOf(0) }
             var popupExpanded by remember { mutableStateOf(false) }
 
-            val modif2 = remember {
-                if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
-            }
+            val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
 
             val clickableModifier = remember {
                 Modifier

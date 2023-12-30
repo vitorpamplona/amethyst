@@ -156,6 +156,16 @@ val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
+val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp, end = 5.dp)
+val ChatPaddingModifier = Modifier
+    .fillMaxWidth(1f)
+    .padding(
+        start = 12.dp,
+        end = 12.dp,
+        top = 5.dp,
+        bottom = 5.dp
+    )
+
 val profileContentHeaderModifier = Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
 val bannerModifier = Modifier.fillMaxWidth().height(120.dp)
 val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Size25dp)
