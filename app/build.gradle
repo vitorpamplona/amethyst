@@ -138,7 +138,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.5.3"
+        kotlinCompilerExtensionVersion "1.5.7"
     }
 
     packagingOptions {
@@ -197,7 +197,7 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.12'
 
     // HTML Parsing for Link Preview
-    implementation 'org.jsoup:jsoup:1.17.1'
+    implementation 'org.jsoup:jsoup:1.17.2'
 
     // Encrypted Key Storage
     implementation 'androidx.security:security-crypto-ktx:1.1.0-alpha06'
