@@ -80,6 +80,6 @@ fun /*SodiumAndroid.*/cryptoStreamXChaCha20Xor(
 ): ByteArray? {
     val mLen = messageBytes.size
     val cipher = ByteArray(mLen)
-    val sucessful = cryptoStreamXChaCha20Xor(libSodium, cipher, messageBytes, mLen.toLong(), nonce, key.asBytes)
-    return if (sucessful) cipher else null
+    val successful = cryptoStreamXChaCha20Xor(libSodium, cipher, messageBytes, mLen.toLong(), nonce, key.asBytes)
+    return if (successful) cipher else null
 }
