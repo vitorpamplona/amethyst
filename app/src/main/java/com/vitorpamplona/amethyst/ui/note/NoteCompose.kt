@@ -3459,29 +3459,6 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
         }
     }
 
-    participantUsers.forEach {
-        Row(
-            verticalAlignment = CenterVertically,
-            modifier = Modifier
-                .padding(top = 5.dp, start = 10.dp, end = 10.dp)
-                .clickable {
-                    nav("User/${it.second.pubkeyHex}")
-                }
-        ) {
-            ClickableUserPicture(it.second, 25.dp, accountViewModel)
-            Spacer(StdHorzSpacer)
-            UsernameDisplay(it.second, Modifier.weight(1f))
-            Spacer(StdHorzSpacer)
-            it.first.role?.let {
-                Text(
-                    text = it.capitalize(Locale.ROOT),
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1
-                )
-            }
-        }
-    }
-
     media?.let { media ->
         if (status == STATUS_LIVE) {
             CheckIfUrlIsOnline(media, accountViewModel) { isOnline ->
@@ -3525,6 +3502,29 @@ fun RenderLiveActivityEventInner(baseNote: Note, accountViewModel: AccountViewMo
                     text = stringResource(id = R.string.live_stream_has_ended),
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+
+    participantUsers.forEach {
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier = Modifier
+                .padding(vertical = 5.dp)
+                .clickable {
+                    nav("User/${it.second.pubkeyHex}")
+                }
+        ) {
+            ClickableUserPicture(it.second, 25.dp, accountViewModel)
+            Spacer(StdHorzSpacer)
+            UsernameDisplay(it.second, Modifier.weight(1f))
+            Spacer(StdHorzSpacer)
+            it.first.role?.let {
+                Text(
+                    text = it.capitalize(Locale.ROOT),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1
                 )
             }
         }

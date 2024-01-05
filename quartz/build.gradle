@@ -40,7 +40,7 @@ dependencies {
     // Bitcoin secp256k1 bindings to Android
     api 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.12.0'
 
-    // LibSodium for XChaCha encryption
+    // LibSodium for ChaCha encryption
     implementation "com.goterl:lazysodium-android:5.1.0@aar"
     implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
