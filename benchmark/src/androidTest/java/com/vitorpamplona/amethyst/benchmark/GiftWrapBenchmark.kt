@@ -129,14 +129,14 @@ class GiftWrapBenchmark {
     @Test
     fun tinyMessageHardCoded() {
         benchmarkRule.measureRepeated {
-            basePerformanceTest("Hola, que tal?", 2946)
+            basePerformanceTest("Hola, que tal?", 3402)
         }
     }
 
     @Test
     fun regularMessageHardCoded() {
         benchmarkRule.measureRepeated {
-            basePerformanceTest("Hi, honey, can you drop by the market and get some bread?", 3098)
+            basePerformanceTest("Hi, honey, can you drop by the market and get some bread?", 3746)
         }
     }
 
@@ -145,7 +145,7 @@ class GiftWrapBenchmark {
         benchmarkRule.measureRepeated {
             basePerformanceTest(
                 "My queen, you are nothing short of royalty to me. You possess more beauty in the nail of your pinkie toe than everything else in this world combined. I am astounded by your grace, generosity, and graciousness. I am so lucky to know you. ",
-                3738
+                5114
             )
         }
     }

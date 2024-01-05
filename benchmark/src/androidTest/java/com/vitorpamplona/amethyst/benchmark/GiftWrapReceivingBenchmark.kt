@@ -144,7 +144,7 @@ class GiftWrapReceivingBenchmark {
         val wrap = createWrap(sender, receiver)
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.decryptNIP44v1(wrap.content, sender.keyPair.privKey!!, wrap.pubKey.hexToByteArray()))
+            assertNotNull(CryptoUtils.decryptNIP44v2(wrap.content, receiver.keyPair.privKey!!, wrap.pubKey.hexToByteArray()))
         }
     }
 
@@ -155,7 +155,7 @@ class GiftWrapReceivingBenchmark {
 
         val wrap = createWrap(sender, receiver)
 
-        val innerJson = CryptoUtils.decryptNIP44v1(wrap.content, receiver.keyPair.privKey!!, wrap.pubKey.hexToByteArray())
+        val innerJson = CryptoUtils.decryptNIP44v2(wrap.content, receiver.keyPair.privKey!!, wrap.pubKey.hexToByteArray())
 
         benchmarkRule.measureRepeated {
             assertNotNull(innerJson?.let { Event.fromJson(it) })
@@ -170,7 +170,7 @@ class GiftWrapReceivingBenchmark {
         val seal = createSeal(sender, receiver)
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.decryptNIP44v1(seal.content, sender.keyPair.privKey!!, seal.pubKey.hexToByteArray()))
+            assertNotNull(CryptoUtils.decryptNIP44v2(seal.content, receiver.keyPair.privKey!!, seal.pubKey.hexToByteArray()))
         }
     }
 
@@ -181,7 +181,7 @@ class GiftWrapReceivingBenchmark {
 
         val seal = createSeal(sender, receiver)
 
-        val innerJson = CryptoUtils.decryptNIP44v1(seal.content, receiver.keyPair.privKey!!, seal.pubKey.hexToByteArray())
+        val innerJson = CryptoUtils.decryptNIP44v2(seal.content, receiver.keyPair.privKey!!, seal.pubKey.hexToByteArray())
 
         benchmarkRule.measureRepeated {
             assertNotNull(innerJson?.let { Gossip.fromJson(it) })
