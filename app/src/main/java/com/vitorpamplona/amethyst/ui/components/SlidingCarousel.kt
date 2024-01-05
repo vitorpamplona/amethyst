@@ -43,7 +43,7 @@ fun SlidingCarousel(
         }
 
         // you can remove the surface in case you don't want
-        // the transparant bacground
+        // the transparent bacground
         Surface(
             modifier = Modifier
                 .padding(bottom = 8.dp)
