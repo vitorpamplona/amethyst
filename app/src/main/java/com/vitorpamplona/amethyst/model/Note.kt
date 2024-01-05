@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
@@ -726,7 +727,7 @@ open class Note(val idHex: String) {
 
         val isHiddenByWord = if (thisEvent is BaseTextNoteEvent) {
             accountChoices.hiddenWords.any {
-                thisEvent.content.contains(it, true)
+                thisEvent.content.containsAny(accountChoices.hiddenWordsCase)
             }
         } else {
             false

@@ -72,6 +72,7 @@ import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
@@ -338,6 +339,7 @@ class Account(
         val hiddenUsers: ImmutableSet<String>,
         val spammers: ImmutableSet<String>,
         val hiddenWords: ImmutableSet<String>,
+        val hiddenWordsCase: List<DualCase>,
         val showSensitiveContent: Boolean?
     )
 
@@ -349,30 +351,35 @@ class Account(
         ) { localLive, blockList, muteList ->
             checkNotInMainThread()
 
-            val resultBlockList = (blockList.note.event as? PeopleListEvent)?.let {
-                withTimeoutOrNull(1000) {
-                    suspendCancellableCoroutine { continuation ->
-                        it.publicAndPrivateUsersAndWords(signer) {
-                            continuation.resume(it)
+            val resultBlockList =
+                (blockList.note.event as? PeopleListEvent)?.let {
+                    withTimeoutOrNull(1000) {
+                        suspendCancellableCoroutine { continuation ->
+                            it.publicAndPrivateUsersAndWords(signer) {
+                                continuation.resume(it)
+                            }
                         }
                     }
-                }
-            } ?: PeopleListEvent.UsersAndWords()
+                } ?: PeopleListEvent.UsersAndWords()
 
-            val resultMuteList = (muteList.note.event as? MuteListEvent)?.let {
-                withTimeoutOrNull(1000) {
-                    suspendCancellableCoroutine { continuation ->
-                        it.publicAndPrivateUsersAndWords(signer) {
-                            continuation.resume(it)
+            val resultMuteList =
+                (muteList.note.event as? MuteListEvent)?.let {
+                    withTimeoutOrNull(1000) {
+                        suspendCancellableCoroutine { continuation ->
+                            it.publicAndPrivateUsersAndWords(signer) {
+                                continuation.resume(it)
+                            }
                         }
                     }
-                }
-            } ?: PeopleListEvent.UsersAndWords()
+                } ?: PeopleListEvent.UsersAndWords()
+
+            val hiddenWords = resultBlockList.words + resultMuteList.words
 
             emit(
                 LiveHiddenUsers(
                     hiddenUsers = (resultBlockList.users + resultMuteList.users).toPersistentSet(),
-                    hiddenWords = (resultBlockList.words + resultMuteList.words).toPersistentSet(),
+                    hiddenWords = hiddenWords.toPersistentSet(),
+                    hiddenWordsCase = hiddenWords.map { DualCase(it.lowercase(), it.uppercase()) },
                     spammers = localLive.account.transientHiddenUsers,
                     showSensitiveContent = localLive.account.showSensitiveContent
                 )
@@ -383,6 +390,7 @@ class Account(
             LiveHiddenUsers(
                 hiddenUsers = persistentSetOf(),
                 hiddenWords = persistentSetOf(),
+                hiddenWordsCase = emptyList(),
                 spammers = transientHiddenUsers,
                 showSensitiveContent = showSensitiveContent
             )

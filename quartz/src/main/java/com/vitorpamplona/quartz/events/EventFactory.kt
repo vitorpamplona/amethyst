@@ -35,8 +35,9 @@ class EventFactory {
             ChannelMuteUserEvent.kind -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
             ChatMessageEvent.kind -> {
                 if (id.isBlank()) {
-                    val id = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
-                    ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+                    val newId = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
+                    ChatMessageEvent(
+                        newId, pubKey, createdAt, tags, content, sig)
                 } else {
                     ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 }
