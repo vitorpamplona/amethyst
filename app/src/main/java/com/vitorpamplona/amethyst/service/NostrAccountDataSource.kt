@@ -231,7 +231,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
     override fun updateChannelFilters() {
         return if (hasLoadedTheBasics[account.userProfile()] != null) {
-            // gets everthing about the user logged in
+            // gets everything about the user logged in
             accountChannel.typedFilters = listOfNotNull(
                 createAccountMetadataFilter(),
                 createAccountContactListFilter(),

@@ -18,7 +18,7 @@ class ChatMessageEvent(
     sig: HexKey
 ) : WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig), ChatroomKeyable {
     /**
-     * Recepients intended to receive this conversation
+     * Recipients intended to receive this conversation
      */
     fun recipientsPubKey() = tags.mapNotNull {
         if (it.size > 1 && it[0] == "p") it[1] else null
