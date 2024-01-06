@@ -150,8 +150,8 @@ Build the app:
 
 ## Linting
 ```bash
-./gradlew ktlintCheck
-./gradlew ktlintFormat
+./gradlew spotlessCheck
+./gradlew spotlessApply
 ```
 
 ## Installing on device

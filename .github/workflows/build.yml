@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Linter (gradle)
-        run: ./gradlew ktlintCheck
+        run: ./gradlew spotlessCheck
 
       - name: Test (gradle)
         run: ./gradlew test --no-daemon

@@ -8,6 +8,7 @@
 /.idea/androidTestResultsUserPreferences.xml
 /.idea/deploymentTargetDropDown.xml
 /.idea/appInsightsSettings.xml
+/.idea/ktlint-plugin.xml
 .DS_Store
 /build
 /captures
