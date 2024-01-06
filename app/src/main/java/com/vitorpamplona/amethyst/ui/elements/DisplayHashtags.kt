@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.elements
 
 import androidx.compose.foundation.layout.Arrangement
@@ -22,50 +42,51 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  baseNote: Note,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val noteEvent = remember { baseNote.event } ?: return
+  val noteEvent = remember { baseNote.event } ?: return
 
-    val userFollowState by accountViewModel.userFollows.observeAsState()
-    var firstTag by remember { mutableStateOf<String?>(null) }
+  val userFollowState by accountViewModel.userFollows.observeAsState()
+  var firstTag by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = userFollowState) {
-        launch(Dispatchers.Default) {
-            val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
-            val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
+  LaunchedEffect(key1 = userFollowState) {
+    launch(Dispatchers.Default) {
+      val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
+      val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
 
-            if (firstTag != newFirstTag) {
-                launch(Dispatchers.Main) {
-                    firstTag = newFirstTag
-                }
-            }
-        }
+      if (firstTag != newFirstTag) {
+        launch(Dispatchers.Main) { firstTag = newFirstTag }
+      }
     }
+  }
 
-    firstTag?.let {
-        Column(verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                DisplayTagList(it, nav)
-            }
-        }
+  firstTag?.let {
+    Column(verticalArrangement = Arrangement.Center) {
+      Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, nav) }
     }
+  }
 }
 
 @Composable
-private fun DisplayTagList(firstTag: String, nav: (String) -> Unit) {
-    val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
-    val route = remember(firstTag) { "Hashtag/$firstTag" }
+private fun DisplayTagList(
+  firstTag: String,
+  nav: (String) -> Unit,
+) {
+  val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
+  val route = remember(firstTag) { "Hashtag/$firstTag" }
 
-    ClickableText(
-        text = displayTag,
-        onClick = { nav(route) },
-        style = LocalTextStyle.current.copy(
-            color = MaterialTheme.colorScheme.primary.copy(
-                alpha = 0.52f
-            )
-        ),
-        maxLines = 1
-    )
+  ClickableText(
+    text = displayTag,
+    onClick = { nav(route) },
+    style =
+      LocalTextStyle.current.copy(
+        color =
+          MaterialTheme.colorScheme.primary.copy(
+            alpha = 0.52f,
+          ),
+      ),
+    maxLines = 1,
+  )
 }

@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.theme
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,11 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
-val Shapes = Shapes(
+val Shapes =
+  Shapes(
     small = RoundedCornerShape(4.dp),
     medium = RoundedCornerShape(4.dp),
-    large = RoundedCornerShape(0.dp)
-)
+    large = RoundedCornerShape(0.dp),
+  )
 
 val RippleRadius45dp = 45.dp // Ripple should be +10.dp over the component size
 
@@ -142,58 +163,55 @@ val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
-val EditFieldModifier = Modifier
-    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp)
-    .fillMaxWidth()
-val EditFieldTrailingIconModifier = Modifier
-    .height(26.dp)
-    .padding(start = 5.dp, end = 0.dp)
-val EditFieldLeadingIconModifier = Modifier
-    .height(32.dp)
-    .padding(start = 2.dp)
+val EditFieldModifier =
+  Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
+val EditFieldTrailingIconModifier = Modifier.height(26.dp).padding(start = 5.dp, end = 0.dp)
+val EditFieldLeadingIconModifier = Modifier.height(32.dp).padding(start = 2.dp)
 
 val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
 val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp, end = 5.dp)
-val ChatPaddingModifier = Modifier
-    .fillMaxWidth(1f)
+val ChatPaddingModifier =
+  Modifier.fillMaxWidth(1f)
     .padding(
-        start = 12.dp,
-        end = 12.dp,
-        top = 5.dp,
-        bottom = 5.dp
+      start = 12.dp,
+      end = 12.dp,
+      top = 5.dp,
+      bottom = 5.dp,
     )
 
-val profileContentHeaderModifier = Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
+val profileContentHeaderModifier =
+  Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
 val bannerModifier = Modifier.fillMaxWidth().height(120.dp)
 val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Size25dp)
 
 val IconRowTextModifier = Modifier.padding(start = 16.dp)
-val IconRowModifier = Modifier
-    .fillMaxWidth()
-    .padding(vertical = 15.dp, horizontal = 25.dp)
+val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp)
 
 val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
 
-val normalNoteModifier = Modifier.fillMaxWidth()
+val normalNoteModifier =
+  Modifier.fillMaxWidth()
     .padding(
-        start = 12.dp,
-        end = 12.dp,
-        top = 0.dp
+      start = 12.dp,
+      end = 12.dp,
+      top = 0.dp,
     )
 
-val normalWithTopMarginNoteModifier = Modifier.fillMaxWidth()
+val normalWithTopMarginNoteModifier =
+  Modifier.fillMaxWidth()
     .padding(
-        start = 12.dp,
-        end = 12.dp,
-        top = 10.dp
+      start = 12.dp,
+      end = 12.dp,
+      top = 10.dp,
     )
 
-val boostedNoteModifier = Modifier.fillMaxWidth()
+val boostedNoteModifier =
+  Modifier.fillMaxWidth()
     .padding(
-        start = 0.dp,
-        end = 0.dp,
-        top = 0.dp
+      start = 0.dp,
+      end = 0.dp,
+      top = 0.dp,
     )

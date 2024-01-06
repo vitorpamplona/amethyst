@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
@@ -7,84 +27,115 @@ import java.math.BigDecimal
 
 @Immutable
 interface EventInterface {
-    fun countMemory(): Long
+  fun countMemory(): Long
 
-    fun id(): HexKey
+  fun id(): HexKey
 
-    fun pubKey(): HexKey
+  fun pubKey(): HexKey
 
-    fun createdAt(): Long
+  fun createdAt(): Long
 
-    fun kind(): Int
+  fun kind(): Int
 
-    fun tags(): Array<Array<String>>
+  fun tags(): Array<Array<String>>
 
-    fun content(): String
+  fun content(): String
 
-    fun sig(): HexKey
+  fun sig(): HexKey
 
-    fun toJson(): String
+  fun toJson(): String
 
-    fun checkSignature()
+  fun checkSignature()
 
-    fun hasValidSignature(): Boolean
+  fun hasValidSignature(): Boolean
 
-    fun isTagged(key: String, tag: String): Boolean
-    fun isAnyTagged(key: String, tags: Set<String>): Boolean
-    fun isTaggedWord(word: String): Boolean
+  fun isTagged(
+    key: String,
+    tag: String,
+  ): Boolean
 
-    fun isTaggedUser(idHex: String): Boolean
-    fun isTaggedUsers(idHex: Set<String>): Boolean
+  fun isAnyTagged(
+    key: String,
+    tags: Set<String>,
+  ): Boolean
 
-    fun isTaggedEvent(idHex: String): Boolean
+  fun isTaggedWord(word: String): Boolean
 
-    fun isTaggedAddressableNote(idHex: String): Boolean
-    fun isTaggedAddressableNotes(idHexes: Set<String>): Boolean
+  fun isTaggedUser(idHex: String): Boolean
 
-    fun isTaggedHash(hashtag: String): Boolean
-    fun isTaggedGeoHash(hashtag: String): Boolean
+  fun isTaggedUsers(idHex: Set<String>): Boolean
 
-    fun isTaggedHashes(hashtags: Set<String>): Boolean
-    fun isTaggedGeoHashes(hashtags: Set<String>): Boolean
+  fun isTaggedEvent(idHex: String): Boolean
 
-    fun firstIsTaggedHashes(hashtags: Set<String>): String?
-    fun firstIsTaggedAddressableNote(addressableNotes: Set<String>): String?
+  fun isTaggedAddressableNote(idHex: String): Boolean
 
-    fun isTaggedAddressableKind(kind: Int): Boolean
-    fun getTagOfAddressableKind(kind: Int): ATag?
+  fun isTaggedAddressableNotes(idHexes: Set<String>): Boolean
 
-    fun expiration(): Long?
+  fun isTaggedHash(hashtag: String): Boolean
 
-    fun hasHashtags(): Boolean
-    fun hasGeohashes(): Boolean
+  fun isTaggedGeoHash(hashtag: String): Boolean
 
-    fun hashtags(): List<String>
-    fun geohashes(): List<String>
+  fun isTaggedHashes(hashtags: Set<String>): Boolean
 
-    fun getReward(): BigDecimal?
-    fun getPoWRank(): Int
-    fun getGeoHash(): String?
+  fun isTaggedGeoHashes(hashtags: Set<String>): Boolean
 
-    fun zapSplitSetup(): List<ZapSplitSetup>
-    fun isSensitive(): Boolean
-    fun subject(): String?
-    fun zapraiserAmount(): Long?
+  fun firstIsTaggedHashes(hashtags: Set<String>): String?
 
-    fun hasAnyTaggedUser(): Boolean
-    fun hasTagWithContent(tagName: String): Boolean
+  fun firstIsTaggedAddressableNote(addressableNotes: Set<String>): String?
 
-    fun taggedAddresses(): List<ATag>
-    fun taggedUsers(): List<HexKey>
-    fun taggedEvents(): List<HexKey>
-    fun taggedUrls(): List<String>
+  fun isTaggedAddressableKind(kind: Int): Boolean
 
-    fun firstTaggedAddress(): ATag?
-    fun firstTaggedUser(): HexKey?
-    fun firstTaggedEvent(): HexKey?
-    fun firstTaggedUrl(): String?
+  fun getTagOfAddressableKind(kind: Int): ATag?
 
-    fun taggedEmojis(): List<EmojiUrl>
-    fun matchTag1With(text: String): Boolean
-    fun isExpired(): Boolean
-    fun hasZapSplitSetup(): Boolean
+  fun expiration(): Long?
+
+  fun hasHashtags(): Boolean
+
+  fun hasGeohashes(): Boolean
+
+  fun hashtags(): List<String>
+
+  fun geohashes(): List<String>
+
+  fun getReward(): BigDecimal?
+
+  fun getPoWRank(): Int
+
+  fun getGeoHash(): String?
+
+  fun zapSplitSetup(): List<ZapSplitSetup>
+
+  fun isSensitive(): Boolean
+
+  fun subject(): String?
+
+  fun zapraiserAmount(): Long?
+
+  fun hasAnyTaggedUser(): Boolean
+
+  fun hasTagWithContent(tagName: String): Boolean
+
+  fun taggedAddresses(): List<ATag>
+
+  fun taggedUsers(): List<HexKey>
+
+  fun taggedEvents(): List<HexKey>
+
+  fun taggedUrls(): List<String>
+
+  fun firstTaggedAddress(): ATag?
+
+  fun firstTaggedUser(): HexKey?
+
+  fun firstTaggedEvent(): HexKey?
+
+  fun firstTaggedUrl(): String?
+
+  fun taggedEmojis(): List<EmojiUrl>
+
+  fun matchTag1With(text: String): Boolean
+
+  fun isExpired(): Boolean
+
+  fun hasZapSplitSetup(): Boolean
 }

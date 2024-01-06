@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
@@ -36,120 +56,124 @@ import kotlinx.coroutines.launch
 
 @Stable
 class RelayFeedViewModel : ViewModel() {
-    val order = compareByDescending<RelayInfo> { it.lastEvent }.thenByDescending { it.counter }.thenBy { it.url }
+  val order =
+    compareByDescending<RelayInfo> { it.lastEvent }
+      .thenByDescending { it.counter }
+      .thenBy { it.url }
 
-    private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
-    val feedContent = _feedContent.asStateFlow()
+  private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
+  val feedContent = _feedContent.asStateFlow()
 
-    var currentUser: User? = null
+  var currentUser: User? = null
 
-    fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) {
-            refreshSuspended()
+  fun refresh() {
+    viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+  }
+
+  fun refreshSuspended() {
+    val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
+    val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
+
+    val newRelaysFromRecord =
+      currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
+        if (it.key !in beingUsedSet) {
+          RelayInfo(it.key, 0, 0)
+        } else {
+          null
         }
+      }
+        ?: emptyList()
+
+    val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
+
+    _feedContent.update { newList }
+  }
+
+  val listener: (UserState) -> Unit = { invalidateData() }
+
+  fun subscribeTo(user: User) {
+    if (currentUser != user) {
+      currentUser = user
+      user.live().relays.observeForever(listener)
+      user.live().relayInfo.observeForever(listener)
+      invalidateData()
     }
+  }
 
-    fun refreshSuspended() {
-        val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
-        val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
-
-        val newRelaysFromRecord = currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
-            if (it.key !in beingUsedSet) {
-                RelayInfo(it.key, 0, 0)
-            } else {
-                null
-            }
-        } ?: emptyList()
-
-        val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
-
-        _feedContent.update { newList }
+  fun unsubscribeTo(user: User) {
+    if (currentUser == user) {
+      user.live().relays.removeObserver(listener)
+      user.live().relayInfo.removeObserver(listener)
+      currentUser = null
     }
+  }
 
-    val listener: (UserState) -> Unit = {
-        invalidateData()
+  private val bundler = BundledUpdate(250, Dispatchers.IO)
+
+  fun invalidateData() {
+    bundler.invalidate {
+      // adds the time to perform the refresh into this delay
+      // holding off new updates in case of heavy refresh routines.
+      refreshSuspended()
     }
+  }
 
-    fun subscribeTo(user: User) {
-        if (currentUser != user) {
-            currentUser = user
-            user.live().relays.observeForever(listener)
-            user.live().relayInfo.observeForever(listener)
-            invalidateData()
-        }
-    }
-
-    fun unsubscribeTo(user: User) {
-        if (currentUser == user) {
-            user.live().relays.removeObserver(listener)
-            user.live().relayInfo.removeObserver(listener)
-            currentUser = null
-        }
-    }
-
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-    fun invalidateData() {
-        bundler.invalidate() {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-        }
-    }
-
-    override fun onCleared() {
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        bundler.cancel()
-        super.onCleared()
-    }
+  override fun onCleared() {
+    Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+    bundler.cancel()
+    super.onCleared()
+  }
 }
 
 @Composable
 fun RelayFeedView(
-    viewModel: RelayFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    enablePullRefresh: Boolean = true
+  viewModel: RelayFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+  enablePullRefresh: Boolean = true,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    var wantsToAddRelay by remember {
-        mutableStateOf("")
-    }
+  var wantsToAddRelay by remember { mutableStateOf("") }
 
-    if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
-    }
+  if (wantsToAddRelay.isNotEmpty()) {
+    NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
+  }
 
-    var refreshing by remember { mutableStateOf(false) }
-    val refresh = { refreshing = true; viewModel.refresh(); refreshing = false }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
+  var refreshing by remember { mutableStateOf(false) }
+  val refresh = {
+    refreshing = true
+    viewModel.refresh()
+    refreshing = false
+  }
+  val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    val modifier = if (enablePullRefresh) {
-        Modifier.fillMaxSize().pullRefresh(pullRefreshState)
+  val modifier =
+    if (enablePullRefresh) {
+      Modifier.fillMaxSize().pullRefresh(pullRefreshState)
     } else {
-        Modifier.fillMaxSize()
+      Modifier.fillMaxSize()
     }
 
-    Box(modifier) {
-        val listState = rememberLazyListState()
+  Box(modifier) {
+    val listState = rememberLazyListState()
 
-        LazyColumn(
-            contentPadding = FeedPadding,
-            state = listState
-        ) {
-            itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
-                RelayCompose(
-                    item,
-                    accountViewModel = accountViewModel,
-                    onAddRelay = { wantsToAddRelay = item.url },
-                    onRemoveRelay = { wantsToAddRelay = item.url }
-                )
-            }
-        }
-
-        if (enablePullRefresh) {
-            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
-        }
+    LazyColumn(
+      contentPadding = FeedPadding,
+      state = listState,
+    ) {
+      itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
+        RelayCompose(
+          item,
+          accountViewModel = accountViewModel,
+          onAddRelay = { wantsToAddRelay = item.url },
+          onRemoveRelay = { wantsToAddRelay = item.url },
+        )
+      }
     }
+
+    if (enablePullRefresh) {
+      PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+    }
+  }
 }

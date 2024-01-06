@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
@@ -12,162 +32,176 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
 
 @Stable
 class PublicChatChannel(idHex: String) : Channel(idHex) {
-    var info = ChannelCreateEvent.ChannelData(null, null, null)
+  var info = ChannelCreateEvent.ChannelData(null, null, null)
 
-    fun updateChannelInfo(creator: User, channelInfo: ChannelCreateEvent.ChannelData, updatedAt: Long) {
-        this.info = channelInfo
-        super.updateChannelInfo(creator, updatedAt)
-    }
+  fun updateChannelInfo(
+    creator: User,
+    channelInfo: ChannelCreateEvent.ChannelData,
+    updatedAt: Long,
+  ) {
+    this.info = channelInfo
+    super.updateChannelInfo(creator, updatedAt)
+  }
 
-    override fun toBestDisplayName(): String {
-        return info.name ?: super.toBestDisplayName()
-    }
+  override fun toBestDisplayName(): String {
+    return info.name ?: super.toBestDisplayName()
+  }
 
-    override fun summary(): String? {
-        return info.about
-    }
+  override fun summary(): String? {
+    return info.about
+  }
 
-    override fun profilePicture(): String? {
-        if (info.picture.isNullOrBlank()) return super.profilePicture()
-        return info.picture ?: super.profilePicture()
-    }
+  override fun profilePicture(): String? {
+    if (info.picture.isNullOrBlank()) return super.profilePicture()
+    return info.picture ?: super.profilePicture()
+  }
 
-    override fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(info.name, info.about)
-            .filter { it.contains(prefix, true) }.isNotEmpty()
-    }
+  override fun anyNameStartsWith(prefix: String): Boolean {
+    return listOfNotNull(info.name, info.about).filter { it.contains(prefix, true) }.isNotEmpty()
+  }
 }
 
 @Stable
 class LiveActivitiesChannel(val address: ATag) : Channel(address.toTag()) {
-    var info: LiveActivitiesEvent? = null
+  var info: LiveActivitiesEvent? = null
 
-    override fun idNote() = address.toNAddr()
-    override fun idDisplayNote() = idNote().toShortenHex()
-    fun address() = address
+  override fun idNote() = address.toNAddr()
 
-    fun updateChannelInfo(creator: User, channelInfo: LiveActivitiesEvent, updatedAt: Long) {
-        this.info = channelInfo
-        super.updateChannelInfo(creator, updatedAt)
-    }
+  override fun idDisplayNote() = idNote().toShortenHex()
 
-    override fun toBestDisplayName(): String {
-        return info?.title() ?: super.toBestDisplayName()
-    }
+  fun address() = address
 
-    override fun summary(): String? {
-        return info?.summary()
-    }
+  fun updateChannelInfo(
+    creator: User,
+    channelInfo: LiveActivitiesEvent,
+    updatedAt: Long,
+  ) {
+    this.info = channelInfo
+    super.updateChannelInfo(creator, updatedAt)
+  }
 
-    override fun profilePicture(): String? {
-        return info?.image()?.ifBlank { null }
-    }
+  override fun toBestDisplayName(): String {
+    return info?.title() ?: super.toBestDisplayName()
+  }
 
-    override fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(info?.title(), info?.summary())
-            .filter { it.contains(prefix, true) }.isNotEmpty()
-    }
+  override fun summary(): String? {
+    return info?.summary()
+  }
+
+  override fun profilePicture(): String? {
+    return info?.image()?.ifBlank { null }
+  }
+
+  override fun anyNameStartsWith(prefix: String): Boolean {
+    return listOfNotNull(info?.title(), info?.summary())
+      .filter { it.contains(prefix, true) }
+      .isNotEmpty()
+  }
 }
 
 @Stable
 abstract class Channel(val idHex: String) {
-    var creator: User? = null
+  var creator: User? = null
 
-    var updatedMetadataAt: Long = 0
+  var updatedMetadataAt: Long = 0
 
-    val notes = ConcurrentHashMap<HexKey, Note>()
+  val notes = ConcurrentHashMap<HexKey, Note>()
 
-    open fun id() = Hex.decode(idHex)
-    open fun idNote() = id().toNote()
-    open fun idDisplayNote() = idNote().toShortenHex()
+  open fun id() = Hex.decode(idHex)
 
-    open fun toBestDisplayName(): String {
-        return idDisplayNote()
-    }
+  open fun idNote() = id().toNote()
 
-    open fun summary(): String? {
-        return null
-    }
+  open fun idDisplayNote() = idNote().toShortenHex()
 
-    open fun creatorName(): String? {
-        return creator?.toBestDisplayName()
-    }
+  open fun toBestDisplayName(): String {
+    return idDisplayNote()
+  }
 
-    open fun profilePicture(): String? {
-        return creator?.profilePicture()
-    }
+  open fun summary(): String? {
+    return null
+  }
 
-    open fun updateChannelInfo(creator: User, updatedAt: Long) {
-        this.creator = creator
-        this.updatedMetadataAt = updatedAt
+  open fun creatorName(): String? {
+    return creator?.toBestDisplayName()
+  }
 
-        live.invalidateData()
-    }
+  open fun profilePicture(): String? {
+    return creator?.profilePicture()
+  }
 
-    fun addNote(note: Note) {
-        notes[note.idHex] = note
-    }
+  open fun updateChannelInfo(
+    creator: User,
+    updatedAt: Long,
+  ) {
+    this.creator = creator
+    this.updatedMetadataAt = updatedAt
 
-    fun removeNote(note: Note) {
-        notes.remove(note.idHex)
-    }
+    live.invalidateData()
+  }
 
-    fun removeNote(noteHex: String) {
-        notes.remove(noteHex)
-    }
+  fun addNote(note: Note) {
+    notes[note.idHex] = note
+  }
 
-    abstract fun anyNameStartsWith(prefix: String): Boolean
+  fun removeNote(note: Note) {
+    notes.remove(note.idHex)
+  }
 
-    // Observers line up here.
-    val live: ChannelLiveData = ChannelLiveData(this)
+  fun removeNote(noteHex: String) {
+    notes.remove(noteHex)
+  }
 
-    fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
-        val important = notes.values
-            .filter { it.author?.let { it1 -> account.isHidden(it1) } == false }
-            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-            .reversed()
-            .take(1000)
-            .toSet()
+  abstract fun anyNameStartsWith(prefix: String): Boolean
 
-        val toBeRemoved = notes.values.filter { it !in important }.toSet()
+  // Observers line up here.
+  val live: ChannelLiveData = ChannelLiveData(this)
 
-        toBeRemoved.forEach {
-            notes.remove(it.idHex)
-        }
+  fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
+    val important =
+      notes.values
+        .filter { it.author?.let { it1 -> account.isHidden(it1) } == false }
+        .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+        .reversed()
+        .take(1000)
+        .toSet()
 
-        return toBeRemoved
-    }
+    val toBeRemoved = notes.values.filter { it !in important }.toSet()
+
+    toBeRemoved.forEach { notes.remove(it.idHex) }
+
+    return toBeRemoved
+  }
 }
 
 class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelState(channel)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
+  // Refreshes observers in batches.
+  private val bundler = BundledUpdate(300, Dispatchers.IO)
 
-    fun invalidateData() {
-        checkNotInMainThread()
+  fun invalidateData() {
+    checkNotInMainThread()
 
-        bundler.invalidate() {
-            checkNotInMainThread()
-            if (hasActiveObservers()) {
-                postValue(ChannelState(channel))
-            }
-        }
+    bundler.invalidate {
+      checkNotInMainThread()
+      if (hasActiveObservers()) {
+        postValue(ChannelState(channel))
+      }
     }
+  }
 
-    override fun onActive() {
-        super.onActive()
-        NostrSingleChannelDataSource.add(channel)
-    }
+  override fun onActive() {
+    super.onActive()
+    NostrSingleChannelDataSource.add(channel)
+  }
 
-    override fun onInactive() {
-        super.onInactive()
-        NostrSingleChannelDataSource.remove(channel)
-    }
+  override fun onInactive() {
+    super.onInactive()
+    NostrSingleChannelDataSource.remove(channel)
+  }
 }
 
 class ChannelState(val channel: Channel)

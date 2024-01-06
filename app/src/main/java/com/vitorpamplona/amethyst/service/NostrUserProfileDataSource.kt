@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.User
@@ -23,120 +43,140 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
-    var user: User? = null
+  var user: User? = null
 
-    fun loadUserProfile(user: User?) {
-        this.user = user
+  fun loadUserProfile(user: User?) {
+    this.user = user
+  }
+
+  fun createUserInfoFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds = listOf(MetadataEvent.KIND),
+            authors = listOf(it.pubkeyHex),
+            limit = 1,
+          ),
+      )
     }
 
-    fun createUserInfoFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(MetadataEvent.kind),
-                authors = listOf(it.pubkeyHex),
-                limit = 1
-            )
+  fun createUserPostsFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds =
+              listOf(
+                TextNoteEvent.KIND,
+                GenericRepostEvent.KIND,
+                RepostEvent.KIND,
+                LongTextNoteEvent.KIND,
+                AudioTrackEvent.KIND,
+                AudioHeaderEvent.KIND,
+                PinListEvent.KIND,
+                PollNoteEvent.KIND,
+                HighlightEvent.KIND,
+              ),
+            authors = listOf(it.pubkeyHex),
+            limit = 200,
+          ),
+      )
+    }
+
+  fun createUserReceivedZapsFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds = listOf(LnZapEvent.KIND),
+            tags = mapOf("p" to listOf(it.pubkeyHex)),
+          ),
+      )
+    }
+
+  fun createFollowFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds = listOf(ContactListEvent.KIND),
+            authors = listOf(it.pubkeyHex),
+            limit = 1,
+          ),
+      )
+    }
+
+  fun createFollowersFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds = listOf(ContactListEvent.KIND),
+            tags = mapOf("p" to listOf(it.pubkeyHex)),
+          ),
+      )
+    }
+
+  fun createAcceptedAwardsFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds = listOf(BadgeProfilesEvent.KIND),
+            authors = listOf(it.pubkeyHex),
+            limit = 1,
+          ),
+      )
+    }
+
+  fun createBookmarksFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds =
+              listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, AppRecommendationEvent.KIND),
+            authors = listOf(it.pubkeyHex),
+            limit = 100,
+          ),
+      )
+    }
+
+  fun createReceivedAwardsFilter() =
+    user?.let {
+      TypedFilter(
+        types = COMMON_FEED_TYPES,
+        filter =
+          JsonFilter(
+            kinds = listOf(BadgeAwardEvent.KIND),
+            tags = mapOf("p" to listOf(it.pubkeyHex)),
+            limit = 20,
+          ),
+      )
+    }
+
+  val userInfoChannel = requestNewChannel()
+
+  override fun updateChannelFilters() {
+    userInfoChannel.typedFilters =
+      listOfNotNull(
+          createUserInfoFilter(),
+          createUserPostsFilter(),
+          createFollowFilter(),
+          createFollowersFilter(),
+          createUserReceivedZapsFilter(),
+          createAcceptedAwardsFilter(),
+          createReceivedAwardsFilter(),
+          createBookmarksFilter(),
         )
-    }
-
-    fun createUserPostsFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(
-                    TextNoteEvent.kind,
-                    GenericRepostEvent.kind,
-                    RepostEvent.kind,
-                    LongTextNoteEvent.kind,
-                    AudioTrackEvent.kind,
-                    AudioHeaderEvent.kind,
-                    PinListEvent.kind,
-                    PollNoteEvent.kind,
-                    HighlightEvent.kind
-                ),
-                authors = listOf(it.pubkeyHex),
-                limit = 200
-            )
-        )
-    }
-
-    fun createUserReceivedZapsFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(LnZapEvent.kind),
-                tags = mapOf("p" to listOf(it.pubkeyHex))
-            )
-        )
-    }
-
-    fun createFollowFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(ContactListEvent.kind),
-                authors = listOf(it.pubkeyHex),
-                limit = 1
-            )
-        )
-    }
-
-    fun createFollowersFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(ContactListEvent.kind),
-                tags = mapOf("p" to listOf(it.pubkeyHex))
-            )
-        )
-    }
-
-    fun createAcceptedAwardsFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(BadgeProfilesEvent.kind),
-                authors = listOf(it.pubkeyHex),
-                limit = 1
-            )
-        )
-    }
-
-    fun createBookmarksFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(BookmarkListEvent.kind, PeopleListEvent.kind, AppRecommendationEvent.kind),
-                authors = listOf(it.pubkeyHex),
-                limit = 100
-            )
-        )
-    }
-
-    fun createReceivedAwardsFilter() = user?.let {
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter = JsonFilter(
-                kinds = listOf(BadgeAwardEvent.kind),
-                tags = mapOf("p" to listOf(it.pubkeyHex)),
-                limit = 20
-            )
-        )
-    }
-
-    val userInfoChannel = requestNewChannel()
-
-    override fun updateChannelFilters() {
-        userInfoChannel.typedFilters = listOfNotNull(
-            createUserInfoFilter(),
-            createUserPostsFilter(),
-            createFollowFilter(),
-            createFollowersFilter(),
-            createUserReceivedZapsFilter(),
-            createAcceptedAwardsFilter(),
-            createReceivedAwardsFilter(),
-            createBookmarksFilter()
-        ).ifEmpty { null }
-    }
+        .ifEmpty { null }
+  }
 }

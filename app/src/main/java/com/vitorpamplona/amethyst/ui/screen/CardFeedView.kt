@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.Crossfade
@@ -35,224 +55,225 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefresheableCardView(
-    viewModel: CardFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    routeForLastRead: String,
-    scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true
+  viewModel: CardFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+  routeForLastRead: String,
+  scrollStateKey: String? = null,
+  enablePullRefresh: Boolean = true,
 ) {
-    var refreshing by remember { mutableStateOf(false) }
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing,
-        onRefresh =
-        {
-            refreshing = true
-            viewModel.invalidateData()
-            refreshing = false
-        }
+  var refreshing by remember { mutableStateOf(false) }
+  val pullRefreshState =
+    rememberPullRefreshState(
+      refreshing,
+      onRefresh = {
+        refreshing = true
+        viewModel.invalidateData()
+        refreshing = false
+      },
     )
 
-    val modifier = if (enablePullRefresh) {
-        Modifier.fillMaxSize().pullRefresh(pullRefreshState)
+  val modifier =
+    if (enablePullRefresh) {
+      Modifier.fillMaxSize().pullRefresh(pullRefreshState)
     } else {
-        Modifier.fillMaxSize()
+      Modifier.fillMaxSize()
     }
 
-    Box(modifier) {
-        SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+  Box(modifier) {
+    SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
 
-        if (enablePullRefresh) {
-            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
-        }
+    if (enablePullRefresh) {
+      PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
     }
+  }
 }
 
 @Composable
 private fun SaveableCardFeedState(
-    viewModel: CardFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    routeForLastRead: String,
-    scrollStateKey: String? = null
+  viewModel: CardFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+  routeForLastRead: String,
+  scrollStateKey: String? = null,
 ) {
-    val listState = if (scrollStateKey != null) {
-        rememberForeverLazyListState(scrollStateKey)
+  val listState =
+    if (scrollStateKey != null) {
+      rememberForeverLazyListState(scrollStateKey)
     } else {
-        rememberLazyListState()
+      rememberLazyListState()
     }
 
-    WatchScrollToTop(viewModel, listState)
+  WatchScrollToTop(viewModel, listState)
 
-    RenderCardFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+  RenderCardFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
 }
 
 @Composable
 private fun WatchScrollToTop(
-    viewModel: CardFeedViewModel,
-    listState: LazyListState
+  viewModel: CardFeedViewModel,
+  listState: LazyListState,
 ) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
+  val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
 
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
-        }
+  LaunchedEffect(scrollToTop) {
+    if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+      listState.scrollToItem(index = 0)
+      viewModel.sentToTop()
     }
+  }
 }
 
 @Composable
 fun RenderCardFeed(
-    viewModel: CardFeedViewModel,
-    accountViewModel: AccountViewModel,
-    listState: LazyListState,
-    nav: (String) -> Unit,
-    routeForLastRead: String
+  viewModel: CardFeedViewModel,
+  accountViewModel: AccountViewModel,
+  listState: LazyListState,
+  nav: (String) -> Unit,
+  routeForLastRead: String,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
-        modifier = Modifier.fillMaxSize(),
-        targetState = feedState,
-        animationSpec = tween(durationMillis = 100)
-    ) { state ->
-        when (state) {
-            is CardFeedState.Empty -> {
-                FeedEmpty {
-                    viewModel.invalidateData()
-                }
-            }
-            is CardFeedState.FeedError -> {
-                FeedError(state.errorMessage) {
-                    viewModel.invalidateData()
-                }
-            }
-            is CardFeedState.Loaded -> {
-                FeedLoaded(
-                    state = state,
-                    listState = listState,
-                    routeForLastRead = routeForLastRead,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-            }
-            CardFeedState.Loading -> {
-                LoadingFeed()
-            }
-        }
+  Crossfade(
+    modifier = Modifier.fillMaxSize(),
+    targetState = feedState,
+    animationSpec = tween(durationMillis = 100),
+  ) { state ->
+    when (state) {
+      is CardFeedState.Empty -> {
+        FeedEmpty { viewModel.invalidateData() }
+      }
+      is CardFeedState.FeedError -> {
+        FeedError(state.errorMessage) { viewModel.invalidateData() }
+      }
+      is CardFeedState.Loaded -> {
+        FeedLoaded(
+          state = state,
+          listState = listState,
+          routeForLastRead = routeForLastRead,
+          accountViewModel = accountViewModel,
+          nav = nav,
+        )
+      }
+      CardFeedState.Loading -> {
+        LoadingFeed()
+      }
     }
+  }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedLoaded(
-    state: CardFeedState.Loaded,
-    listState: LazyListState,
-    routeForLastRead: String,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  state: CardFeedState.Loaded,
+  listState: LazyListState,
+  routeForLastRead: String,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = FeedPadding,
-        state = listState
-    ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
-            val defaultModifier = remember {
-                Modifier.fillMaxWidth().animateItemPlacement()
-            }
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = FeedPadding,
+    state = listState,
+  ) {
+    itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
+      val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-            Row(defaultModifier) {
-                RenderCardItem(item, routeForLastRead, showHidden = state.showHidden.value, accountViewModel, nav)
-            }
-        }
+      Row(defaultModifier) {
+        RenderCardItem(
+          item,
+          routeForLastRead,
+          showHidden = state.showHidden.value,
+          accountViewModel,
+          nav,
+        )
+      }
     }
+  }
 }
 
 @Composable
 private fun RenderCardItem(
-    item: Card,
-    routeForLastRead: String,
-    showHidden: Boolean,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  item: Card,
+  routeForLastRead: String,
+  showHidden: Boolean,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    when (item) {
-        is NoteCard -> NoteCardCompose(
-            item,
-            isBoostedNote = false,
-            accountViewModel = accountViewModel,
-            showHidden = showHidden,
-            nav = nav,
-            routeForLastRead = routeForLastRead
-        )
-
-        is ZapUserSetCard -> ZapUserSetCompose(
-            item,
-            isInnerNote = false,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            routeForLastRead = routeForLastRead
-        )
-
-        is MultiSetCard -> MultiSetCompose(
-            item,
-            accountViewModel = accountViewModel,
-            showHidden = showHidden,
-            nav = nav,
-            routeForLastRead = routeForLastRead
-        )
-
-        is BadgeCard -> BadgeCompose(
-            item,
-            accountViewModel = accountViewModel,
-            showHidden = showHidden,
-            nav = nav,
-            routeForLastRead = routeForLastRead
-        )
-
-        is MessageSetCard -> MessageSetCompose(
-            messageSetCard = item,
-            routeForLastRead = routeForLastRead,
-            showHidden = showHidden,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-    }
+  when (item) {
+    is NoteCard ->
+      NoteCardCompose(
+        item,
+        isBoostedNote = false,
+        accountViewModel = accountViewModel,
+        showHidden = showHidden,
+        nav = nav,
+        routeForLastRead = routeForLastRead,
+      )
+    is ZapUserSetCard ->
+      ZapUserSetCompose(
+        item,
+        isInnerNote = false,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        routeForLastRead = routeForLastRead,
+      )
+    is MultiSetCard ->
+      MultiSetCompose(
+        item,
+        accountViewModel = accountViewModel,
+        showHidden = showHidden,
+        nav = nav,
+        routeForLastRead = routeForLastRead,
+      )
+    is BadgeCard ->
+      BadgeCompose(
+        item,
+        accountViewModel = accountViewModel,
+        showHidden = showHidden,
+        nav = nav,
+        routeForLastRead = routeForLastRead,
+      )
+    is MessageSetCard ->
+      MessageSetCompose(
+        messageSetCard = item,
+        routeForLastRead = routeForLastRead,
+        showHidden = showHidden,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
+  }
 }
 
 @Composable
 fun NoteCardCompose(
-    baseNote: NoteCard,
-    routeForLastRead: String? = null,
-    modifier: Modifier = remember { Modifier },
-    isBoostedNote: Boolean = false,
-    isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
-    makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
-    showHidden: Boolean = false,
-    parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  baseNote: NoteCard,
+  routeForLastRead: String? = null,
+  modifier: Modifier = remember { Modifier },
+  isBoostedNote: Boolean = false,
+  isQuotedNote: Boolean = false,
+  unPackReply: Boolean = true,
+  makeItShort: Boolean = false,
+  addMarginTop: Boolean = true,
+  showHidden: Boolean = false,
+  parentBackgroundColor: MutableState<Color>? = null,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val note = remember(baseNote) {
-        baseNote.note
-    }
+  val note = remember(baseNote) { baseNote.note }
 
-    NoteCompose(
-        baseNote = note,
-        routeForLastRead = routeForLastRead,
-        modifier = modifier,
-        isBoostedNote = isBoostedNote,
-        isQuotedNote = isQuotedNote,
-        unPackReply = unPackReply,
-        makeItShort = makeItShort,
-        addMarginTop = addMarginTop,
-        showHidden = showHidden,
-        parentBackgroundColor = parentBackgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav
-    )
+  NoteCompose(
+    baseNote = note,
+    routeForLastRead = routeForLastRead,
+    modifier = modifier,
+    isBoostedNote = isBoostedNote,
+    isQuotedNote = isQuotedNote,
+    unPackReply = unPackReply,
+    makeItShort = makeItShort,
+    addMarginTop = addMarginTop,
+    showHidden = showHidden,
+    parentBackgroundColor = parentBackgroundColor,
+    accountViewModel = accountViewModel,
+    nav = nav,
+  )
 }

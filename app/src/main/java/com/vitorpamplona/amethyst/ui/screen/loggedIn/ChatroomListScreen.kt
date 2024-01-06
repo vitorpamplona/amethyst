@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -62,272 +82,266 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ChatroomListScreen(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
+  newFeedViewModel: NostrChatroomListNewFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val windowSizeClass = accountViewModel.settings.windowSizeClass.value
+  val windowSizeClass = accountViewModel.settings.windowSizeClass.value
 
-    val twoPane by remember {
-        derivedStateOf {
-            when (windowSizeClass?.widthSizeClass) {
-                WindowWidthSizeClass.Compact -> false
-                WindowWidthSizeClass.Expanded, WindowWidthSizeClass.Medium -> true
-                else -> false
-            }
-        }
+  val twoPane by remember {
+    derivedStateOf {
+      when (windowSizeClass?.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> false
+        WindowWidthSizeClass.Expanded,
+        WindowWidthSizeClass.Medium, -> true
+        else -> false
+      }
     }
+  }
 
-    if (twoPane && windowSizeClass != null) {
-        ChatroomListTwoPane(
-            knownFeedViewModel = knownFeedViewModel,
-            newFeedViewModel = newFeedViewModel,
-            widthSizeClass = windowSizeClass.widthSizeClass,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-    } else {
-        ChatroomListScreenOnlyList(
-            knownFeedViewModel = knownFeedViewModel,
-            newFeedViewModel = newFeedViewModel,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-    }
+  if (twoPane && windowSizeClass != null) {
+    ChatroomListTwoPane(
+      knownFeedViewModel = knownFeedViewModel,
+      newFeedViewModel = newFeedViewModel,
+      widthSizeClass = windowSizeClass.widthSizeClass,
+      accountViewModel = accountViewModel,
+      nav = nav,
+    )
+  } else {
+    ChatroomListScreenOnlyList(
+      knownFeedViewModel = knownFeedViewModel,
+      newFeedViewModel = newFeedViewModel,
+      accountViewModel = accountViewModel,
+      nav = nav,
+    )
+  }
 }
 
 data class RouteId(val route: String, val id: String)
 
 @Composable
 fun ChatroomListTwoPane(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    widthSizeClass: WindowWidthSizeClass,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
+  newFeedViewModel: NostrChatroomListNewFeedViewModel,
+  widthSizeClass: WindowWidthSizeClass,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    /**
-     * The index of the currently selected word, or `null` if none is selected
-     */
-    var selectedRoute: RouteId? by remember { mutableStateOf(null) }
+  /** The index of the currently selected word, or `null` if none is selected */
+  var selectedRoute: RouteId? by remember { mutableStateOf(null) }
 
-    val navInterceptor = remember {
-        { fullRoute: String ->
-            if (fullRoute.startsWith("Room/") || fullRoute.startsWith("Channel/")) {
-                val route = fullRoute.substringBefore("/")
-                val id = fullRoute.substringAfter("/")
-                selectedRoute = RouteId(route, id)
-            } else {
-                nav(fullRoute)
-            }
-        }
+  val navInterceptor = remember {
+    { fullRoute: String ->
+      if (fullRoute.startsWith("Room/") || fullRoute.startsWith("Channel/")) {
+        val route = fullRoute.substringBefore("/")
+        val id = fullRoute.substringAfter("/")
+        selectedRoute = RouteId(route, id)
+      } else {
+        nav(fullRoute)
+      }
     }
+  }
 
-    val strategy = remember {
-        if (widthSizeClass == WindowWidthSizeClass.Expanded) {
-            HorizontalTwoPaneStrategy(
-                splitFraction = 1f / 3f
-            )
-        } else {
-            HorizontalTwoPaneStrategy(
-                splitFraction = 1f / 2.5f
-            )
-        }
+  val strategy = remember {
+    if (widthSizeClass == WindowWidthSizeClass.Expanded) {
+      HorizontalTwoPaneStrategy(
+        splitFraction = 1f / 3f,
+      )
+    } else {
+      HorizontalTwoPaneStrategy(
+        splitFraction = 1f / 2.5f,
+      )
     }
+  }
 
-    TwoPane(
-        first = {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-                ChatroomListScreenOnlyList(
-                    knownFeedViewModel,
-                    newFeedViewModel,
-                    accountViewModel,
-                    navInterceptor
-                )
-                Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
-                    ChannelFabColumn(accountViewModel, nav)
-                }
-                Divider(
-                    modifier = Modifier
-                        .fillMaxHeight() // fill the max height
-                        .width(DividerThickness)
-                )
-            }
-        },
-        second = {
-            selectedRoute?.let {
-                if (it.route == "Room") {
-                    ChatroomScreen(
-                        roomId = it.id,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
-                }
+  TwoPane(
+    first = {
+      Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+        ChatroomListScreenOnlyList(
+          knownFeedViewModel,
+          newFeedViewModel,
+          accountViewModel,
+          navInterceptor,
+        )
+        Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
+          ChannelFabColumn(accountViewModel, nav)
+        }
+        Divider(
+          modifier =
+            Modifier.fillMaxHeight() // fill the max height
+              .width(DividerThickness),
+        )
+      }
+    },
+    second = {
+      selectedRoute?.let {
+        if (it.route == "Room") {
+          ChatroomScreen(
+            roomId = it.id,
+            accountViewModel = accountViewModel,
+            nav = nav,
+          )
+        }
 
-                if (it.route == "Channel") {
-                    ChannelScreen(
-                        channelId = it.id,
-                        accountViewModel = accountViewModel,
-                        nav = nav
-                    )
-                }
-            }
-        },
-        strategy = strategy,
-        displayFeatures = accountViewModel.settings.displayFeatures.value,
-        foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
-        modifier = Modifier.fillMaxSize()
-    )
+        if (it.route == "Channel") {
+          ChannelScreen(
+            channelId = it.id,
+            accountViewModel = accountViewModel,
+            nav = nav,
+          )
+        }
+      }
+    },
+    strategy = strategy,
+    displayFeatures = accountViewModel.settings.displayFeatures.value,
+    foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
+    modifier = Modifier.fillMaxSize(),
+  )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatroomListScreenOnlyList(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
+  newFeedViewModel: NostrChatroomListNewFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val pagerState = rememberPagerState() { 2 }
-    val coroutineScope = rememberCoroutineScope()
+  val pagerState = rememberPagerState { 2 }
+  val coroutineScope = rememberCoroutineScope()
 
-    var moreActionsExpanded by remember { mutableStateOf(false) }
-    val markKnownAsRead = remember { mutableStateOf(false) }
-    val markNewAsRead = remember { mutableStateOf(false) }
+  var moreActionsExpanded by remember { mutableStateOf(false) }
+  val markKnownAsRead = remember { mutableStateOf(false) }
+  val markNewAsRead = remember { mutableStateOf(false) }
 
-    WatchAccountForListScreen(knownFeedViewModel, newFeedViewModel, accountViewModel)
+  WatchAccountForListScreen(knownFeedViewModel, newFeedViewModel, accountViewModel)
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifeCycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                NostrChatroomListDataSource.start()
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
+  val lifeCycleOwner = LocalLifecycleOwner.current
+  DisposableEffect(lifeCycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        NostrChatroomListDataSource.start()
+      }
     }
 
-    val tabs by remember(knownFeedViewModel, markKnownAsRead) {
-        derivedStateOf {
-            listOf(
-                ChatroomListTabItem(R.string.known, knownFeedViewModel, markKnownAsRead),
-                ChatroomListTabItem(R.string.new_requests, newFeedViewModel, markNewAsRead)
-            )
-        }
+    lifeCycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+  }
+
+  val tabs by
+    remember(knownFeedViewModel, markKnownAsRead) {
+      derivedStateOf {
+        listOf(
+          ChatroomListTabItem(R.string.known, knownFeedViewModel, markKnownAsRead),
+          ChatroomListTabItem(R.string.new_requests, newFeedViewModel, markNewAsRead),
+        )
+      }
     }
 
-    Column(
-        modifier = Modifier.fillMaxHeight()
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            TabRow(
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                selectedTabIndex = pagerState.currentPage,
-                modifier = TabRowHeight
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        text = {
-                            Text(text = stringResource(tab.resource))
-                        },
-                        onClick = {
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                        }
-                    )
-                }
-            }
-
-            IconButton(
-                modifier = Modifier
-                    .size(40.dp)
-                    .align(Alignment.CenterEnd),
-                onClick = { moreActionsExpanded = true }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.placeholderText
-                )
-
-                ChatroomTabMenu(
-                    moreActionsExpanded,
-                    { moreActionsExpanded = false },
-                    { markKnownAsRead.value = true },
-                    { markNewAsRead.value = true }
-                )
-            }
+  Column(
+    modifier = Modifier.fillMaxHeight(),
+  ) {
+    Box(Modifier.fillMaxWidth()) {
+      TabRow(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight,
+      ) {
+        tabs.forEachIndexed { index, tab ->
+          Tab(
+            selected = pagerState.currentPage == index,
+            text = { Text(text = stringResource(tab.resource)) },
+            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+          )
         }
+      }
 
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            ChatroomListFeedView(
-                viewModel = tabs[page].viewModel,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                markAsRead = tabs[page].markAsRead
-            )
-        }
+      IconButton(
+        modifier = Modifier.size(40.dp).align(Alignment.CenterEnd),
+        onClick = { moreActionsExpanded = true },
+      ) {
+        Icon(
+          imageVector = Icons.Default.MoreVert,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.placeholderText,
+        )
+
+        ChatroomTabMenu(
+          moreActionsExpanded,
+          { moreActionsExpanded = false },
+          { markKnownAsRead.value = true },
+          { markNewAsRead.value = true },
+        )
+      }
     }
+
+    HorizontalPager(
+      state = pagerState,
+      modifier = Modifier.fillMaxSize(),
+    ) { page ->
+      ChatroomListFeedView(
+        viewModel = tabs[page].viewModel,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        markAsRead = tabs[page].markAsRead,
+      )
+    }
+  }
 }
 
 @Composable
-fun WatchAccountForListScreen(knownFeedViewModel: NostrChatroomListKnownFeedViewModel, newFeedViewModel: NostrChatroomListNewFeedViewModel, accountViewModel: AccountViewModel) {
-    LaunchedEffect(accountViewModel) {
-        launch(Dispatchers.IO) {
-            NostrChatroomListDataSource.start()
-            knownFeedViewModel.invalidateData(true)
-            newFeedViewModel.invalidateData(true)
-        }
+fun WatchAccountForListScreen(
+  knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
+  newFeedViewModel: NostrChatroomListNewFeedViewModel,
+  accountViewModel: AccountViewModel,
+) {
+  LaunchedEffect(accountViewModel) {
+    launch(Dispatchers.IO) {
+      NostrChatroomListDataSource.start()
+      knownFeedViewModel.invalidateData(true)
+      newFeedViewModel.invalidateData(true)
     }
+  }
 }
 
 @Immutable
-class ChatroomListTabItem(val resource: Int, val viewModel: FeedViewModel, val markAsRead: MutableState<Boolean>)
+class ChatroomListTabItem(
+  val resource: Int,
+  val viewModel: FeedViewModel,
+  val markAsRead: MutableState<Boolean>,
+)
 
 @Composable
 fun ChatroomTabMenu(
-    expanded: Boolean,
-    onDismiss: () -> Unit,
-    onMarkKnownAsRead: () -> Unit,
-    onMarkNewAsRead: () -> Unit
+  expanded: Boolean,
+  onDismiss: () -> Unit,
+  onMarkKnownAsRead: () -> Unit,
+  onMarkNewAsRead: () -> Unit,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = {
-                Text(stringResource(R.string.mark_all_known_as_read))
-            },
-            onClick = {
-                onMarkKnownAsRead()
-                onDismiss()
-            }
-        )
-        DropdownMenuItem(
-            text = {
-                Text(stringResource(R.string.mark_all_new_as_read))
-            },
-            onClick = {
-                onMarkNewAsRead()
-                onDismiss()
-            }
-        )
-        DropdownMenuItem(
-            text = {
-                Text(stringResource(R.string.mark_all_as_read))
-            },
-            onClick = {
-                onMarkKnownAsRead()
-                onMarkNewAsRead()
-                onDismiss()
-            }
-        )
-    }
+  DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+    DropdownMenuItem(
+      text = { Text(stringResource(R.string.mark_all_known_as_read)) },
+      onClick = {
+        onMarkKnownAsRead()
+        onDismiss()
+      },
+    )
+    DropdownMenuItem(
+      text = { Text(stringResource(R.string.mark_all_new_as_read)) },
+      onClick = {
+        onMarkNewAsRead()
+        onDismiss()
+      },
+    )
+    DropdownMenuItem(
+      text = { Text(stringResource(R.string.mark_all_as_read)) },
+      onClick = {
+        onMarkKnownAsRead()
+        onMarkNewAsRead()
+        onDismiss()
+      },
+    )
+  }
 }

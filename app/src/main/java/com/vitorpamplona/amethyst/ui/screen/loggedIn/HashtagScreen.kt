@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.foundation.clickable
@@ -31,135 +51,152 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
-fun HashtagScreen(tag: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    if (tag == null) return
+fun HashtagScreen(
+  tag: String?,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  if (tag == null) return
 
-    PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
+  PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
 }
 
 @Composable
-fun PrepareViewModelsHashtagScreen(tag: String, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val followsFeedViewModel: NostrHashtagFeedViewModel = viewModel(
-        key = tag + "HashtagFeedViewModel",
-        factory = NostrHashtagFeedViewModel.Factory(
-            tag,
-            accountViewModel.account
-        )
+fun PrepareViewModelsHashtagScreen(
+  tag: String,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val followsFeedViewModel: NostrHashtagFeedViewModel =
+    viewModel(
+      key = tag + "HashtagFeedViewModel",
+      factory =
+        NostrHashtagFeedViewModel.Factory(
+          tag,
+          accountViewModel.account,
+        ),
     )
 
-    HashtagScreen(tag, followsFeedViewModel, accountViewModel, nav)
+  HashtagScreen(tag, followsFeedViewModel, accountViewModel, nav)
 }
 
 @Composable
-fun HashtagScreen(tag: String, feedViewModel: NostrHashtagFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
+fun HashtagScreen(
+  tag: String,
+  feedViewModel: NostrHashtagFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val lifeCycleOwner = LocalLifecycleOwner.current
 
-    NostrHashtagDataSource.loadHashtag(tag)
+  NostrHashtagDataSource.loadHashtag(tag)
 
-    DisposableEffect(tag) {
+  DisposableEffect(tag) {
+    NostrHashtagDataSource.start()
+    feedViewModel.invalidateData()
+
+    onDispose {
+      NostrHashtagDataSource.loadHashtag(null)
+      NostrHashtagDataSource.stop()
+    }
+  }
+
+  DisposableEffect(lifeCycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        println("Hashtag Start")
+        NostrHashtagDataSource.loadHashtag(tag)
         NostrHashtagDataSource.start()
         feedViewModel.invalidateData()
-
-        onDispose {
-            NostrHashtagDataSource.loadHashtag(null)
-            NostrHashtagDataSource.stop()
-        }
+      }
+      if (event == Lifecycle.Event.ON_PAUSE) {
+        println("Hashtag Stop")
+        NostrHashtagDataSource.loadHashtag(null)
+        NostrHashtagDataSource.stop()
+      }
     }
 
-    DisposableEffect(lifeCycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("Hashtag Start")
-                NostrHashtagDataSource.loadHashtag(tag)
-                NostrHashtagDataSource.start()
-                feedViewModel.invalidateData()
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Hashtag Stop")
-                NostrHashtagDataSource.loadHashtag(null)
-                NostrHashtagDataSource.stop()
-            }
-        }
+    lifeCycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+  }
 
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
+  Column(Modifier.fillMaxHeight()) {
+    Column(
+      modifier = Modifier.padding(vertical = 0.dp),
+    ) {
+      RefresheableFeedView(
+        feedViewModel,
+        null,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
     }
-
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
-    }
+  }
 }
 
 @Composable
-fun HashtagHeader(tag: String, modifier: Modifier = StdPadding, account: AccountViewModel, onClick: () -> Unit = { }) {
-    Column(
-        Modifier.fillMaxWidth().clickable { onClick() }
-    ) {
-        Column(modifier = modifier) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    "#$tag",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-
-                HashtagActionOptions(tag, account)
-            }
-        }
-
-        Divider(
-            thickness = DividerThickness
+fun HashtagHeader(
+  tag: String,
+  modifier: Modifier = StdPadding,
+  account: AccountViewModel,
+  onClick: () -> Unit = {},
+) {
+  Column(
+    Modifier.fillMaxWidth().clickable { onClick() },
+  ) {
+    Column(modifier = modifier) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+      ) {
+        Text(
+          "#$tag",
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.weight(1f),
         )
+
+        HashtagActionOptions(tag, account)
+      }
     }
+
+    Divider(
+      thickness = DividerThickness,
+    )
+  }
 }
 
 @Composable
 fun HashtagActionOptions(
-    tag: String,
-    accountViewModel: AccountViewModel
+  tag: String,
+  accountViewModel: AccountViewModel,
 ) {
-    val userState by accountViewModel.userProfile().live().follows.observeAsState()
-    val isFollowingTag by remember(userState) {
-        derivedStateOf {
-            userState?.user?.isFollowingHashtagCached(tag) ?: false
-        }
+  val userState by accountViewModel.userProfile().live().follows.observeAsState()
+  val isFollowingTag by
+    remember(userState) {
+      derivedStateOf { userState?.user?.isFollowingHashtagCached(tag) ?: false }
     }
 
-    if (isFollowingTag) {
-        UnfollowButton {
-            if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow
-                )
-            } else {
-                accountViewModel.unfollowHashtag(tag)
-            }
-        }
-    } else {
-        FollowButton {
-            if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_follow
-                )
-            } else {
-                accountViewModel.followHashtag(tag)
-            }
-        }
+  if (isFollowingTag) {
+    UnfollowButton {
+      if (!accountViewModel.isWriteable()) {
+        accountViewModel.toast(
+          R.string.read_only_user,
+          R.string.login_with_a_private_key_to_be_able_to_unfollow,
+        )
+      } else {
+        accountViewModel.unfollowHashtag(tag)
+      }
     }
+  } else {
+    FollowButton {
+      if (!accountViewModel.isWriteable()) {
+        accountViewModel.toast(
+          R.string.read_only_user,
+          R.string.login_with_a_private_key_to_be_able_to_follow,
+        )
+      } else {
+        accountViewModel.followHashtag(tag)
+      }
+    }
+  }
 }

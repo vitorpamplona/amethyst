@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.app.Activity
@@ -36,124 +56,121 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
-    accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+  accountStateViewModel: AccountStateViewModel,
+  sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
-    val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
+  val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
-    Crossfade(
-        targetState = accountState,
-        animationSpec = tween(durationMillis = 100),
-        label = "AccountState"
-    ) { state ->
-        when (state) {
-            is AccountState.Loading -> {
-                LoadingAccounts()
-            }
-            is AccountState.LoggedOff -> {
-                LoginPage(accountStateViewModel, isFirstLogin = true)
-            }
-            is AccountState.LoggedIn -> {
-                CompositionLocalProvider(
-                    LocalViewModelStoreOwner provides state.currentViewModelStore
-                ) {
-                    LoggedInPage(
-                        state.account,
-                        accountStateViewModel,
-                        sharedPreferencesViewModel
-                    )
-                }
-            }
-            is AccountState.LoggedInViewOnly -> {
-                CompositionLocalProvider(
-                    LocalViewModelStoreOwner provides state.currentViewModelStore
-                ) {
-                    LoggedInPage(
-                        state.account,
-                        accountStateViewModel,
-                        sharedPreferencesViewModel
-                    )
-                }
-            }
+  Crossfade(
+    targetState = accountState,
+    animationSpec = tween(durationMillis = 100),
+    label = "AccountState",
+  ) { state ->
+    when (state) {
+      is AccountState.Loading -> {
+        LoadingAccounts()
+      }
+      is AccountState.LoggedOff -> {
+        LoginPage(accountStateViewModel, isFirstLogin = true)
+      }
+      is AccountState.LoggedIn -> {
+        CompositionLocalProvider(
+          LocalViewModelStoreOwner provides state.currentViewModelStore,
+        ) {
+          LoggedInPage(
+            state.account,
+            accountStateViewModel,
+            sharedPreferencesViewModel,
+          )
         }
+      }
+      is AccountState.LoggedInViewOnly -> {
+        CompositionLocalProvider(
+          LocalViewModelStoreOwner provides state.currentViewModelStore,
+        ) {
+          LoggedInPage(
+            state.account,
+            accountStateViewModel,
+            sharedPreferencesViewModel,
+          )
+        }
+      }
     }
+  }
 }
 
 @Composable
 fun LoggedInPage(
-    account: Account,
-    accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+  account: Account,
+  accountStateViewModel: AccountStateViewModel,
+  sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
-    val accountViewModel: AccountViewModel = viewModel(
-        key = "AccountViewModel",
-        factory = AccountViewModel.Factory(
-            account,
-            sharedPreferencesViewModel.sharedPrefs
-        )
+  val accountViewModel: AccountViewModel =
+    viewModel(
+      key = "AccountViewModel",
+      factory =
+        AccountViewModel.Factory(
+          account,
+          sharedPreferencesViewModel.sharedPrefs,
+        ),
     )
 
-    val activity = getActivity() as MainActivity
-    // Find a better way to associate these two.
-    accountViewModel.serviceManager = activity.serviceManager
+  val activity = getActivity() as MainActivity
+  // Find a better way to associate these two.
+  accountViewModel.serviceManager = activity.serviceManager
 
-    if (accountViewModel.account.signer is NostrSignerExternal) {
-        val launcher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult(),
-            onResult = { result ->
-                if (result.resultCode != Activity.RESULT_OK) {
-                    accountViewModel.toast(
-                        R.string.sign_request_rejected,
-                        R.string.sign_request_rejected_description
-                    )
-                } else {
-                    result.data?.let {
-                        accountViewModel.runOnIO {
-                            accountViewModel.account.signer.launcher.newResult(it)
-                        }
-                    }
-                }
-            }
-        )
-
-        DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity) {
-            accountViewModel.account.signer.launcher.registerLauncher(
-                launcher = {
-                    try {
-                        activity.prepareToLaunchSigner()
-                        launcher.launch(it)
-                    } catch (e: Exception) {
-                        Log.e("Signer", "Error opening Signer app", e)
-                        accountViewModel.toast(
-                            R.string.error_opening_external_signer,
-                            R.string.error_opening_external_signer_description
-                        )
-                    }
-                },
-                contentResolver = { Amethyst.instance.contentResolver }
+  if (accountViewModel.account.signer is NostrSignerExternal) {
+    val launcher =
+      rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = { result ->
+          if (result.resultCode != Activity.RESULT_OK) {
+            accountViewModel.toast(
+              R.string.sign_request_rejected,
+              R.string.sign_request_rejected_description,
             )
-            onDispose {
-                accountViewModel.account.signer.launcher.clearLauncher()
+          } else {
+            result.data?.let {
+              accountViewModel.runOnIO { accountViewModel.account.signer.launcher.newResult(it) }
             }
-        }
-    }
+          }
+        },
+      )
 
-    MainScreen(accountViewModel, accountStateViewModel, sharedPreferencesViewModel)
+    DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity) {
+      accountViewModel.account.signer.launcher.registerLauncher(
+        launcher = {
+          try {
+            activity.prepareToLaunchSigner()
+            launcher.launch(it)
+          } catch (e: Exception) {
+            Log.e("Signer", "Error opening Signer app", e)
+            accountViewModel.toast(
+              R.string.error_opening_external_signer,
+              R.string.error_opening_external_signer_description,
+            )
+          }
+        },
+        contentResolver = { Amethyst.instance.contentResolver },
+      )
+      onDispose { accountViewModel.account.signer.launcher.clearLauncher() }
+    }
+  }
+
+  MainScreen(accountViewModel, accountStateViewModel, sharedPreferencesViewModel)
 }
 
 class AccountCentricViewModelStore(val account: Account) : ViewModelStoreOwner {
-    override val viewModelStore = ViewModelStore()
+  override val viewModelStore = ViewModelStore()
 }
 
 @Composable
 fun LoadingAccounts() {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(stringResource(R.string.loading_account))
-    }
+  Column(
+    Modifier.fillMaxHeight().fillMaxWidth(),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center,
+  ) {
+    Text(stringResource(R.string.loading_account))
+  }
 }

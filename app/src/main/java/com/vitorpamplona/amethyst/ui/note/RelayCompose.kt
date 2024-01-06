@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Column
@@ -35,114 +55,114 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun RelayCompose(
-    relay: RelayInfo,
-    accountViewModel: AccountViewModel,
-    onAddRelay: () -> Unit,
-    onRemoveRelay: () -> Unit
+  relay: RelayInfo,
+  accountViewModel: AccountViewModel,
+  onAddRelay: () -> Unit,
+  onRemoveRelay: () -> Unit,
 ) {
-    val context = LocalContext.current
+  val context = LocalContext.current
 
-    Column() {
-        Row(
-            modifier = Modifier
-                .padding(start = 12.dp, end = 12.dp, top = 10.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        relay.url.trim().removePrefix("wss://"),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+  Column {
+    Row(
+      modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp),
+    ) {
+      Column(
+        modifier = Modifier.padding(start = 10.dp).weight(1f),
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          Text(
+            relay.url.trim().removePrefix("wss://"),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
 
-                    val lastTime by remember(relay.lastEvent) {
-                        derivedStateOf {
-                            timeAgo(relay.lastEvent, context = context)
-                        }
-                    }
-
-                    Text(
-                        text = lastTime,
-                        maxLines = 1
-                    )
-                }
-
-                Text(
-                    "${relay.counter} ${stringResource(R.string.posts_received)}",
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+          val lastTime by
+            remember(relay.lastEvent) {
+              derivedStateOf { timeAgo(relay.lastEvent, context = context) }
             }
 
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                RelayOptions(accountViewModel, relay, onAddRelay, onRemoveRelay)
-            }
+          Text(
+            text = lastTime,
+            maxLines = 1,
+          )
         }
 
-        Divider(
-            modifier = Modifier.padding(top = 10.dp),
-            thickness = DividerThickness
+        Text(
+          "${relay.counter} ${stringResource(R.string.posts_received)}",
+          color = MaterialTheme.colorScheme.placeholderText,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
         )
+      }
+
+      Column(modifier = Modifier.padding(start = 10.dp)) {
+        RelayOptions(accountViewModel, relay, onAddRelay, onRemoveRelay)
+      }
     }
+
+    Divider(
+      modifier = Modifier.padding(top = 10.dp),
+      thickness = DividerThickness,
+    )
+  }
 }
 
 @Composable
 private fun RelayOptions(
-    accountViewModel: AccountViewModel,
-    relay: RelayInfo,
-    onAddRelay: () -> Unit,
-    onRemoveRelay: () -> Unit
+  accountViewModel: AccountViewModel,
+  relay: RelayInfo,
+  onAddRelay: () -> Unit,
+  onRemoveRelay: () -> Unit,
 ) {
-    val userState by accountViewModel.userRelays.observeAsState()
+  val userState by accountViewModel.userRelays.observeAsState()
 
-    val isNotUsingRelay = remember(userState) {
-        accountViewModel.account.activeRelays()?.none { it.url == relay.url } == true
+  val isNotUsingRelay =
+    remember(userState) {
+      accountViewModel.account.activeRelays()?.none { it.url == relay.url } == true
     }
 
-    if (isNotUsingRelay) {
-        AddRelayButton(onAddRelay)
-    } else {
-        RemoveRelayButton(onRemoveRelay)
-    }
+  if (isNotUsingRelay) {
+    AddRelayButton(onAddRelay)
+  } else {
+    RemoveRelayButton(onRemoveRelay)
+  }
 }
 
 @Composable
 fun AddRelayButton(onClick: () -> Unit) {
-    Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        contentPadding = ButtonPadding
-    ) {
-        Text(text = stringResource(id = R.string.add), color = Color.White)
-    }
+  Button(
+    modifier = Modifier.padding(horizontal = 3.dp),
+    onClick = onClick,
+    shape = ButtonBorder,
+    colors =
+      ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+      ),
+    contentPadding = ButtonPadding,
+  ) {
+    Text(text = stringResource(id = R.string.add), color = Color.White)
+  }
 }
 
 @Composable
 fun RemoveRelayButton(onClick: () -> Unit) {
-    Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        contentPadding = ButtonPadding
-    ) {
-        Text(text = stringResource(R.string.remove), color = Color.White)
-    }
+  Button(
+    modifier = Modifier.padding(horizontal = 3.dp),
+    onClick = onClick,
+    shape = ButtonBorder,
+    colors =
+      ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+      ),
+    contentPadding = ButtonPadding,
+  ) {
+    Text(text = stringResource(R.string.remove), color = Color.White)
+  }
 }
 
 fun formattedDateTime(timestamp: Long): String {
-    return Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("MMM d, uuuu hh:mm a"))
+  return Instant.ofEpochSecond(timestamp)
+    .atZone(ZoneId.systemDefault())
+    .format(DateTimeFormatter.ofPattern("MMM d, uuuu hh:mm a"))
 }

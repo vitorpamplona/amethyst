@@ -1,19 +1,23 @@
-/*
- * Copyright 2022 The Android Open Source Project
+/**
+ * Copyright (c) 2023 Vitor Pamplona
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 package androidx.compose.material3.pullrefresh
 
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -25,51 +29,50 @@ import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.platform.inspectable
 
 /**
- * A modifier for translating the position and scaling the size of a pull-to-refresh indicator
- * based on the given [PullRefreshState].
- *
- * @sample androidx.compose.material.samples.PullRefreshIndicatorTransformSample
+ * A modifier for translating the position and scaling the size of a pull-to-refresh indicator based
+ * on the given [PullRefreshState].
  *
  * @param state The [PullRefreshState] which determines the position of the indicator.
  * @param scale A boolean controlling whether the indicator's size scales with pull progress or not.
+ * @sample androidx.compose.material.samples.PullRefreshIndicatorTransformSample
  */
-// TODO: Consider whether the state parameter should be replaced with lambdas.
 fun Modifier.pullRefreshIndicatorTransform(
-    state: PullRefreshState,
-    scale: Boolean = false
-) = inspectable(
-    inspectorInfo = debugInspectorInfo {
+  state: PullRefreshState,
+  scale: Boolean = false,
+) =
+  inspectable(
+    inspectorInfo =
+      debugInspectorInfo {
         name = "pullRefreshIndicatorTransform"
         properties["state"] = state
         properties["scale"] = scale
-    }
-) {
+      },
+  ) {
     Modifier
-        // Essentially we only want to clip the at the top, so the indicator will not appear when
-        // the position is 0. It is preferable to clip the indicator as opposed to the layout that
-        // contains the indicator, as this would also end up clipping shadows drawn by items in a
-        // list for example - so we leave the clipping to the scrolling container. We use MAX_VALUE
-        // for the other dimensions to allow for more room for elevation / arbitrary indicators - we
-        // only ever really want to clip at the top edge.
-        .drawWithContent {
-            clipRect(
-                top = 0f,
-                left = -Float.MAX_VALUE,
-                right = Float.MAX_VALUE,
-                bottom = Float.MAX_VALUE
-            ) {
-                this@drawWithContent.drawContent()
-            }
+      // Essentially we only want to clip the at the top, so the indicator will not appear when
+      // the position is 0. It is preferable to clip the indicator as opposed to the layout that
+      // contains the indicator, as this would also end up clipping shadows drawn by items in a
+      // list for example - so we leave the clipping to the scrolling container. We use MAX_VALUE
+      // for the other dimensions to allow for more room for elevation / arbitrary indicators - we
+      // only ever really want to clip at the top edge.
+      .drawWithContent {
+        clipRect(
+          top = 0f,
+          left = -Float.MAX_VALUE,
+          right = Float.MAX_VALUE,
+          bottom = Float.MAX_VALUE,
+        ) {
+          this@drawWithContent.drawContent()
         }
-        .graphicsLayer {
-            translationY = state.position - size.height
+      }
+      .graphicsLayer {
+        translationY = state.position - size.height
 
-            if (scale && !state.refreshing) {
-                val scaleFraction = LinearOutSlowInEasing
-                    .transform(state.position / state.threshold)
-                    .coerceIn(0f, 1f)
-                scaleX = scaleFraction
-                scaleY = scaleFraction
-            }
+        if (scale && !state.refreshing) {
+          val scaleFraction =
+            LinearOutSlowInEasing.transform(state.position / state.threshold).coerceIn(0f, 1f)
+          scaleX = scaleFraction
+          scaleY = scaleFraction
         }
-}
+      }
+  }

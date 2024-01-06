@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.quartz
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -9,7 +29,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class CitationTests {
-    val json = """
+  val json =
+    """
     {
   "content": "Astral:\n\nhttps://void.cat/d/A5Fba5B1bcxwEmeyoD9nBs.webp\n\nIris:\n\nhttps://void.cat/d/44hTcVvhRps6xYYs99QsqA.webp\n\nSnort:\n\nhttps://void.cat/d/4nJD5TRePuQChM5tzteYbU.webp\n\nAmethyst agrees with Astral which I suspect are both wrong. nostr:npub13sx6fp3pxq5rl70x0kyfmunyzaa9pzt5utltjm0p8xqyafndv95q3saapa nostr:npub1v0lxxxxutpvrelsksy8cdhgfux9l6a42hsj2qzquu2zk7vc9qnkszrqj49 nostr:npub1g53mukxnjkcmr94fhryzkqutdz2ukq4ks0gvy5af25rgmwsl4ngq43drvk nostr:npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z ",
   "created_at": 1683596206,
@@ -73,17 +94,18 @@ class CitationTests {
 }
 """
 
-    @Test
-    fun parseEvent() {
-        val event = Event.fromJson(json) as TextNoteEvent
+  @Test
+  fun parseEvent() {
+    val event = Event.fromJson(json) as TextNoteEvent
 
-        val expectedCitations = setOf(
-            "8c0da4862130283ff9e67d889df264177a508974e2feb96de139804ea66d6168",
-            "63fe6318dc58583cfe16810f86dd09e18bfd76aabc24a0081ce2856f330504ed",
-            "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0",
-            "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
-        )
+    val expectedCitations =
+      setOf(
+        "8c0da4862130283ff9e67d889df264177a508974e2feb96de139804ea66d6168",
+        "63fe6318dc58583cfe16810f86dd09e18bfd76aabc24a0081ce2856f330504ed",
+        "4523be58d395b1b196a9b8c82b038b6895cb02b683d0c253a955068dba1facd0",
+        "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
+      )
 
-        assertEquals(expectedCitations, event.citedUsers())
-    }
+    assertEquals(expectedCitations, event.citedUsers())
+  }
 }

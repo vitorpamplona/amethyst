@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.foundation.Image
@@ -33,94 +53,91 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 @Composable
 @Preview
 fun ChannelNamePreview() {
-    Column {
-        ChatHeaderLayout(
-            channelPicture = {
-                Image(
-                    painter = painterResource(R.drawable.github),
-                    contentDescription = stringResource(id = R.string.profile_banner),
-                    contentScale = ContentScale.FillWidth
-                )
-            },
-            firstRow = {
-                Text("This is my author", Modifier.weight(1f))
-                TimeAgo(TimeUtils.now())
-            },
-            secondRow = {
-                Text("This is a message from this person", Modifier.weight(1f))
-                NewItemsBubble()
-            },
-            onClick = {
-            }
+  Column {
+    ChatHeaderLayout(
+      channelPicture = {
+        Image(
+          painter = painterResource(R.drawable.github),
+          contentDescription = stringResource(id = R.string.profile_banner),
+          contentScale = ContentScale.FillWidth,
         )
+      },
+      firstRow = {
+        Text("This is my author", Modifier.weight(1f))
+        TimeAgo(TimeUtils.now())
+      },
+      secondRow = {
+        Text("This is a message from this person", Modifier.weight(1f))
+        NewItemsBubble()
+      },
+      onClick = {},
+    )
 
-        Divider()
+    Divider()
 
-        ListItem(
-            headlineContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("This is my author", Modifier.weight(1f))
-                    TimeAgo(TimeUtils.now())
-                }
-            },
-            supportingContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("This is a message from this person", Modifier.weight(1f))
-                    NewItemsBubble()
-                }
-            },
-            leadingContent = {
-                Image(
-                    painter = painterResource(R.drawable.github),
-                    contentDescription = stringResource(id = R.string.profile_banner),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Size55Modifier
-                )
-            }
+    ListItem(
+      headlineContent = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("This is my author", Modifier.weight(1f))
+          TimeAgo(TimeUtils.now())
+        }
+      },
+      supportingContent = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("This is a message from this person", Modifier.weight(1f))
+          NewItemsBubble()
+        }
+      },
+      leadingContent = {
+        Image(
+          painter = painterResource(R.drawable.github),
+          contentDescription = stringResource(id = R.string.profile_banner),
+          contentScale = ContentScale.FillWidth,
+          modifier = Size55Modifier,
         )
-    }
+      },
+    )
+  }
 }
 
 @Composable
 fun ChatHeaderLayout(
-    channelPicture: @Composable () -> Unit,
-    firstRow: @Composable RowScope.() -> Unit,
-    secondRow: @Composable RowScope.() -> Unit,
-    onClick: () -> Unit
+  channelPicture: @Composable () -> Unit,
+  firstRow: @Composable RowScope.() -> Unit,
+  secondRow: @Composable RowScope.() -> Unit,
+  onClick: () -> Unit,
 ) {
-    Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
+  Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
+    Row(
+      modifier = ChatHeadlineBorders,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Box(Size55Modifier) { channelPicture() }
+
+      Spacer(modifier = DoubleHorzSpacer)
+
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+      ) {
         Row(
-            modifier = ChatHeadlineBorders,
-            verticalAlignment = Alignment.CenterVertically
+          verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Size55Modifier) {
-                channelPicture()
-            }
-
-            Spacer(modifier = DoubleHorzSpacer)
-
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    firstRow()
-                }
-
-                Spacer(modifier = Height4dpModifier)
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    secondRow()
-                }
-            }
+          firstRow()
         }
 
-        Divider(
-            modifier = StdTopPadding,
-            thickness = DividerThickness
-        )
+        Spacer(modifier = Height4dpModifier)
+
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          secondRow()
+        }
+      }
     }
+
+    Divider(
+      modifier = StdTopPadding,
+      thickness = DividerThickness,
+    )
+  }
 }

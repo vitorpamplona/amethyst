@@ -57,7 +57,7 @@ subprojects {
 
             ktlint("1.1.0")
             ktfmt().googleStyle()
-            licenseHeaderFile rootProject.file('spotless/copyright.txt'), "package|import|class|object|sealed|open|interface|abstract "
+            licenseHeaderFile rootProject.file('spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
         }
 
         groovyGradle {

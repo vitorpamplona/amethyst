@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,47 +48,47 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 
 @Composable
 fun NotifyRequestDialog(
-    title: String,
-    textContent: String,
-    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    onDismiss: () -> Unit
+  title: String,
+  textContent: String,
+  buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+  onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(title)
-        },
-        text = {
-            val defaultBackground = MaterialTheme.colorScheme.background
-            val background = remember {
-                mutableStateOf(defaultBackground)
-            }
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(title) },
+    text = {
+      val defaultBackground = MaterialTheme.colorScheme.background
+      val background = remember { mutableStateOf(defaultBackground) }
 
-            TranslatableRichTextViewer(
-                textContent,
-                canPreview = true,
-                Modifier.fillMaxWidth(),
-                EmptyTagList,
-                background,
-                accountViewModel,
-                nav
-            )
-        },
-        confirmButton = {
-            Button(onClick = onDismiss, colors = buttonColors, contentPadding = PaddingValues(horizontal = Size16dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Done,
-                        contentDescription = null
-                    )
-                    Spacer(StdHorzSpacer)
-                    Text(stringResource(R.string.error_dialog_button_ok))
-                }
-            }
+      TranslatableRichTextViewer(
+        textContent,
+        canPreview = true,
+        Modifier.fillMaxWidth(),
+        EmptyTagList,
+        background,
+        accountViewModel,
+        nav,
+      )
+    },
+    confirmButton = {
+      Button(
+        onClick = onDismiss,
+        colors = buttonColors,
+        contentPadding = PaddingValues(horizontal = Size16dp),
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Icon(
+            imageVector = Icons.Outlined.Done,
+            contentDescription = null,
+          )
+          Spacer(StdHorzSpacer)
+          Text(stringResource(R.string.error_dialog_button_ok))
         }
-    )
+      }
+    },
+  )
 }

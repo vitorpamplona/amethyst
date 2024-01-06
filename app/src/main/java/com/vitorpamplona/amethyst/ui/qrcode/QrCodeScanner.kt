@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.qrcode
 
 import android.util.Log
@@ -13,51 +33,53 @@ import com.vitorpamplona.quartz.encoders.Nip19
 
 @Composable
 fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
-    SimpleQrCodeScanner {
-        try {
-            val nip19 = Nip19.uriToRoute(it)
-            val startingPage = when (nip19?.type) {
-                Nip19.Type.USER -> "User/${nip19.hex}"
-                Nip19.Type.NOTE -> "Note/${nip19.hex}"
-                Nip19.Type.EVENT -> "Event/${nip19.hex}"
-                Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
-                else -> null
-            }
-
-            if (startingPage != null) {
-                onScan(startingPage)
-            } else {
-                onScan(null)
-            }
-        } catch (e: Throwable) {
-            Log.e("NIP19 Scanner", "Error parsing $it", e)
-            // QR can be anything, do not throw errors.
-            onScan(null)
+  SimpleQrCodeScanner {
+    try {
+      val nip19 = Nip19.uriToRoute(it)
+      val startingPage =
+        when (nip19?.type) {
+          Nip19.Type.USER -> "User/${nip19.hex}"
+          Nip19.Type.NOTE -> "Note/${nip19.hex}"
+          Nip19.Type.EVENT -> "Event/${nip19.hex}"
+          Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
+          else -> null
         }
+
+      if (startingPage != null) {
+        onScan(startingPage)
+      } else {
+        onScan(null)
+      }
+    } catch (e: Throwable) {
+      Log.e("NIP19 Scanner", "Error parsing $it", e)
+      // QR can be anything, do not throw errors.
+      onScan(null)
     }
+  }
 }
 
 @Composable
 fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
-    val qrLauncher =
-        rememberLauncherForActivityResult(ScanContract()) {
-            if (it.contents != null) {
-                onScan(it.contents)
-            } else {
-                onScan(null)
-            }
-        }
-
-    val scanOptions = ScanOptions().apply {
-        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-        setPrompt(stringResource(id = R.string.point_to_the_qr_code))
-        setBeepEnabled(false)
-        setOrientationLocked(false)
-        addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)
+  val qrLauncher =
+    rememberLauncherForActivityResult(ScanContract()) {
+      if (it.contents != null) {
+        onScan(it.contents)
+      } else {
+        onScan(null)
+      }
     }
 
-    DisposableEffect(Unit) {
-        qrLauncher.launch(scanOptions)
-        onDispose { }
+  val scanOptions =
+    ScanOptions().apply {
+      setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+      setPrompt(stringResource(id = R.string.point_to_the_qr_code))
+      setBeepEnabled(false)
+      setOrientationLocked(false)
+      addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)
     }
+
+  DisposableEffect(Unit) {
+    qrLauncher.launch(scanOptions)
+    onDispose {}
+  }
 }

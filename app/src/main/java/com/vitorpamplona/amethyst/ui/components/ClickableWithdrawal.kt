@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.Crossfade
@@ -23,51 +43,43 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MayBeWithdrawal(lnurlWord: String) {
-    var lnWithdrawal by remember { mutableStateOf<String?>(null) }
+  var lnWithdrawal by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = lnurlWord) {
-        launch(Dispatchers.IO) {
-            lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord)
-        }
-    }
+  LaunchedEffect(key1 = lnurlWord) {
+    launch(Dispatchers.IO) { lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord) }
+  }
 
-    Crossfade(targetState = lnWithdrawal) {
-        if (it != null) {
-            ClickableWithdrawal(withdrawalString = it)
-        } else {
-            Text(
-                text = lnurlWord,
-                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-            )
-        }
+  Crossfade(targetState = lnWithdrawal) {
+    if (it != null) {
+      ClickableWithdrawal(withdrawalString = it)
+    } else {
+      Text(
+        text = lnurlWord,
+        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+      )
     }
+  }
 }
 
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
-    val context = LocalContext.current
+  val context = LocalContext.current
 
-    val withdraw = remember(withdrawalString) {
-        AnnotatedString("$withdrawalString ")
-    }
+  val withdraw = remember(withdrawalString) { AnnotatedString("$withdrawalString ") }
 
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+  var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
-    if (showErrorMessageDialog != null) {
-        ErrorMessageDialog(
-            title = context.getString(R.string.error_dialog_pay_withdraw_error),
-            textContent = showErrorMessageDialog ?: "",
-            onDismiss = { showErrorMessageDialog = null }
-        )
-    }
-
-    ClickableText(
-        text = withdraw,
-        onClick = {
-            payViaIntent(withdrawalString, context) {
-                showErrorMessageDialog = it
-            }
-        },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary)
+  if (showErrorMessageDialog != null) {
+    ErrorMessageDialog(
+      title = context.getString(R.string.error_dialog_pay_withdraw_error),
+      textContent = showErrorMessageDialog ?: "",
+      onDismiss = { showErrorMessageDialog = null },
     )
+  }
+
+  ClickableText(
+    text = withdraw,
+    onClick = { payViaIntent(withdrawalString, context) { showErrorMessageDialog = it } },
+    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+  )
 }

@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.foundation.Image
@@ -37,103 +57,94 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @Composable
 @Preview
 fun LeftPictureLayoutPreview() {
-    ThemeComparison(
-        onDark = { LeftPictureLayoutPreviewCard() },
-        onLight = { LeftPictureLayoutPreviewCard() }
-    )
+  ThemeComparison(
+    onDark = { LeftPictureLayoutPreviewCard() },
+    onLight = { LeftPictureLayoutPreviewCard() },
+  )
 }
 
 @Composable
 fun LeftPictureLayoutPreviewCard() {
-    LeftPictureLayout(
-        onImage = {
-            Image(
-                painter = painterResource(R.drawable.github),
-                contentDescription = stringResource(id = R.string.profile_banner),
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(QuoteBorder)
-            )
-        },
-        onTitleRow = {
-            Text(
-                text = "This is my title",
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+  LeftPictureLayout(
+    onImage = {
+      Image(
+        painter = painterResource(R.drawable.github),
+        contentDescription = stringResource(id = R.string.profile_banner),
+        contentScale = ContentScale.FillWidth,
+        modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+      )
+    },
+    onTitleRow = {
+      Text(
+        text = "This is my title",
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f),
+      )
 
-            Spacer(modifier = StdHorzSpacer)
-            LikeIcon(
-                iconSizeModifier = Size16Modifier,
-                grayTint = MaterialTheme.colorScheme.onSurface
-            )
-            TextCount(12, MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = StdHorzSpacer)
-            ZappedIcon(Size20Modifier)
-            TextCount(120, MaterialTheme.colorScheme.onSurface)
-        },
-        onDescription = {
-            Text(
-                "This is 3-line description, This is 3-line description, This is 3-line description, This is 3-line description",
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 14.sp
-            )
-        },
-        onBottomRow = {
-            Text("This is my Moderator List")
-        }
-    )
+      Spacer(modifier = StdHorzSpacer)
+      LikeIcon(
+        iconSizeModifier = Size16Modifier,
+        grayTint = MaterialTheme.colorScheme.onSurface,
+      )
+      TextCount(12, MaterialTheme.colorScheme.onSurface)
+      Spacer(modifier = StdHorzSpacer)
+      ZappedIcon(Size20Modifier)
+      TextCount(120, MaterialTheme.colorScheme.onSurface)
+    },
+    onDescription = {
+      Text(
+        "This is 3-line description, This is 3-line description, This is 3-line description, This is 3-line description",
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 3,
+        overflow = TextOverflow.Ellipsis,
+        fontSize = 14.sp,
+      )
+    },
+    onBottomRow = { Text("This is my Moderator List") },
+  )
 }
 
 @Composable
 fun LeftPictureLayout(
-    onImage: @Composable () -> Unit,
-    onTitleRow: @Composable RowScope.() -> Unit,
-    onDescription: @Composable () -> Unit,
-    onBottomRow: @Composable RowScope.() -> Unit
+  onImage: @Composable () -> Unit,
+  onTitleRow: @Composable RowScope.() -> Unit,
+  onDescription: @Composable () -> Unit,
+  onBottomRow: @Composable RowScope.() -> Unit,
 ) {
-    Row(Modifier.aspectRatio(ratio = 4f)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.25f)
-                .aspectRatio(ratio = 1f)
-        ) {
-            onImage()
-        }
-
-        Spacer(modifier = DoubleHorzSpacer)
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                onTitleRow()
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                onDescription()
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                onBottomRow()
-            }
-        }
+  Row(Modifier.aspectRatio(ratio = 4f)) {
+    Column(
+      modifier = Modifier.fillMaxWidth(0.25f).aspectRatio(ratio = 1f),
+    ) {
+      onImage()
     }
+
+    Spacer(modifier = DoubleHorzSpacer)
+
+    Column(
+      modifier = Modifier.fillMaxWidth(),
+      verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        onTitleRow()
+      }
+
+      Row(
+        modifier = Modifier.fillMaxWidth().weight(1f),
+      ) {
+        onDescription()
+      }
+
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        onBottomRow()
+      }
+    }
+  }
 }

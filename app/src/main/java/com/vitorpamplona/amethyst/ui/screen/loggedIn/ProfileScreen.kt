@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.Crossfade
@@ -153,1677 +173,1693 @@ import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.TelegramIdentity
 import com.vitorpamplona.quartz.events.TwitterIdentity
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import java.math.BigDecimal
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 
 @Composable
-fun ProfileScreen(userId: String?, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    if (userId == null) return
+fun ProfileScreen(
+  userId: String?,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  if (userId == null) return
 
-    var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userId)) }
+  var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userId)) }
 
-    if (userBase == null) {
-        LaunchedEffect(userId) {
-            // waits to resolve.
-            launch(Dispatchers.IO) {
-                val newUserBase = LocalCache.checkGetOrCreateUser(userId)
-                if (newUserBase != userBase) {
-                    userBase = newUserBase
-                }
-            }
+  if (userBase == null) {
+    LaunchedEffect(userId) {
+      // waits to resolve.
+      launch(Dispatchers.IO) {
+        val newUserBase = LocalCache.checkGetOrCreateUser(userId)
+        if (newUserBase != userBase) {
+          userBase = newUserBase
         }
+      }
     }
+  }
 
-    userBase?.let {
-        PrepareViewModels(
-            baseUser = it,
-            accountViewModel = accountViewModel,
-            nav = nav
-        )
-    }
+  userBase?.let {
+    PrepareViewModels(
+      baseUser = it,
+      accountViewModel = accountViewModel,
+      nav = nav,
+    )
+  }
 }
 
 @Composable
-fun PrepareViewModels(baseUser: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileFollowsUserFeedViewModel",
-        factory = NostrUserProfileFollowsUserFeedViewModel.Factory(
-            baseUser,
-            accountViewModel.account
-        )
+fun PrepareViewModels(
+  baseUser: User,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileFollowsUserFeedViewModel",
+      factory =
+        NostrUserProfileFollowsUserFeedViewModel.Factory(
+          baseUser,
+          accountViewModel.account,
+        ),
     )
 
-    val followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileFollowersUserFeedViewModel",
-        factory = NostrUserProfileFollowersUserFeedViewModel.Factory(
-            baseUser,
-            accountViewModel.account
-        )
+  val followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileFollowersUserFeedViewModel",
+      factory =
+        NostrUserProfileFollowersUserFeedViewModel.Factory(
+          baseUser,
+          accountViewModel.account,
+        ),
     )
 
-    val appRecommendations: NostrUserAppRecommendationsFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserAppRecommendationsFeedViewModel",
-        factory = NostrUserAppRecommendationsFeedViewModel.Factory(
-            baseUser
-        )
+  val appRecommendations: NostrUserAppRecommendationsFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserAppRecommendationsFeedViewModel",
+      factory =
+        NostrUserAppRecommendationsFeedViewModel.Factory(
+          baseUser,
+        ),
     )
 
-    val zapFeedViewModel: NostrUserProfileZapsFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileZapsFeedViewModel",
-        factory = NostrUserProfileZapsFeedViewModel.Factory(
-            baseUser
-        )
+  val zapFeedViewModel: NostrUserProfileZapsFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileZapsFeedViewModel",
+      factory =
+        NostrUserProfileZapsFeedViewModel.Factory(
+          baseUser,
+        ),
     )
 
-    val threadsViewModel: NostrUserProfileNewThreadsFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileNewThreadsFeedViewModel",
-        factory = NostrUserProfileNewThreadsFeedViewModel.Factory(
-            baseUser,
-            accountViewModel.account
-        )
+  val threadsViewModel: NostrUserProfileNewThreadsFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileNewThreadsFeedViewModel",
+      factory =
+        NostrUserProfileNewThreadsFeedViewModel.Factory(
+          baseUser,
+          accountViewModel.account,
+        ),
     )
 
-    val repliesViewModel: NostrUserProfileConversationsFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileConversationsFeedViewModel",
-        factory = NostrUserProfileConversationsFeedViewModel.Factory(
-            baseUser,
-            accountViewModel.account
-        )
+  val repliesViewModel: NostrUserProfileConversationsFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileConversationsFeedViewModel",
+      factory =
+        NostrUserProfileConversationsFeedViewModel.Factory(
+          baseUser,
+          accountViewModel.account,
+        ),
     )
 
-    val bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileBookmarksFeedViewModel",
-        factory = NostrUserProfileBookmarksFeedViewModel.Factory(
-            baseUser,
-            accountViewModel.account
-        )
+  val bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileBookmarksFeedViewModel",
+      factory =
+        NostrUserProfileBookmarksFeedViewModel.Factory(
+          baseUser,
+          accountViewModel.account,
+        ),
     )
 
-    val reportsFeedViewModel: NostrUserProfileReportFeedViewModel = viewModel(
-        key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
-        factory = NostrUserProfileReportFeedViewModel.Factory(
-            baseUser
-        )
+  val reportsFeedViewModel: NostrUserProfileReportFeedViewModel =
+    viewModel(
+      key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
+      factory =
+        NostrUserProfileReportFeedViewModel.Factory(
+          baseUser,
+        ),
     )
 
-    ProfileScreen(
-        baseUser = baseUser,
-        threadsViewModel,
-        repliesViewModel,
-        followsFeedViewModel,
-        followersFeedViewModel,
-        appRecommendations,
-        zapFeedViewModel,
-        bookmarksFeedViewModel,
-        reportsFeedViewModel,
-        accountViewModel = accountViewModel,
-        nav = nav
-    )
+  ProfileScreen(
+    baseUser = baseUser,
+    threadsViewModel,
+    repliesViewModel,
+    followsFeedViewModel,
+    followersFeedViewModel,
+    appRecommendations,
+    zapFeedViewModel,
+    bookmarksFeedViewModel,
+    reportsFeedViewModel,
+    accountViewModel = accountViewModel,
+    nav = nav,
+  )
 }
 
 @Composable
 fun ProfileScreen(
-    baseUser: User,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  baseUser: User,
+  threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+  repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+  followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+  followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+  appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+  zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+  bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+  reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    NostrUserProfileDataSource.loadUserProfile(baseUser)
+  NostrUserProfileDataSource.loadUserProfile(baseUser)
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
+  val lifeCycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(accountViewModel) {
+  DisposableEffect(accountViewModel) {
+    NostrUserProfileDataSource.start()
+    onDispose {
+      NostrUserProfileDataSource.loadUserProfile(null)
+      NostrUserProfileDataSource.stop()
+    }
+  }
+
+  DisposableEffect(lifeCycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        println("Profidle Start")
+        NostrUserProfileDataSource.loadUserProfile(baseUser)
         NostrUserProfileDataSource.start()
-        onDispose {
-            NostrUserProfileDataSource.loadUserProfile(null)
-            NostrUserProfileDataSource.stop()
-        }
+      }
+      if (event == Lifecycle.Event.ON_PAUSE) {
+        println("Profile Stop")
+        NostrUserProfileDataSource.loadUserProfile(null)
+        NostrUserProfileDataSource.stop()
+      }
     }
 
-    DisposableEffect(lifeCycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("Profidle Start")
-                NostrUserProfileDataSource.loadUserProfile(baseUser)
-                NostrUserProfileDataSource.start()
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Profile Stop")
-                NostrUserProfileDataSource.loadUserProfile(null)
-                NostrUserProfileDataSource.stop()
-            }
-        }
+    lifeCycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+  }
 
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
+  RenderSurface(
+    baseUser,
+    threadsViewModel,
+    repliesViewModel,
+    appRecommendations,
+    followsFeedViewModel,
+    followersFeedViewModel,
+    zapFeedViewModel,
+    bookmarksFeedViewModel,
+    reportsFeedViewModel,
+    accountViewModel,
+    nav,
+  )
+}
+
+@Composable
+private fun RenderSurface(
+  baseUser: User,
+  threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+  repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+  appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+  followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+  followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+  zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+  bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+  reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  Surface(
+    modifier = Modifier.fillMaxWidth(),
+    color = MaterialTheme.colorScheme.background,
+  ) {
+    var columnSize by remember { mutableStateOf(IntSize.Zero) }
+    var tabsSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Column(
+      modifier = Modifier.fillMaxSize().onSizeChanged { columnSize = it },
+    ) {
+      val coroutineScope = rememberCoroutineScope()
+      val scrollState = rememberScrollState()
+
+      val tabRowModifier = remember { Modifier.onSizeChanged { tabsSize = it } }
+
+      val pagerModifier =
+        with(LocalDensity.current) { Modifier.height((columnSize.height - tabsSize.height).toDp()) }
+
+      Box(
+        modifier =
+          remember {
+            Modifier.verticalScroll(scrollState)
+              .nestedScroll(
+                object : NestedScrollConnection {
+                  override fun onPreScroll(
+                    available: Offset,
+                    source: NestedScrollSource,
+                  ): Offset {
+                    // When scrolling vertically, scroll the container first.
+                    return if (available.y < 0 && scrollState.canScrollForward) {
+                      coroutineScope.launch { scrollState.scrollBy(-available.y) }
+                      Offset(0f, available.y)
+                    } else {
+                      Offset.Zero
+                    }
+                  }
+                },
+              )
+              .fillMaxHeight()
+          },
+      ) {
+        RenderScreen(
+          baseUser,
+          tabRowModifier,
+          pagerModifier,
+          threadsViewModel,
+          repliesViewModel,
+          appRecommendations,
+          followsFeedViewModel,
+          followersFeedViewModel,
+          zapFeedViewModel,
+          bookmarksFeedViewModel,
+          reportsFeedViewModel,
+          accountViewModel,
+          nav,
+        )
+      }
     }
+  }
+}
 
-    RenderSurface(
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun RenderScreen(
+  baseUser: User,
+  tabRowModifier: Modifier,
+  pagerModifier: Modifier,
+  threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+  repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+  appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+  followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+  followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+  zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+  bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+  reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val pagerState = rememberPagerState { 9 }
+
+  Column {
+    ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
+    ScrollableTabRow(
+      containerColor = MaterialTheme.colorScheme.background,
+      contentColor = MaterialTheme.colorScheme.onBackground,
+      selectedTabIndex = pagerState.currentPage,
+      edgePadding = 8.dp,
+      modifier = tabRowModifier,
+      divider = { Divider(thickness = DividerThickness) },
+    ) {
+      CreateAndRenderTabs(baseUser, pagerState)
+    }
+    HorizontalPager(
+      state = pagerState,
+      modifier = pagerModifier,
+    ) { page ->
+      CreateAndRenderPages(
+        page,
         baseUser,
         threadsViewModel,
         repliesViewModel,
-        appRecommendations,
         followsFeedViewModel,
         followersFeedViewModel,
         zapFeedViewModel,
         bookmarksFeedViewModel,
         reportsFeedViewModel,
         accountViewModel,
-        nav
-    )
-}
-
-@Composable
-private fun RenderSurface(
-    baseUser: User,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        var columnSize by remember { mutableStateOf(IntSize.Zero) }
-        var tabsSize by remember { mutableStateOf(IntSize.Zero) }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .onSizeChanged {
-                    columnSize = it
-                }
-        ) {
-            val coroutineScope = rememberCoroutineScope()
-            val scrollState = rememberScrollState()
-
-            val tabRowModifier = remember {
-                Modifier.onSizeChanged {
-                    tabsSize = it
-                }
-            }
-
-            val pagerModifier = with(LocalDensity.current) {
-                Modifier.height((columnSize.height - tabsSize.height).toDp())
-            }
-
-            Box(
-                modifier = remember {
-                    Modifier
-                        .verticalScroll(scrollState)
-                        .nestedScroll(object : NestedScrollConnection {
-                            override fun onPreScroll(
-                                available: Offset,
-                                source: NestedScrollSource
-                            ): Offset {
-                                // When scrolling vertically, scroll the container first.
-                                return if (available.y < 0 && scrollState.canScrollForward) {
-                                    coroutineScope.launch {
-                                        scrollState.scrollBy(-available.y)
-                                    }
-                                    Offset(0f, available.y)
-                                } else {
-                                    Offset.Zero
-                                }
-                            }
-                        })
-                        .fillMaxHeight()
-                }
-            ) {
-                RenderScreen(
-                    baseUser,
-                    tabRowModifier,
-                    pagerModifier,
-                    threadsViewModel,
-                    repliesViewModel,
-                    appRecommendations,
-                    followsFeedViewModel,
-                    followersFeedViewModel,
-                    zapFeedViewModel,
-                    bookmarksFeedViewModel,
-                    reportsFeedViewModel,
-                    accountViewModel,
-                    nav
-                )
-            }
-        }
+        nav,
+      )
     }
-}
-
-@Composable
-@OptIn(ExperimentalFoundationApi::class)
-private fun RenderScreen(
-    baseUser: User,
-    tabRowModifier: Modifier,
-    pagerModifier: Modifier,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
-) {
-    val pagerState = rememberPagerState { 9 }
-
-    Column {
-        ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
-        ScrollableTabRow(
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = 8.dp,
-            modifier = tabRowModifier,
-            divider = {
-                Divider(thickness = DividerThickness)
-            }
-        ) {
-            CreateAndRenderTabs(baseUser, pagerState)
-        }
-        HorizontalPager(
-            state = pagerState,
-            modifier = pagerModifier
-        ) { page ->
-            CreateAndRenderPages(
-                page,
-                baseUser,
-                threadsViewModel,
-                repliesViewModel,
-                followsFeedViewModel,
-                followersFeedViewModel,
-                zapFeedViewModel,
-                bookmarksFeedViewModel,
-                reportsFeedViewModel,
-                accountViewModel,
-                nav
-            )
-        }
-    }
+  }
 }
 
 @Composable
 private fun CreateAndRenderPages(
-    page: Int,
-    baseUser: User,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  page: Int,
+  baseUser: User,
+  threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+  repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+  followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
+  followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
+  zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+  bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+  reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    UpdateThreadsAndRepliesWhenBlockUnblock(baseUser, threadsViewModel, repliesViewModel, accountViewModel)
+  UpdateThreadsAndRepliesWhenBlockUnblock(
+    baseUser,
+    threadsViewModel,
+    repliesViewModel,
+    accountViewModel,
+  )
 
-    when (page) {
-        0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
-        1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
-        2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
-        3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
-        4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
-        5 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        6 -> TabFollowedTags(baseUser, accountViewModel, nav)
-        7 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        8 -> TabRelays(baseUser, accountViewModel, nav)
-    }
+  when (page) {
+    0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
+    1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
+    2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
+    3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
+    4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
+    5 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
+    6 -> TabFollowedTags(baseUser, accountViewModel, nav)
+    7 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+    8 -> TabRelays(baseUser, accountViewModel, nav)
+  }
 }
 
 @Composable
-fun UpdateThreadsAndRepliesWhenBlockUnblock(baseUser: User, threadsViewModel: NostrUserProfileNewThreadsFeedViewModel, repliesViewModel: NostrUserProfileConversationsFeedViewModel, accountViewModel: AccountViewModel) {
-    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+fun UpdateThreadsAndRepliesWhenBlockUnblock(
+  baseUser: User,
+  threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
+  repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+  accountViewModel: AccountViewModel,
+) {
+  val isHidden by
+    accountViewModel.account.liveHiddenUsers
+      .map {
         it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-    }.observeAsState(accountViewModel.account.isHidden(baseUser))
+      }
+      .observeAsState(accountViewModel.account.isHidden(baseUser))
 
-    LaunchedEffect(key1 = isHidden) {
-        threadsViewModel.invalidateData()
-        repliesViewModel.invalidateData()
-    }
+  LaunchedEffect(key1 = isHidden) {
+    threadsViewModel.invalidateData()
+    repliesViewModel.invalidateData()
+  }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CreateAndRenderTabs(
-    baseUser: User,
-    pagerState: PagerState
+  baseUser: User,
+  pagerState: PagerState,
 ) {
-    val coroutineScope = rememberCoroutineScope()
+  val coroutineScope = rememberCoroutineScope()
 
-    val tabs = listOf<@Composable (() -> Unit)?>(
-        { Text(text = stringResource(R.string.notes)) },
-        { Text(text = stringResource(R.string.replies)) },
-        { FollowTabHeader(baseUser) },
-        { FollowersTabHeader(baseUser) },
-        { ZapTabHeader(baseUser) },
-        { BookmarkTabHeader(baseUser) },
-        { FollowedTagsTabHeader(baseUser) },
-        { ReportsTabHeader(baseUser) },
-        { RelaysTabHeader(baseUser) }
+  val tabs =
+    listOf<@Composable (() -> Unit)?>(
+      { Text(text = stringResource(R.string.notes)) },
+      { Text(text = stringResource(R.string.replies)) },
+      { FollowTabHeader(baseUser) },
+      { FollowersTabHeader(baseUser) },
+      { ZapTabHeader(baseUser) },
+      { BookmarkTabHeader(baseUser) },
+      { FollowedTagsTabHeader(baseUser) },
+      { ReportsTabHeader(baseUser) },
+      { RelaysTabHeader(baseUser) },
     )
 
-    tabs.forEachIndexed { index, function ->
-        Tab(
-            selected = pagerState.currentPage == index,
-            onClick = {
-                coroutineScope.launch { pagerState.animateScrollToPage(index) }
-            },
-            text = function
-        )
-    }
+  tabs.forEachIndexed { index, function ->
+    Tab(
+      selected = pagerState.currentPage == index,
+      onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+      text = function,
+    )
+  }
 }
 
 @Composable
 private fun RelaysTabHeader(baseUser: User) {
-    val userState by baseUser.live().relays.observeAsState()
-    val userRelaysBeingUsed = remember(userState) { userState?.user?.relaysBeingUsed?.size ?: "--" }
+  val userState by baseUser.live().relays.observeAsState()
+  val userRelaysBeingUsed = remember(userState) { userState?.user?.relaysBeingUsed?.size ?: "--" }
 
-    val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-    val userRelays = remember(userStateRelayInfo) { userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--" }
+  val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
+  val userRelays =
+    remember(userStateRelayInfo) {
+      userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
+    }
 
-    Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
+  Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
 }
 
 @Composable
 private fun ReportsTabHeader(baseUser: User) {
-    val userState by baseUser.live().reports.observeAsState()
-    var userReports by remember { mutableIntStateOf(0) }
+  val userState by baseUser.live().reports.observeAsState()
+  var userReports by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newSize = UserProfileReportsFeedFilter(baseUser).feed().size
+  LaunchedEffect(key1 = userState) {
+    launch(Dispatchers.IO) {
+      val newSize = UserProfileReportsFeedFilter(baseUser).feed().size
 
-            if (newSize != userReports) {
-                userReports = newSize
-            }
-        }
+      if (newSize != userReports) {
+        userReports = newSize
+      }
     }
+  }
 
-    Text(text = "$userReports ${stringResource(R.string.reports)}")
+  Text(text = "$userReports ${stringResource(R.string.reports)}")
 }
 
 @Composable
 private fun FollowedTagsTabHeader(baseUser: User) {
-    var usertags by remember { mutableIntStateOf(0) }
+  var usertags by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(key1 = baseUser) {
-        launch(Dispatchers.IO) {
-            val contactList = baseUser.latestContactList
+  LaunchedEffect(key1 = baseUser) {
+    launch(Dispatchers.IO) {
+      val contactList = baseUser.latestContactList
 
-            val newTags = (contactList?.verifiedFollowTagSet?.count() ?: 0)
+      val newTags = (contactList?.verifiedFollowTagSet?.count() ?: 0)
 
-            if (newTags != usertags) {
-                usertags = newTags
-            }
-        }
+      if (newTags != usertags) {
+        usertags = newTags
+      }
     }
+  }
 
-    Text(text = "$usertags ${stringResource(R.string.followed_tags)}")
+  Text(text = "$usertags ${stringResource(R.string.followed_tags)}")
 }
 
 @Composable
 private fun BookmarkTabHeader(baseUser: User) {
-    val userState by baseUser.live().bookmarks.observeAsState()
+  val userState by baseUser.live().bookmarks.observeAsState()
 
-    var userBookmarks by remember { mutableIntStateOf(0) }
+  var userBookmarks by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val bookmarkList = userState?.user?.latestBookmarkList
+  LaunchedEffect(key1 = userState) {
+    launch(Dispatchers.IO) {
+      val bookmarkList = userState?.user?.latestBookmarkList
 
-            val newBookmarks = (bookmarkList?.taggedEvents()?.count() ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
+      val newBookmarks =
+        (bookmarkList?.taggedEvents()?.count()
+          ?: 0) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
 
-            if (newBookmarks != userBookmarks) {
-                userBookmarks = newBookmarks
-            }
-        }
+      if (newBookmarks != userBookmarks) {
+        userBookmarks = newBookmarks
+      }
     }
+  }
 
-    Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
+  Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
 }
 
 @Composable
 private fun ZapTabHeader(baseUser: User) {
-    val userState by baseUser.live().zaps.observeAsState()
-    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
+  val userState by baseUser.live().zaps.observeAsState()
+  var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
 
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.Default) {
-            val tempAmount = baseUser.zappedAmount()
-            if (zapAmount != tempAmount) {
-                zapAmount = tempAmount
-            }
-        }
+  LaunchedEffect(key1 = userState) {
+    launch(Dispatchers.Default) {
+      val tempAmount = baseUser.zappedAmount()
+      if (zapAmount != tempAmount) {
+        zapAmount = tempAmount
+      }
     }
+  }
 
-    Text(text = "${showAmountAxis(zapAmount)} ${stringResource(id = R.string.zaps)}")
+  Text(text = "${showAmountAxis(zapAmount)} ${stringResource(id = R.string.zaps)}")
 }
 
 @Composable
 private fun FollowersTabHeader(baseUser: User) {
-    val userState by baseUser.live().followers.observeAsState()
-    var followerCount by remember { mutableStateOf("--") }
+  val userState by baseUser.live().followers.observeAsState()
+  var followerCount by remember { mutableStateOf("--") }
 
-    val text = stringResource(R.string.followers)
+  val text = stringResource(R.string.followers)
 
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newFollower = (userState?.user?.transientFollowerCount()?.toString() ?: "--") + " " + text
+  LaunchedEffect(key1 = userState) {
+    launch(Dispatchers.IO) {
+      val newFollower = (userState?.user?.transientFollowerCount()?.toString() ?: "--") + " " + text
 
-            if (followerCount != newFollower) {
-                followerCount = newFollower
-            }
-        }
+      if (followerCount != newFollower) {
+        followerCount = newFollower
+      }
     }
+  }
 
-    Text(text = followerCount)
+  Text(text = followerCount)
 }
 
 @Composable
 private fun FollowTabHeader(baseUser: User) {
-    val userState by baseUser.live().follows.observeAsState()
-    var followCount by remember { mutableStateOf("--") }
+  val userState by baseUser.live().follows.observeAsState()
+  var followCount by remember { mutableStateOf("--") }
 
-    val text = stringResource(R.string.follows)
+  val text = stringResource(R.string.follows)
 
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newFollow = (userState?.user?.transientFollowCount()?.toString() ?: "--") + " " + text
+  LaunchedEffect(key1 = userState) {
+    launch(Dispatchers.IO) {
+      val newFollow = (userState?.user?.transientFollowCount()?.toString() ?: "--") + " " + text
 
-            if (followCount != newFollow) {
-                followCount = newFollow
-            }
-        }
+      if (followCount != newFollow) {
+        followCount = newFollow
+      }
     }
+  }
 
-    Text(text = followCount)
+  Text(text = followCount)
 }
 
 @Composable
 private fun ProfileHeader(
-    baseUser: User,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    nav: (String) -> Unit,
-    accountViewModel: AccountViewModel
+  baseUser: User,
+  appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+  nav: (String) -> Unit,
+  accountViewModel: AccountViewModel,
 ) {
-    var popupExpanded by remember { mutableStateOf(false) }
-    var zoomImageDialogOpen by remember { mutableStateOf(false) }
+  var popupExpanded by remember { mutableStateOf(false) }
+  var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
-    Box {
-        DrawBanner(baseUser, accountViewModel)
+  Box {
+    DrawBanner(baseUser, accountViewModel)
 
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 10.dp)
-                .size(40.dp)
-                .align(Alignment.TopEnd)
-        ) {
-            Button(
-                modifier = Modifier
-                    .size(30.dp)
-                    .align(Alignment.Center),
-                onClick = {
-                    popupExpanded = true
-                },
-                shape = ButtonBorder,
-                colors = ButtonDefaults
-                    .buttonColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                contentPadding = ZeroPadding
-            ) {
-                Icon(
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_options)
-                )
+    Box(
+      modifier = Modifier.padding(horizontal = 10.dp).size(40.dp).align(Alignment.TopEnd),
+    ) {
+      Button(
+        modifier = Modifier.size(30.dp).align(Alignment.Center),
+        onClick = { popupExpanded = true },
+        shape = ButtonBorder,
+        colors =
+          ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.background,
+          ),
+        contentPadding = ZeroPadding,
+      ) {
+        Icon(
+          tint = MaterialTheme.colorScheme.placeholderText,
+          imageVector = Icons.Default.MoreVert,
+          contentDescription = stringResource(R.string.more_options),
+        )
 
-                UserProfileDropDownMenu(baseUser, popupExpanded, { popupExpanded = false }, accountViewModel)
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp)
-                .padding(top = 75.dp)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                val clipboardManager = LocalClipboardManager.current
-
-                ClickableUserPicture(
-                    baseUser = baseUser,
-                    accountViewModel = accountViewModel,
-                    size = 100.dp,
-                    modifier = Modifier.border(
-                        3.dp,
-                        MaterialTheme.colorScheme.background,
-                        CircleShape
-                    ),
-                    onClick = {
-                        if (baseUser.profilePicture() != null) {
-                            zoomImageDialogOpen = true
-                        }
-                    },
-                    onLongClick = {
-                        it.info?.picture?.let { it1 ->
-                            clipboardManager.setText(
-                                AnnotatedString(it1)
-                            )
-                        }
-                    }
-                )
-
-                Spacer(Modifier.weight(1f))
-
-                Row(
-                    modifier = Modifier
-                        .height(Size35dp)
-                        .padding(bottom = 3.dp)
-                ) {
-                    MessageButton(baseUser, accountViewModel, nav)
-
-                    ProfileActions(baseUser, accountViewModel)
-                }
-            }
-
-            DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
-
-            Divider(modifier = Modifier.padding(top = 6.dp))
-        }
+        UserProfileDropDownMenu(
+          baseUser,
+          popupExpanded,
+          { popupExpanded = false },
+          accountViewModel,
+        )
+      }
     }
 
-    val profilePic = baseUser.profilePicture()
-    if (zoomImageDialogOpen && profilePic != null) {
-        ZoomableImageDialog(figureOutMimeType(profilePic), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 75.dp),
+    ) {
+      Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+      ) {
+        val clipboardManager = LocalClipboardManager.current
+
+        ClickableUserPicture(
+          baseUser = baseUser,
+          accountViewModel = accountViewModel,
+          size = 100.dp,
+          modifier =
+            Modifier.border(
+              3.dp,
+              MaterialTheme.colorScheme.background,
+              CircleShape,
+            ),
+          onClick = {
+            if (baseUser.profilePicture() != null) {
+              zoomImageDialogOpen = true
+            }
+          },
+          onLongClick = {
+            it.info?.picture?.let { it1 ->
+              clipboardManager.setText(
+                AnnotatedString(it1),
+              )
+            }
+          },
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        Row(
+          modifier = Modifier.height(Size35dp).padding(bottom = 3.dp),
+        ) {
+          MessageButton(baseUser, accountViewModel, nav)
+
+          ProfileActions(baseUser, accountViewModel)
+        }
+      }
+
+      DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
+
+      Divider(modifier = Modifier.padding(top = 6.dp))
     }
+  }
+
+  val profilePic = baseUser.profilePicture()
+  if (zoomImageDialogOpen && profilePic != null) {
+    ZoomableImageDialog(
+      figureOutMimeType(profilePic),
+      onDismiss = { zoomImageDialogOpen = false },
+      accountViewModel = accountViewModel,
+    )
+  }
 }
 
 @Composable
 private fun ProfileActions(
-    baseUser: User,
-    accountViewModel: AccountViewModel
+  baseUser: User,
+  accountViewModel: AccountViewModel,
 ) {
-    val isMe by remember(accountViewModel) {
-        derivedStateOf {
-            accountViewModel.userProfile() == baseUser
-        }
-    }
+  val isMe by
+    remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
-    if (isMe) {
-        EditButton(accountViewModel.account)
-    }
+  if (isMe) {
+    EditButton(accountViewModel.account)
+  }
 
-    WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
-        if (isHidden) {
-            ShowUserButton {
-                accountViewModel.showUser(baseUser.pubkeyHex)
-            }
-        } else {
-            DisplayFollowUnfollowButton(baseUser, accountViewModel)
-        }
+  WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
+    if (isHidden) {
+      ShowUserButton { accountViewModel.showUser(baseUser.pubkeyHex) }
+    } else {
+      DisplayFollowUnfollowButton(baseUser, accountViewModel)
     }
+  }
 }
 
 @Composable
 private fun DisplayFollowUnfollowButton(
-    baseUser: User,
-    accountViewModel: AccountViewModel
+  baseUser: User,
+  accountViewModel: AccountViewModel,
 ) {
-    val isLoggedInFollowingUser by accountViewModel.account.userProfile().live().follows.map {
-        it.user.isFollowing(baseUser)
-    }.distinctUntilChanged().observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
+  val isLoggedInFollowingUser by
+    accountViewModel.account
+      .userProfile()
+      .live()
+      .follows
+      .map { it.user.isFollowing(baseUser) }
+      .distinctUntilChanged()
+      .observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
 
-    val isUserFollowingLoggedIn by baseUser.live().follows.map {
-        it.user.isFollowing(accountViewModel.account.userProfile())
-    }.distinctUntilChanged().observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
+  val isUserFollowingLoggedIn by
+    baseUser
+      .live()
+      .follows
+      .map { it.user.isFollowing(accountViewModel.account.userProfile()) }
+      .distinctUntilChanged()
+      .observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
 
-    if (isLoggedInFollowingUser) {
-        UnfollowButton {
-            if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow
-                )
-            } else {
-                accountViewModel.unfollow(baseUser)
-            }
-        }
-    } else {
-        if (isUserFollowingLoggedIn) {
-            FollowButton(R.string.follow_back) {
-                if (!accountViewModel.isWriteable()) {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_follow
-                    )
-                } else {
-                    accountViewModel.follow(baseUser)
-                }
-            }
-        } else {
-            FollowButton(R.string.follow) {
-                if (!accountViewModel.isWriteable()) {
-                    accountViewModel.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_follow
-                    )
-                } else {
-                    accountViewModel.follow(baseUser)
-                }
-            }
-        }
+  if (isLoggedInFollowingUser) {
+    UnfollowButton {
+      if (!accountViewModel.isWriteable()) {
+        accountViewModel.toast(
+          R.string.read_only_user,
+          R.string.login_with_a_private_key_to_be_able_to_unfollow,
+        )
+      } else {
+        accountViewModel.unfollow(baseUser)
+      }
     }
+  } else {
+    if (isUserFollowingLoggedIn) {
+      FollowButton(R.string.follow_back) {
+        if (!accountViewModel.isWriteable()) {
+          accountViewModel.toast(
+            R.string.read_only_user,
+            R.string.login_with_a_private_key_to_be_able_to_follow,
+          )
+        } else {
+          accountViewModel.follow(baseUser)
+        }
+      }
+    } else {
+      FollowButton(R.string.follow) {
+        if (!accountViewModel.isWriteable()) {
+          accountViewModel.toast(
+            R.string.read_only_user,
+            R.string.login_with_a_private_key_to_be_able_to_follow,
+          )
+        } else {
+          accountViewModel.follow(baseUser)
+        }
+      }
+    }
+  }
 }
 
 @Composable
-fun WatchIsHiddenUser(baseUser: User, accountViewModel: AccountViewModel, content: @Composable (Boolean) -> Unit) {
-    val isHidden by accountViewModel.account.liveHiddenUsers.map {
+fun WatchIsHiddenUser(
+  baseUser: User,
+  accountViewModel: AccountViewModel,
+  content: @Composable (Boolean) -> Unit,
+) {
+  val isHidden by
+    accountViewModel.account.liveHiddenUsers
+      .map {
         it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-    }.observeAsState(accountViewModel.account.isHidden(baseUser))
+      }
+      .observeAsState(accountViewModel.account.isHidden(baseUser))
 
-    content(isHidden)
+  content(isHidden)
 }
 
 fun getIdentityClaimIcon(identity: IdentityClaim): Int {
-    return when (identity) {
-        is TwitterIdentity -> R.drawable.twitter
-        is TelegramIdentity -> R.drawable.telegram
-        is MastodonIdentity -> R.drawable.mastodon
-        is GitHubIdentity -> R.drawable.github
-        else -> R.drawable.github
-    }
+  return when (identity) {
+    is TwitterIdentity -> R.drawable.twitter
+    is TelegramIdentity -> R.drawable.telegram
+    is MastodonIdentity -> R.drawable.mastodon
+    is GitHubIdentity -> R.drawable.github
+    else -> R.drawable.github
+  }
 }
 
 fun getIdentityClaimDescription(identity: IdentityClaim): Int {
-    return when (identity) {
-        is TwitterIdentity -> R.string.twitter
-        is TelegramIdentity -> R.string.telegram
-        is MastodonIdentity -> R.string.mastodon
-        is GitHubIdentity -> R.string.github
-        else -> R.drawable.github
-    }
+  return when (identity) {
+    is TwitterIdentity -> R.string.twitter
+    is TelegramIdentity -> R.string.telegram
+    is MastodonIdentity -> R.string.mastodon
+    is GitHubIdentity -> R.string.github
+    else -> R.drawable.github
+  }
 }
 
 @Composable
 private fun DrawAdditionalInfo(
-    baseUser: User,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  baseUser: User,
+  appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val user = remember(userState) { userState?.user } ?: return
-    val tags = remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+  val userState by baseUser.live().metadata.observeAsState()
+  val user = remember(userState) { userState?.user } ?: return
+  val tags =
+    remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
 
-    val uri = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
+  val uri = LocalUriHandler.current
+  val clipboardManager = LocalClipboardManager.current
 
-    val automaticallyShowProfilePicture = remember {
-        accountViewModel.settings.showProfilePictures.value
+  val automaticallyShowProfilePicture = remember {
+    accountViewModel.settings.showProfilePictures.value
+  }
+
+  user.toBestDisplayName().let {
+    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
+      CreateTextWithEmoji(
+        text = it,
+        tags = tags,
+        fontWeight = FontWeight.Bold,
+        fontSize = 25.sp,
+      )
+    }
+  }
+
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    Text(
+      text = user.pubkeyDisplayHex(),
+      modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+      color = MaterialTheme.colorScheme.placeholderText,
+    )
+
+    IconButton(
+      modifier = Modifier.size(25.dp).padding(start = 5.dp),
+      onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())) },
+    ) {
+      Icon(
+        imageVector = Icons.Default.ContentCopy,
+        null,
+        modifier = Modifier.size(15.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
+      )
     }
 
-    user.toBestDisplayName().let {
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
-            CreateTextWithEmoji(
-                text = it,
-                tags = tags,
-                fontWeight = FontWeight.Bold,
-                fontSize = 25.sp
-            )
-        }
+    var dialogOpen by remember { mutableStateOf(false) }
+
+    if (dialogOpen) {
+      ShowQRDialog(
+        user,
+        automaticallyShowProfilePicture,
+        onScan = {
+          dialogOpen = false
+          nav(it)
+        },
+        onClose = { dialogOpen = false },
+      )
     }
 
+    IconButton(
+      modifier = Modifier.size(25.dp),
+      onClick = { dialogOpen = true },
+    ) {
+      Icon(
+        painter = painterResource(R.drawable.ic_qrcode),
+        null,
+        modifier = Modifier.size(15.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
+      )
+    }
+  }
+
+  DisplayBadges(baseUser, accountViewModel, nav)
+
+  DisplayNip05ProfileStatus(user, accountViewModel)
+
+  val website = user.info?.website
+  if (!website.isNullOrEmpty()) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = user.pubkeyDisplayHex(),
-            modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-            color = MaterialTheme.colorScheme.placeholderText
+      Icon(
+        tint = MaterialTheme.colorScheme.placeholderText,
+        imageVector = Icons.Default.Link,
+        contentDescription = stringResource(R.string.website),
+        modifier = Modifier.size(16.dp),
+      )
+
+      ClickableText(
+        text = AnnotatedString(website.removePrefix("https://")),
+        onClick = {
+          website.let {
+            runCatching {
+              if (it.contains("://")) {
+                uri.openUri(it)
+              } else {
+                uri.openUri("http://$it")
+              }
+            }
+          }
+        },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
+      )
+    }
+  }
+
+  val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
+  val pubkeyHex = remember { baseUser.pubkeyHex }
+  DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
+
+  val identities = user.info?.latestMetadata?.identityClaims()
+  if (!identities.isNullOrEmpty()) {
+    identities.forEach { identity: IdentityClaim ->
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+          tint = Color.Unspecified,
+          painter = painterResource(id = getIdentityClaimIcon(identity)),
+          contentDescription = stringResource(getIdentityClaimDescription(identity)),
+          modifier = Modifier.size(16.dp),
         )
 
-        IconButton(
-            modifier = Modifier
-                .size(25.dp)
-                .padding(start = 5.dp),
-            onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); }
-        ) {
-            Icon(
-                imageVector = Icons.Default.ContentCopy,
-                null,
-                modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colorScheme.placeholderText
-            )
-        }
-
-        var dialogOpen by remember {
-            mutableStateOf(false)
-        }
-
-        if (dialogOpen) {
-            ShowQRDialog(
-                user,
-                automaticallyShowProfilePicture,
-                onScan = {
-                    dialogOpen = false
-                    nav(it)
-                },
-                onClose = { dialogOpen = false }
-            )
-        }
-
-        IconButton(
-            modifier = Modifier.size(25.dp),
-            onClick = { dialogOpen = true }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_qrcode),
-                null,
-                modifier = Modifier.size(15.dp),
-                tint = MaterialTheme.colorScheme.placeholderText
-            )
-        }
+        ClickableText(
+          text = AnnotatedString(identity.identity),
+          onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+          style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+          modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp).weight(1f),
+        )
+      }
     }
+  }
 
-    DisplayBadges(baseUser, accountViewModel, nav)
+  user.info?.about?.let {
+    Row(
+      modifier = Modifier.padding(top = 5.dp, bottom = 5.dp),
+    ) {
+      val defaultBackground = MaterialTheme.colorScheme.background
+      val background = remember { mutableStateOf(defaultBackground) }
 
-    DisplayNip05ProfileStatus(user, accountViewModel)
-
-    val website = user.info?.website
-    if (!website.isNullOrEmpty()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                tint = MaterialTheme.colorScheme.placeholderText,
-                imageVector = Icons.Default.Link,
-                contentDescription = stringResource(R.string.website),
-                modifier = Modifier.size(16.dp)
-            )
-
-            ClickableText(
-                text = AnnotatedString(website.removePrefix("https://")),
-                onClick = {
-                    website.let {
-                        runCatching {
-                            if (it.contains("://")) {
-                                uri.openUri(it)
-                            } else {
-                                uri.openUri("http://$it")
-                            }
-                        }
-                    }
-                },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-            )
-        }
+      TranslatableRichTextViewer(
+        content = it,
+        canPreview = false,
+        tags = EmptyTagList,
+        backgroundColor = background,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
     }
+  }
 
-    val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
-    val pubkeyHex = remember { baseUser.pubkeyHex }
-    DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
-
-    val identities = user.info?.latestMetadata?.identityClaims()
-    if (!identities.isNullOrEmpty()) {
-        identities.forEach { identity: IdentityClaim ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    tint = Color.Unspecified,
-                    painter = painterResource(id = getIdentityClaimIcon(identity)),
-                    contentDescription = stringResource(getIdentityClaimDescription(identity)),
-                    modifier = Modifier.size(16.dp)
-                )
-
-                ClickableText(
-                    text = AnnotatedString(identity.identity),
-                    onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-                        .weight(1f)
-                )
-            }
-        }
-    }
-
-    user.info?.about?.let {
-        Row(
-            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-        ) {
-            val defaultBackground = MaterialTheme.colorScheme.background
-            val background = remember {
-                mutableStateOf(defaultBackground)
-            }
-
-            TranslatableRichTextViewer(
-                content = it,
-                canPreview = false,
-                tags = EmptyTagList,
-                backgroundColor = background,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
-    }
-
-    DisplayAppRecommendations(appRecommendations, nav)
+  DisplayAppRecommendations(appRecommendations, nav)
 }
 
 @Composable
 fun DisplayLNAddress(
-    lud16: String?,
-    userHex: String,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  lud16: String?,
+  userHex: String,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var zapExpanded by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  var zapExpanded by remember { mutableStateOf(false) }
 
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+  var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
-    if (showErrorMessageDialog != null) {
-        ErrorMessageDialog(
-            title = stringResource(id = R.string.error_dialog_zap_error),
-            textContent = showErrorMessageDialog ?: "",
-            onClickStartMessage = {
-                scope.launch(Dispatchers.IO) {
-                    val route = routeToMessage(userHex, showErrorMessageDialog, accountViewModel)
-                    nav(route)
+  if (showErrorMessageDialog != null) {
+    ErrorMessageDialog(
+      title = stringResource(id = R.string.error_dialog_zap_error),
+      textContent = showErrorMessageDialog ?: "",
+      onClickStartMessage = {
+        scope.launch(Dispatchers.IO) {
+          val route = routeToMessage(userHex, showErrorMessageDialog, accountViewModel)
+          nav(route)
+        }
+      },
+      onDismiss = { showErrorMessageDialog = null },
+    )
+  }
+
+  var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
+  if (showInfoMessageDialog != null) {
+    InformationDialog(
+      title = context.getString(R.string.payment_successful),
+      textContent = showInfoMessageDialog ?: "",
+    ) {
+      showInfoMessageDialog = null
+    }
+  }
+
+  if (!lud16.isNullOrEmpty()) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      LightningAddressIcon(modifier = Size16Modifier, tint = BitcoinOrange)
+
+      ClickableText(
+        text = AnnotatedString(lud16),
+        onClick = { zapExpanded = !zapExpanded },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp).weight(1f),
+      )
+    }
+
+    if (zapExpanded) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 5.dp),
+      ) {
+        InvoiceRequestCard(
+          lud16,
+          userHex,
+          accountViewModel.account,
+          onSuccess = {
+            zapExpanded = false
+            // pay directly
+            if (accountViewModel.account.hasWalletConnectSetup()) {
+              accountViewModel.account.sendZapPaymentRequestFor(it, null) { response ->
+                if (response is PayInvoiceSuccessResponse) {
+                  showInfoMessageDialog = context.getString(R.string.payment_successful)
+                } else if (response is PayInvoiceErrorResponse) {
+                  showErrorMessageDialog =
+                    response.error?.message
+                      ?: response.error?.code?.toString()
+                        ?: context.getString(R.string.error_parsing_error_message)
                 }
-            },
-            onDismiss = { showErrorMessageDialog = null }
-        )
-    }
-
-    var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
-    if (showInfoMessageDialog != null) {
-        InformationDialog(
-            title = context.getString(R.string.payment_successful),
-            textContent = showInfoMessageDialog ?: ""
-        ) {
-            showInfoMessageDialog = null
-        }
-    }
-
-    if (!lud16.isNullOrEmpty()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            LightningAddressIcon(modifier = Size16Modifier, tint = BitcoinOrange)
-
-            ClickableText(
-                text = AnnotatedString(lud16),
-                onClick = { zapExpanded = !zapExpanded },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                modifier = Modifier
-                    .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-                    .weight(1f)
-            )
-        }
-
-        if (zapExpanded) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 5.dp)
-            ) {
-                InvoiceRequestCard(
-                    lud16,
-                    userHex,
-                    accountViewModel.account,
-                    onSuccess = {
-                        zapExpanded = false
-                        // pay directly
-                        if (accountViewModel.account.hasWalletConnectSetup()) {
-                            accountViewModel.account.sendZapPaymentRequestFor(it, null) { response ->
-                                if (response is PayInvoiceSuccessResponse) {
-                                    showInfoMessageDialog = context.getString(R.string.payment_successful)
-                                } else if (response is PayInvoiceErrorResponse) {
-                                    showErrorMessageDialog = response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: context.getString(R.string.error_parsing_error_message)
-                                }
-                            }
-                        } else {
-                            payViaIntent(it, context) {
-                                showErrorMessageDialog = it
-                            }
-                        }
-                    },
-                    onClose = {
-                        zapExpanded = false
-                    },
-                    onError = { title, message ->
-                        accountViewModel.toast(title, message)
-                    }
-                )
+              }
+            } else {
+              payViaIntent(it, context) { showErrorMessageDialog = it }
             }
-        }
+          },
+          onClose = { zapExpanded = false },
+          onError = { title, message -> accountViewModel.toast(title, message) },
+        )
+      }
     }
+  }
 }
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun DisplayAppRecommendations(
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    nav: (String) -> Unit
+  appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+  nav: (String) -> Unit,
 ) {
-    val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
+  val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
 
-    LaunchedEffect(key1 = Unit) {
-        appRecommendations.invalidateData()
-    }
+  LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
 
-    Crossfade(
-        targetState = feedState,
-        animationSpec = tween(durationMillis = 100)
-    ) { state ->
-        when (state) {
-            is FeedState.Loaded -> {
-                Column {
-                    Text(stringResource(id = R.string.recommended_apps))
+  Crossfade(
+    targetState = feedState,
+    animationSpec = tween(durationMillis = 100),
+  ) { state ->
+    when (state) {
+      is FeedState.Loaded -> {
+        Column {
+          Text(stringResource(id = R.string.recommended_apps))
 
-                    FlowRow(
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(vertical = 5.dp)
-                    ) {
-                        state.feed.value.forEach { app ->
-                            WatchApp(app, nav)
-                        }
-                    }
-                }
-            }
-
-            else -> {}
+          FlowRow(
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(vertical = 5.dp),
+          ) {
+            state.feed.value.forEach { app -> WatchApp(app, nav) }
+          }
         }
+      }
+      else -> {}
     }
+  }
 }
 
 @Composable
-private fun WatchApp(baseApp: Note, nav: (String) -> Unit) {
-    val appState by baseApp.live().metadata.observeAsState()
+private fun WatchApp(
+  baseApp: Note,
+  nav: (String) -> Unit,
+) {
+  val appState by baseApp.live().metadata.observeAsState()
 
-    var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
+  var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = appState) {
-        launch(Dispatchers.Default) {
-            val newAppLogo = (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
-            if (newAppLogo != appLogo) {
-                appLogo = newAppLogo
-            }
-        }
+  LaunchedEffect(key1 = appState) {
+    launch(Dispatchers.Default) {
+      val newAppLogo =
+        (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
+      if (newAppLogo != appLogo) {
+        appLogo = newAppLogo
+      }
     }
+  }
 
-    appLogo?.let {
-        Box(
-            remember {
-                Modifier
-                    .size(Size35dp)
-                    .clickable {
-                        nav("Note/${baseApp.idHex}")
-                    }
-            }
-        ) {
-            AsyncImage(
-                model = appLogo,
-                contentDescription = null,
-                modifier = remember {
-                    Modifier
-                        .size(Size35dp)
-                        .clip(shape = CircleShape)
-                }
-            )
-        }
+  appLogo?.let {
+    Box(
+      remember { Modifier.size(Size35dp).clickable { nav("Note/${baseApp.idHex}") } },
+    ) {
+      AsyncImage(
+        model = appLogo,
+        contentDescription = null,
+        modifier = remember { Modifier.size(Size35dp).clip(shape = CircleShape) },
+      )
     }
+  }
 }
 
 @Composable
 private fun DisplayBadges(
-    baseUser: User,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  baseUser: User,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val automaticallyShowProfilePicture = remember {
-        accountViewModel.settings.showProfilePictures.value
-    }
+  val automaticallyShowProfilePicture = remember {
+    accountViewModel.settings.showProfilePictures.value
+  }
 
-    LoadAddressableNote(
-        aTag = ATag(
-            BadgeProfilesEvent.kind,
-            baseUser.pubkeyHex,
-            BadgeProfilesEvent.standardDTAg,
-            null
-        ),
-        accountViewModel
-    ) { note ->
-        if (note != null) {
-            WatchAndRenderBadgeList(note, automaticallyShowProfilePicture, nav)
-        }
+  LoadAddressableNote(
+    aTag =
+      ATag(
+        BadgeProfilesEvent.KIND,
+        baseUser.pubkeyHex,
+        BadgeProfilesEvent.STANDARD_D_TAG,
+        null,
+      ),
+    accountViewModel,
+  ) { note ->
+    if (note != null) {
+      WatchAndRenderBadgeList(note, automaticallyShowProfilePicture, nav)
     }
+  }
 }
 
 @Composable
 private fun WatchAndRenderBadgeList(
-    note: AddressableNote,
-    loadProfilePicture: Boolean,
-    nav: (String) -> Unit
+  note: AddressableNote,
+  loadProfilePicture: Boolean,
+  nav: (String) -> Unit,
 ) {
-    val badgeList by note.live().metadata.map {
-        (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList()
-    }.distinctUntilChanged().observeAsState()
+  val badgeList by
+    note
+      .live()
+      .metadata
+      .map { (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList() }
+      .distinctUntilChanged()
+      .observeAsState()
 
-    badgeList?.let { list ->
-        RenderBadgeList(list, loadProfilePicture, nav)
-    }
+  badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, nav) }
 }
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun RenderBadgeList(
-    list: ImmutableList<String>,
-    loadProfilePicture: Boolean,
-    nav: (String) -> Unit
+  list: ImmutableList<String>,
+  loadProfilePicture: Boolean,
+  nav: (String) -> Unit,
 ) {
-    FlowRow(
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(vertical = 5.dp)
-    ) {
-        list.forEach { badgeAwardEvent ->
-            LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, nav)
-        }
-    }
+  FlowRow(
+    verticalArrangement = Arrangement.Center,
+    modifier = Modifier.padding(vertical = 5.dp),
+  ) {
+    list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, nav) }
+  }
 }
 
 @Composable
-private fun LoadAndRenderBadge(badgeAwardEventHex: String, loadProfilePicture: Boolean, nav: (String) -> Unit) {
-    var baseNote by remember {
-        mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex))
-    }
+private fun LoadAndRenderBadge(
+  badgeAwardEventHex: String,
+  loadProfilePicture: Boolean,
+  nav: (String) -> Unit,
+) {
+  var baseNote by remember { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
 
-    LaunchedEffect(key1 = badgeAwardEventHex) {
-        if (baseNote == null) {
-            launch(Dispatchers.IO) {
-                baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEventHex)
-            }
-        }
+  LaunchedEffect(key1 = badgeAwardEventHex) {
+    if (baseNote == null) {
+      launch(Dispatchers.IO) { baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEventHex) }
     }
+  }
 
-    baseNote?.let {
-        ObserveAndRenderBadge(it, loadProfilePicture, nav)
-    }
+  baseNote?.let { ObserveAndRenderBadge(it, loadProfilePicture, nav) }
 }
 
 @Composable
 private fun ObserveAndRenderBadge(
-    it: Note,
-    loadProfilePicture: Boolean,
-    nav: (String) -> Unit
+  it: Note,
+  loadProfilePicture: Boolean,
+  nav: (String) -> Unit,
 ) {
-    val badgeAwardState by it.live().metadata.observeAsState()
-    val baseBadgeDefinition by remember(badgeAwardState) {
-        derivedStateOf {
-            badgeAwardState?.note?.replyTo?.firstOrNull()
-        }
-    }
+  val badgeAwardState by it.live().metadata.observeAsState()
+  val baseBadgeDefinition by
+    remember(badgeAwardState) { derivedStateOf { badgeAwardState?.note?.replyTo?.firstOrNull() } }
 
-    baseBadgeDefinition?.let {
-        BadgeThumb(it, loadProfilePicture, nav, Size35dp)
-    }
+  baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, nav, Size35dp) }
 }
 
 @Composable
 fun BadgeThumb(
-    note: Note,
-    loadProfilePicture: Boolean,
-    nav: (String) -> Unit,
-    size: Dp,
-    pictureModifier: Modifier = Modifier
+  note: Note,
+  loadProfilePicture: Boolean,
+  nav: (String) -> Unit,
+  size: Dp,
+  pictureModifier: Modifier = Modifier,
 ) {
-    BadgeThumb(note, loadProfilePicture, size, pictureModifier) {
-        nav("Note/${note.idHex}")
-    }
+  BadgeThumb(note, loadProfilePicture, size, pictureModifier) { nav("Note/${note.idHex}") }
 }
 
 @Composable
 fun BadgeThumb(
-    baseNote: Note,
-    loadProfilePicture: Boolean,
-    size: Dp,
-    pictureModifier: Modifier = Modifier,
-    onClick: ((String) -> Unit)? = null
+  baseNote: Note,
+  loadProfilePicture: Boolean,
+  size: Dp,
+  pictureModifier: Modifier = Modifier,
+  onClick: ((String) -> Unit)? = null,
 ) {
-    Box(
-        remember {
-            Modifier
-                .width(size)
-                .height(size)
-        }
-    ) {
-        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, size, pictureModifier, onClick)
-    }
+  Box(
+    remember { Modifier.width(size).height(size) },
+  ) {
+    WatchAndRenderBadgeImage(baseNote, loadProfilePicture, size, pictureModifier, onClick)
+  }
 }
 
 @Composable
 private fun WatchAndRenderBadgeImage(
-    baseNote: Note,
-    loadProfilePicture: Boolean,
-    size: Dp,
-    pictureModifier: Modifier,
-    onClick: ((String) -> Unit)?
+  baseNote: Note,
+  loadProfilePicture: Boolean,
+  size: Dp,
+  pictureModifier: Modifier,
+  onClick: ((String) -> Unit)?,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val eventId = remember(noteState) { noteState?.note?.idHex } ?: return
-    val image by remember(noteState) {
-        derivedStateOf {
-            val event = noteState?.note?.event as? BadgeDefinitionEvent
-            event?.thumb()?.ifBlank { null } ?: event?.image()?.ifBlank { null }
-        }
+  val noteState by baseNote.live().metadata.observeAsState()
+  val eventId = remember(noteState) { noteState?.note?.idHex } ?: return
+  val image by
+    remember(noteState) {
+      derivedStateOf {
+        val event = noteState?.note?.event as? BadgeDefinitionEvent
+        event?.thumb()?.ifBlank { null } ?: event?.image()?.ifBlank { null }
+      }
     }
 
-    val bgColor = MaterialTheme.colorScheme.background
+  val bgColor = MaterialTheme.colorScheme.background
 
-    if (image == null) {
-        RobohashAsyncImage(
-            robot = "authornotfound",
-            contentDescription = stringResource(R.string.unknown_author),
-            modifier = remember {
-                pictureModifier
-                    .width(size)
-                    .height(size)
-                    .background(bgColor)
+  if (image == null) {
+    RobohashAsyncImage(
+      robot = "authornotfound",
+      contentDescription = stringResource(R.string.unknown_author),
+      modifier = remember { pictureModifier.width(size).height(size).background(bgColor) },
+    )
+  } else {
+    RobohashFallbackAsyncImage(
+      robot = eventId,
+      model = image!!,
+      contentDescription = stringResource(id = R.string.profile_image),
+      modifier =
+        remember {
+          pictureModifier
+            .width(size)
+            .height(size)
+            .clip(shape = CircleShape)
+            .background(bgColor)
+            .run {
+              if (onClick != null) {
+                this.clickable(onClick = { onClick(eventId) })
+              } else {
+                this
+              }
             }
-        )
-    } else {
-        RobohashFallbackAsyncImage(
-            robot = eventId,
-            model = image!!,
-            contentDescription = stringResource(id = R.string.profile_image),
-            modifier = remember {
-                pictureModifier
-                    .width(size)
-                    .height(size)
-                    .clip(shape = CircleShape)
-                    .background(bgColor)
-                    .run {
-                        if (onClick != null) {
-                            this.clickable(onClick = { onClick(eventId) })
-                        } else {
-                            this
-                        }
-                    }
-            },
-            loadProfilePicture = loadProfilePicture
-        )
-    }
+        },
+      loadProfilePicture = loadProfilePicture,
+    )
+  }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DrawBanner(baseUser: User, accountViewModel: AccountViewModel) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val banner = remember(userState) { userState?.user?.info?.banner }
+fun DrawBanner(
+  baseUser: User,
+  accountViewModel: AccountViewModel,
+) {
+  val userState by baseUser.live().metadata.observeAsState()
+  val banner = remember(userState) { userState?.user?.info?.banner }
 
-    val clipboardManager = LocalClipboardManager.current
-    var zoomImageDialogOpen by remember { mutableStateOf(false) }
+  val clipboardManager = LocalClipboardManager.current
+  var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
-    if (!banner.isNullOrBlank()) {
-        AsyncImage(
-            model = banner,
-            contentDescription = stringResource(id = R.string.profile_image),
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(125.dp)
-                .combinedClickable(
-                    onClick = { zoomImageDialogOpen = true },
-                    onLongClick = {
-                        clipboardManager.setText(AnnotatedString(banner))
-                    }
-                )
-        )
+  if (!banner.isNullOrBlank()) {
+    AsyncImage(
+      model = banner,
+      contentDescription = stringResource(id = R.string.profile_image),
+      contentScale = ContentScale.FillWidth,
+      modifier =
+        Modifier.fillMaxWidth()
+          .height(125.dp)
+          .combinedClickable(
+            onClick = { zoomImageDialogOpen = true },
+            onLongClick = { clipboardManager.setText(AnnotatedString(banner)) },
+          ),
+    )
 
-        if (zoomImageDialogOpen) {
-            ZoomableImageDialog(imageUrl = figureOutMimeType(banner), onDismiss = { zoomImageDialogOpen = false }, accountViewModel = accountViewModel)
-        }
-    } else {
-        Image(
-            painter = painterResource(R.drawable.profile_banner),
-            contentDescription = stringResource(id = R.string.profile_banner),
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(125.dp)
-        )
+    if (zoomImageDialogOpen) {
+      ZoomableImageDialog(
+        imageUrl = figureOutMimeType(banner),
+        onDismiss = { zoomImageDialogOpen = false },
+        accountViewModel = accountViewModel,
+      )
     }
+  } else {
+    Image(
+      painter = painterResource(R.drawable.profile_banner),
+      contentDescription = stringResource(id = R.string.profile_banner),
+      contentScale = ContentScale.FillWidth,
+      modifier = Modifier.fillMaxWidth().height(125.dp),
+    )
+  }
 }
 
 @Composable
-fun TabNotesNewThreads(feedViewModel: NostrUserProfileNewThreadsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+fun TabNotesNewThreads(
+  feedViewModel: NostrUserProfileNewThreadsFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  Column(Modifier.fillMaxHeight()) {
+    Column(
+      modifier = Modifier.padding(vertical = 0.dp),
+    ) {
+      RefresheableFeedView(
+        feedViewModel,
+        null,
+        enablePullRefresh = false,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
     }
+  }
 }
 
 @Composable
-fun TabNotesConversations(feedViewModel: NostrUserProfileConversationsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+fun TabNotesConversations(
+  feedViewModel: NostrUserProfileConversationsFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  Column(Modifier.fillMaxHeight()) {
+    Column(
+      modifier = Modifier.padding(vertical = 0.dp),
+    ) {
+      RefresheableFeedView(
+        feedViewModel,
+        null,
+        enablePullRefresh = false,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
     }
+  }
 }
 
 @Composable
-fun TabFollowedTags(baseUser: User, account: AccountViewModel, nav: (String) -> Unit) {
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            baseUser.latestContactList?.let {
-                it.unverifiedFollowTagSet().forEach { hashtag ->
-                    HashtagHeader(
-                        tag = hashtag,
-                        account = account,
-                        onClick = {
-                            nav("Hashtag/$hashtag")
-                        }
-                    )
-                }
-            }
+fun TabFollowedTags(
+  baseUser: User,
+  account: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  Column(Modifier.fillMaxHeight()) {
+    Column(
+      modifier = Modifier.padding(vertical = 0.dp),
+    ) {
+      baseUser.latestContactList?.let {
+        it.unverifiedFollowTagSet().forEach { hashtag ->
+          HashtagHeader(
+            tag = hashtag,
+            account = account,
+            onClick = { nav("Hashtag/$hashtag") },
+          )
         }
+      }
     }
+  }
 }
 
 @Composable
-fun TabBookmarks(feedViewModel: NostrUserProfileBookmarksFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    LaunchedEffect(Unit) {
-        feedViewModel.invalidateData()
-    }
+fun TabBookmarks(
+  feedViewModel: NostrUserProfileBookmarksFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  LaunchedEffect(Unit) { feedViewModel.invalidateData() }
 
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+  Column(Modifier.fillMaxHeight()) {
+    Column(
+      modifier = Modifier.padding(vertical = 0.dp),
+    ) {
+      RefresheableFeedView(
+        feedViewModel,
+        null,
+        enablePullRefresh = false,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
     }
+  }
 }
 
 @Composable
-fun TabFollows(baseUser: User, feedViewModel: UserFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    WatchFollowChanges(baseUser, feedViewModel)
+fun TabFollows(
+  baseUser: User,
+  feedViewModel: UserFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  WatchFollowChanges(baseUser, feedViewModel)
 
-    Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
+  Column(Modifier.fillMaxHeight()) {
+    Column {
+      RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
     }
+  }
 }
 
 @Composable
-fun TabFollowers(baseUser: User, feedViewModel: UserFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    WatchFollowerChanges(baseUser, feedViewModel)
+fun TabFollowers(
+  baseUser: User,
+  feedViewModel: UserFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  WatchFollowerChanges(baseUser, feedViewModel)
 
-    Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
+  Column(Modifier.fillMaxHeight()) {
+    Column {
+      RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
     }
+  }
 }
 
 @Composable
 private fun WatchFollowChanges(
-    baseUser: User,
-    feedViewModel: UserFeedViewModel
+  baseUser: User,
+  feedViewModel: UserFeedViewModel,
 ) {
-    val userState by baseUser.live().follows.observeAsState()
+  val userState by baseUser.live().follows.observeAsState()
 
-    LaunchedEffect(userState) {
-        feedViewModel.invalidateData()
-    }
+  LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }
 
 @Composable
 private fun WatchFollowerChanges(
-    baseUser: User,
-    feedViewModel: UserFeedViewModel
+  baseUser: User,
+  feedViewModel: UserFeedViewModel,
 ) {
-    val userState by baseUser.live().followers.observeAsState()
+  val userState by baseUser.live().followers.observeAsState()
 
-    LaunchedEffect(userState) {
-        feedViewModel.invalidateData()
-    }
+  LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }
 
 @Composable
-fun TabReceivedZaps(baseUser: User, zapFeedViewModel: NostrUserProfileZapsFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
+fun TabReceivedZaps(
+  baseUser: User,
+  zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
-    Column(Modifier.fillMaxHeight()) {
-        Column {
-            LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
-        }
-    }
+  Column(Modifier.fillMaxHeight()) {
+    Column { LnZapFeedView(zapFeedViewModel, accountViewModel, nav) }
+  }
 }
 
 @Composable
 private fun WatchZapsAndUpdateFeed(
-    baseUser: User,
-    feedViewModel: NostrUserProfileZapsFeedViewModel
+  baseUser: User,
+  feedViewModel: NostrUserProfileZapsFeedViewModel,
 ) {
-    val userState by baseUser.live().zaps.observeAsState()
+  val userState by baseUser.live().zaps.observeAsState()
 
-    LaunchedEffect(userState) {
-        feedViewModel.invalidateData()
-    }
+  LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }
 
 @Composable
-fun TabReports(baseUser: User, feedViewModel: NostrUserProfileReportFeedViewModel, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    WatchReportsAndUpdateFeed(baseUser, feedViewModel)
+fun TabReports(
+  baseUser: User,
+  feedViewModel: NostrUserProfileReportFeedViewModel,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  WatchReportsAndUpdateFeed(baseUser, feedViewModel)
 
-    Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+  Column(Modifier.fillMaxHeight()) {
+    Column {
+      RefresheableFeedView(
+        feedViewModel,
+        null,
+        enablePullRefresh = false,
+        accountViewModel = accountViewModel,
+        nav = nav,
+      )
     }
+  }
 }
 
 @Composable
 private fun WatchReportsAndUpdateFeed(
-    baseUser: User,
-    feedViewModel: NostrUserProfileReportFeedViewModel
+  baseUser: User,
+  feedViewModel: NostrUserProfileReportFeedViewModel,
 ) {
-    val userState by baseUser.live().reports.observeAsState()
-    LaunchedEffect(userState) {
-        feedViewModel.invalidateData()
-    }
+  val userState by baseUser.live().reports.observeAsState()
+  LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }
 
 @Composable
-fun TabRelays(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val feedViewModel: RelayFeedViewModel = viewModel()
+fun TabRelays(
+  user: User,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val feedViewModel: RelayFeedViewModel = viewModel()
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
+  val lifeCycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(user) {
+  DisposableEffect(user) {
+    feedViewModel.subscribeTo(user)
+    onDispose { feedViewModel.unsubscribeTo(user) }
+  }
+
+  DisposableEffect(lifeCycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        println("Profile Relay Start")
         feedViewModel.subscribeTo(user)
-        onDispose {
-            feedViewModel.unsubscribeTo(user)
-        }
+      }
+      if (event == Lifecycle.Event.ON_PAUSE) {
+        println("Profile Relay Stop")
+        feedViewModel.unsubscribeTo(user)
+      }
     }
 
-    DisposableEffect(lifeCycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                println("Profile Relay Start")
-                feedViewModel.subscribeTo(user)
-            }
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                println("Profile Relay Stop")
-                feedViewModel.unsubscribeTo(user)
-            }
-        }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-            println("Profile Relay Dispose")
-            feedViewModel.unsubscribeTo(user)
-        }
+    lifeCycleOwner.lifecycle.addObserver(observer)
+    onDispose {
+      lifeCycleOwner.lifecycle.removeObserver(observer)
+      println("Profile Relay Dispose")
+      feedViewModel.unsubscribeTo(user)
     }
+  }
 
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp)
-        ) {
-            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
-        }
+  Column(Modifier.fillMaxHeight()) {
+    Column(
+      modifier = Modifier.padding(vertical = 0.dp),
+    ) {
+      RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
     }
+  }
 }
 
 @Composable
-private fun MessageButton(user: User, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val scope = rememberCoroutineScope()
+private fun MessageButton(
+  user: User,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val scope = rememberCoroutineScope()
 
-    Button(
-        modifier = Modifier
-            .padding(horizontal = 3.dp)
-            .width(50.dp),
-        onClick = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.createChatRoomFor(user) {
-                    nav("Room/$it")
-                }
-            }
-        },
-        contentPadding = ZeroPadding
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_dm),
-            stringResource(R.string.send_a_direct_message),
-            modifier = Modifier.size(20.dp),
-            tint = Color.White
-        )
-    }
+  Button(
+    modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+    onClick = {
+      scope.launch(Dispatchers.IO) { accountViewModel.createChatRoomFor(user) { nav("Room/$it") } }
+    },
+    contentPadding = ZeroPadding,
+  ) {
+    Icon(
+      painter = painterResource(R.drawable.ic_dm),
+      stringResource(R.string.send_a_direct_message),
+      modifier = Modifier.size(20.dp),
+      tint = Color.White,
+    )
+  }
 }
 
 @Composable
 private fun EditButton(account: Account) {
-    var wantsToEdit by remember {
-        mutableStateOf(false)
-    }
+  var wantsToEdit by remember { mutableStateOf(false) }
 
-    if (wantsToEdit) {
-        NewUserMetadataView({ wantsToEdit = false }, account)
-    }
+  if (wantsToEdit) {
+    NewUserMetadataView({ wantsToEdit = false }, account)
+  }
 
-    InnerEditButton { wantsToEdit = true }
+  InnerEditButton { wantsToEdit = true }
 }
 
 @Preview
 @Composable
 private fun InnerEditButtonPreview() {
-    InnerEditButton {}
+  InnerEditButton {}
 }
 
 @Composable
 private fun InnerEditButton(onClick: () -> Unit) {
-    Button(
-        modifier = Modifier
-            .padding(horizontal = 3.dp)
-            .width(50.dp),
-        onClick = onClick,
-        contentPadding = ZeroPadding
-    ) {
-        Icon(
-            tint = Color.White,
-            imageVector = Icons.Default.EditNote,
-            contentDescription = stringResource(R.string.edits_the_user_s_metadata)
-        )
-    }
+  Button(
+    modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+    onClick = onClick,
+    contentPadding = ZeroPadding,
+  ) {
+    Icon(
+      tint = Color.White,
+      imageVector = Icons.Default.EditNote,
+      contentDescription = stringResource(R.string.edits_the_user_s_metadata),
+    )
+  }
 }
 
 @Composable
 fun UnfollowButton(onClick: () -> Unit) {
-    Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        contentPadding = ButtonPadding
-    ) {
-        Text(text = stringResource(R.string.unfollow), color = Color.White)
-    }
+  Button(
+    modifier = Modifier.padding(horizontal = 3.dp),
+    onClick = onClick,
+    shape = ButtonBorder,
+    colors =
+      ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+      ),
+    contentPadding = ButtonPadding,
+  ) {
+    Text(text = stringResource(R.string.unfollow), color = Color.White)
+  }
 }
 
 @Composable
-fun FollowButton(text: Int = R.string.follow, onClick: () -> Unit) {
-    Button(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        contentPadding = ButtonPadding
-    ) {
-        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
-    }
+fun FollowButton(
+  text: Int = R.string.follow,
+  onClick: () -> Unit,
+) {
+  Button(
+    modifier = Modifier.padding(start = 3.dp),
+    onClick = onClick,
+    shape = ButtonBorder,
+    colors =
+      ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+      ),
+    contentPadding = ButtonPadding,
+  ) {
+    Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+  }
 }
 
 @Composable
 fun ShowUserButton(onClick: () -> Unit) {
-    Button(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = onClick,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        contentPadding = ButtonPadding
-    ) {
-        Text(text = stringResource(R.string.unblock), color = Color.White)
-    }
+  Button(
+    modifier = Modifier.padding(start = 3.dp),
+    onClick = onClick,
+    shape = ButtonBorder,
+    colors =
+      ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+      ),
+    contentPadding = ButtonPadding,
+  ) {
+    Text(text = stringResource(R.string.unblock), color = Color.White)
+  }
 }
 
 @Composable
-fun UserProfileDropDownMenu(user: User, popupExpanded: Boolean, onDismiss: () -> Unit, accountViewModel: AccountViewModel) {
-    DropdownMenu(
-        expanded = popupExpanded,
-        onDismissRequest = onDismiss
-    ) {
-        val clipboardManager = LocalClipboardManager.current
+fun UserProfileDropDownMenu(
+  user: User,
+  popupExpanded: Boolean,
+  onDismiss: () -> Unit,
+  accountViewModel: AccountViewModel,
+) {
+  DropdownMenu(
+    expanded = popupExpanded,
+    onDismissRequest = onDismiss,
+  ) {
+    val clipboardManager = LocalClipboardManager.current
 
+    DropdownMenuItem(
+      text = { Text(stringResource(R.string.copy_user_id)) },
+      onClick = {
+        clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
+        onDismiss()
+      },
+    )
+
+    if (accountViewModel.userProfile() != user) {
+      Divider()
+      if (accountViewModel.account.isHidden(user)) {
         DropdownMenuItem(
-            text = {
-                Text(stringResource(R.string.copy_user_id))
-            },
-            onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())); onDismiss() }
+          text = { Text(stringResource(R.string.unblock_user)) },
+          onClick = {
+            accountViewModel.show(user)
+            onDismiss()
+          },
         )
-
-        if (accountViewModel.userProfile() != user) {
-            Divider()
-            if (accountViewModel.account.isHidden(user)) {
-                DropdownMenuItem(
-                    text = {
-                        Text(stringResource(R.string.unblock_user))
-                    },
-                    onClick = {
-                        accountViewModel.show(user)
-                        onDismiss()
-                    }
-                )
-            } else {
-                DropdownMenuItem(
-                    text = {
-                        Text(stringResource(id = R.string.block_hide_user))
-                    },
-                    onClick = {
-                        accountViewModel.hide(user)
-                        onDismiss()
-                    }
-                )
-            }
-            Divider()
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(id = R.string.report_spam_scam))
-                },
-                onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.SPAM)
-                    onDismiss()
-                }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(R.string.report_hateful_speech))
-                },
-                onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
-                    onDismiss()
-                }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(id = R.string.report_impersonation))
-                },
-                onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
-                    onDismiss()
-                }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(R.string.report_nudity_porn))
-                },
-                onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
-                    onDismiss()
-                }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(id = R.string.report_illegal_behaviour))
-                },
-                onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
-                    onDismiss()
-                }
-            )
-        }
+      } else {
+        DropdownMenuItem(
+          text = { Text(stringResource(id = R.string.block_hide_user)) },
+          onClick = {
+            accountViewModel.hide(user)
+            onDismiss()
+          },
+        )
+      }
+      Divider()
+      DropdownMenuItem(
+        text = { Text(stringResource(id = R.string.report_spam_scam)) },
+        onClick = {
+          accountViewModel.report(user, ReportEvent.ReportType.SPAM)
+          onDismiss()
+        },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.report_hateful_speech)) },
+        onClick = {
+          accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
+          onDismiss()
+        },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(id = R.string.report_impersonation)) },
+        onClick = {
+          accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
+          onDismiss()
+        },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.report_nudity_porn)) },
+        onClick = {
+          accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
+          onDismiss()
+        },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(id = R.string.report_illegal_behaviour)) },
+        onClick = {
+          accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
+          onDismiss()
+        },
+      )
     }
+  }
 }

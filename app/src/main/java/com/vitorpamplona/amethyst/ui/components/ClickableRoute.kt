@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -59,654 +79,649 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ClickableRoute(
-    nip19: Nip19.Return,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  nip19: Nip19.Return,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    when (nip19.type) {
-        Nip19.Type.USER -> {
-            DisplayUser(nip19, accountViewModel, nav)
-        }
-        Nip19.Type.ADDRESS -> {
-            DisplayAddress(nip19, accountViewModel, nav)
-        }
-        Nip19.Type.NOTE -> {
-            DisplayNote(nip19, accountViewModel, nav)
-        }
-        Nip19.Type.EVENT -> {
-            DisplayEvent(nip19, accountViewModel, nav)
-        }
-        else -> {
-            Text(
-                remember {
-                    "@${nip19.hex}${nip19.additionalChars}"
-                }
-            )
-        }
+  when (nip19.type) {
+    Nip19.Type.USER -> {
+      DisplayUser(nip19, accountViewModel, nav)
     }
+    Nip19.Type.ADDRESS -> {
+      DisplayAddress(nip19, accountViewModel, nav)
+    }
+    Nip19.Type.NOTE -> {
+      DisplayNote(nip19, accountViewModel, nav)
+    }
+    Nip19.Type.EVENT -> {
+      DisplayEvent(nip19, accountViewModel, nav)
+    }
+    else -> {
+      Text(
+        remember { "@${nip19.hex}${nip19.additionalChars}" },
+      )
+    }
+  }
 }
 
 @Composable
 private fun DisplayEvent(
-    nip19: Nip19.Return,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  nip19: Nip19.Return,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    LoadNote(nip19.hex, accountViewModel) {
-        if (it != null) {
-            DisplayNoteLink(it, nip19, accountViewModel, nav)
-        } else {
-            CreateClickableText(
-                clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
-                suffix = nip19.additionalChars,
-                route = remember(nip19) { "Event/${nip19.hex}" },
-                nav = nav
-            )
-        }
+  LoadNote(nip19.hex, accountViewModel) {
+    if (it != null) {
+      DisplayNoteLink(it, nip19, accountViewModel, nav)
+    } else {
+      CreateClickableText(
+        clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
+        suffix = nip19.additionalChars,
+        route = remember(nip19) { "Event/${nip19.hex}" },
+        nav = nav,
+      )
     }
+  }
 }
 
 @Composable
 private fun DisplayNote(
-    nip19: Nip19.Return,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  nip19: Nip19.Return,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    LoadNote(nip19.hex, accountViewModel = accountViewModel) {
-        if (it != null) {
-            DisplayNoteLink(it, nip19, accountViewModel, nav)
-        } else {
-            CreateClickableText(
-                clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
-                suffix = nip19.additionalChars,
-                route = remember(nip19) { "Event/${nip19.hex}" },
-                nav = nav
-            )
-        }
+  LoadNote(nip19.hex, accountViewModel = accountViewModel) {
+    if (it != null) {
+      DisplayNoteLink(it, nip19, accountViewModel, nav)
+    } else {
+      CreateClickableText(
+        clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
+        suffix = nip19.additionalChars,
+        route = remember(nip19) { "Event/${nip19.hex}" },
+        nav = nav,
+      )
     }
+  }
 }
 
 @Composable
 private fun DisplayNoteLink(
-    it: Note,
-    nip19: Nip19.Return,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  it: Note,
+  nip19: Nip19.Return,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    val noteState by it.live().metadata.observeAsState()
+  val noteState by it.live().metadata.observeAsState()
 
-    val note = remember(noteState) { noteState?.note } ?: return
+  val note = remember(noteState) { noteState?.note } ?: return
 
-    val channelHex = remember(noteState) { note.channelHex() }
-    val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
-    val addedCharts = remember { "${nip19.additionalChars}" }
+  val channelHex = remember(noteState) { note.channelHex() }
+  val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
+  val addedCharts = remember { "${nip19.additionalChars}" }
 
-    if (note.event is ChannelCreateEvent || nip19.kind == ChannelCreateEvent.kind) {
-        CreateClickableText(
-            clickablePart = noteIdDisplayNote,
-            suffix = addedCharts,
-            route = remember(noteState) { "Channel/${nip19.hex}" },
-            nav = nav
-        )
-    } else if (note.event is PrivateDmEvent || nip19.kind == PrivateDmEvent.kind) {
-        CreateClickableText(
-            clickablePart = noteIdDisplayNote,
-            suffix = addedCharts,
-            route = remember(noteState) {
-                (note.author?.pubkeyHex ?: nip19.hex).let {
-                    "RoomByAuthor/$it"
-                }
-            },
-            nav = nav
-        )
-    } else if (channelHex != null) {
-        LoadChannel(baseChannelHex = channelHex, accountViewModel) { baseChannel ->
-            val channelState by baseChannel.live.observeAsState()
-            val channelDisplayName by remember(channelState) {
-                derivedStateOf {
-                    channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote
-                }
-            }
-
-            CreateClickableText(
-                clickablePart = channelDisplayName,
-                suffix = addedCharts,
-                route = remember(noteState) { "Channel/${baseChannel.idHex}" },
-                nav = nav
-            )
+  if (note.event is ChannelCreateEvent || nip19.kind == ChannelCreateEvent.KIND) {
+    CreateClickableText(
+      clickablePart = noteIdDisplayNote,
+      suffix = addedCharts,
+      route = remember(noteState) { "Channel/${nip19.hex}" },
+      nav = nav,
+    )
+  } else if (note.event is PrivateDmEvent || nip19.kind == PrivateDmEvent.KIND) {
+    CreateClickableText(
+      clickablePart = noteIdDisplayNote,
+      suffix = addedCharts,
+      route =
+        remember(noteState) { (note.author?.pubkeyHex ?: nip19.hex).let { "RoomByAuthor/$it" } },
+      nav = nav,
+    )
+  } else if (channelHex != null) {
+    LoadChannel(baseChannelHex = channelHex, accountViewModel) { baseChannel ->
+      val channelState by baseChannel.live.observeAsState()
+      val channelDisplayName by
+        remember(channelState) {
+          derivedStateOf { channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote }
         }
-    } else {
-        CreateClickableText(
-            clickablePart = noteIdDisplayNote,
-            suffix = addedCharts,
-            route = remember(noteState) { "Event/${nip19.hex}" },
-            nav = nav
-        )
+
+      CreateClickableText(
+        clickablePart = channelDisplayName,
+        suffix = addedCharts,
+        route = remember(noteState) { "Channel/${baseChannel.idHex}" },
+        nav = nav,
+      )
     }
+  } else {
+    CreateClickableText(
+      clickablePart = noteIdDisplayNote,
+      suffix = addedCharts,
+      route = remember(noteState) { "Event/${nip19.hex}" },
+      nav = nav,
+    )
+  }
 }
 
 @Composable
 private fun DisplayAddress(
-    nip19: Nip19.Return,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  nip19: Nip19.Return,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.hex)) }
+  var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.hex)) }
 
-    if (noteBase == null) {
-        LaunchedEffect(key1 = nip19.hex) {
-            accountViewModel.checkGetOrCreateAddressableNote(nip19.hex) {
-                noteBase = it
-            }
-        }
+  if (noteBase == null) {
+    LaunchedEffect(key1 = nip19.hex) {
+      accountViewModel.checkGetOrCreateAddressableNote(nip19.hex) { noteBase = it }
     }
+  }
 
-    noteBase?.let {
-        val noteState by it.live().metadata.observeAsState()
+  noteBase?.let {
+    val noteState by it.live().metadata.observeAsState()
 
-        val route = remember(noteState) { "Note/${nip19.hex}" }
-        val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
-        val addedCharts = remember { "${nip19.additionalChars}" }
+    val route = remember(noteState) { "Note/${nip19.hex}" }
+    val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
+    val addedCharts = remember { "${nip19.additionalChars}" }
 
-        CreateClickableText(
-            clickablePart = displayName,
-            suffix = addedCharts,
-            route = route,
-            nav = nav
-        )
-    }
+    CreateClickableText(
+      clickablePart = displayName,
+      suffix = addedCharts,
+      route = route,
+      nav = nav,
+    )
+  }
 
-    if (noteBase == null) {
-        Text(
-            remember {
-                "@${nip19.hex}${nip19.additionalChars}"
-            }
-        )
-    }
+  if (noteBase == null) {
+    Text(
+      remember { "@${nip19.hex}${nip19.additionalChars}" },
+    )
+  }
 }
 
 @Composable
 private fun DisplayUser(
-    nip19: Nip19.Return,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit
+  nip19: Nip19.Return,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
 ) {
-    var userBase by remember(nip19) {
-        mutableStateOf(
-            accountViewModel.getUserIfExists(nip19.hex)
-        )
+  var userBase by
+    remember(nip19) {
+      mutableStateOf(
+        accountViewModel.getUserIfExists(nip19.hex),
+      )
     }
 
-    if (userBase == null) {
-        LaunchedEffect(key1 = nip19.hex) {
-            accountViewModel.checkGetOrCreateUser(nip19.hex) {
-                userBase = it
-            }
-        }
+  if (userBase == null) {
+    LaunchedEffect(key1 = nip19.hex) {
+      accountViewModel.checkGetOrCreateUser(nip19.hex) { userBase = it }
     }
+  }
 
-    userBase?.let {
-        RenderUserAsClickableText(it, nip19, nav)
-    }
+  userBase?.let { RenderUserAsClickableText(it, nip19, nav) }
 
-    if (userBase == null) {
-        Text(
-            remember {
-                "@${nip19.hex}${nip19.additionalChars}"
-            }
-        )
-    }
+  if (userBase == null) {
+    Text(
+      remember { "@${nip19.hex}${nip19.additionalChars}" },
+    )
+  }
 }
 
 @Composable
 private fun RenderUserAsClickableText(
-    baseUser: User,
-    nip19: Nip19.Return,
-    nav: (String) -> Unit
+  baseUser: User,
+  nip19: Nip19.Return,
+  nav: (String) -> Unit,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val route = remember { "User/${baseUser.pubkeyHex}" }
+  val userState by baseUser.live().metadata.observeAsState()
+  val route = remember { "User/${baseUser.pubkeyHex}" }
 
-    val userDisplayName by remember(userState) {
-        derivedStateOf {
-            userState?.user?.toBestDisplayName()
-        }
+  val userDisplayName by
+    remember(userState) { derivedStateOf { userState?.user?.toBestDisplayName() } }
+
+  val userTags by
+    remember(userState) {
+      derivedStateOf { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
     }
 
-    val userTags by remember(userState) {
-        derivedStateOf {
-            userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists()
-        }
-    }
+  val addedCharts = remember(nip19) { "${nip19.additionalChars}" }
 
-    val addedCharts = remember(nip19) {
-        "${nip19.additionalChars}"
-    }
-
-    userDisplayName?.let {
-        CreateClickableTextWithEmoji(
-            clickablePart = it,
-            suffix = addedCharts,
-            maxLines = 1,
-            route = route,
-            nav = nav,
-            tags = userTags
-        )
-    }
+  userDisplayName?.let {
+    CreateClickableTextWithEmoji(
+      clickablePart = it,
+      suffix = addedCharts,
+      maxLines = 1,
+      route = route,
+      nav = nav,
+      tags = userTags,
+    )
+  }
 }
 
 @Composable
 fun CreateClickableText(
-    clickablePart: String,
-    suffix: String?,
-    maxLines: Int = Int.MAX_VALUE,
-    overrideColor: Color? = null,
-    fontWeight: FontWeight = FontWeight.Normal,
-    route: String,
-    nav: (String) -> Unit
+  clickablePart: String,
+  suffix: String?,
+  maxLines: Int = Int.MAX_VALUE,
+  overrideColor: Color? = null,
+  fontWeight: FontWeight = FontWeight.Normal,
+  route: String,
+  nav: (String) -> Unit,
 ) {
-    val currentStyle = LocalTextStyle.current
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+  val currentStyle = LocalTextStyle.current
+  val primaryColor = MaterialTheme.colorScheme.primary
+  val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
-    val clickablePartStyle = remember(primaryColor, overrideColor) {
-        currentStyle.copy(color = overrideColor ?: primaryColor, fontWeight = fontWeight).toSpanStyle()
+  val clickablePartStyle =
+    remember(primaryColor, overrideColor) {
+      currentStyle
+        .copy(color = overrideColor ?: primaryColor, fontWeight = fontWeight)
+        .toSpanStyle()
     }
 
-    val nonClickablePartStyle = remember(onBackgroundColor, overrideColor) {
-        currentStyle.copy(color = overrideColor ?: onBackgroundColor, fontWeight = fontWeight).toSpanStyle()
+  val nonClickablePartStyle =
+    remember(onBackgroundColor, overrideColor) {
+      currentStyle
+        .copy(color = overrideColor ?: onBackgroundColor, fontWeight = fontWeight)
+        .toSpanStyle()
     }
 
-    val text = remember(clickablePartStyle, nonClickablePartStyle, clickablePart, suffix) {
-        buildAnnotatedString {
-            withStyle(clickablePartStyle) {
-                append(clickablePart)
-            }
-            if (!suffix.isNullOrBlank()) {
-                withStyle(nonClickablePartStyle) {
-                    append(suffix)
-                }
-            }
+  val text =
+    remember(clickablePartStyle, nonClickablePartStyle, clickablePart, suffix) {
+      buildAnnotatedString {
+        withStyle(clickablePartStyle) { append(clickablePart) }
+        if (!suffix.isNullOrBlank()) {
+          withStyle(nonClickablePartStyle) { append(suffix) }
         }
+      }
     }
 
-    ClickableText(
-        text = text,
-        maxLines = maxLines,
-        onClick = { nav(route) }
+  ClickableText(
+    text = text,
+    maxLines = maxLines,
+    onClick = { nav(route) },
+  )
+}
+
+@Composable
+fun CreateTextWithEmoji(
+  text: String,
+  tags: ImmutableListOfLists<String>?,
+  color: Color = Color.Unspecified,
+  textAlign: TextAlign? = null,
+  fontWeight: FontWeight? = null,
+  fontSize: TextUnit = TextUnit.Unspecified,
+  maxLines: Int = Int.MAX_VALUE,
+  overflow: TextOverflow = TextOverflow.Clip,
+  modifier: Modifier = Modifier,
+) {
+  var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
+
+  LaunchedEffect(key1 = text) {
+    launch(Dispatchers.Default) {
+      val emojis =
+        tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] }
+          ?: emptyMap()
+
+      if (emojis.isNotEmpty()) {
+        val newEmojiList = assembleAnnotatedList(text, emojis)
+        if (newEmojiList.isNotEmpty()) {
+          emojiList = newEmojiList.toImmutableList()
+        }
+      }
+    }
+  }
+
+  val textColor =
+    color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
+
+  if (emojiList.isEmpty()) {
+    Text(
+      text = text,
+      color = textColor,
+      textAlign = textAlign,
+      fontWeight = fontWeight,
+      fontSize = fontSize,
+      maxLines = maxLines,
+      overflow = overflow,
+      modifier = modifier,
     )
+  } else {
+    val style =
+      LocalTextStyle.current
+        .merge(
+          TextStyle(
+            color = textColor,
+            textAlign = textAlign,
+            fontWeight = fontWeight,
+            fontSize = fontSize,
+          ),
+        )
+        .toSpanStyle()
+
+    InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
+  }
 }
 
 @Composable
 fun CreateTextWithEmoji(
-    text: String,
-    tags: ImmutableListOfLists<String>?,
-    color: Color = Color.Unspecified,
-    textAlign: TextAlign? = null,
-    fontWeight: FontWeight? = null,
-    fontSize: TextUnit = TextUnit.Unspecified,
-    maxLines: Int = Int.MAX_VALUE,
-    overflow: TextOverflow = TextOverflow.Clip,
-    modifier: Modifier = Modifier
+  text: String,
+  emojis: ImmutableMap<String, String>,
+  color: Color = Color.Unspecified,
+  textAlign: TextAlign? = null,
+  fontWeight: FontWeight? = null,
+  fontSize: TextUnit = TextUnit.Unspecified,
+  maxLines: Int = Int.MAX_VALUE,
+  overflow: TextOverflow = TextOverflow.Clip,
+  modifier: Modifier = Modifier,
 ) {
-    var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
+  var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
 
+  if (emojis.isNotEmpty()) {
     LaunchedEffect(key1 = text) {
-        launch(Dispatchers.Default) {
-            val emojis =
-                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
-
-            if (emojis.isNotEmpty()) {
-                val newEmojiList = assembleAnnotatedList(text, emojis)
-                if (newEmojiList.isNotEmpty()) {
-                    emojiList = newEmojiList.toImmutableList()
-                }
-            }
+      launch(Dispatchers.Default) {
+        val newEmojiList = assembleAnnotatedList(text, emojis)
+        if (newEmojiList.isNotEmpty()) {
+          emojiList = newEmojiList.toImmutableList()
         }
+      }
     }
+  }
 
-    val textColor = color.takeOrElse {
-        LocalTextStyle.current.color.takeOrElse {
-            LocalContentColor.current
-        }
-    }
+  val textColor =
+    color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
 
-    if (emojiList.isEmpty()) {
-        Text(
-            text = text,
-            color = textColor,
-            textAlign = textAlign,
-            fontWeight = fontWeight,
-            fontSize = fontSize,
-            maxLines = maxLines,
-            overflow = overflow,
-            modifier = modifier
-        )
-    } else {
-        val style = LocalTextStyle.current.merge(
+  if (emojiList.isEmpty()) {
+    Text(
+      text = text,
+      color = textColor,
+      textAlign = textAlign,
+      fontWeight = fontWeight,
+      fontSize = fontSize,
+      maxLines = maxLines,
+      overflow = overflow,
+      modifier = modifier,
+    )
+  } else {
+    val currentStyle = LocalTextStyle.current
+    val style =
+      remember(currentStyle) {
+        currentStyle
+          .merge(
             TextStyle(
-                color = textColor,
-                textAlign = textAlign,
-                fontWeight = fontWeight,
-                fontSize = fontSize
-            )
-        ).toSpanStyle()
+              color = textColor,
+              textAlign = textAlign,
+              fontWeight = fontWeight,
+              fontSize = fontSize,
+            ),
+          )
+          .toSpanStyle()
+      }
 
-        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
-    }
-}
-
-@Composable
-fun CreateTextWithEmoji(
-    text: String,
-    emojis: ImmutableMap<String, String>,
-    color: Color = Color.Unspecified,
-    textAlign: TextAlign? = null,
-    fontWeight: FontWeight? = null,
-    fontSize: TextUnit = TextUnit.Unspecified,
-    maxLines: Int = Int.MAX_VALUE,
-    overflow: TextOverflow = TextOverflow.Clip,
-    modifier: Modifier = Modifier
-) {
-    var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
-
-    if (emojis.isNotEmpty()) {
-        LaunchedEffect(key1 = text) {
-            launch(Dispatchers.Default) {
-                val newEmojiList = assembleAnnotatedList(text, emojis)
-                if (newEmojiList.isNotEmpty()) {
-                    emojiList = newEmojiList.toImmutableList()
-                }
-            }
-        }
-    }
-
-    val textColor = color.takeOrElse {
-        LocalTextStyle.current.color.takeOrElse {
-            LocalContentColor.current
-        }
-    }
-
-    if (emojiList.isEmpty()) {
-        Text(
-            text = text,
-            color = textColor,
-            textAlign = textAlign,
-            fontWeight = fontWeight,
-            fontSize = fontSize,
-            maxLines = maxLines,
-            overflow = overflow,
-            modifier = modifier
-        )
-    } else {
-        val currentStyle = LocalTextStyle.current
-        val style = remember(currentStyle) {
-            currentStyle.merge(
-                TextStyle(
-                    color = textColor,
-                    textAlign = textAlign,
-                    fontWeight = fontWeight,
-                    fontSize = fontSize
-                )
-            ).toSpanStyle()
-        }
-
-        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
-    }
+    InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
+  }
 }
 
 @Composable
 fun CreateClickableTextWithEmoji(
-    clickablePart: String,
-    maxLines: Int = Int.MAX_VALUE,
-    tags: ImmutableListOfLists<String>?,
-    style: TextStyle,
-    onClick: (Int) -> Unit
+  clickablePart: String,
+  maxLines: Int = Int.MAX_VALUE,
+  tags: ImmutableListOfLists<String>?,
+  style: TextStyle,
+  onClick: (Int) -> Unit,
 ) {
-    var emojiList by remember(clickablePart) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
+  var emojiList by
+    remember(clickablePart) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
 
-    LaunchedEffect(key1 = clickablePart) {
-        launch(Dispatchers.Default) {
-            val emojis =
-                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
+  LaunchedEffect(key1 = clickablePart) {
+    launch(Dispatchers.Default) {
+      val emojis =
+        tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] }
+          ?: emptyMap()
 
-            if (emojis.isNotEmpty()) {
-                val newEmojiList = assembleAnnotatedList(clickablePart, emojis)
-                if (newEmojiList.isNotEmpty()) {
-                    emojiList = newEmojiList.toImmutableList()
-                }
-            }
+      if (emojis.isNotEmpty()) {
+        val newEmojiList = assembleAnnotatedList(clickablePart, emojis)
+        if (newEmojiList.isNotEmpty()) {
+          emojiList = newEmojiList.toImmutableList()
         }
+      }
     }
+  }
 
-    if (emojiList.isEmpty()) {
-        ClickableText(
-            text = AnnotatedString(clickablePart),
-            style = style,
-            maxLines = maxLines,
-            onClick = onClick
-        )
-    } else {
-        ClickableInLineIconRenderer(emojiList, maxLines, style.toSpanStyle()) {
-            onClick(it)
-        }
-    }
+  if (emojiList.isEmpty()) {
+    ClickableText(
+      text = AnnotatedString(clickablePart),
+      style = style,
+      maxLines = maxLines,
+      onClick = onClick,
+    )
+  } else {
+    ClickableInLineIconRenderer(emojiList, maxLines, style.toSpanStyle()) { onClick(it) }
+  }
 }
 
 @Immutable
 data class DoubleEmojiList(
-    val part1: ImmutableList<Renderable>,
-    val part2: ImmutableList<Renderable>
+  val part1: ImmutableList<Renderable>,
+  val part2: ImmutableList<Renderable>,
 )
 
 @Composable
 fun CreateClickableTextWithEmoji(
-    clickablePart: String,
-    suffix: String?,
-    maxLines: Int = Int.MAX_VALUE,
-    overrideColor: Color? = null,
-    fontWeight: FontWeight = FontWeight.Normal,
-    route: String,
-    nav: (String) -> Unit,
-    tags: ImmutableListOfLists<String>?
+  clickablePart: String,
+  suffix: String?,
+  maxLines: Int = Int.MAX_VALUE,
+  overrideColor: Color? = null,
+  fontWeight: FontWeight = FontWeight.Normal,
+  route: String,
+  nav: (String) -> Unit,
+  tags: ImmutableListOfLists<String>?,
 ) {
-    var emojiLists by remember(clickablePart) {
-        mutableStateOf<DoubleEmojiList?>(null)
+  var emojiLists by remember(clickablePart) { mutableStateOf<DoubleEmojiList?>(null) }
+
+  LaunchedEffect(key1 = clickablePart) {
+    launch(Dispatchers.Default) {
+      val emojis =
+        tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] }
+          ?: emptyMap()
+
+      if (emojis.isNotEmpty()) {
+        val newEmojiList1 = assembleAnnotatedList(clickablePart, emojis)
+        val newEmojiList2 =
+          suffix?.let { assembleAnnotatedList(it, emojis) } ?: emptyList<Renderable>()
+
+        if (newEmojiList1.isNotEmpty() || newEmojiList2.isNotEmpty()) {
+          emojiLists =
+            DoubleEmojiList(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())
+        }
+      }
+    }
+  }
+
+  if (emojiLists == null) {
+    CreateClickableText(clickablePart, suffix, maxLines, overrideColor, fontWeight, route, nav)
+  } else {
+    ClickableInLineIconRenderer(
+      emojiLists!!.part1,
+      maxLines,
+      LocalTextStyle.current
+        .copy(color = overrideColor ?: MaterialTheme.colorScheme.primary, fontWeight = fontWeight)
+        .toSpanStyle(),
+    ) {
+      nav(route)
     }
 
-    LaunchedEffect(key1 = clickablePart) {
-        launch(Dispatchers.Default) {
-            val emojis =
-                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] } ?: emptyMap()
-
-            if (emojis.isNotEmpty()) {
-                val newEmojiList1 = assembleAnnotatedList(clickablePart, emojis)
-                val newEmojiList2 = suffix?.let { assembleAnnotatedList(it, emojis) } ?: emptyList<Renderable>()
-
-                if (newEmojiList1.isNotEmpty() || newEmojiList2.isNotEmpty()) {
-                    emojiLists = DoubleEmojiList(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())
-                }
-            }
-        }
-    }
-
-    if (emojiLists == null) {
-        CreateClickableText(clickablePart, suffix, maxLines, overrideColor, fontWeight, route, nav)
-    } else {
-        ClickableInLineIconRenderer(
-            emojiLists!!.part1,
-            maxLines,
-            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colorScheme.primary, fontWeight = fontWeight).toSpanStyle()
-        ) {
-            nav(route)
-        }
-
-        InLineIconRenderer(
-            emojiLists!!.part2,
-            LocalTextStyle.current.copy(color = overrideColor ?: MaterialTheme.colorScheme.onBackground, fontWeight = fontWeight).toSpanStyle(),
-            maxLines = maxLines
+    InLineIconRenderer(
+      emojiLists!!.part2,
+      LocalTextStyle.current
+        .copy(
+          color = overrideColor ?: MaterialTheme.colorScheme.onBackground,
+          fontWeight = fontWeight,
         )
+        .toSpanStyle(),
+      maxLines = maxLines,
+    )
+  }
+}
+
+suspend fun assembleAnnotatedList(
+  text: String,
+  emojis: Map<String, String>,
+): ImmutableList<Renderable> {
+  return Nip30CustomEmoji()
+    .buildArray(text)
+    .map {
+      val url = emojis[it]
+      if (url != null) {
+        ImageUrlType(url)
+      } else {
+        TextType(it)
+      }
     }
+    .toImmutableList()
 }
 
-suspend fun assembleAnnotatedList(text: String, emojis: Map<String, String>): ImmutableList<Renderable> {
-    return Nip30CustomEmoji().buildArray(text).map {
-        val url = emojis[it]
-        if (url != null) {
-            ImageUrlType(url)
-        } else {
-            TextType(it)
-        }
-    }.toImmutableList()
-}
+@Immutable open class Renderable()
 
-@Immutable
-open class Renderable()
+@Immutable class TextType(val text: String) : Renderable()
 
-@Immutable
-class TextType(val text: String) : Renderable()
-
-@Immutable
-class ImageUrlType(val url: String) : Renderable()
+@Immutable class ImageUrlType(val url: String) : Renderable()
 
 @Composable
 fun ClickableInLineIconRenderer(
-    wordsInOrder: ImmutableList<Renderable>,
-    maxLines: Int = Int.MAX_VALUE,
-    style: SpanStyle,
-    onClick: (Int) -> Unit
+  wordsInOrder: ImmutableList<Renderable>,
+  maxLines: Int = Int.MAX_VALUE,
+  style: SpanStyle,
+  onClick: (Int) -> Unit,
 ) {
-    val placeholderSize = remember(style) {
-        if (style.fontSize == TextUnit.Unspecified) {
-            22.sp
-        } else {
-            style.fontSize.times(1.1f)
-        }
+  val placeholderSize =
+    remember(style) {
+      if (style.fontSize == TextUnit.Unspecified) {
+        22.sp
+      } else {
+        style.fontSize.times(1.1f)
+      }
     }
 
-    val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
+  val inlineContent =
+    wordsInOrder
+      .mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
-            Pair(
-                "inlineContent$idx",
-                InlineTextContent(
-                    Placeholder(
-                        width = placeholderSize,
-                        height = placeholderSize,
-                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                    )
-                ) {
-                    AsyncImage(
-                        model = value.url,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(1.dp)
-                    )
-                }
-            )
-        } else {
-            null
-        }
-    }.associate { it.first to it.second }
-
-    val annotatedText = buildAnnotatedString {
-        wordsInOrder.forEachIndexed { idx, value ->
-            withStyle(
-                style
+          Pair(
+            "inlineContent$idx",
+            InlineTextContent(
+              Placeholder(
+                width = placeholderSize,
+                height = placeholderSize,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+              ),
             ) {
-                if (value is TextType) {
-                    append(value.text)
-                } else if (value is ImageUrlType) {
-                    appendInlineContent("inlineContent$idx", "[icon]")
-                }
-            }
+              AsyncImage(
+                model = value.url,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().padding(1.dp),
+              )
+            },
+          )
+        } else {
+          null
         }
+      }
+      .associate { it.first to it.second }
+
+  val annotatedText = buildAnnotatedString {
+    wordsInOrder.forEachIndexed { idx, value ->
+      withStyle(
+        style,
+      ) {
+        if (value is TextType) {
+          append(value.text)
+        } else if (value is ImageUrlType) {
+          appendInlineContent("inlineContent$idx", "[icon]")
+        }
+      }
+    }
+  }
+
+  val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+  val pressIndicator =
+    Modifier.pointerInput(onClick) {
+      detectTapGestures { pos ->
+        layoutResult.value?.let { layoutResult -> onClick(layoutResult.getOffsetForPosition(pos)) }
+      }
     }
 
-    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val pressIndicator = Modifier.pointerInput(onClick) {
-        detectTapGestures { pos ->
-            layoutResult.value?.let { layoutResult ->
-                onClick(layoutResult.getOffsetForPosition(pos))
-            }
-        }
-    }
-
-    BasicText(
-        text = annotatedText,
-        modifier = pressIndicator,
-        inlineContent = inlineContent,
-        maxLines = maxLines,
-        onTextLayout = {
-            layoutResult.value = it
-        }
-    )
+  BasicText(
+    text = annotatedText,
+    modifier = pressIndicator,
+    inlineContent = inlineContent,
+    maxLines = maxLines,
+    onTextLayout = { layoutResult.value = it },
+  )
 }
 
 @Composable
 fun InLineIconRenderer(
-    wordsInOrder: ImmutableList<Renderable>,
-    style: SpanStyle,
-    fontSize: TextUnit = TextUnit.Unspecified,
-    maxLines: Int = Int.MAX_VALUE,
-    overflow: TextOverflow = TextOverflow.Clip,
-    modifier: Modifier = Modifier
+  wordsInOrder: ImmutableList<Renderable>,
+  style: SpanStyle,
+  fontSize: TextUnit = TextUnit.Unspecified,
+  maxLines: Int = Int.MAX_VALUE,
+  overflow: TextOverflow = TextOverflow.Clip,
+  modifier: Modifier = Modifier,
 ) {
-    val placeholderSize = remember(fontSize) {
-        if (fontSize == TextUnit.Unspecified) {
-            22.sp
-        } else {
-            fontSize.times(1.1f)
-        }
+  val placeholderSize =
+    remember(fontSize) {
+      if (fontSize == TextUnit.Unspecified) {
+        22.sp
+      } else {
+        fontSize.times(1.1f)
+      }
     }
 
-    val inlineContent = wordsInOrder.mapIndexedNotNull { idx, value ->
+  val inlineContent =
+    wordsInOrder
+      .mapIndexedNotNull { idx, value ->
         if (value is ImageUrlType) {
-            Pair(
-                "inlineContent$idx",
-                InlineTextContent(
-                    Placeholder(
-                        width = placeholderSize,
-                        height = placeholderSize,
-                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                    )
-                ) {
-                    AsyncImage(
-                        model = value.url,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 0.dp)
-                    )
-                }
-            )
+          Pair(
+            "inlineContent$idx",
+            InlineTextContent(
+              Placeholder(
+                width = placeholderSize,
+                height = placeholderSize,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+              ),
+            ) {
+              AsyncImage(
+                model = value.url,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 0.dp),
+              )
+            },
+          )
         } else {
-            null
+          null
         }
-    }.associate { it.first to it.second }
+      }
+      .associate { it.first to it.second }
 
-    val annotatedText = remember {
-        buildAnnotatedString {
-            wordsInOrder.forEachIndexed { idx, value ->
-                withStyle(
-                    style
-                ) {
-                    if (value is TextType) {
-                        append(value.text)
-                    } else if (value is ImageUrlType) {
-                        appendInlineContent("inlineContent$idx", "[icon]")
-                    }
-                }
-            }
+  val annotatedText = remember {
+    buildAnnotatedString {
+      wordsInOrder.forEachIndexed { idx, value ->
+        withStyle(
+          style,
+        ) {
+          if (value is TextType) {
+            append(value.text)
+          } else if (value is ImageUrlType) {
+            appendInlineContent("inlineContent$idx", "[icon]")
+          }
         }
+      }
     }
+  }
 
-    Text(
-        text = annotatedText,
-        inlineContent = inlineContent,
-        fontSize = fontSize,
-        maxLines = maxLines,
-        overflow = overflow,
-        modifier = modifier
-    )
+  Text(
+    text = annotatedText,
+    inlineContent = inlineContent,
+    fontSize = fontSize,
+    maxLines = maxLines,
+    overflow = overflow,
+    modifier = modifier,
+  )
 }

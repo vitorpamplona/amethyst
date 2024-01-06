@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.Crossfade
@@ -38,128 +58,123 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import java.text.NumberFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
 
-@Stable
-data class InvoiceAmount(val invoice: String, val amount: String?)
+@Stable data class InvoiceAmount(val invoice: String, val amount: String?)
 
 @Composable
-fun LoadValueFromInvoice(lnbcWord: String, inner: @Composable (invoiceAmount: InvoiceAmount?) -> Unit) {
-    var lnInvoice by remember { mutableStateOf<InvoiceAmount?>(null) }
+fun LoadValueFromInvoice(
+  lnbcWord: String,
+  inner: @Composable (invoiceAmount: InvoiceAmount?) -> Unit,
+) {
+  var lnInvoice by remember { mutableStateOf<InvoiceAmount?>(null) }
 
-    LaunchedEffect(key1 = lnbcWord) {
-        launch(Dispatchers.IO) {
-            val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)
-            if (myInvoice != null) {
-                val myInvoiceAmount = try {
-                    NumberFormat.getInstance().format(LnInvoiceUtil.getAmountInSats(myInvoice))
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
+  LaunchedEffect(key1 = lnbcWord) {
+    launch(Dispatchers.IO) {
+      val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)
+      if (myInvoice != null) {
+        val myInvoiceAmount =
+          try {
+            NumberFormat.getInstance().format(LnInvoiceUtil.getAmountInSats(myInvoice))
+          } catch (e: Exception) {
+            e.printStackTrace()
+            null
+          }
 
-                lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount)
-            }
-        }
+        lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount)
+      }
     }
+  }
 
-    inner(lnInvoice)
+  inner(lnInvoice)
 }
 
 @Composable
 fun MayBeInvoicePreview(lnbcWord: String) {
-    LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
-        Crossfade(targetState = invoiceAmount, label = "MayBeInvoicePreview") {
-            if (it != null) {
-                InvoicePreview(it.invoice, it.amount)
-            } else {
-                Text(
-                    text = lnbcWord,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content)
-                )
-            }
-        }
+  LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
+    Crossfade(targetState = invoiceAmount, label = "MayBeInvoicePreview") {
+      if (it != null) {
+        InvoicePreview(it.invoice, it.amount)
+      } else {
+        Text(
+          text = lnbcWord,
+          style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+        )
+      }
     }
+  }
 }
 
 @Composable
-fun InvoicePreview(lnInvoice: String, amount: String?) {
-    val context = LocalContext.current
+fun InvoicePreview(
+  lnInvoice: String,
+  amount: String?,
+) {
+  val context = LocalContext.current
 
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+  var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
-    if (showErrorMessageDialog != null) {
-        ErrorMessageDialog(
-            title = context.getString(R.string.error_dialog_pay_invoice_error),
-            textContent = showErrorMessageDialog ?: "",
-            onDismiss = { showErrorMessageDialog = null }
-        )
-    }
+  if (showErrorMessageDialog != null) {
+    ErrorMessageDialog(
+      title = context.getString(R.string.error_dialog_pay_invoice_error),
+      textContent = showErrorMessageDialog ?: "",
+      onDismiss = { showErrorMessageDialog = null },
+    )
+  }
 
+  Column(
+    modifier =
+      Modifier.fillMaxWidth()
+        .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
+        .clip(shape = QuoteBorder)
+        .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
+  ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
-            .clip(shape = QuoteBorder)
-            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
+      modifier = Modifier.fillMaxWidth().padding(20.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.lightning),
-                    null,
-                    modifier = Size20Modifier,
-                    tint = Color.Unspecified
-                )
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+      ) {
+        Icon(
+          painter = painterResource(R.drawable.lightning),
+          null,
+          modifier = Size20Modifier,
+          tint = Color.Unspecified,
+        )
 
-                Text(
-                    text = stringResource(R.string.lightning_invoice),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier = Modifier.padding(start = 10.dp)
-                )
-            }
+        Text(
+          text = stringResource(R.string.lightning_invoice),
+          fontSize = 20.sp,
+          fontWeight = FontWeight.W500,
+          modifier = Modifier.padding(start = 10.dp),
+        )
+      }
 
-            Divider()
+      Divider()
 
-            amount?.let {
-                Text(
-                    text = "$it ${stringResource(id = R.string.sats)}",
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp)
-                )
-            }
+      amount?.let {
+        Text(
+          text = "$it ${stringResource(id = R.string.sats)}",
+          fontSize = 25.sp,
+          fontWeight = FontWeight.W500,
+          modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        )
+      }
 
-            Button(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-                onClick = {
-                    payViaIntent(lnInvoice, context) {
-                        showErrorMessageDialog = it
-                    }
-                },
-                shape = QuoteBorder,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text(text = stringResource(R.string.pay), color = Color.White, fontSize = 20.sp)
-            }
-        }
+      Button(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        onClick = { payViaIntent(lnInvoice, context) { showErrorMessageDialog = it } },
+        shape = QuoteBorder,
+        colors =
+          ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+          ),
+      ) {
+        Text(text = stringResource(R.string.pay), color = Color.White, fontSize = 20.sp)
+      }
     }
+  }
 }

@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -31,92 +51,90 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageSetCompose(messageSetCard: MessageSetCard, routeForLastRead: String, showHidden: Boolean = false, accountViewModel: AccountViewModel, nav: (String) -> Unit) {
-    val baseNote = remember { messageSetCard.note }
+fun MessageSetCompose(
+  messageSetCard: MessageSetCard,
+  routeForLastRead: String,
+  showHidden: Boolean = false,
+  accountViewModel: AccountViewModel,
+  nav: (String) -> Unit,
+) {
+  val baseNote = remember { messageSetCard.note }
 
-    val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember {
-        { popupExpanded.value = true }
-    }
+  val popupExpanded = remember { mutableStateOf(false) }
+  val enablePopup = remember { { popupExpanded.value = true } }
 
-    val scope = rememberCoroutineScope()
+  val scope = rememberCoroutineScope()
 
-    val defaultBackgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+  val defaultBackgroundColor = MaterialTheme.colorScheme.background
+  val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+  val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
-    LaunchedEffect(key1 = messageSetCard) {
-        accountViewModel.loadAndMarkAsRead(routeForLastRead, messageSetCard.createdAt()) { isNew ->
-            val newBackgroundColor = if (isNew) {
-                newItemColor.compositeOver(defaultBackgroundColor)
-            } else {
-                defaultBackgroundColor
-            }
-
-            if (backgroundColor.value != newBackgroundColor) {
-                backgroundColor.value = newBackgroundColor
-            }
-        }
-    }
-
-    val columnModifier = remember(backgroundColor.value) {
-        Modifier
-            .background(backgroundColor.value)
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp
-            )
-            .combinedClickable(
-                onClick = {
-                    scope.launch {
-                        routeFor(
-                            baseNote,
-                            accountViewModel.userProfile()
-                        )?.let { nav(it) }
-                    }
-                },
-                onLongClick = enablePopup
-            )
-            .fillMaxWidth()
-    }
-
-    Column(columnModifier) {
-        Row(Modifier.fillMaxWidth()) {
-            Box(
-                modifier = remember {
-                    Modifier
-                        .width(55.dp)
-                        .padding(top = 5.dp, end = 5.dp)
-                }
-            ) {
-                MessageIcon(
-                    remember {
-                        Modifier
-                            .size(16.dp)
-                            .align(Alignment.TopEnd)
-                    }
-                )
-            }
-
-            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-                NoteCompose(
-                    baseNote = baseNote,
-                    routeForLastRead = null,
-                    isBoostedNote = true,
-                    addMarginTop = false,
-                    showHidden = showHidden,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav
-                )
-
-                NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
-            }
+  LaunchedEffect(key1 = messageSetCard) {
+    accountViewModel.loadAndMarkAsRead(routeForLastRead, messageSetCard.createdAt()) { isNew ->
+      val newBackgroundColor =
+        if (isNew) {
+          newItemColor.compositeOver(defaultBackgroundColor)
+        } else {
+          defaultBackgroundColor
         }
 
-        Divider(
-            thickness = DividerThickness
+      if (backgroundColor.value != newBackgroundColor) {
+        backgroundColor.value = newBackgroundColor
+      }
+    }
+  }
+
+  val columnModifier =
+    remember(backgroundColor.value) {
+      Modifier.background(backgroundColor.value)
+        .padding(
+          start = 12.dp,
+          end = 12.dp,
+          top = 10.dp,
         )
+        .combinedClickable(
+          onClick = {
+            scope.launch {
+              routeFor(
+                  baseNote,
+                  accountViewModel.userProfile(),
+                )
+                ?.let { nav(it) }
+            }
+          },
+          onLongClick = enablePopup,
+        )
+        .fillMaxWidth()
     }
+
+  Column(columnModifier) {
+    Row(Modifier.fillMaxWidth()) {
+      Box(
+        modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) },
+      ) {
+        MessageIcon(
+          remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
+        )
+      }
+
+      Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+        NoteCompose(
+          baseNote = baseNote,
+          routeForLastRead = null,
+          isBoostedNote = true,
+          addMarginTop = false,
+          showHidden = showHidden,
+          parentBackgroundColor = backgroundColor,
+          accountViewModel = accountViewModel,
+          nav = nav,
+        )
+
+        NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
+      }
+    }
+
+    Divider(
+      thickness = DividerThickness,
+    )
+  }
 }

@@ -1,3 +1,23 @@
+/**
+ * Copyright (c) 2023 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.vitorpamplona.amethyst.ui.navigation
 
 import android.graphics.Rect
@@ -41,169 +61,163 @@ import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import kotlinx.collections.immutable.persistentListOf
 
-val bottomNavigationItems = persistentListOf(
+val bottomNavigationItems =
+  persistentListOf(
     Route.Home,
     Route.Message,
     Route.Video,
     Route.Discover,
-    Route.Notification
-)
+    Route.Notification,
+  )
 
 enum class Keyboard {
-    Opened, Closed
+  Opened,
+  Closed,
 }
 
 fun isKeyboardOpen(view: View): Keyboard {
-    val rect = Rect()
-    view.getWindowVisibleDisplayFrame(rect)
-    val screenHeight = view.rootView.height
-    val keypadHeight = screenHeight - rect.bottom
+  val rect = Rect()
+  view.getWindowVisibleDisplayFrame(rect)
+  val screenHeight = view.rootView.height
+  val keypadHeight = screenHeight - rect.bottom
 
-    return if (keypadHeight > screenHeight * 0.15) {
-        Keyboard.Opened
-    } else {
-        Keyboard.Closed
-    }
+  return if (keypadHeight > screenHeight * 0.15) {
+    Keyboard.Opened
+  } else {
+    Keyboard.Closed
+  }
 }
 
 @Composable
 fun keyboardAsState(): State<Keyboard> {
-    val view = LocalView.current
+  val view = LocalView.current
 
-    val keyboardState = remember(view) {
-        mutableStateOf(isKeyboardOpen(view))
-    }
+  val keyboardState = remember(view) { mutableStateOf(isKeyboardOpen(view)) }
 
-    DisposableEffect(view) {
-        val onGlobalListener = ViewTreeObserver.OnGlobalLayoutListener {
-            val newKeyboardValue = isKeyboardOpen(view)
+  DisposableEffect(view) {
+    val onGlobalListener =
+      ViewTreeObserver.OnGlobalLayoutListener {
+        val newKeyboardValue = isKeyboardOpen(view)
 
-            if (newKeyboardValue != keyboardState.value) {
-                keyboardState.value = newKeyboardValue
-            }
+        if (newKeyboardValue != keyboardState.value) {
+          keyboardState.value = newKeyboardValue
         }
-        view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
+      }
+    view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
 
-        onDispose {
-            view.viewTreeObserver.removeOnGlobalLayoutListener(onGlobalListener)
-        }
-    }
+    onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(onGlobalListener) }
+  }
 
-    return keyboardState
+  return keyboardState
 }
 
 @Composable
-fun IfKeyboardClosed(
-    inner: @Composable () -> Unit
+fun IfKeyboardClosed(inner: @Composable () -> Unit) {
+  val isKeyboardState by keyboardAsState()
+  if (isKeyboardState == Keyboard.Closed) {
+    inner()
+  }
+}
+
+@Composable
+fun AppBottomBar(
+  accountViewModel: AccountViewModel,
+  navEntryState: State<NavBackStackEntry?>,
+  nav: (Route, Boolean) -> Unit,
 ) {
-    val isKeyboardState by keyboardAsState()
-    if (isKeyboardState == Keyboard.Closed) {
-        inner()
-    }
-}
-
-@Composable
-fun AppBottomBar(accountViewModel: AccountViewModel, navEntryState: State<NavBackStackEntry?>, nav: (Route, Boolean) -> Unit) {
-    IfKeyboardClosed {
-        RenderBottomMenu(accountViewModel, navEntryState, nav)
-    }
+  IfKeyboardClosed { RenderBottomMenu(accountViewModel, navEntryState, nav) }
 }
 
 @Composable
 private fun RenderBottomMenu(
-    accountViewModel: AccountViewModel,
-    navEntryState: State<NavBackStackEntry?>,
-    nav: (Route, Boolean) -> Unit
+  accountViewModel: AccountViewModel,
+  navEntryState: State<NavBackStackEntry?>,
+  nav: (Route, Boolean) -> Unit,
 ) {
-    Column(modifier = BottomTopHeight) {
-        Divider(
-            thickness = DividerThickness
-        )
-        NavigationBar(tonalElevation = Size0dp) {
-            bottomNavigationItems.forEach { item ->
-                HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
-            }
-        }
+  Column(modifier = BottomTopHeight) {
+    Divider(
+      thickness = DividerThickness,
+    )
+    NavigationBar(tonalElevation = Size0dp) {
+      bottomNavigationItems.forEach { item ->
+        HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
+      }
     }
+  }
 }
 
 @Composable
 private fun RowScope.HasNewItemsIcon(
-    route: Route,
-    accountViewModel: AccountViewModel,
-    navEntryState: State<NavBackStackEntry?>,
-    nav: (Route, Boolean) -> Unit
+  route: Route,
+  accountViewModel: AccountViewModel,
+  navEntryState: State<NavBackStackEntry?>,
+  nav: (Route, Boolean) -> Unit,
 ) {
-    val selected by remember(navEntryState.value) {
-        derivedStateOf {
-            navEntryState.value?.destination?.route?.substringBefore("?") == route.base
-        }
+  val selected by
+    remember(navEntryState.value) {
+      derivedStateOf { navEntryState.value?.destination?.route?.substringBefore("?") == route.base }
     }
 
-    NavigationBarItem(
-        icon = {
-            NotifiableIcon(
-                selected,
-                route,
-                accountViewModel
-            )
-        },
-        selected = selected,
-        onClick = { nav(route, selected) }
-    )
+  NavigationBarItem(
+    icon = {
+      NotifiableIcon(
+        selected,
+        route,
+        accountViewModel,
+      )
+    },
+    selected = selected,
+    onClick = { nav(route, selected) },
+  )
 }
 
 @Composable
 private fun NotifiableIcon(
-    selected: Boolean,
-    route: Route,
-    accountViewModel: AccountViewModel
+  selected: Boolean,
+  route: Route,
+  accountViewModel: AccountViewModel,
 ) {
-    Box(route.notifSize) {
-        Icon(
-            painter = painterResource(id = route.icon),
-            contentDescription = null,
-            modifier = route.iconSize,
-            tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified
-        )
+  Box(route.notifSize) {
+    Icon(
+      painter = painterResource(id = route.icon),
+      contentDescription = null,
+      modifier = route.iconSize,
+      tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+    )
 
-        AddNotifIconIfNeeded(route, accountViewModel, Modifier.align(Alignment.TopEnd))
-    }
+    AddNotifIconIfNeeded(route, accountViewModel, Modifier.align(Alignment.TopEnd))
+  }
 }
 
 @Composable
 fun AddNotifIconIfNeeded(
-    route: Route,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier
+  route: Route,
+  accountViewModel: AccountViewModel,
+  modifier: Modifier,
 ) {
-    val flow = accountViewModel.notificationDots.hasNewItems[route] ?: return
-    val hasNewItems by flow.collectAsStateWithLifecycle()
-    if (hasNewItems) {
-        NotificationDotIcon(modifier)
-    }
+  val flow = accountViewModel.notificationDots.hasNewItems[route] ?: return
+  val hasNewItems by flow.collectAsStateWithLifecycle()
+  if (hasNewItems) {
+    NotificationDotIcon(modifier)
+  }
 }
 
 @Composable
 private fun NotificationDotIcon(modifier: Modifier) {
-    Box(modifier.size(Size10dp)) {
-        Box(
-            modifier = remember {
-                Size10Modifier.clip(shape = CircleShape)
-            }.background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.TopEnd
-        ) {
-            Text(
-                "",
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                fontSize = Font12SP,
-                modifier = remember {
-                    Modifier
-                        .wrapContentHeight()
-                        .align(Alignment.TopEnd)
-                }
-            )
-        }
+  Box(modifier.size(Size10dp)) {
+    Box(
+      modifier =
+        remember { Size10Modifier.clip(shape = CircleShape) }
+          .background(MaterialTheme.colorScheme.primary),
+      contentAlignment = Alignment.TopEnd,
+    ) {
+      Text(
+        "",
+        color = Color.White,
+        textAlign = TextAlign.Center,
+        fontSize = Font12SP,
+        modifier = remember { Modifier.wrapContentHeight().align(Alignment.TopEnd) },
+      )
     }
+  }
 }
