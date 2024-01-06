@@ -46,42 +46,42 @@ import com.vitorpamplona.amethyst.ui.theme.Size24dp
 
 @Composable
 fun SelectTextDialog(
-  text: String,
-  onDismiss: () -> Unit,
+    text: String,
+    onDismiss: () -> Unit,
 ) {
-  val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-  val maxHeight =
-    if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
-      screenHeight * 0.6f
-    } else {
-      screenHeight * 0.9f
-    }
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val maxHeight =
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            screenHeight * 0.6f
+        } else {
+            screenHeight * 0.9f
+        }
 
-  Dialog(
-    onDismissRequest = onDismiss,
-  ) {
-    Card {
-      Column(
-        modifier = Modifier.heightIn(Size24dp, maxHeight),
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.End,
-        ) {
-          IconButton(
-            onClick = onDismiss,
-          ) {
-            ArrowBackIcon()
-          }
-          Text(text = stringResource(R.string.select_text_dialog_top))
+    Dialog(
+        onDismissRequest = onDismiss,
+    ) {
+        Card {
+            Column(
+                modifier = Modifier.heightIn(Size24dp, maxHeight),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    IconButton(
+                        onClick = onDismiss,
+                    ) {
+                        ArrowBackIcon()
+                    }
+                    Text(text = stringResource(R.string.select_text_dialog_top))
+                }
+                Divider()
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    Row(modifier = Modifier.padding(16.dp)) { SelectionContainer { Text(text) } }
+                }
+            }
         }
-        Divider()
-        Column(
-          modifier = Modifier.verticalScroll(rememberScrollState()),
-        ) {
-          Row(modifier = Modifier.padding(16.dp)) { SelectionContainer { Text(text) } }
-        }
-      }
     }
-  }
 }

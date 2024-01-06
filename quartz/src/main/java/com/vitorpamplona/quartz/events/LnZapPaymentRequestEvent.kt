@@ -32,67 +32,67 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class LnZapPaymentRequestEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  // Once one of an app user decrypts the payment, all users else can see it.
-  @Transient private var lnInvoice: String? = null
+    // Once one of an app user decrypts the payment, all users else can see it.
+    @Transient private var lnInvoice: String? = null
 
-  fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-  fun talkingWith(oneSideHex: String): HexKey {
-    return if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
-  }
-
-  fun lnInvoice(
-    signer: NostrSigner,
-    onReady: (String) -> Unit,
-  ) {
-    lnInvoice?.let {
-      onReady(it)
-      return
+    fun talkingWith(oneSideHex: String): HexKey {
+        return if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
     }
 
-    try {
-      signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
-        val payInvoiceMethod = mapper.readValue(jsonText, Request::class.java)
-
-        lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
-
-        lnInvoice?.let { onReady(it) }
-      }
-    } catch (e: Exception) {
-      Log.w("BookmarkList", "Error decrypting the message ${e.message}")
-    }
-  }
-
-  companion object {
-    const val KIND = 23194
-    const val ALT = "Zap payment request"
-
-    fun create(
-      lnInvoice: String,
-      walletServicePubkey: String,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (LnZapPaymentRequestEvent) -> Unit,
+    fun lnInvoice(
+        signer: NostrSigner,
+        onReady: (String) -> Unit,
     ) {
-      val serializedRequest = mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
+        lnInvoice?.let {
+            onReady(it)
+            return
+        }
 
-      val tags = arrayOf(arrayOf("p", walletServicePubkey), arrayOf("alt", ALT))
+        try {
+            signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
+                val payInvoiceMethod = mapper.readValue(jsonText, Request::class.java)
 
-      signer.nip04Encrypt(
-        serializedRequest,
-        walletServicePubkey,
-      ) { content ->
-        signer.sign(createdAt, KIND, tags, content, onReady)
-      }
+                lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
+
+                lnInvoice?.let { onReady(it) }
+            }
+        } catch (e: Exception) {
+            Log.w("BookmarkList", "Error decrypting the message ${e.message}")
+        }
     }
-  }
+
+    companion object {
+        const val KIND = 23194
+        const val ALT = "Zap payment request"
+
+        fun create(
+            lnInvoice: String,
+            walletServicePubkey: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (LnZapPaymentRequestEvent) -> Unit,
+        ) {
+            val serializedRequest = mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
+
+            val tags = arrayOf(arrayOf("p", walletServicePubkey), arrayOf("alt", ALT))
+
+            signer.nip04Encrypt(
+                serializedRequest,
+                walletServicePubkey,
+            ) { content ->
+                signer.sign(createdAt, KIND, tags, content, onReady)
+            }
+        }
+    }
 }
 
 // REQUEST OBJECTS
@@ -103,24 +103,24 @@ abstract class Request(var method: String? = null)
 class PayInvoiceParams(var invoice: String? = null)
 
 class PayInvoiceMethod(var params: PayInvoiceParams? = null) : Request("pay_invoice") {
-  companion object {
-    fun create(bolt11: String): PayInvoiceMethod {
-      return PayInvoiceMethod(PayInvoiceParams(bolt11))
+    companion object {
+        fun create(bolt11: String): PayInvoiceMethod {
+            return PayInvoiceMethod(PayInvoiceParams(bolt11))
+        }
     }
-  }
 }
 
 class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
-  override fun deserialize(
-    jp: JsonParser,
-    ctxt: DeserializationContext,
-  ): Request? {
-    val jsonObject: JsonNode = jp.codec.readTree(jp)
-    val method = jsonObject.get("method")?.asText()
+    override fun deserialize(
+        jp: JsonParser,
+        ctxt: DeserializationContext,
+    ): Request? {
+        val jsonObject: JsonNode = jp.codec.readTree(jp)
+        val method = jsonObject.get("method")?.asText()
 
-    if (method == "pay_invoice") {
-      return jp.codec.treeToValue(jsonObject, PayInvoiceMethod::class.java)
+        if (method == "pay_invoice") {
+            return jp.codec.treeToValue(jsonObject, PayInvoiceMethod::class.java)
+        }
+        return null
     }
-    return null
-  }
 }

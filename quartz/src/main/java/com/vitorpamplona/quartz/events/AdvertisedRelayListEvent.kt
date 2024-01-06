@@ -27,65 +27,65 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class AdvertisedRelayListEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  override fun dTag() = FIXED_D_TAG
+    override fun dTag() = FIXED_D_TAG
 
-  fun relays(): List<AdvertisedRelayInfo> {
-    return tags.mapNotNull {
-      if (it.size > 1 && it[0] == "r") {
-        val type =
-          when (it.getOrNull(2)) {
-            "read" -> AdvertisedRelayType.READ
-            "write" -> AdvertisedRelayType.WRITE
-            else -> AdvertisedRelayType.BOTH
-          }
+    fun relays(): List<AdvertisedRelayInfo> {
+        return tags.mapNotNull {
+            if (it.size > 1 && it[0] == "r") {
+                val type =
+                    when (it.getOrNull(2)) {
+                        "read" -> AdvertisedRelayType.READ
+                        "write" -> AdvertisedRelayType.WRITE
+                        else -> AdvertisedRelayType.BOTH
+                    }
 
-        AdvertisedRelayInfo(it[1], type)
-      } else {
-        null
-      }
-    }
-  }
-
-  companion object {
-    const val KIND = 10002
-    const val FIXED_D_TAG = ""
-
-    fun create(
-      list: List<AdvertisedRelayInfo>,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (AdvertisedRelayListEvent) -> Unit,
-    ) {
-      val tags =
-        list
-          .map {
-            if (it.type == AdvertisedRelayType.BOTH) {
-              arrayOf(it.relayUrl)
+                AdvertisedRelayInfo(it[1], type)
             } else {
-              arrayOf(it.relayUrl, it.type.code)
+                null
             }
-          }
-          .plusElement(arrayOf("alt", "Relay list event with ${list.size} relays"))
-          .toTypedArray()
-      val msg = ""
-
-      signer.sign(createdAt, KIND, tags, msg, onReady)
+        }
     }
-  }
 
-  @Immutable data class AdvertisedRelayInfo(val relayUrl: String, val type: AdvertisedRelayType)
+    companion object {
+        const val KIND = 10002
+        const val FIXED_D_TAG = ""
 
-  @Immutable
-  enum class AdvertisedRelayType(val code: String) {
-    BOTH(""),
-    READ("read"),
-    WRITE("write"),
-  }
+        fun create(
+            list: List<AdvertisedRelayInfo>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AdvertisedRelayListEvent) -> Unit,
+        ) {
+            val tags =
+                list
+                    .map {
+                        if (it.type == AdvertisedRelayType.BOTH) {
+                            arrayOf(it.relayUrl)
+                        } else {
+                            arrayOf(it.relayUrl, it.type.code)
+                        }
+                    }
+                    .plusElement(arrayOf("alt", "Relay list event with ${list.size} relays"))
+                    .toTypedArray()
+            val msg = ""
+
+            signer.sign(createdAt, KIND, tags, msg, onReady)
+        }
+    }
+
+    @Immutable data class AdvertisedRelayInfo(val relayUrl: String, val type: AdvertisedRelayType)
+
+    @Immutable
+    enum class AdvertisedRelayType(val code: String) {
+        BOTH(""),
+        READ("read"),
+        WRITE("write"),
+    }
 }

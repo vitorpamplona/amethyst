@@ -52,101 +52,101 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewChannelView(
-  onClose: () -> Unit,
-  accountViewModel: AccountViewModel,
-  channel: PublicChatChannel? = null,
+    onClose: () -> Unit,
+    accountViewModel: AccountViewModel,
+    channel: PublicChatChannel? = null,
 ) {
-  val postViewModel: NewChannelViewModel = viewModel()
-  postViewModel.load(accountViewModel.account, channel)
+    val postViewModel: NewChannelViewModel = viewModel()
+    postViewModel.load(accountViewModel.account, channel)
 
-  Dialog(
-    onDismissRequest = { onClose() },
-    properties =
-      DialogProperties(
-        dismissOnClickOutside = false,
-      ),
-  ) {
-    Surface {
-      Column(
-        modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          CloseButton(
-            onPress = {
-              postViewModel.clear()
-              onClose()
-            },
-          )
+    Dialog(
+        onDismissRequest = { onClose() },
+        properties =
+            DialogProperties(
+                dismissOnClickOutside = false,
+            ),
+    ) {
+        Surface {
+            Column(
+                modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CloseButton(
+                        onPress = {
+                            postViewModel.clear()
+                            onClose()
+                        },
+                    )
 
-          PostButton(
-            onPost = {
-              postViewModel.create()
-              onClose()
-            },
-            postViewModel.channelName.value.text.isNotBlank(),
-          )
+                    PostButton(
+                        onPost = {
+                            postViewModel.create()
+                            onClose()
+                        },
+                        postViewModel.channelName.value.text.isNotBlank(),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.channel_name)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.channelName.value,
+                    onValueChange = { postViewModel.channelName.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.my_awesome_group),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences,
+                        ),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.picture_url)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.channelPicture.value,
+                    onValueChange = { postViewModel.channelPicture.value = it },
+                    placeholder = {
+                        Text(
+                            text = "http://mygroup.com/logo.jpg",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringResource(R.string.description)) },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    value = postViewModel.channelDescription.value,
+                    onValueChange = { postViewModel.channelDescription.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.about_us),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences,
+                        ),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    maxLines = 10,
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-          label = { Text(text = stringResource(R.string.channel_name)) },
-          modifier = Modifier.fillMaxWidth(),
-          value = postViewModel.channelName.value,
-          onValueChange = { postViewModel.channelName.value = it },
-          placeholder = {
-            Text(
-              text = stringResource(R.string.my_awesome_group),
-              color = MaterialTheme.colorScheme.placeholderText,
-            )
-          },
-          keyboardOptions =
-            KeyboardOptions.Default.copy(
-              capitalization = KeyboardCapitalization.Sentences,
-            ),
-          textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-          label = { Text(text = stringResource(R.string.picture_url)) },
-          modifier = Modifier.fillMaxWidth(),
-          value = postViewModel.channelPicture.value,
-          onValueChange = { postViewModel.channelPicture.value = it },
-          placeholder = {
-            Text(
-              text = "http://mygroup.com/logo.jpg",
-              color = MaterialTheme.colorScheme.placeholderText,
-            )
-          },
-        )
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        OutlinedTextField(
-          label = { Text(text = stringResource(R.string.description)) },
-          modifier = Modifier.fillMaxWidth().height(100.dp),
-          value = postViewModel.channelDescription.value,
-          onValueChange = { postViewModel.channelDescription.value = it },
-          placeholder = {
-            Text(
-              text = stringResource(R.string.about_us),
-              color = MaterialTheme.colorScheme.placeholderText,
-            )
-          },
-          keyboardOptions =
-            KeyboardOptions.Default.copy(
-              capitalization = KeyboardCapitalization.Sentences,
-            ),
-          textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-          maxLines = 10,
-        )
-      }
     }
-  }
 }

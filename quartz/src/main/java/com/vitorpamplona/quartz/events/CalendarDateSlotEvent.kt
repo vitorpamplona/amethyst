@@ -27,33 +27,33 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CalendarDateSlotEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
+    fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
 
-  fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)
+    fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)
 
-  fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)
+    fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)
 
-  //  ["start", "<YYYY-MM-DD>"],
-  //  ["end", "<YYYY-MM-DD>"],
+    //  ["start", "<YYYY-MM-DD>"],
+    //  ["end", "<YYYY-MM-DD>"],
 
-  companion object {
-    const val KIND = 31922
-    const val ALT = "Full-day calendar event"
+    companion object {
+        const val KIND = 31922
+        const val ALT = "Full-day calendar event"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (CalendarDateSlotEvent) -> Unit,
-    ) {
-      val tags = arrayOf(arrayOf("alt", ALT))
-      signer.sign(createdAt, KIND, tags, "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CalendarDateSlotEvent) -> Unit,
+        ) {
+            val tags = arrayOf(arrayOf("alt", ALT))
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-  }
 }

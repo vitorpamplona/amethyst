@@ -27,32 +27,32 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class HighlightEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun inUrl() = taggedUrls().firstOrNull()
+    fun inUrl() = taggedUrls().firstOrNull()
 
-  fun author() = taggedUsers().firstOrNull()
+    fun author() = taggedUsers().firstOrNull()
 
-  fun quote() = content
+    fun quote() = content
 
-  fun inPost() = taggedAddresses().firstOrNull()
+    fun inPost() = taggedAddresses().firstOrNull()
 
-  companion object {
-    const val KIND = 9802
-    const val ALT = "Highlight/quote event"
+    companion object {
+        const val KIND = 9802
+        const val ALT = "Highlight/quote event"
 
-    fun create(
-      msg: String,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (HighlightEvent) -> Unit,
-    ) {
-      signer.sign(createdAt, KIND, arrayOf(arrayOf("alt", ALT)), msg, onReady)
+        fun create(
+            msg: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (HighlightEvent) -> Unit,
+        ) {
+            signer.sign(createdAt, KIND, arrayOf(arrayOf("alt", ALT)), msg, onReady)
+        }
     }
-  }
 }

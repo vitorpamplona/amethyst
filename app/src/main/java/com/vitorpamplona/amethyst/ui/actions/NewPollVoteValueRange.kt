@@ -44,82 +44,82 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
-  val colorInValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.error,
-      unfocusedBorderColor = Color.Red,
-    )
-  val colorValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.primary,
-      unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
-    )
-
-  Row(
-    Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.Center,
-  ) {
-    OutlinedTextField(
-      value = pollViewModel.valueMinimum?.toString() ?: "",
-      onValueChange = { pollViewModel.updateMinZapAmountForPoll(it) },
-      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-      modifier = Modifier.weight(1f),
-      colors = if (pollViewModel.isValidvalueMinimum.value) colorValid else colorInValid,
-      label = {
-        Text(
-          text = stringResource(R.string.poll_zap_value_min),
-          color = MaterialTheme.colorScheme.placeholderText,
+    val colorInValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.error,
+            unfocusedBorderColor = Color.Red,
         )
-      },
-      placeholder = {
-        Text(
-          text = stringResource(R.string.sats),
-          color = MaterialTheme.colorScheme.placeholderText,
+    val colorValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
         )
-      },
-    )
 
-    Spacer(modifier = DoubleHorzSpacer)
-
-    OutlinedTextField(
-      value = pollViewModel.valueMaximum?.toString() ?: "",
-      onValueChange = { pollViewModel.updateMaxZapAmountForPoll(it) },
-      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-      modifier = Modifier.weight(1f),
-      colors = if (pollViewModel.isValidvalueMaximum.value) colorValid else colorInValid,
-      label = {
-        Text(
-          text = stringResource(R.string.poll_zap_value_max),
-          color = MaterialTheme.colorScheme.placeholderText,
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        OutlinedTextField(
+            value = pollViewModel.valueMinimum?.toString() ?: "",
+            onValueChange = { pollViewModel.updateMinZapAmountForPoll(it) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f),
+            colors = if (pollViewModel.isValidvalueMinimum.value) colorValid else colorInValid,
+            label = {
+                Text(
+                    text = stringResource(R.string.poll_zap_value_min),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.sats),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
         )
-      },
-      placeholder = {
-        Text(
-          text = stringResource(R.string.sats),
-          color = MaterialTheme.colorScheme.placeholderText,
-        )
-      },
-    )
-  }
 
-  Row(
-    Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.Center,
-  ) {
-    Text(
-      text = stringResource(R.string.poll_zap_value_min_max_explainer),
-      color = MaterialTheme.colorScheme.placeholderText,
-      modifier = Modifier.padding(vertical = 10.dp),
-    )
-  }
+        Spacer(modifier = DoubleHorzSpacer)
+
+        OutlinedTextField(
+            value = pollViewModel.valueMaximum?.toString() ?: "",
+            onValueChange = { pollViewModel.updateMaxZapAmountForPoll(it) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f),
+            colors = if (pollViewModel.isValidvalueMaximum.value) colorValid else colorInValid,
+            label = {
+                Text(
+                    text = stringResource(R.string.poll_zap_value_max),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.sats),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+        )
+    }
+
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.poll_zap_value_min_max_explainer),
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier.padding(vertical = 10.dp),
+        )
+    }
 }
 
 @Preview
 @Composable
 fun NewPollVoteValueRangePreview() {
-  Column(
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    NewPollVoteValueRange(NewPostViewModel())
-  }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        NewPollVoteValueRange(NewPostViewModel())
+    }
 }

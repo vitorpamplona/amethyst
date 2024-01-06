@@ -34,87 +34,84 @@ const val CLOSED_AT = "closed_at"
 
 @Immutable
 class PollNoteEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  // ots: String?, TODO implement OTS: https://github.com/opentimestamps/java-opentimestamps
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    // ots: String?, TODO implement OTS: https://github.com/opentimestamps/java-opentimestamps
+    content: String,
+    sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun pollOptions() =
-    tags.filter { it.size > 2 && it[0] == POLL_OPTION }.associate { it[1].toInt() to it[2] }
+    fun pollOptions() = tags.filter { it.size > 2 && it[0] == POLL_OPTION }.associate { it[1].toInt() to it[2] }
 
-  fun minimumAmount() =
-    tags.firstOrNull { it.size > 1 && it[0] == VALUE_MINIMUM }?.getOrNull(1)?.toLongOrNull()
+    fun minimumAmount() = tags.firstOrNull { it.size > 1 && it[0] == VALUE_MINIMUM }?.getOrNull(1)?.toLongOrNull()
 
-  fun maximumAmount() =
-    tags.firstOrNull { it.size > 1 && it[0] == VALUE_MAXIMUM }?.getOrNull(1)?.toLongOrNull()
+    fun maximumAmount() = tags.firstOrNull { it.size > 1 && it[0] == VALUE_MAXIMUM }?.getOrNull(1)?.toLongOrNull()
 
-  fun getTagLong(property: String): Long? {
-    val number = tags.firstOrNull { it.size > 1 && it[0] == property }?.get(1)
+    fun getTagLong(property: String): Long? {
+        val number = tags.firstOrNull { it.size > 1 && it[0] == property }?.get(1)
 
-    return if (number.isNullOrBlank() || number == "null") {
-      null
-    } else {
-      number.toLong()
-    }
-  }
-
-  companion object {
-    const val KIND = 6969
-    const val ALT = "Poll event"
-
-    fun create(
-      msg: String,
-      replyTos: List<String>?,
-      mentions: List<String>?,
-      addresses: List<ATag>?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      pollOptions: Map<Int, String>,
-      valueMaximum: Int?,
-      valueMinimum: Int?,
-      consensusThreshold: Int?,
-      closedAt: Int?,
-      zapReceiver: List<ZapSplitSetup>? = null,
-      markAsSensitive: Boolean,
-      zapRaiserAmount: Long?,
-      geohash: String? = null,
-      nip94attachments: List<Event>? = null,
-      onReady: (PollNoteEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
-      replyTos?.forEach { tags.add(arrayOf("e", it)) }
-      mentions?.forEach { tags.add(arrayOf("p", it)) }
-      addresses?.forEach { tags.add(arrayOf("a", it.toTag())) }
-      pollOptions.forEach { poll_op ->
-        tags.add(arrayOf(POLL_OPTION, poll_op.key.toString(), poll_op.value))
-      }
-      valueMaximum?.let { tags.add(arrayOf(VALUE_MAXIMUM, valueMaximum.toString())) }
-      valueMinimum?.let { tags.add(arrayOf(VALUE_MINIMUM, valueMinimum.toString())) }
-      consensusThreshold?.let {
-        tags.add(arrayOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
-      }
-      closedAt?.let { tags.add(arrayOf(CLOSED_AT, closedAt.toString())) }
-      zapReceiver?.forEach {
-        tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-      }
-      if (markAsSensitive) {
-        tags.add(arrayOf("content-warning", ""))
-      }
-      zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
-      geohash?.let { tags.addAll(geohashMipMap(it)) }
-      nip94attachments?.let {
-        it.forEach {
-          // tags.add(arrayOf("nip94", it.toJson()))
+        return if (number.isNullOrBlank() || number == "null") {
+            null
+        } else {
+            number.toLong()
         }
-      }
-      tags.add(arrayOf("alt", ALT))
-
-      signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
     }
-  }
+
+    companion object {
+        const val KIND = 6969
+        const val ALT = "Poll event"
+
+        fun create(
+            msg: String,
+            replyTos: List<String>?,
+            mentions: List<String>?,
+            addresses: List<ATag>?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            pollOptions: Map<Int, String>,
+            valueMaximum: Int?,
+            valueMinimum: Int?,
+            consensusThreshold: Int?,
+            closedAt: Int?,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?,
+            geohash: String? = null,
+            nip94attachments: List<Event>? = null,
+            onReady: (PollNoteEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            replyTos?.forEach { tags.add(arrayOf("e", it)) }
+            mentions?.forEach { tags.add(arrayOf("p", it)) }
+            addresses?.forEach { tags.add(arrayOf("a", it.toTag())) }
+            pollOptions.forEach { poll_op ->
+                tags.add(arrayOf(POLL_OPTION, poll_op.key.toString(), poll_op.value))
+            }
+            valueMaximum?.let { tags.add(arrayOf(VALUE_MAXIMUM, valueMaximum.toString())) }
+            valueMinimum?.let { tags.add(arrayOf(VALUE_MINIMUM, valueMinimum.toString())) }
+            consensusThreshold?.let {
+                tags.add(arrayOf(CONSENSUS_THRESHOLD, consensusThreshold.toString()))
+            }
+            closedAt?.let { tags.add(arrayOf(CLOSED_AT, closedAt.toString())) }
+            zapReceiver?.forEach {
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+            }
+            if (markAsSensitive) {
+                tags.add(arrayOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
+            geohash?.let { tags.addAll(geohashMipMap(it)) }
+            nip94attachments?.let {
+                it.forEach {
+                    // tags.add(arrayOf("nip94", it.toJson()))
+                }
+            }
+            tags.add(arrayOf("alt", ALT))
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+        }
+    }
 }
 
 /*

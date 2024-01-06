@@ -25,15 +25,15 @@ import java.math.BigDecimal
 
 @Immutable
 interface LnZapEventInterface : EventInterface {
-  fun zappedPost(): List<String>
+    fun zappedPost(): List<String>
 
-  fun zappedPollOption(): Int?
+    fun zappedPollOption(): Int?
 
-  fun zappedAuthor(): List<String>
+    fun zappedAuthor(): List<String>
 
-  fun zappedRequestAuthor(): String?
+    fun zappedRequestAuthor(): String?
 
-  fun amount(): BigDecimal?
+    fun amount(): BigDecimal?
 
-  fun containedPost(): Event?
+    fun containedPost(): Event?
 }

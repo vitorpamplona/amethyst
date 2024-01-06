@@ -31,182 +31,182 @@ import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.toNpub
 
 class NewMessageTagger(
-  var message: String,
-  var pTags: List<User>? = null,
-  var eTags: List<Note>? = null,
-  var channelHex: String? = null,
-  var dao: Dao,
+    var message: String,
+    var pTags: List<User>? = null,
+    var eTags: List<Note>? = null,
+    var channelHex: String? = null,
+    var dao: Dao,
 ) {
-  val directMentions = mutableSetOf<HexKey>()
+    val directMentions = mutableSetOf<HexKey>()
 
-  fun addUserToMentions(user: User) {
-    directMentions.add(user.pubkeyHex)
-    pTags = if (pTags?.contains(user) == true) pTags else pTags?.plus(user) ?: listOf(user)
-  }
-
-  fun addNoteToReplyTos(note: Note) {
-    directMentions.add(note.idHex)
-
-    note.author?.let { addUserToMentions(it) }
-    eTags = if (eTags?.contains(note) == true) eTags else eTags?.plus(note) ?: listOf(note)
-  }
-
-  fun tagIndex(user: User): Int {
-    // Postr Events assembles replies before mentions in the tag order
-    return (if (channelHex != null) 1 else 0) + (eTags?.size ?: 0) + (pTags?.indexOf(user) ?: 0)
-  }
-
-  fun tagIndex(note: Note): Int {
-    // Postr Events assembles replies before mentions in the tag order
-    return (if (channelHex != null) 1 else 0) + (eTags?.indexOf(note) ?: 0)
-  }
-
-  suspend fun run() {
-    // adds all references to mentions and reply tos
-    message.split('\n').forEach { paragraph: String ->
-      paragraph.split(' ').forEach { word: String ->
-        val results = parseDirtyWordForKey(word)
-
-        if (results?.key?.type == Nip19.Type.USER) {
-          addUserToMentions(dao.getOrCreateUser(results.key.hex))
-        } else if (results?.key?.type == Nip19.Type.NOTE) {
-          addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
-        } else if (results?.key?.type == Nip19.Type.EVENT) {
-          addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
-        } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-          val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
-          if (note != null) {
-            addNoteToReplyTos(note)
-          }
-        }
-      }
+    fun addUserToMentions(user: User) {
+        directMentions.add(user.pubkeyHex)
+        pTags = if (pTags?.contains(user) == true) pTags else pTags?.plus(user) ?: listOf(user)
     }
 
-    // Tags the text in the correct order.
-    message =
-      message
-        .split('\n')
-        .map { paragraph: String ->
-          paragraph
-            .split(' ')
-            .map { word: String ->
-              val results = parseDirtyWordForKey(word)
-              if (results?.key?.type == Nip19.Type.USER) {
-                val user = dao.getOrCreateUser(results.key.hex)
+    fun addNoteToReplyTos(note: Note) {
+        directMentions.add(note.idHex)
 
-                getNostrAddress(user.pubkeyNpub(), results.restOfWord)
-              } else if (results?.key?.type == Nip19.Type.NOTE) {
-                val note = dao.getOrCreateNote(results.key.hex)
+        note.author?.let { addUserToMentions(it) }
+        eTags = if (eTags?.contains(note) == true) eTags else eTags?.plus(note) ?: listOf(note)
+    }
 
-                getNostrAddress(note.toNEvent(), results.restOfWord)
-              } else if (results?.key?.type == Nip19.Type.EVENT) {
-                val note = dao.getOrCreateNote(results.key.hex)
+    fun tagIndex(user: User): Int {
+        // Postr Events assembles replies before mentions in the tag order
+        return (if (channelHex != null) 1 else 0) + (eTags?.size ?: 0) + (pTags?.indexOf(user) ?: 0)
+    }
 
-                getNostrAddress(note.toNEvent(), results.restOfWord)
-              } else if (results?.key?.type == Nip19.Type.ADDRESS) {
-                val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
-                if (note != null) {
-                  getNostrAddress(note.idNote(), results.restOfWord)
-                } else {
-                  word
+    fun tagIndex(note: Note): Int {
+        // Postr Events assembles replies before mentions in the tag order
+        return (if (channelHex != null) 1 else 0) + (eTags?.indexOf(note) ?: 0)
+    }
+
+    suspend fun run() {
+        // adds all references to mentions and reply tos
+        message.split('\n').forEach { paragraph: String ->
+            paragraph.split(' ').forEach { word: String ->
+                val results = parseDirtyWordForKey(word)
+
+                if (results?.key?.type == Nip19.Type.USER) {
+                    addUserToMentions(dao.getOrCreateUser(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.NOTE) {
+                    addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.EVENT) {
+                    addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
+                } else if (results?.key?.type == Nip19.Type.ADDRESS) {
+                    val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
+                    if (note != null) {
+                        addNoteToReplyTos(note)
+                    }
                 }
-              } else {
-                word
-              }
             }
-            .joinToString(" ")
-        }
-        .joinToString("\n")
-  }
-
-  fun getNostrAddress(
-    bechAddress: String,
-    restOfTheWord: String,
-  ): String {
-    return if (restOfTheWord.isEmpty()) {
-      "nostr:$bechAddress"
-    } else {
-      if (Bech32.ALPHABET.contains(restOfTheWord.get(0), true)) {
-        "nostr:$bechAddress $restOfTheWord"
-      } else {
-        "nostr:${bechAddress}$restOfTheWord"
-      }
-    }
-  }
-
-  @Immutable data class DirtyKeyInfo(val key: Nip19.Return, val restOfWord: String)
-
-  fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
-    var key = mightBeAKey
-    if (key.startsWith("nostr:", true)) {
-      key = key.substring("nostr:".length)
-    }
-
-    key = key.removePrefix("@")
-
-    try {
-      if (key.startsWith("nsec1", true)) {
-        if (key.length < 63) {
-          return null
         }
 
-        val keyB32 = key.substring(0, 63)
-        val restOfWord = key.substring(63)
-        // Converts to npub
-        val pubkey =
-          Nip19.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
+        // Tags the text in the correct order.
+        message =
+            message
+                .split('\n')
+                .map { paragraph: String ->
+                    paragraph
+                        .split(' ')
+                        .map { word: String ->
+                            val results = parseDirtyWordForKey(word)
+                            if (results?.key?.type == Nip19.Type.USER) {
+                                val user = dao.getOrCreateUser(results.key.hex)
 
-        return DirtyKeyInfo(pubkey, restOfWord)
-      } else if (key.startsWith("npub1", true)) {
-        if (key.length < 63) {
-          return null
-        }
+                                getNostrAddress(user.pubkeyNpub(), results.restOfWord)
+                            } else if (results?.key?.type == Nip19.Type.NOTE) {
+                                val note = dao.getOrCreateNote(results.key.hex)
 
-        val keyB32 = key.substring(0, 63)
-        val restOfWord = key.substring(63)
+                                getNostrAddress(note.toNEvent(), results.restOfWord)
+                            } else if (results?.key?.type == Nip19.Type.EVENT) {
+                                val note = dao.getOrCreateNote(results.key.hex)
 
-        val pubkey = Nip19.uriToRoute(keyB32) ?: return null
-
-        return DirtyKeyInfo(pubkey, restOfWord)
-      } else if (key.startsWith("note1", true)) {
-        if (key.length < 63) {
-          return null
-        }
-
-        val keyB32 = key.substring(0, 63)
-        val restOfWord = key.substring(63)
-
-        val noteId = Nip19.uriToRoute(keyB32) ?: return null
-
-        return DirtyKeyInfo(noteId, restOfWord)
-      } else if (key.startsWith("nprofile", true)) {
-        val pubkeyRelay = Nip19.uriToRoute(key) ?: return null
-
-        return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
-      } else if (key.startsWith("nevent1", true)) {
-        val noteRelayId = Nip19.uriToRoute(key) ?: return null
-
-        return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
-      } else if (key.startsWith("naddr1", true)) {
-        val address = Nip19.uriToRoute(key) ?: return null
-
-        return DirtyKeyInfo(
-          address,
-          address.additionalChars,
-        ) // no way to know when they address ends and dirt begins
-      }
-    } catch (e: Exception) {
-      e.printStackTrace()
+                                getNostrAddress(note.toNEvent(), results.restOfWord)
+                            } else if (results?.key?.type == Nip19.Type.ADDRESS) {
+                                val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
+                                if (note != null) {
+                                    getNostrAddress(note.idNote(), results.restOfWord)
+                                } else {
+                                    word
+                                }
+                            } else {
+                                word
+                            }
+                        }
+                        .joinToString(" ")
+                }
+                .joinToString("\n")
     }
 
-    return null
-  }
+    fun getNostrAddress(
+        bechAddress: String,
+        restOfTheWord: String,
+    ): String {
+        return if (restOfTheWord.isEmpty()) {
+            "nostr:$bechAddress"
+        } else {
+            if (Bech32.ALPHABET.contains(restOfTheWord.get(0), true)) {
+                "nostr:$bechAddress $restOfTheWord"
+            } else {
+                "nostr:${bechAddress}$restOfTheWord"
+            }
+        }
+    }
+
+    @Immutable data class DirtyKeyInfo(val key: Nip19.Return, val restOfWord: String)
+
+    fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
+        var key = mightBeAKey
+        if (key.startsWith("nostr:", true)) {
+            key = key.substring("nostr:".length)
+        }
+
+        key = key.removePrefix("@")
+
+        try {
+            if (key.startsWith("nsec1", true)) {
+                if (key.length < 63) {
+                    return null
+                }
+
+                val keyB32 = key.substring(0, 63)
+                val restOfWord = key.substring(63)
+                // Converts to npub
+                val pubkey =
+                    Nip19.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
+
+                return DirtyKeyInfo(pubkey, restOfWord)
+            } else if (key.startsWith("npub1", true)) {
+                if (key.length < 63) {
+                    return null
+                }
+
+                val keyB32 = key.substring(0, 63)
+                val restOfWord = key.substring(63)
+
+                val pubkey = Nip19.uriToRoute(keyB32) ?: return null
+
+                return DirtyKeyInfo(pubkey, restOfWord)
+            } else if (key.startsWith("note1", true)) {
+                if (key.length < 63) {
+                    return null
+                }
+
+                val keyB32 = key.substring(0, 63)
+                val restOfWord = key.substring(63)
+
+                val noteId = Nip19.uriToRoute(keyB32) ?: return null
+
+                return DirtyKeyInfo(noteId, restOfWord)
+            } else if (key.startsWith("nprofile", true)) {
+                val pubkeyRelay = Nip19.uriToRoute(key) ?: return null
+
+                return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
+            } else if (key.startsWith("nevent1", true)) {
+                val noteRelayId = Nip19.uriToRoute(key) ?: return null
+
+                return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
+            } else if (key.startsWith("naddr1", true)) {
+                val address = Nip19.uriToRoute(key) ?: return null
+
+                return DirtyKeyInfo(
+                    address,
+                    address.additionalChars,
+                ) // no way to know when they address ends and dirt begins
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return null
+    }
 }
 
 interface Dao {
-  suspend fun getOrCreateUser(hex: String): User
+    suspend fun getOrCreateUser(hex: String): User
 
-  suspend fun getOrCreateNote(hex: String): Note
+    suspend fun getOrCreateNote(hex: String): Note
 
-  suspend fun checkGetOrCreateAddressableNote(hex: String): Note?
+    suspend fun checkGetOrCreateAddressableNote(hex: String): Note?
 }

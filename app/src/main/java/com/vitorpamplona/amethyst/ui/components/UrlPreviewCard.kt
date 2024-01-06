@@ -43,50 +43,50 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 
 @Composable
 fun UrlPreviewCard(
-  url: String,
-  previewInfo: UrlInfoItem,
+    url: String,
+    previewInfo: UrlInfoItem,
 ) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  Column(
-    modifier =
-      MaterialTheme.colorScheme.innerPostModifier.clickable { runCatching { uri.openUri(url) } },
-  ) {
-    AsyncImage(
-      model = previewInfo.imageUrlFullPath,
-      contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
-      contentScale = ContentScale.FillWidth,
-      modifier = Modifier.fillMaxWidth(),
-    )
+    Column(
+        modifier =
+            MaterialTheme.colorScheme.innerPostModifier.clickable { runCatching { uri.openUri(url) } },
+    ) {
+        AsyncImage(
+            model = previewInfo.imageUrlFullPath,
+            contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-    Spacer(modifier = StdVertSpacer)
+        Spacer(modifier = StdVertSpacer)
 
-    Text(
-      text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
-      style = MaterialTheme.typography.bodySmall,
-      modifier = MaxWidthWithHorzPadding,
-      color = Color.Gray,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
+        Text(
+            text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = MaxWidthWithHorzPadding,
+            color = Color.Gray,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
 
-    Text(
-      text = previewInfo.title,
-      style = MaterialTheme.typography.bodyMedium,
-      modifier = MaxWidthWithHorzPadding,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
+        Text(
+            text = previewInfo.title,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = MaxWidthWithHorzPadding,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
 
-    Text(
-      text = previewInfo.description,
-      style = MaterialTheme.typography.bodySmall,
-      modifier = MaxWidthWithHorzPadding,
-      color = Color.Gray,
-      maxLines = 3,
-      overflow = TextOverflow.Ellipsis,
-    )
+        Text(
+            text = previewInfo.description,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = MaxWidthWithHorzPadding,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
 
-    Spacer(modifier = DoubleVertSpacer)
-  }
+        Spacer(modifier = DoubleVertSpacer)
+    }
 }

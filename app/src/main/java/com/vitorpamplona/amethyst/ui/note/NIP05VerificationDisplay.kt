@@ -73,338 +73,338 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun nip05VerificationAsAState(
-  userMetadata: UserMetadata,
-  pubkeyHex: String,
-  accountViewModel: AccountViewModel,
+    userMetadata: UserMetadata,
+    pubkeyHex: String,
+    accountViewModel: AccountViewModel,
 ): MutableState<Boolean?> {
-  val nip05Verified =
-    remember(userMetadata.nip05) {
-      // starts with null if must verify or already filled in if verified in the last hour
-      val default =
-        if ((userMetadata.nip05LastVerificationTime ?: 0) > TimeUtils.oneHourAgo()) {
-          userMetadata.nip05Verified
-        } else {
-          null
+    val nip05Verified =
+        remember(userMetadata.nip05) {
+            // starts with null if must verify or already filled in if verified in the last hour
+            val default =
+                if ((userMetadata.nip05LastVerificationTime ?: 0) > TimeUtils.oneHourAgo()) {
+                    userMetadata.nip05Verified
+                } else {
+                    null
+                }
+
+            mutableStateOf(default)
         }
 
-      mutableStateOf(default)
-    }
-
-  if (nip05Verified.value == null) {
-    LaunchedEffect(key1 = userMetadata.nip05) {
-      accountViewModel.verifyNip05(userMetadata, pubkeyHex) { newVerificationStatus ->
-        if (nip05Verified.value != newVerificationStatus) {
-          nip05Verified.value = newVerificationStatus
+    if (nip05Verified.value == null) {
+        LaunchedEffect(key1 = userMetadata.nip05) {
+            accountViewModel.verifyNip05(userMetadata, pubkeyHex) { newVerificationStatus ->
+                if (nip05Verified.value != newVerificationStatus) {
+                    nip05Verified.value = newVerificationStatus
+                }
+            }
         }
-      }
     }
-  }
 
-  return nip05Verified
+    return nip05Verified
 }
 
 @Composable
 fun ObserveDisplayNip05Status(
-  baseNote: Note,
-  columnModifier: Modifier = Modifier,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseNote: Note,
+    columnModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val author by baseNote.live().authorChanges.observeAsState()
+    val author by baseNote.live().authorChanges.observeAsState()
 
-  author?.let { ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav) }
+    author?.let { ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav) }
 }
 
 @Composable
 fun ObserveDisplayNip05Status(
-  baseUser: User,
-  columnModifier: Modifier = Modifier,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseUser: User,
+    columnModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
+    val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
-  LoadStatuses(baseUser, accountViewModel) { statuses ->
-    Crossfade(
-      targetState = nip05,
-      modifier = columnModifier,
-      label = "ObserveDisplayNip05StatusCrossfade",
-    ) {
-      VerifyAndDisplayNIP05OrStatusLine(
-        it,
-        statuses,
-        baseUser,
-        columnModifier,
-        accountViewModel,
-        nav,
-      )
+    LoadStatuses(baseUser, accountViewModel) { statuses ->
+        Crossfade(
+            targetState = nip05,
+            modifier = columnModifier,
+            label = "ObserveDisplayNip05StatusCrossfade",
+        ) {
+            VerifyAndDisplayNIP05OrStatusLine(
+                it,
+                statuses,
+                baseUser,
+                columnModifier,
+                accountViewModel,
+                nav,
+            )
+        }
     }
-  }
 }
 
 @Composable
 private fun VerifyAndDisplayNIP05OrStatusLine(
-  nip05: String?,
-  statuses: ImmutableList<AddressableNote>,
-  baseUser: User,
-  columnModifier: Modifier = Modifier,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    nip05: String?,
+    statuses: ImmutableList<AddressableNote>,
+    baseUser: User,
+    columnModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  Column(modifier = columnModifier) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      if (nip05 != null) {
-        val nip05Verified =
-          nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
+    Column(modifier = columnModifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (nip05 != null) {
+                val nip05Verified =
+                    nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
 
-        if (nip05Verified.value != true) {
-          DisplayNIP05(nip05, nip05Verified)
-        } else if (!statuses.isEmpty()) {
-          RotateStatuses(statuses, accountViewModel, nav)
-        } else {
-          DisplayNIP05(nip05, nip05Verified)
+                if (nip05Verified.value != true) {
+                    DisplayNIP05(nip05, nip05Verified)
+                } else if (!statuses.isEmpty()) {
+                    RotateStatuses(statuses, accountViewModel, nav)
+                } else {
+                    DisplayNIP05(nip05, nip05Verified)
+                }
+            } else {
+                if (!statuses.isEmpty()) {
+                    RotateStatuses(statuses, accountViewModel, nav)
+                } else {
+                    DisplayUsersNpub(baseUser.pubkeyDisplayHex())
+                }
+            }
         }
-      } else {
-        if (!statuses.isEmpty()) {
-          RotateStatuses(statuses, accountViewModel, nav)
-        } else {
-          DisplayUsersNpub(baseUser.pubkeyDisplayHex())
-        }
-      }
     }
-  }
 }
 
 @Composable
 fun RotateStatuses(
-  statuses: ImmutableList<AddressableNote>,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    statuses: ImmutableList<AddressableNote>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  var indexToDisplay by remember(statuses) { mutableIntStateOf(0) }
+    var indexToDisplay by remember(statuses) { mutableIntStateOf(0) }
 
-  DisplayStatus(statuses[indexToDisplay], accountViewModel, nav)
+    DisplayStatus(statuses[indexToDisplay], accountViewModel, nav)
 
-  if (statuses.size > 1) {
-    LaunchedEffect(Unit) {
-      while (true) {
-        delay(10.seconds)
-        indexToDisplay = (indexToDisplay + 1) % statuses.size
-      }
+    if (statuses.size > 1) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(10.seconds)
+                indexToDisplay = (indexToDisplay + 1) % statuses.size
+            }
+        }
     }
-  }
 }
 
 @Composable
 fun DisplayUsersNpub(npub: String) {
-  Text(
-    text = npub,
-    fontSize = 14.sp,
-    color = MaterialTheme.colorScheme.placeholderText,
-    maxLines = 1,
-    overflow = TextOverflow.Ellipsis,
-  )
+    Text(
+        text = npub,
+        fontSize = 14.sp,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
 fun DisplayStatus(
-  addressableNote: AddressableNote,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    addressableNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val noteState by addressableNote.live().metadata.observeAsState()
+    val noteState by addressableNote.live().metadata.observeAsState()
 
-  val content = remember(noteState) { addressableNote.event?.content() ?: "" }
-  val type = remember(noteState) { (addressableNote.event as? AddressableEvent)?.dTag() ?: "" }
-  val url = remember(noteState) { addressableNote.event?.firstTaggedUrl()?.ifBlank { null } }
-  val nostrATag = remember(noteState) { addressableNote.event?.firstTaggedAddress() }
-  val nostrHexID =
-    remember(noteState) { addressableNote.event?.firstTaggedEvent()?.ifBlank { null } }
+    val content = remember(noteState) { addressableNote.event?.content() ?: "" }
+    val type = remember(noteState) { (addressableNote.event as? AddressableEvent)?.dTag() ?: "" }
+    val url = remember(noteState) { addressableNote.event?.firstTaggedUrl()?.ifBlank { null } }
+    val nostrATag = remember(noteState) { addressableNote.event?.firstTaggedAddress() }
+    val nostrHexID =
+        remember(noteState) { addressableNote.event?.firstTaggedEvent()?.ifBlank { null } }
 
-  when (type) {
-    "music" ->
-      Icon(
-        painter = painterResource(id = R.drawable.tunestr),
-        null,
-        modifier = Size15Modifier.padding(end = Size5dp),
-        tint = MaterialTheme.colorScheme.placeholderText,
-      )
-    else -> {}
-  }
-
-  Text(
-    text = content,
-    fontSize = Font14SP,
-    color = MaterialTheme.colorScheme.placeholderText,
-    maxLines = 1,
-    overflow = TextOverflow.Ellipsis,
-  )
-
-  if (url != null) {
-    val uri = LocalUriHandler.current
-    Spacer(modifier = StdHorzSpacer)
-    IconButton(
-      modifier = Size15Modifier,
-      onClick = { runCatching { uri.openUri(url.trim()) } },
-    ) {
-      Icon(
-        imageVector = Icons.Default.OpenInNew,
-        null,
-        modifier = Size15Modifier,
-        tint = MaterialTheme.colorScheme.lessImportantLink,
-      )
+    when (type) {
+        "music" ->
+            Icon(
+                painter = painterResource(id = R.drawable.tunestr),
+                null,
+                modifier = Size15Modifier.padding(end = Size5dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        else -> {}
     }
-  } else if (nostrATag != null) {
-    LoadAddressableNote(nostrATag, accountViewModel) { note ->
-      if (note != null) {
+
+    Text(
+        text = content,
+        fontSize = Font14SP,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+
+    if (url != null) {
+        val uri = LocalUriHandler.current
         Spacer(modifier = StdHorzSpacer)
         IconButton(
-          modifier = Size15Modifier,
-          onClick = {
-            routeFor(
-                note,
-                accountViewModel.userProfile(),
-              )
-              ?.let { nav(it) }
-          },
-        ) {
-          Icon(
-            imageVector = Icons.Default.OpenInNew,
-            null,
             modifier = Size15Modifier,
-            tint = MaterialTheme.colorScheme.lessImportantLink,
-          )
-        }
-      }
-    }
-  } else if (nostrHexID != null) {
-    LoadNote(baseNoteHex = nostrHexID, accountViewModel) {
-      if (it != null) {
-        Spacer(modifier = StdHorzSpacer)
-        IconButton(
-          modifier = Size15Modifier,
-          onClick = {
-            routeFor(
-                it,
-                accountViewModel.userProfile(),
-              )
-              ?.let { nav(it) }
-          },
+            onClick = { runCatching { uri.openUri(url.trim()) } },
         ) {
-          Icon(
-            imageVector = Icons.Default.OpenInNew,
-            null,
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colorScheme.lessImportantLink,
-          )
+            Icon(
+                imageVector = Icons.Default.OpenInNew,
+                null,
+                modifier = Size15Modifier,
+                tint = MaterialTheme.colorScheme.lessImportantLink,
+            )
         }
-      }
+    } else if (nostrATag != null) {
+        LoadAddressableNote(nostrATag, accountViewModel) { note ->
+            if (note != null) {
+                Spacer(modifier = StdHorzSpacer)
+                IconButton(
+                    modifier = Size15Modifier,
+                    onClick = {
+                        routeFor(
+                            note,
+                            accountViewModel.userProfile(),
+                        )
+                            ?.let { nav(it) }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        null,
+                        modifier = Size15Modifier,
+                        tint = MaterialTheme.colorScheme.lessImportantLink,
+                    )
+                }
+            }
+        }
+    } else if (nostrHexID != null) {
+        LoadNote(baseNoteHex = nostrHexID, accountViewModel) {
+            if (it != null) {
+                Spacer(modifier = StdHorzSpacer)
+                IconButton(
+                    modifier = Size15Modifier,
+                    onClick = {
+                        routeFor(
+                            it,
+                            accountViewModel.userProfile(),
+                        )
+                            ?.let { nav(it) }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        null,
+                        modifier = Size15Modifier,
+                        tint = MaterialTheme.colorScheme.lessImportantLink,
+                    )
+                }
+            }
+        }
     }
-  }
 }
 
 @Composable
 private fun DisplayNIP05(
-  nip05: String,
-  nip05Verified: MutableState<Boolean?>,
+    nip05: String,
+    nip05Verified: MutableState<Boolean?>,
 ) {
-  val uri = LocalUriHandler.current
-  val (user, domain) =
-    remember(nip05) {
-      val parts = nip05.split("@")
-      if (parts.size == 1) {
-        listOf("_", parts[0])
-      } else {
-        listOf(parts[0], parts[1])
-      }
+    val uri = LocalUriHandler.current
+    val (user, domain) =
+        remember(nip05) {
+            val parts = nip05.split("@")
+            if (parts.size == 1) {
+                listOf("_", parts[0])
+            } else {
+                listOf(parts[0], parts[1])
+            }
+        }
+
+    if (user != "_") {
+        Text(
+            text = remember(nip05) { AnnotatedString(user) },
+            fontSize = Font14SP,
+            color = MaterialTheme.colorScheme.nip05,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 
-  if (user != "_") {
-    Text(
-      text = remember(nip05) { AnnotatedString(user) },
-      fontSize = Font14SP,
-      color = MaterialTheme.colorScheme.nip05,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
+    NIP05VerifiedSymbol(nip05Verified, NIP05IconSize)
+
+    ClickableText(
+        text = remember(nip05) { AnnotatedString(domain) },
+        onClick = { runCatching { uri.openUri("https://$domain") } },
+        style =
+            LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+        maxLines = 1,
+        overflow = TextOverflow.Visible,
     )
-  }
-
-  NIP05VerifiedSymbol(nip05Verified, NIP05IconSize)
-
-  ClickableText(
-    text = remember(nip05) { AnnotatedString(domain) },
-    onClick = { runCatching { uri.openUri("https://$domain") } },
-    style =
-      LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
-    maxLines = 1,
-    overflow = TextOverflow.Visible,
-  )
 }
 
 @Composable
 private fun NIP05VerifiedSymbol(
-  nip05Verified: MutableState<Boolean?>,
-  modifier: Modifier,
+    nip05Verified: MutableState<Boolean?>,
+    modifier: Modifier,
 ) {
-  Crossfade(targetState = nip05Verified.value) {
-    when (it) {
-      null -> NIP05CheckingIcon(modifier = modifier)
-      true -> NIP05VerifiedIcon(modifier = modifier)
-      false -> NIP05FailedVerification(modifier = modifier)
+    Crossfade(targetState = nip05Verified.value) {
+        when (it) {
+            null -> NIP05CheckingIcon(modifier = modifier)
+            true -> NIP05VerifiedIcon(modifier = modifier)
+            false -> NIP05FailedVerification(modifier = modifier)
+        }
     }
-  }
 }
 
 @Composable
 fun DisplayNip05ProfileStatus(
-  user: User,
-  accountViewModel: AccountViewModel,
+    user: User,
+    accountViewModel: AccountViewModel,
 ) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  user.nip05()?.let { nip05 ->
-    if (nip05.split("@").size <= 2) {
-      val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        NIP05VerifiedSymbol(nip05Verified, Size16Modifier)
-        var domainPadStart = 5.dp
+    user.nip05()?.let { nip05 ->
+        if (nip05.split("@").size <= 2) {
+            val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NIP05VerifiedSymbol(nip05Verified, Size16Modifier)
+                var domainPadStart = 5.dp
 
-        val (user, domain) =
-          remember(nip05) {
-            val parts = nip05.split("@")
-            if (parts.size == 1) {
-              listOf("_", parts[0])
-            } else {
-              listOf(parts[0], parts[1])
+                val (user, domain) =
+                    remember(nip05) {
+                        val parts = nip05.split("@")
+                        if (parts.size == 1) {
+                            listOf("_", parts[0])
+                        } else {
+                            listOf(parts[0], parts[1])
+                        }
+                    }
+
+                if (user != "_") {
+                    Text(
+                        text = remember { AnnotatedString(user + "@") },
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    domainPadStart = 0.dp
+                }
+
+                ClickableText(
+                    text = AnnotatedString(domain),
+                    onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-          }
-
-        if (user != "_") {
-          Text(
-            text = remember { AnnotatedString(user + "@") },
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-          domainPadStart = 0.dp
         }
-
-        ClickableText(
-          text = AnnotatedString(domain),
-          onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-          style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-          modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
     }
-  }
 }

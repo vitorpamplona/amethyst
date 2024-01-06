@@ -34,44 +34,44 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun LnZapFeedView(
-  viewModel: LnZapFeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    viewModel: LnZapFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-  Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
-    when (state) {
-      is LnZapFeedState.Empty -> {
-        FeedEmpty { viewModel.invalidateData() }
-      }
-      is LnZapFeedState.FeedError -> {
-        FeedError(state.errorMessage) { viewModel.invalidateData() }
-      }
-      is LnZapFeedState.Loaded -> {
-        LnZapFeedLoaded(state, accountViewModel, nav)
-      }
-      is LnZapFeedState.Loading -> {
-        LoadingFeed()
-      }
+    Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+        when (state) {
+            is LnZapFeedState.Empty -> {
+                FeedEmpty { viewModel.invalidateData() }
+            }
+            is LnZapFeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is LnZapFeedState.Loaded -> {
+                LnZapFeedLoaded(state, accountViewModel, nav)
+            }
+            is LnZapFeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
     }
-  }
 }
 
 @Composable
 private fun LnZapFeedLoaded(
-  state: LnZapFeedState.Loaded,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    state: LnZapFeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val listState = rememberLazyListState()
+    val listState = rememberLazyListState()
 
-  LazyColumn(
-    contentPadding = FeedPadding,
-    state = listState,
-  ) {
-    itemsIndexed(state.feed.value, key = { _, item -> item.zapEvent.idHex }) { _, item ->
-      ZapNoteCompose(item, accountViewModel = accountViewModel, nav = nav)
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.zapEvent.idHex }) { _, item ->
+            ZapNoteCompose(item, accountViewModel = accountViewModel, nav = nav)
+        }
     }
-  }
 }

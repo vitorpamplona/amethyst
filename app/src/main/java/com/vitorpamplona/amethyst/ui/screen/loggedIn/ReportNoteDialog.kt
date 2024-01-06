@@ -68,143 +68,142 @@ import kotlinx.collections.immutable.toImmutableList
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportNoteDialog(
-  note: Note,
-  accountViewModel: AccountViewModel,
-  onDismiss: () -> Unit,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
 ) {
-  val reportTypes =
-    listOf(
-      Pair(ReportEvent.ReportType.SPAM, stringResource(R.string.report_dialog_spam)),
-      Pair(ReportEvent.ReportType.PROFANITY, stringResource(R.string.report_dialog_profanity)),
-      Pair(
-        ReportEvent.ReportType.IMPERSONATION,
-        stringResource(R.string.report_dialog_impersonation),
-      ),
-      Pair(ReportEvent.ReportType.NUDITY, stringResource(R.string.report_dialog_nudity)),
-      Pair(ReportEvent.ReportType.ILLEGAL, stringResource(R.string.report_dialog_illegal)),
-    )
-
-  val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
-  var additionalReason by remember { mutableStateOf("") }
-  var selectedReason by remember { mutableStateOf(-1) }
-
-  Dialog(
-    onDismissRequest = onDismiss,
-    properties = DialogProperties(usePlatformDefaultWidth = false),
-  ) {
-    Scaffold(
-      topBar = {
-        TopAppBar(
-          title = { Text(text = stringResource(id = R.string.report_dialog_title)) },
-          navigationIcon = { IconButton(onClick = onDismiss) { ArrowBackIcon() } },
-          colors =
-            TopAppBarDefaults.topAppBarColors(
-              containerColor = MaterialTheme.colorScheme.surface,
+    val reportTypes =
+        listOf(
+            Pair(ReportEvent.ReportType.SPAM, stringResource(R.string.report_dialog_spam)),
+            Pair(ReportEvent.ReportType.PROFANITY, stringResource(R.string.report_dialog_profanity)),
+            Pair(
+                ReportEvent.ReportType.IMPERSONATION,
+                stringResource(R.string.report_dialog_impersonation),
             ),
+            Pair(ReportEvent.ReportType.NUDITY, stringResource(R.string.report_dialog_nudity)),
+            Pair(ReportEvent.ReportType.ILLEGAL, stringResource(R.string.report_dialog_illegal)),
         )
-      },
-    ) { pad ->
-      Column(
-        modifier =
-          Modifier.padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding()),
-        verticalArrangement = Arrangement.SpaceAround,
-      ) {
-        SpacerH16()
-        SectionHeader(text = stringResource(id = R.string.block_only))
-        SpacerH16()
-        Text(
-          text = stringResource(R.string.report_dialog_blocking_a_user),
-        )
-        SpacerH16()
-        ActionButton(
-          text = stringResource(R.string.report_dialog_block_hide_user_btn),
-          icon = Icons.Default.Block,
-          onClick = {
-            note.author?.let { accountViewModel.hide(it) }
-            onDismiss()
-          },
-        )
-        SpacerH16()
 
-        Divider(color = MaterialTheme.colorScheme.onSurface, thickness = 0.25.dp)
+    val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
+    var additionalReason by remember { mutableStateOf("") }
+    var selectedReason by remember { mutableStateOf(-1) }
 
-        SpacerH16()
-        SectionHeader(text = stringResource(R.string.report_dialog_report_btn))
-        SpacerH16()
-        Text(stringResource(R.string.report_dialog_reminder_public))
-        SpacerH16()
-        TextSpinner(
-          label = stringResource(R.string.report_dialog_select_reason_label),
-          placeholder = stringResource(R.string.report_dialog_select_reason_placeholder),
-          options = reasonOptions,
-          onSelect = { selectedReason = it },
-          modifier = Modifier.fillMaxWidth(),
-        )
-        SpacerH16()
-        OutlinedTextField(
-          value = additionalReason,
-          onValueChange = { additionalReason = it },
-          placeholder = {
-            Text(text = stringResource(R.string.report_dialog_additional_reason_placeholder))
-          },
-          label = { Text(stringResource(R.string.report_dialog_additional_reason_label)) },
-          modifier = Modifier.fillMaxWidth(),
-        )
-        SpacerH16()
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(text = stringResource(id = R.string.report_dialog_title)) },
+                    navigationIcon = { IconButton(onClick = onDismiss) { ArrowBackIcon() } },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                )
+            },
+        ) { pad ->
+            Column(
+                modifier =
+                    Modifier.padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding()),
+                verticalArrangement = Arrangement.SpaceAround,
+            ) {
+                SpacerH16()
+                SectionHeader(text = stringResource(id = R.string.block_only))
+                SpacerH16()
+                Text(
+                    text = stringResource(R.string.report_dialog_blocking_a_user),
+                )
+                SpacerH16()
+                ActionButton(
+                    text = stringResource(R.string.report_dialog_block_hide_user_btn),
+                    icon = Icons.Default.Block,
+                    onClick = {
+                        note.author?.let { accountViewModel.hide(it) }
+                        onDismiss()
+                    },
+                )
+                SpacerH16()
 
-        ActionButton(
-          text = stringResource(R.string.report_dialog_post_report_btn),
-          icon = Icons.Default.Report,
-          enabled = selectedReason in 0..reportTypes.lastIndex,
-          onClick = {
-            accountViewModel.report(
-              note,
-              reportTypes[selectedReason].first,
-              additionalReason,
-            )
-            note.author?.let { accountViewModel.hide(it) }
-            onDismiss()
-          },
-        )
-      }
+                Divider(color = MaterialTheme.colorScheme.onSurface, thickness = 0.25.dp)
+
+                SpacerH16()
+                SectionHeader(text = stringResource(R.string.report_dialog_report_btn))
+                SpacerH16()
+                Text(stringResource(R.string.report_dialog_reminder_public))
+                SpacerH16()
+                TextSpinner(
+                    label = stringResource(R.string.report_dialog_select_reason_label),
+                    placeholder = stringResource(R.string.report_dialog_select_reason_placeholder),
+                    options = reasonOptions,
+                    onSelect = { selectedReason = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                SpacerH16()
+                OutlinedTextField(
+                    value = additionalReason,
+                    onValueChange = { additionalReason = it },
+                    placeholder = {
+                        Text(text = stringResource(R.string.report_dialog_additional_reason_placeholder))
+                    },
+                    label = { Text(stringResource(R.string.report_dialog_additional_reason_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                SpacerH16()
+
+                ActionButton(
+                    text = stringResource(R.string.report_dialog_post_report_btn),
+                    icon = Icons.Default.Report,
+                    enabled = selectedReason in 0..reportTypes.lastIndex,
+                    onClick = {
+                        accountViewModel.report(
+                            note,
+                            reportTypes[selectedReason].first,
+                            additionalReason,
+                        )
+                        note.author?.let { accountViewModel.hide(it) }
+                        onDismiss()
+                    },
+                )
+            }
+        }
     }
-  }
 }
 
 @Composable private fun SpacerH16() = Spacer(modifier = Modifier.height(16.dp))
 
 @Composable
 private fun SectionHeader(text: String) =
-  Text(
-    text = text,
-    fontWeight = FontWeight.Bold,
-    color = MaterialTheme.colorScheme.onSurface,
-    fontSize = 18.sp,
-  )
+    Text(
+        text = text,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        fontSize = 18.sp,
+    )
 
 @Composable
 private fun ActionButton(
-  text: String,
-  icon: ImageVector,
-  enabled: Boolean = true,
-  onClick: () -> Unit,
-) =
-  Button(
+    text: String,
+    icon: ImageVector,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) = Button(
     onClick = onClick,
     enabled = enabled,
     colors = ButtonDefaults.buttonColors(containerColor = WarningColor),
     modifier = Modifier.fillMaxWidth(),
-  ) {
+) {
     Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
-      Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = Color.White,
-      )
-      Spacer(modifier = Modifier.width(8.dp))
-      Text(text = text, color = Color.White)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = text, color = Color.White)
     }
-  }
+}

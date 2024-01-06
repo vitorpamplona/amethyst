@@ -34,48 +34,48 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrGeohashDataSource : NostrDataSource("SingleGeoHashFeed") {
-  private var geohashToWatch: String? = null
+    private var geohashToWatch: String? = null
 
-  fun createLoadHashtagFilter(): TypedFilter? {
-    val hashToLoad = geohashToWatch ?: return null
+    fun createLoadHashtagFilter(): TypedFilter? {
+        val hashToLoad = geohashToWatch ?: return null
 
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          tags =
-            mapOf(
-              "g" to
-                listOf(
-                  hashToLoad,
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    tags =
+                        mapOf(
+                            "g" to
+                                listOf(
+                                    hashToLoad,
+                                ),
+                        ),
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            ChannelMessageEvent.KIND,
+                            LongTextNoteEvent.KIND,
+                            PollNoteEvent.KIND,
+                            LiveActivitiesChatMessageEvent.KIND,
+                            ClassifiedsEvent.KIND,
+                            HighlightEvent.KIND,
+                            AudioTrackEvent.KIND,
+                            AudioHeaderEvent.KIND,
+                        ),
+                    limit = 200,
                 ),
-            ),
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              ChannelMessageEvent.KIND,
-              LongTextNoteEvent.KIND,
-              PollNoteEvent.KIND,
-              LiveActivitiesChatMessageEvent.KIND,
-              ClassifiedsEvent.KIND,
-              HighlightEvent.KIND,
-              AudioTrackEvent.KIND,
-              AudioHeaderEvent.KIND,
-            ),
-          limit = 200,
-        ),
-    )
-  }
+        )
+    }
 
-  val loadGeohashChannel = requestNewChannel()
+    val loadGeohashChannel = requestNewChannel()
 
-  override fun updateChannelFilters() {
-    loadGeohashChannel.typedFilters = listOfNotNull(createLoadHashtagFilter()).ifEmpty { null }
-  }
+    override fun updateChannelFilters() {
+        loadGeohashChannel.typedFilters = listOfNotNull(createLoadHashtagFilter()).ifEmpty { null }
+    }
 
-  fun loadHashtag(tag: String?) {
-    geohashToWatch = tag
+    fun loadHashtag(tag: String?) {
+        geohashToWatch = tag
 
-    invalidateFilters()
-  }
+        invalidateFilters()
+    }
 }

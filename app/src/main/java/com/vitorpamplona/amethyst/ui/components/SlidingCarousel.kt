@@ -49,66 +49,66 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlidingCarousel(
-  pagerState: PagerState,
-  modifier: Modifier = Modifier,
-  itemContent: @Composable (index: Int) -> Unit,
+    pagerState: PagerState,
+    modifier: Modifier = Modifier,
+    itemContent: @Composable (index: Int) -> Unit,
 ) {
-  val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
+    val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
 
-  Box(
-    modifier = modifier.fillMaxWidth(),
-  ) {
-    HorizontalPager(state = pagerState) { page -> itemContent(page) }
-
-    // you can remove the surface in case you don't want
-    // the transparent bacground
-    Surface(
-      modifier = Modifier.padding(bottom = 8.dp).align(Alignment.BottomCenter),
-      shape = CircleShape,
-      color = Color.Black.copy(alpha = 0.5f),
+    Box(
+        modifier = modifier.fillMaxWidth(),
     ) {
-      DotsIndicator(
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-        totalDots = pagerState.pageCount,
-        selectedIndex = if (isDragged) pagerState.currentPage else pagerState.targetPage,
-        dotSize = 8.dp,
-      )
+        HorizontalPager(state = pagerState) { page -> itemContent(page) }
+
+        // you can remove the surface in case you don't want
+        // the transparent bacground
+        Surface(
+            modifier = Modifier.padding(bottom = 8.dp).align(Alignment.BottomCenter),
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.5f),
+        ) {
+            DotsIndicator(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                totalDots = pagerState.pageCount,
+                selectedIndex = if (isDragged) pagerState.currentPage else pagerState.targetPage,
+                dotSize = 8.dp,
+            )
+        }
     }
-  }
 }
 
 @Composable
 fun DotsIndicator(
-  modifier: Modifier = Modifier,
-  totalDots: Int,
-  selectedIndex: Int,
-  selectedColor: Color = MaterialTheme.colorScheme.primary,
-  unSelectedColor: Color = MaterialTheme.colorScheme.placeholderText,
-  dotSize: Dp,
+    modifier: Modifier = Modifier,
+    totalDots: Int,
+    selectedIndex: Int,
+    selectedColor: Color = MaterialTheme.colorScheme.primary,
+    unSelectedColor: Color = MaterialTheme.colorScheme.placeholderText,
+    dotSize: Dp,
 ) {
-  LazyRow(
-    modifier = modifier.wrapContentWidth().wrapContentHeight(),
-  ) {
-    items(totalDots) { index ->
-      IndicatorDot(
-        color = if (index == selectedIndex) selectedColor else unSelectedColor,
-        size = dotSize,
-      )
+    LazyRow(
+        modifier = modifier.wrapContentWidth().wrapContentHeight(),
+    ) {
+        items(totalDots) { index ->
+            IndicatorDot(
+                color = if (index == selectedIndex) selectedColor else unSelectedColor,
+                size = dotSize,
+            )
 
-      if (index != totalDots - 1) {
-        Spacer(modifier = Modifier.padding(horizontal = 2.dp))
-      }
+            if (index != totalDots - 1) {
+                Spacer(modifier = Modifier.padding(horizontal = 2.dp))
+            }
+        }
     }
-  }
 }
 
 @Composable
 fun IndicatorDot(
-  modifier: Modifier = Modifier,
-  size: Dp,
-  color: Color,
+    modifier: Modifier = Modifier,
+    size: Dp,
+    color: Color,
 ) {
-  Box(
-    modifier = modifier.size(size).clip(CircleShape).background(color),
-  )
+    Box(
+        modifier = modifier.size(size).clip(CircleShape).background(color),
+    )
 }

@@ -33,20 +33,20 @@ import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 fun ClickablePhone(phone: String) {
-  val context = LocalContext.current
+    val context = LocalContext.current
 
-  ClickableText(
-    text = remember { AnnotatedString(phone) },
-    onClick = { runCatching { context.dial(phone) } },
-    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-  )
+    ClickableText(
+        text = remember { AnnotatedString(phone) },
+        onClick = { runCatching { context.dial(phone) } },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+    )
 }
 
 fun Context.dial(phone: String) {
-  try {
-    val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null))
-    startActivity(intent)
-  } catch (t: Throwable) {
-    // TODO: Handle potential exceptions
-  }
+    try {
+        val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null))
+        startActivity(intent)
+    } catch (t: Throwable) {
+        // TODO: Handle potential exceptions
+    }
 }

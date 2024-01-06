@@ -56,124 +56,124 @@ import kotlinx.coroutines.launch
 
 @Stable
 class RelayFeedViewModel : ViewModel() {
-  val order =
-    compareByDescending<RelayInfo> { it.lastEvent }
-      .thenByDescending { it.counter }
-      .thenBy { it.url }
+    val order =
+        compareByDescending<RelayInfo> { it.lastEvent }
+            .thenByDescending { it.counter }
+            .thenBy { it.url }
 
-  private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
-  val feedContent = _feedContent.asStateFlow()
+    private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
+    val feedContent = _feedContent.asStateFlow()
 
-  var currentUser: User? = null
+    var currentUser: User? = null
 
-  fun refresh() {
-    viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
-  }
+    fun refresh() {
+        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+    }
 
-  fun refreshSuspended() {
-    val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
-    val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
+    fun refreshSuspended() {
+        val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
+        val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
 
-    val newRelaysFromRecord =
-      currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
-        if (it.key !in beingUsedSet) {
-          RelayInfo(it.key, 0, 0)
-        } else {
-          null
+        val newRelaysFromRecord =
+            currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
+                if (it.key !in beingUsedSet) {
+                    RelayInfo(it.key, 0, 0)
+                } else {
+                    null
+                }
+            }
+                ?: emptyList()
+
+        val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
+
+        _feedContent.update { newList }
+    }
+
+    val listener: (UserState) -> Unit = { invalidateData() }
+
+    fun subscribeTo(user: User) {
+        if (currentUser != user) {
+            currentUser = user
+            user.live().relays.observeForever(listener)
+            user.live().relayInfo.observeForever(listener)
+            invalidateData()
         }
-      }
-        ?: emptyList()
-
-    val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
-
-    _feedContent.update { newList }
-  }
-
-  val listener: (UserState) -> Unit = { invalidateData() }
-
-  fun subscribeTo(user: User) {
-    if (currentUser != user) {
-      currentUser = user
-      user.live().relays.observeForever(listener)
-      user.live().relayInfo.observeForever(listener)
-      invalidateData()
     }
-  }
 
-  fun unsubscribeTo(user: User) {
-    if (currentUser == user) {
-      user.live().relays.removeObserver(listener)
-      user.live().relayInfo.removeObserver(listener)
-      currentUser = null
+    fun unsubscribeTo(user: User) {
+        if (currentUser == user) {
+            user.live().relays.removeObserver(listener)
+            user.live().relayInfo.removeObserver(listener)
+            currentUser = null
+        }
     }
-  }
 
-  private val bundler = BundledUpdate(250, Dispatchers.IO)
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
 
-  fun invalidateData() {
-    bundler.invalidate {
-      // adds the time to perform the refresh into this delay
-      // holding off new updates in case of heavy refresh routines.
-      refreshSuspended()
+    fun invalidateData() {
+        bundler.invalidate {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            refreshSuspended()
+        }
     }
-  }
 
-  override fun onCleared() {
-    Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-    bundler.cancel()
-    super.onCleared()
-  }
+    override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        bundler.cancel()
+        super.onCleared()
+    }
 }
 
 @Composable
 fun RelayFeedView(
-  viewModel: RelayFeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  enablePullRefresh: Boolean = true,
+    viewModel: RelayFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    enablePullRefresh: Boolean = true,
 ) {
-  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-  var wantsToAddRelay by remember { mutableStateOf("") }
+    var wantsToAddRelay by remember { mutableStateOf("") }
 
-  if (wantsToAddRelay.isNotEmpty()) {
-    NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
-  }
-
-  var refreshing by remember { mutableStateOf(false) }
-  val refresh = {
-    refreshing = true
-    viewModel.refresh()
-    refreshing = false
-  }
-  val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
-
-  val modifier =
-    if (enablePullRefresh) {
-      Modifier.fillMaxSize().pullRefresh(pullRefreshState)
-    } else {
-      Modifier.fillMaxSize()
+    if (wantsToAddRelay.isNotEmpty()) {
+        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
     }
 
-  Box(modifier) {
-    val listState = rememberLazyListState()
-
-    LazyColumn(
-      contentPadding = FeedPadding,
-      state = listState,
-    ) {
-      itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
-        RelayCompose(
-          item,
-          accountViewModel = accountViewModel,
-          onAddRelay = { wantsToAddRelay = item.url },
-          onRemoveRelay = { wantsToAddRelay = item.url },
-        )
-      }
+    var refreshing by remember { mutableStateOf(false) }
+    val refresh = {
+        refreshing = true
+        viewModel.refresh()
+        refreshing = false
     }
+    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
-    if (enablePullRefresh) {
-      PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+    val modifier =
+        if (enablePullRefresh) {
+            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
+        } else {
+            Modifier.fillMaxSize()
+        }
+
+    Box(modifier) {
+        val listState = rememberLazyListState()
+
+        LazyColumn(
+            contentPadding = FeedPadding,
+            state = listState,
+        ) {
+            itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
+                RelayCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    onAddRelay = { wantsToAddRelay = item.url },
+                    onRemoveRelay = { wantsToAddRelay = item.url },
+                )
+            }
+        }
+
+        if (enablePullRefresh) {
+            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+        }
     }
-  }
 }

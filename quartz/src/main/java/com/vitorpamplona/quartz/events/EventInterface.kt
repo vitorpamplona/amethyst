@@ -27,115 +27,115 @@ import java.math.BigDecimal
 
 @Immutable
 interface EventInterface {
-  fun countMemory(): Long
+    fun countMemory(): Long
 
-  fun id(): HexKey
+    fun id(): HexKey
 
-  fun pubKey(): HexKey
+    fun pubKey(): HexKey
 
-  fun createdAt(): Long
+    fun createdAt(): Long
 
-  fun kind(): Int
+    fun kind(): Int
 
-  fun tags(): Array<Array<String>>
+    fun tags(): Array<Array<String>>
 
-  fun content(): String
+    fun content(): String
 
-  fun sig(): HexKey
+    fun sig(): HexKey
 
-  fun toJson(): String
+    fun toJson(): String
 
-  fun checkSignature()
+    fun checkSignature()
 
-  fun hasValidSignature(): Boolean
+    fun hasValidSignature(): Boolean
 
-  fun isTagged(
-    key: String,
-    tag: String,
-  ): Boolean
+    fun isTagged(
+        key: String,
+        tag: String,
+    ): Boolean
 
-  fun isAnyTagged(
-    key: String,
-    tags: Set<String>,
-  ): Boolean
+    fun isAnyTagged(
+        key: String,
+        tags: Set<String>,
+    ): Boolean
 
-  fun isTaggedWord(word: String): Boolean
+    fun isTaggedWord(word: String): Boolean
 
-  fun isTaggedUser(idHex: String): Boolean
+    fun isTaggedUser(idHex: String): Boolean
 
-  fun isTaggedUsers(idHex: Set<String>): Boolean
+    fun isTaggedUsers(idHex: Set<String>): Boolean
 
-  fun isTaggedEvent(idHex: String): Boolean
+    fun isTaggedEvent(idHex: String): Boolean
 
-  fun isTaggedAddressableNote(idHex: String): Boolean
+    fun isTaggedAddressableNote(idHex: String): Boolean
 
-  fun isTaggedAddressableNotes(idHexes: Set<String>): Boolean
+    fun isTaggedAddressableNotes(idHexes: Set<String>): Boolean
 
-  fun isTaggedHash(hashtag: String): Boolean
+    fun isTaggedHash(hashtag: String): Boolean
 
-  fun isTaggedGeoHash(hashtag: String): Boolean
+    fun isTaggedGeoHash(hashtag: String): Boolean
 
-  fun isTaggedHashes(hashtags: Set<String>): Boolean
+    fun isTaggedHashes(hashtags: Set<String>): Boolean
 
-  fun isTaggedGeoHashes(hashtags: Set<String>): Boolean
+    fun isTaggedGeoHashes(hashtags: Set<String>): Boolean
 
-  fun firstIsTaggedHashes(hashtags: Set<String>): String?
+    fun firstIsTaggedHashes(hashtags: Set<String>): String?
 
-  fun firstIsTaggedAddressableNote(addressableNotes: Set<String>): String?
+    fun firstIsTaggedAddressableNote(addressableNotes: Set<String>): String?
 
-  fun isTaggedAddressableKind(kind: Int): Boolean
+    fun isTaggedAddressableKind(kind: Int): Boolean
 
-  fun getTagOfAddressableKind(kind: Int): ATag?
+    fun getTagOfAddressableKind(kind: Int): ATag?
 
-  fun expiration(): Long?
+    fun expiration(): Long?
 
-  fun hasHashtags(): Boolean
+    fun hasHashtags(): Boolean
 
-  fun hasGeohashes(): Boolean
+    fun hasGeohashes(): Boolean
 
-  fun hashtags(): List<String>
+    fun hashtags(): List<String>
 
-  fun geohashes(): List<String>
+    fun geohashes(): List<String>
 
-  fun getReward(): BigDecimal?
+    fun getReward(): BigDecimal?
 
-  fun getPoWRank(): Int
+    fun getPoWRank(): Int
 
-  fun getGeoHash(): String?
+    fun getGeoHash(): String?
 
-  fun zapSplitSetup(): List<ZapSplitSetup>
+    fun zapSplitSetup(): List<ZapSplitSetup>
 
-  fun isSensitive(): Boolean
+    fun isSensitive(): Boolean
 
-  fun subject(): String?
+    fun subject(): String?
 
-  fun zapraiserAmount(): Long?
+    fun zapraiserAmount(): Long?
 
-  fun hasAnyTaggedUser(): Boolean
+    fun hasAnyTaggedUser(): Boolean
 
-  fun hasTagWithContent(tagName: String): Boolean
+    fun hasTagWithContent(tagName: String): Boolean
 
-  fun taggedAddresses(): List<ATag>
+    fun taggedAddresses(): List<ATag>
 
-  fun taggedUsers(): List<HexKey>
+    fun taggedUsers(): List<HexKey>
 
-  fun taggedEvents(): List<HexKey>
+    fun taggedEvents(): List<HexKey>
 
-  fun taggedUrls(): List<String>
+    fun taggedUrls(): List<String>
 
-  fun firstTaggedAddress(): ATag?
+    fun firstTaggedAddress(): ATag?
 
-  fun firstTaggedUser(): HexKey?
+    fun firstTaggedUser(): HexKey?
 
-  fun firstTaggedEvent(): HexKey?
+    fun firstTaggedEvent(): HexKey?
 
-  fun firstTaggedUrl(): String?
+    fun firstTaggedUrl(): String?
 
-  fun taggedEmojis(): List<EmojiUrl>
+    fun taggedEmojis(): List<EmojiUrl>
 
-  fun matchTag1With(text: String): Boolean
+    fun matchTag1With(text: String): Boolean
 
-  fun isExpired(): Boolean
+    fun isExpired(): Boolean
 
-  fun hasZapSplitSetup(): Boolean
+    fun hasZapSplitSetup(): Boolean
 }

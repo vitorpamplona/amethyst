@@ -47,68 +47,68 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun ZapRaiserRequest(
-  titleText: String? = null,
-  newPostViewModel: NewPostViewModel,
+    titleText: String? = null,
+    newPostViewModel: NewPostViewModel,
 ) {
-  Column(
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+    Column(
+        modifier = Modifier.fillMaxWidth(),
     ) {
-      Icon(
-        painter = painterResource(R.drawable.lightning),
-        null,
-        modifier = Size20Modifier,
-        tint = Color.Unspecified,
-      )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.lightning),
+                null,
+                modifier = Size20Modifier,
+                tint = Color.Unspecified,
+            )
 
-      Text(
-        text = titleText ?: stringResource(R.string.zapraiser),
-        fontSize = 20.sp,
-        fontWeight = FontWeight.W500,
-        modifier = Modifier.padding(start = 10.dp),
-      )
-    }
-
-    Divider()
-
-    Text(
-      text = stringResource(R.string.zapraiser_explainer),
-      color = MaterialTheme.colorScheme.placeholderText,
-      modifier = Modifier.padding(vertical = 10.dp),
-    )
-
-    OutlinedTextField(
-      label = { Text(text = stringResource(R.string.zapraiser_target_amount_in_sats)) },
-      modifier = Modifier.fillMaxWidth(),
-      value =
-        if (newPostViewModel.zapRaiserAmount != null) {
-          newPostViewModel.zapRaiserAmount.toString()
-        } else {
-          ""
-        },
-      onValueChange = {
-        runCatching {
-          if (it.isEmpty()) {
-            newPostViewModel.zapRaiserAmount = null
-          } else {
-            newPostViewModel.zapRaiserAmount = it.toLongOrNull()
-          }
+            Text(
+                text = titleText ?: stringResource(R.string.zapraiser),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W500,
+                modifier = Modifier.padding(start = 10.dp),
+            )
         }
-      },
-      placeholder = {
+
+        Divider()
+
         Text(
-          text = "1000",
-          color = MaterialTheme.colorScheme.placeholderText,
+            text = stringResource(R.string.zapraiser_explainer),
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier.padding(vertical = 10.dp),
         )
-      },
-      keyboardOptions =
-        KeyboardOptions.Default.copy(
-          keyboardType = KeyboardType.Number,
-        ),
-      singleLine = true,
-    )
-  }
+
+        OutlinedTextField(
+            label = { Text(text = stringResource(R.string.zapraiser_target_amount_in_sats)) },
+            modifier = Modifier.fillMaxWidth(),
+            value =
+                if (newPostViewModel.zapRaiserAmount != null) {
+                    newPostViewModel.zapRaiserAmount.toString()
+                } else {
+                    ""
+                },
+            onValueChange = {
+                runCatching {
+                    if (it.isEmpty()) {
+                        newPostViewModel.zapRaiserAmount = null
+                    } else {
+                        newPostViewModel.zapRaiserAmount = it.toLongOrNull()
+                    }
+                }
+            },
+            placeholder = {
+                Text(
+                    text = "1000",
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number,
+                ),
+            singleLine = true,
+        )
+    }
 }

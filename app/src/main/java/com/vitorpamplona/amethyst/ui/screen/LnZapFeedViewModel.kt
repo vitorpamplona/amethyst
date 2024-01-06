@@ -42,84 +42,82 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NostrUserProfileZapsFeedViewModel(user: User) :
-  LnZapFeedViewModel(UserProfileZapsFeedFilter(user)) {
-  class Factory(val user: User) : ViewModelProvider.Factory {
-    override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(
-      modelClass: Class<NostrUserProfileZapsFeedViewModel>
-    ): NostrUserProfileZapsFeedViewModel {
-      return NostrUserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
+    LnZapFeedViewModel(UserProfileZapsFeedFilter(user)) {
+    class Factory(val user: User) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileZapsFeedViewModel>): NostrUserProfileZapsFeedViewModel {
+            return NostrUserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
+        }
     }
-  }
 }
 
 @Stable
 open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : ViewModel() {
-  private val _feedContent = MutableStateFlow<LnZapFeedState>(LnZapFeedState.Loading)
-  val feedContent = _feedContent.asStateFlow()
+    private val _feedContent = MutableStateFlow<LnZapFeedState>(LnZapFeedState.Loading)
+    val feedContent = _feedContent.asStateFlow()
 
-  private fun refresh() {
-    viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
-  }
-
-  private fun refreshSuspended() {
-    checkNotInMainThread()
-    val notes = dataSource.loadTop().toImmutableList()
-
-    val oldNotesState = _feedContent.value
-    if (oldNotesState is LnZapFeedState.Loaded) {
-      // Using size as a proxy for has changed.
-      if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
-        updateFeed(notes)
-      }
-    } else {
-      updateFeed(notes)
+    private fun refresh() {
+        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
-  }
 
-  private fun updateFeed(notes: ImmutableList<ZapReqResponse>) {
-    viewModelScope.launch(Dispatchers.Main) {
-      val currentState = _feedContent.value
-      if (notes.isEmpty()) {
-        _feedContent.update { LnZapFeedState.Empty }
-      } else if (currentState is LnZapFeedState.Loaded) {
-        // updates the current list
-        currentState.feed.value = notes
-      } else {
-        _feedContent.update { LnZapFeedState.Loaded(mutableStateOf(notes)) }
-      }
-    }
-  }
-
-  private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-  fun invalidateData() {
-    bundler.invalidate {
-      // adds the time to perform the refresh into this delay
-      // holding off new updates in case of heavy refresh routines.
-      refreshSuspended()
-    }
-  }
-
-  var collectorJob: Job? = null
-
-  init {
-    Log.d("Init", "${this.javaClass.simpleName}")
-    collectorJob =
-      viewModelScope.launch(Dispatchers.IO) {
+    private fun refreshSuspended() {
         checkNotInMainThread()
+        val notes = dataSource.loadTop().toImmutableList()
 
-        LocalCache.live.newEventBundles.collect { newNotes ->
-          checkNotInMainThread()
-
-          invalidateData()
+        val oldNotesState = _feedContent.value
+        if (oldNotesState is LnZapFeedState.Loaded) {
+            // Using size as a proxy for has changed.
+            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
+                updateFeed(notes)
+            }
+        } else {
+            updateFeed(notes)
         }
-      }
-  }
+    }
 
-  override fun onCleared() {
-    Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-    bundler.cancel()
-    collectorJob?.cancel()
-    super.onCleared()
-  }
+    private fun updateFeed(notes: ImmutableList<ZapReqResponse>) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val currentState = _feedContent.value
+            if (notes.isEmpty()) {
+                _feedContent.update { LnZapFeedState.Empty }
+            } else if (currentState is LnZapFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
+            } else {
+                _feedContent.update { LnZapFeedState.Loaded(mutableStateOf(notes)) }
+            }
+        }
+    }
+
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
+
+    fun invalidateData() {
+        bundler.invalidate {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+            refreshSuspended()
+        }
+    }
+
+    var collectorJob: Job? = null
+
+    init {
+        Log.d("Init", "${this.javaClass.simpleName}")
+        collectorJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                checkNotInMainThread()
+
+                LocalCache.live.newEventBundles.collect { newNotes ->
+                    checkNotInMainThread()
+
+                    invalidateData()
+                }
+            }
+    }
+
+    override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        bundler.cancel()
+        collectorJob?.cancel()
+        super.onCleared()
+    }
 }

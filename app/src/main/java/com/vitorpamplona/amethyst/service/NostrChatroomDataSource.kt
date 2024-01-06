@@ -29,80 +29,81 @@ import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 
 object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
-  lateinit var account: Account
-  private var withRoom: ChatroomKey? = null
+    lateinit var account: Account
+    private var withRoom: ChatroomKey? = null
 
-  private val latestEOSEs = EOSEAccount()
+    private val latestEOSEs = EOSEAccount()
 
-  fun loadMessagesBetween(
-    accountIn: Account,
-    withRoom: ChatroomKey,
-  ) {
-    this.account = accountIn
-    this.withRoom = withRoom
-    resetFilters()
-  }
-
-  fun createMessagesToMeFilter(): TypedFilter? {
-    val myPeer = withRoom
-
-    return if (myPeer != null) {
-      TypedFilter(
-        types = setOf(FeedType.PRIVATE_DMS),
-        filter =
-          JsonFilter(
-            kinds = listOf(PrivateDmEvent.KIND),
-            authors = myPeer.users.map { it },
-            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-            since =
-              latestEOSEs.users[account.userProfile()]
-                ?.followList
-                ?.get(withRoom.hashCode().toString())
-                ?.relayList,
-          ),
-      )
-    } else {
-      null
+    fun loadMessagesBetween(
+        accountIn: Account,
+        withRoom: ChatroomKey,
+    ) {
+        this.account = accountIn
+        this.withRoom = withRoom
+        resetFilters()
     }
-  }
 
-  fun createMessagesFromMeFilter(): TypedFilter? {
-    val myPeer = withRoom
+    fun createMessagesToMeFilter(): TypedFilter? {
+        val myPeer = withRoom
 
-    return if (myPeer != null) {
-      TypedFilter(
-        types = setOf(FeedType.PRIVATE_DMS),
-        filter =
-          JsonFilter(
-            kinds = listOf(PrivateDmEvent.KIND),
-            authors = listOf(account.userProfile().pubkeyHex),
-            tags = mapOf("p" to myPeer.users.map { it }),
-            since =
-              latestEOSEs.users[account.userProfile()]
-                ?.followList
-                ?.get(withRoom.hashCode().toString())
-                ?.relayList,
-          ),
-      )
-    } else {
-      null
+        return if (myPeer != null) {
+            TypedFilter(
+                types = setOf(FeedType.PRIVATE_DMS),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(PrivateDmEvent.KIND),
+                        authors = myPeer.users.map { it },
+                        tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(withRoom.hashCode().toString())
+                                ?.relayList,
+                    ),
+            )
+        } else {
+            null
+        }
     }
-  }
 
-  fun clearEOSEs(account: Account) {
-    latestEOSEs.removeDataFor(account.userProfile())
-  }
+    fun createMessagesFromMeFilter(): TypedFilter? {
+        val myPeer = withRoom
 
-  val inandoutChannel = requestNewChannel { time, relayUrl ->
-    latestEOSEs.addOrUpdate(account.userProfile(), withRoom.hashCode().toString(), relayUrl, time)
-  }
+        return if (myPeer != null) {
+            TypedFilter(
+                types = setOf(FeedType.PRIVATE_DMS),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(PrivateDmEvent.KIND),
+                        authors = listOf(account.userProfile().pubkeyHex),
+                        tags = mapOf("p" to myPeer.users.map { it }),
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(withRoom.hashCode().toString())
+                                ?.relayList,
+                    ),
+            )
+        } else {
+            null
+        }
+    }
 
-  override fun updateChannelFilters() {
-    inandoutChannel.typedFilters =
-      listOfNotNull(
-          createMessagesToMeFilter(),
-          createMessagesFromMeFilter(),
-        )
-        .ifEmpty { null }
-  }
+    fun clearEOSEs(account: Account) {
+        latestEOSEs.removeDataFor(account.userProfile())
+    }
+
+    val inandoutChannel =
+        requestNewChannel { time, relayUrl ->
+            latestEOSEs.addOrUpdate(account.userProfile(), withRoom.hashCode().toString(), relayUrl, time)
+        }
+
+    override fun updateChannelFilters() {
+        inandoutChannel.typedFilters =
+            listOfNotNull(
+                createMessagesToMeFilter(),
+                createMessagesFromMeFilter(),
+            )
+                .ifEmpty { null }
+    }
 }

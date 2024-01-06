@@ -41,32 +41,32 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 
 @Composable
 fun InformationDialog(
-  title: String,
-  textContent: String,
-  buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-  onDismiss: () -> Unit,
+    title: String,
+    textContent: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onDismiss: () -> Unit,
 ) {
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = { Text(title) },
-    text = { SelectionContainer { Text(textContent) } },
-    confirmButton = {
-      Button(
-        onClick = onDismiss,
-        colors = buttonColors,
-        contentPadding = PaddingValues(horizontal = Size16dp),
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Icon(
-            imageVector = Icons.Outlined.Done,
-            contentDescription = null,
-          )
-          Spacer(StdHorzSpacer)
-          Text(stringResource(R.string.error_dialog_button_ok))
-        }
-      }
-    },
-  )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { SelectionContainer { Text(textContent) } },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = buttonColors,
+                contentPadding = PaddingValues(horizontal = Size16dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Done,
+                        contentDescription = null,
+                    )
+                    Spacer(StdHorzSpacer)
+                    Text(stringResource(R.string.error_dialog_button_ok))
+                }
+            }
+        },
+    )
 }

@@ -43,43 +43,43 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MayBeWithdrawal(lnurlWord: String) {
-  var lnWithdrawal by remember { mutableStateOf<String?>(null) }
+    var lnWithdrawal by remember { mutableStateOf<String?>(null) }
 
-  LaunchedEffect(key1 = lnurlWord) {
-    launch(Dispatchers.IO) { lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord) }
-  }
-
-  Crossfade(targetState = lnWithdrawal) {
-    if (it != null) {
-      ClickableWithdrawal(withdrawalString = it)
-    } else {
-      Text(
-        text = lnurlWord,
-        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-      )
+    LaunchedEffect(key1 = lnurlWord) {
+        launch(Dispatchers.IO) { lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord) }
     }
-  }
+
+    Crossfade(targetState = lnWithdrawal) {
+        if (it != null) {
+            ClickableWithdrawal(withdrawalString = it)
+        } else {
+            Text(
+                text = lnurlWord,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            )
+        }
+    }
 }
 
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
-  val context = LocalContext.current
+    val context = LocalContext.current
 
-  val withdraw = remember(withdrawalString) { AnnotatedString("$withdrawalString ") }
+    val withdraw = remember(withdrawalString) { AnnotatedString("$withdrawalString ") }
 
-  var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
-  if (showErrorMessageDialog != null) {
-    ErrorMessageDialog(
-      title = context.getString(R.string.error_dialog_pay_withdraw_error),
-      textContent = showErrorMessageDialog ?: "",
-      onDismiss = { showErrorMessageDialog = null },
+    if (showErrorMessageDialog != null) {
+        ErrorMessageDialog(
+            title = context.getString(R.string.error_dialog_pay_withdraw_error),
+            textContent = showErrorMessageDialog ?: "",
+            onDismiss = { showErrorMessageDialog = null },
+        )
+    }
+
+    ClickableText(
+        text = withdraw,
+        onClick = { payViaIntent(withdrawalString, context) { showErrorMessageDialog = it } },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
     )
-  }
-
-  ClickableText(
-    text = withdraw,
-    onClick = { payViaIntent(withdrawalString, context) { showErrorMessageDialog = it } },
-    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-  )
 }

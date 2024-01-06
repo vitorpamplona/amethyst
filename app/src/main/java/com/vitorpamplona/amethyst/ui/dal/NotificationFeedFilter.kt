@@ -40,81 +40,83 @@ import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 
 class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-  override fun feedKey(): String {
-    return account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList.value
-  }
+    override fun feedKey(): String {
+        return account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList.value
+    }
 
-  override fun showHiddenKey(): Boolean {
-    return account.defaultNotificationFollowList.value ==
-      PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-      account.defaultNotificationFollowList.value ==
-        MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-  }
+    override fun showHiddenKey(): Boolean {
+        return account.defaultNotificationFollowList.value ==
+            PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultNotificationFollowList.value ==
+            MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+    }
 
-  override fun feed(): List<Note> {
-    return sort(innerApplyFilter(LocalCache.notes.values))
-  }
+    override fun feed(): List<Note> {
+        return sort(innerApplyFilter(LocalCache.notes.values))
+    }
 
-  override fun applyFilter(collection: Set<Note>): Set<Note> {
-    return innerApplyFilter(collection)
-  }
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
+        return innerApplyFilter(collection)
+    }
 
-  private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-    val isGlobal = account.defaultNotificationFollowList.value == GLOBAL_FOLLOWS
-    val isHiddenList = showHiddenKey()
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val isGlobal = account.defaultNotificationFollowList.value == GLOBAL_FOLLOWS
+        val isHiddenList = showHiddenKey()
 
-    val followingKeySet = account.liveNotificationFollowLists.value?.users ?: emptySet()
+        val followingKeySet = account.liveNotificationFollowLists.value?.users ?: emptySet()
 
-    val loggedInUser = account.userProfile()
-    val loggedInUserHex = loggedInUser.pubkeyHex
+        val loggedInUser = account.userProfile()
+        val loggedInUserHex = loggedInUser.pubkeyHex
 
-    return collection
-      .filter {
-        it.event !is ChannelCreateEvent &&
-          it.event !is ChannelMetadataEvent &&
-          it.event !is LnZapRequestEvent &&
-          it.event !is BadgeDefinitionEvent &&
-          it.event !is BadgeProfilesEvent &&
-          it.event !is GiftWrapEvent &&
-          (it.event is LnZapEvent || it.author !== loggedInUser) &&
-          (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
-          it.event?.isTaggedUser(loggedInUserHex) ?: false &&
-          (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
-          tagsAnEventByUser(it, loggedInUserHex)
-      }
-      .toSet()
-  }
+        return collection
+            .filter {
+                it.event !is ChannelCreateEvent &&
+                    it.event !is ChannelMetadataEvent &&
+                    it.event !is LnZapRequestEvent &&
+                    it.event !is BadgeDefinitionEvent &&
+                    it.event !is BadgeProfilesEvent &&
+                    it.event !is GiftWrapEvent &&
+                    (it.event is LnZapEvent || it.author !== loggedInUser) &&
+                    (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
+                    it.event?.isTaggedUser(loggedInUserHex) ?: false &&
+                    (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
+                    tagsAnEventByUser(it, loggedInUserHex)
+            }
+            .toSet()
+    }
 
-  override fun sort(collection: Set<Note>): List<Note> {
-    return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
-  }
+    override fun sort(collection: Set<Note>): List<Note> {
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+    }
 
-  fun tagsAnEventByUser(
-    note: Note,
-    authorHex: HexKey,
-  ): Boolean {
-    val event = note.event
+    fun tagsAnEventByUser(
+        note: Note,
+        authorHex: HexKey,
+    ): Boolean {
+        val event = note.event
 
-    if (event is BaseTextNoteEvent) {
-      val isAuthoredPostCited =
-        event.findCitations().any {
-          LocalCache.notes[it]?.author?.pubkeyHex == authorHex ||
-            LocalCache.addressables[it]?.author?.pubkeyHex == authorHex
+        if (event is BaseTextNoteEvent) {
+            val isAuthoredPostCited =
+                event.findCitations().any {
+                    LocalCache.notes[it]?.author?.pubkeyHex == authorHex ||
+                        LocalCache.addressables[it]?.author?.pubkeyHex == authorHex
+                }
+
+            return isAuthoredPostCited ||
+                (
+                    event.citedUsers().contains(authorHex) ||
+                        note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true
+                )
         }
 
-      return isAuthoredPostCited ||
-        (event.citedUsers().contains(authorHex) ||
-          note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true)
-    }
+        if (event is ReactionEvent) {
+            return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
+        }
 
-    if (event is ReactionEvent) {
-      return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
-    }
+        if (event is RepostEvent || event is GenericRepostEvent) {
+            return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
+        }
 
-    if (event is RepostEvent || event is GenericRepostEvent) {
-      return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
+        return true
     }
-
-    return true
-  }
 }

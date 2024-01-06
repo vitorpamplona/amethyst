@@ -65,167 +65,167 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun InvoiceRequestCard(
-  lud16: String,
-  toUserPubKeyHex: String,
-  account: Account,
-  titleText: String? = null,
-  buttonText: String? = null,
-  onSuccess: (String) -> Unit,
-  onClose: () -> Unit,
-  onError: (String, String) -> Unit,
+    lud16: String,
+    toUserPubKeyHex: String,
+    account: Account,
+    titleText: String? = null,
+    buttonText: String? = null,
+    onSuccess: (String) -> Unit,
+    onClose: () -> Unit,
+    onError: (String, String) -> Unit,
 ) {
-  Column(
-    modifier =
-      Modifier.fillMaxWidth()
-        .padding(start = 30.dp, end = 30.dp)
-        .clip(shape = QuoteBorder)
-        .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
-  ) {
     Column(
-      modifier = Modifier.fillMaxWidth().padding(30.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(start = 30.dp, end = 30.dp)
+                .clip(shape = QuoteBorder)
+                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
     ) {
-      InvoiceRequest(
-        lud16,
-        toUserPubKeyHex,
-        account,
-        titleText,
-        buttonText,
-        onSuccess,
-        onClose,
-        onError,
-      )
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(30.dp),
+        ) {
+            InvoiceRequest(
+                lud16,
+                toUserPubKeyHex,
+                account,
+                titleText,
+                buttonText,
+                onSuccess,
+                onClose,
+                onError,
+            )
+        }
     }
-  }
 }
 
 @Composable
 fun InvoiceRequest(
-  lud16: String,
-  toUserPubKeyHex: String,
-  account: Account,
-  titleText: String? = null,
-  buttonText: String? = null,
-  onSuccess: (String) -> Unit,
-  onClose: () -> Unit,
-  onError: (String, String) -> Unit,
+    lud16: String,
+    toUserPubKeyHex: String,
+    account: Account,
+    titleText: String? = null,
+    buttonText: String? = null,
+    onSuccess: (String) -> Unit,
+    onClose: () -> Unit,
+    onError: (String, String) -> Unit,
 ) {
-  val context = LocalContext.current
-  val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
-  ) {
-    Icon(
-      painter = painterResource(R.drawable.lightning),
-      null,
-      modifier = Size20Modifier,
-      tint = Color.Unspecified,
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.lightning),
+            null,
+            modifier = Size20Modifier,
+            tint = Color.Unspecified,
+        )
 
-    Text(
-      text = titleText ?: stringResource(R.string.lightning_tips),
-      fontSize = 20.sp,
-      fontWeight = FontWeight.W500,
-      modifier = Modifier.padding(start = 10.dp),
-    )
-  }
+        Text(
+            text = titleText ?: stringResource(R.string.lightning_tips),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.W500,
+            modifier = Modifier.padding(start = 10.dp),
+        )
+    }
 
-  Divider()
+    Divider()
 
-  var message by remember { mutableStateOf("") }
-  var amount by remember { mutableStateOf(1000L) }
+    var message by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf(1000L) }
 
-  OutlinedTextField(
-    label = { Text(text = stringResource(R.string.note_to_receiver)) },
-    modifier = Modifier.fillMaxWidth(),
-    value = message,
-    onValueChange = { message = it },
-    placeholder = {
-      Text(
-        text = stringResource(R.string.thank_you_so_much),
-        color = MaterialTheme.colorScheme.placeholderText,
-      )
-    },
-    keyboardOptions =
-      KeyboardOptions.Default.copy(
-        capitalization = KeyboardCapitalization.Sentences,
-      ),
-    singleLine = true,
-  )
-
-  OutlinedTextField(
-    label = { Text(text = stringResource(R.string.amount_in_sats)) },
-    modifier = Modifier.fillMaxWidth(),
-    value = amount.toString(),
-    onValueChange = {
-      runCatching {
-        if (it.isEmpty()) {
-          amount = 0
-        } else {
-          amount = it.toLong()
-        }
-      }
-    },
-    placeholder = {
-      Text(
-        text = "1000",
-        color = MaterialTheme.colorScheme.placeholderText,
-      )
-    },
-    keyboardOptions =
-      KeyboardOptions.Default.copy(
-        keyboardType = KeyboardType.Number,
-      ),
-    singleLine = true,
-  )
-
-  Button(
-    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-    onClick = {
-      scope.launch(Dispatchers.IO) {
-        if (account.defaultZapType == LnZapEvent.ZapType.NONZAP) {
-          LightningAddressResolver()
-            .lnAddressInvoice(
-              lud16,
-              amount * 1000,
-              message,
-              null,
-              onSuccess = onSuccess,
-              onError = onError,
-              onProgress = {},
-              context = context,
+    OutlinedTextField(
+        label = { Text(text = stringResource(R.string.note_to_receiver)) },
+        modifier = Modifier.fillMaxWidth(),
+        value = message,
+        onValueChange = { message = it },
+        placeholder = {
+            Text(
+                text = stringResource(R.string.thank_you_so_much),
+                color = MaterialTheme.colorScheme.placeholderText,
             )
-        } else {
-          account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType) {
-            zapRequest,
-            ->
-            LocalCache.justConsume(zapRequest, null)
-            LightningAddressResolver()
-              .lnAddressInvoice(
-                lud16,
-                amount * 1000,
-                message,
-                zapRequest.toJson(),
-                onSuccess = onSuccess,
-                onError = onError,
-                onProgress = {},
-                context = context,
-              )
-          }
-        }
-      }
-    },
-    shape = QuoteBorder,
-    colors =
-      ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.primary,
-      ),
-  ) {
-    Text(
-      text = buttonText ?: stringResource(R.string.send_sats),
-      color = Color.White,
-      fontSize = 20.sp,
+        },
+        keyboardOptions =
+            KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences,
+            ),
+        singleLine = true,
     )
-  }
+
+    OutlinedTextField(
+        label = { Text(text = stringResource(R.string.amount_in_sats)) },
+        modifier = Modifier.fillMaxWidth(),
+        value = amount.toString(),
+        onValueChange = {
+            runCatching {
+                if (it.isEmpty()) {
+                    amount = 0
+                } else {
+                    amount = it.toLong()
+                }
+            }
+        },
+        placeholder = {
+            Text(
+                text = "1000",
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        },
+        keyboardOptions =
+            KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number,
+            ),
+        singleLine = true,
+    )
+
+    Button(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        onClick = {
+            scope.launch(Dispatchers.IO) {
+                if (account.defaultZapType == LnZapEvent.ZapType.NONZAP) {
+                    LightningAddressResolver()
+                        .lnAddressInvoice(
+                            lud16,
+                            amount * 1000,
+                            message,
+                            null,
+                            onSuccess = onSuccess,
+                            onError = onError,
+                            onProgress = {},
+                            context = context,
+                        )
+                } else {
+                    account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType) {
+                            zapRequest,
+                        ->
+                        LocalCache.justConsume(zapRequest, null)
+                        LightningAddressResolver()
+                            .lnAddressInvoice(
+                                lud16,
+                                amount * 1000,
+                                message,
+                                zapRequest.toJson(),
+                                onSuccess = onSuccess,
+                                onError = onError,
+                                onProgress = {},
+                                context = context,
+                            )
+                    }
+                }
+            }
+        },
+        shape = QuoteBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+    ) {
+        Text(
+            text = buttonText ?: stringResource(R.string.send_sats),
+            color = Color.White,
+            fontSize = 20.sp,
+        )
+    }
 }

@@ -68,101 +68,101 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun NewImageButton(
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  navScrollToTop: (Route, Boolean) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navScrollToTop: (Route, Boolean) -> Unit,
 ) {
-  var wantsToPost by remember { mutableStateOf(false) }
+    var wantsToPost by remember { mutableStateOf(false) }
 
-  var pickedURI by remember { mutableStateOf<Uri?>(null) }
+    var pickedURI by remember { mutableStateOf<Uri?>(null) }
 
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  val postViewModel: NewMediaModel = viewModel()
-  postViewModel.onceUploaded {
-    scope.launch(Dispatchers.Default) {
-      delay(500)
-      withContext(Dispatchers.Main) { navScrollToTop(Route.Video, true) }
+    val postViewModel: NewMediaModel = viewModel()
+    postViewModel.onceUploaded {
+        scope.launch(Dispatchers.Default) {
+            delay(500)
+            withContext(Dispatchers.Main) { navScrollToTop(Route.Video, true) }
+        }
     }
-  }
 
-  if (wantsToPost) {
-    val cameraPermissionState =
-      rememberPermissionState(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-          Manifest.permission.READ_MEDIA_IMAGES
+    if (wantsToPost) {
+        val cameraPermissionState =
+            rememberPermissionState(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Manifest.permission.READ_MEDIA_IMAGES
+                } else {
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                },
+            )
+
+        if (cameraPermissionState.status.isGranted) {
+            var showGallerySelect by remember { mutableStateOf(false) }
+            if (showGallerySelect) {
+                GallerySelect(
+                    onImageUri = { uri ->
+                        wantsToPost = false
+                        showGallerySelect = false
+                        pickedURI = uri
+                    },
+                )
+            }
+
+            showGallerySelect = true
         } else {
-          Manifest.permission.READ_EXTERNAL_STORAGE
-        },
-      )
+            LaunchedEffect(key1 = accountViewModel) { cameraPermissionState.launchPermissionRequest() }
+        }
+    }
 
-    if (cameraPermissionState.status.isGranted) {
-      var showGallerySelect by remember { mutableStateOf(false) }
-      if (showGallerySelect) {
-        GallerySelect(
-          onImageUri = { uri ->
-            wantsToPost = false
-            showGallerySelect = false
-            pickedURI = uri
-          },
+    pickedURI?.let {
+        NewMediaView(
+            uri = it,
+            onClose = { pickedURI = null },
+            postViewModel = postViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
-      }
+    }
 
-      showGallerySelect = true
+    if (postViewModel.isUploadingImage) {
+        ShowProgress(postViewModel)
     } else {
-      LaunchedEffect(key1 = accountViewModel) { cameraPermissionState.launchPermissionRequest() }
+        FloatingActionButton(
+            onClick = { wantsToPost = true },
+            modifier = Size55Modifier,
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_compose),
+                null,
+                modifier = Modifier.size(26.dp),
+                tint = Color.White,
+            )
+        }
     }
-  }
-
-  pickedURI?.let {
-    NewMediaView(
-      uri = it,
-      onClose = { pickedURI = null },
-      postViewModel = postViewModel,
-      accountViewModel = accountViewModel,
-      nav = nav,
-    )
-  }
-
-  if (postViewModel.isUploadingImage) {
-    ShowProgress(postViewModel)
-  } else {
-    FloatingActionButton(
-      onClick = { wantsToPost = true },
-      modifier = Size55Modifier,
-      shape = CircleShape,
-      containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-      Icon(
-        painter = painterResource(R.drawable.ic_compose),
-        null,
-        modifier = Modifier.size(26.dp),
-        tint = Color.White,
-      )
-    }
-  }
 }
 
 @Composable
 private fun ShowProgress(postViewModel: NewMediaModel) {
-  Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-    CircularProgressIndicator(
-      progress =
-        animateFloatAsState(
-            targetValue = postViewModel.uploadingPercentage.value,
-            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-          )
-          .value,
-      modifier = Size55Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.background),
-      strokeWidth = 5.dp,
-    )
-    postViewModel.uploadingDescription.value?.let {
-      Text(
-        it,
-        color = MaterialTheme.colorScheme.onSurface,
-        fontSize = 10.sp,
-        textAlign = TextAlign.Center,
-      )
+    Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(
+            progress =
+                animateFloatAsState(
+                    targetValue = postViewModel.uploadingPercentage.value,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                )
+                    .value,
+            modifier = Size55Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.background),
+            strokeWidth = 5.dp,
+        )
+        postViewModel.uploadingDescription.value?.let {
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
-  }
 }

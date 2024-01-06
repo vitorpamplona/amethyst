@@ -27,30 +27,30 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class NNSEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun ip4() = tags.firstOrNull { it.size > 1 && it[0] == "ip4" }?.get(1)
+    fun ip4() = tags.firstOrNull { it.size > 1 && it[0] == "ip4" }?.get(1)
 
-  fun ip6() = tags.firstOrNull { it.size > 1 && it[0] == "ip6" }?.get(1)
+    fun ip6() = tags.firstOrNull { it.size > 1 && it[0] == "ip6" }?.get(1)
 
-  fun version() = tags.firstOrNull { it.size > 1 && it[0] == "version" }?.get(1)
+    fun version() = tags.firstOrNull { it.size > 1 && it[0] == "version" }?.get(1)
 
-  companion object {
-    const val KIND = 30053
-    const val ALT = "DNS records"
+    companion object {
+        const val KIND = 30053
+        const val ALT = "DNS records"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (NNSEvent) -> Unit,
-    ) {
-      val tags = arrayOf(arrayOf("alt", ALT))
-      signer.sign(createdAt, KIND, tags, "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (NNSEvent) -> Unit,
+        ) {
+            val tags = arrayOf(arrayOf("alt", ALT))
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-  }
 }

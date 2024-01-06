@@ -29,70 +29,70 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class ChannelCreateEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun channelInfo(): ChannelData =
-    try {
-      mapper.readValue(content)
-    } catch (e: Exception) {
-      Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
-      ChannelData(null, null, null)
-    }
-
-  companion object {
-    const val KIND = 40
-
-    fun create(
-      name: String?,
-      about: String?,
-      picture: String?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ChannelCreateEvent) -> Unit,
-    ) {
-      return create(
-        ChannelData(
-          name,
-          about,
-          picture,
-        ),
-        signer,
-        createdAt,
-        onReady,
-      )
-    }
-
-    fun create(
-      channelInfo: ChannelData?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ChannelCreateEvent) -> Unit,
-    ) {
-      val content =
+    fun channelInfo(): ChannelData =
         try {
-          if (channelInfo != null) {
-            mapper.writeValueAsString(channelInfo)
-          } else {
-            ""
-          }
-        } catch (t: Throwable) {
-          Log.e("ChannelCreateEvent", "Couldn't parse channel information", t)
-          ""
+            mapper.readValue(content)
+        } catch (e: Exception) {
+            Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+            ChannelData(null, null, null)
         }
 
-      val tags =
-        arrayOf(
-          arrayOf("alt", "Public chat creation event ${channelInfo?.name?.let { "about $it" }}"),
-        )
+    companion object {
+        const val KIND = 40
 
-      signer.sign(createdAt, KIND, tags, content, onReady)
+        fun create(
+            name: String?,
+            about: String?,
+            picture: String?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelCreateEvent) -> Unit,
+        ) {
+            return create(
+                ChannelData(
+                    name,
+                    about,
+                    picture,
+                ),
+                signer,
+                createdAt,
+                onReady,
+            )
+        }
+
+        fun create(
+            channelInfo: ChannelData?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelCreateEvent) -> Unit,
+        ) {
+            val content =
+                try {
+                    if (channelInfo != null) {
+                        mapper.writeValueAsString(channelInfo)
+                    } else {
+                        ""
+                    }
+                } catch (t: Throwable) {
+                    Log.e("ChannelCreateEvent", "Couldn't parse channel information", t)
+                    ""
+                }
+
+            val tags =
+                arrayOf(
+                    arrayOf("alt", "Public chat creation event ${channelInfo?.name?.let { "about $it" }}"),
+                )
+
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
-  }
 
-  @Immutable data class ChannelData(val name: String?, val about: String?, val picture: String?)
+    @Immutable data class ChannelData(val name: String?, val about: String?, val picture: String?)
 }

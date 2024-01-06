@@ -29,57 +29,57 @@ import java.io.ByteArrayInputStream
 
 @Immutable
 class AppDefinitionEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  @Transient private var cachedMetadata: UserMetadata? = null
+    @Transient private var cachedMetadata: UserMetadata? = null
 
-  fun appMetaData() =
-    if (cachedMetadata != null) {
-      cachedMetadata
-    } else {
-      try {
-        val newMetadata =
-          mapper.readValue(
-            ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
-            UserMetadata::class.java,
-          )
+    fun appMetaData() =
+        if (cachedMetadata != null) {
+            cachedMetadata
+        } else {
+            try {
+                val newMetadata =
+                    mapper.readValue(
+                        ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
+                        UserMetadata::class.java,
+                    )
 
-        cachedMetadata = newMetadata
+                cachedMetadata = newMetadata
 
-        newMetadata
-      } catch (e: Exception) {
-        e.printStackTrace()
-        Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
-        null
-      }
+                newMetadata
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
+                null
+            }
+        }
+
+    fun supportedKinds() =
+        tags
+            .filter { it.size > 1 && it[0] == "k" }
+            .mapNotNull { runCatching { it[1].toInt() }.getOrNull() }
+
+    fun publishedAt() = tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)
+
+    companion object {
+        const val KIND = 31990
+
+        fun create(
+            details: UserMetadata,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AppDefinitionEvent) -> Unit,
+        ) {
+            val tags =
+                arrayOf(
+                    arrayOf("alt", "App definition event for ${details.name}"),
+                )
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-
-  fun supportedKinds() =
-    tags
-      .filter { it.size > 1 && it[0] == "k" }
-      .mapNotNull { runCatching { it[1].toInt() }.getOrNull() }
-
-  fun publishedAt() = tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)
-
-  companion object {
-    const val KIND = 31990
-
-    fun create(
-      details: UserMetadata,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (AppDefinitionEvent) -> Unit,
-    ) {
-      val tags =
-        arrayOf(
-          arrayOf("alt", "App definition event for ${details.name}"),
-        )
-      signer.sign(createdAt, KIND, tags, "", onReady)
-    }
-  }
 }

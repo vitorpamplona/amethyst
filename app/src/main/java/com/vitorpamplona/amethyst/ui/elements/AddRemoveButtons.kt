@@ -40,74 +40,74 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparison
 @Composable
 @Preview
 fun AddButtonPreview() {
-  ThemeComparison(
-    onDark = {
-      Row {
-        Column {
-          AddButton(isActive = true) {}
-          AddButton(isActive = false) {}
-        }
+    ThemeComparison(
+        onDark = {
+            Row {
+                Column {
+                    AddButton(isActive = true) {}
+                    AddButton(isActive = false) {}
+                }
 
-        Column {
-          RemoveButton(isActive = true) {}
-          RemoveButton(isActive = false) {}
-        }
-      }
-    },
-    onLight = {
-      Row {
-        Column {
-          AddButton(isActive = true) {}
-          AddButton(isActive = false) {}
-        }
+                Column {
+                    RemoveButton(isActive = true) {}
+                    RemoveButton(isActive = false) {}
+                }
+            }
+        },
+        onLight = {
+            Row {
+                Column {
+                    AddButton(isActive = true) {}
+                    AddButton(isActive = false) {}
+                }
 
-        Column {
-          RemoveButton(isActive = true) {}
-          RemoveButton(isActive = false) {}
-        }
-      }
-    },
-  )
+                Column {
+                    RemoveButton(isActive = true) {}
+                    RemoveButton(isActive = false) {}
+                }
+            }
+        },
+    )
 }
 
 @Composable
 fun AddButton(
-  text: Int = R.string.add,
-  isActive: Boolean = true,
-  modifier: Modifier = Modifier.padding(start = 3.dp),
-  onClick: () -> Unit,
+    text: Int = R.string.add,
+    isActive: Boolean = true,
+    modifier: Modifier = Modifier.padding(start = 3.dp),
+    onClick: () -> Unit,
 ) {
-  Button(
-    modifier = modifier,
-    onClick = {
-      if (isActive) {
-        onClick()
-      }
-    },
-    shape = ButtonBorder,
-    enabled = isActive,
-    contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
-  ) {
-    Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
-  }
+    Button(
+        modifier = modifier,
+        onClick = {
+            if (isActive) {
+                onClick()
+            }
+        },
+        shape = ButtonBorder,
+        enabled = isActive,
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
+    ) {
+        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+    }
 }
 
 @Composable
 fun RemoveButton(
-  isActive: Boolean = true,
-  onClick: () -> Unit,
+    isActive: Boolean = true,
+    onClick: () -> Unit,
 ) {
-  Button(
-    modifier = Modifier.padding(start = 3.dp),
-    onClick = {
-      if (isActive) {
-        onClick()
-      }
-    },
-    shape = ButtonBorder,
-    enabled = isActive,
-    contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
-  ) {
-    Text(text = stringResource(R.string.remove), color = Color.White)
-  }
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = {
+            if (isActive) {
+                onClick()
+            }
+        },
+        shape = ButtonBorder,
+        enabled = isActive,
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
+    ) {
+        Text(text = stringResource(R.string.remove), color = Color.White)
+    }
 }

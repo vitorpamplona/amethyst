@@ -129,7 +129,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
-import java.io.File
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -137,188 +136,191 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import java.io.File
 
 @Immutable
 abstract class ZoomableContent(
-  val description: String? = null,
-  val dim: String? = null,
+    val description: String? = null,
+    val dim: String? = null,
 )
 
 @Immutable
 abstract class ZoomableUrlContent(
-  val url: String,
-  description: String? = null,
-  val hash: String? = null,
-  dim: String? = null,
-  val uri: String? = null,
+    val url: String,
+    description: String? = null,
+    val hash: String? = null,
+    dim: String? = null,
+    val uri: String? = null,
 ) : ZoomableContent(description, dim)
 
 @Immutable
 class ZoomableUrlImage(
-  url: String,
-  description: String? = null,
-  hash: String? = null,
-  val blurhash: String? = null,
-  dim: String? = null,
-  uri: String? = null,
+    url: String,
+    description: String? = null,
+    hash: String? = null,
+    val blurhash: String? = null,
+    dim: String? = null,
+    uri: String? = null,
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
 @Immutable
 class ZoomableUrlVideo(
-  url: String,
-  description: String? = null,
-  hash: String? = null,
-  dim: String? = null,
-  uri: String? = null,
-  val artworkUri: String? = null,
-  val authorName: String? = null,
-  val blurhash: String? = null,
+    url: String,
+    description: String? = null,
+    hash: String? = null,
+    dim: String? = null,
+    uri: String? = null,
+    val artworkUri: String? = null,
+    val authorName: String? = null,
+    val blurhash: String? = null,
 ) : ZoomableUrlContent(url, description, hash, dim, uri)
 
 @Immutable
 abstract class ZoomablePreloadedContent(
-  val localFile: File?,
-  description: String? = null,
-  val mimeType: String? = null,
-  val isVerified: Boolean? = null,
-  dim: String? = null,
-  val uri: String,
+    val localFile: File?,
+    description: String? = null,
+    val mimeType: String? = null,
+    val isVerified: Boolean? = null,
+    dim: String? = null,
+    val uri: String,
 ) : ZoomableContent(description, dim)
 
 @Immutable
 class ZoomableLocalImage(
-  localFile: File?,
-  mimeType: String? = null,
-  description: String? = null,
-  val blurhash: String? = null,
-  dim: String? = null,
-  isVerified: Boolean? = null,
-  uri: String,
+    localFile: File?,
+    mimeType: String? = null,
+    description: String? = null,
+    val blurhash: String? = null,
+    dim: String? = null,
+    isVerified: Boolean? = null,
+    uri: String,
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
 @Immutable
 class ZoomableLocalVideo(
-  localFile: File?,
-  mimeType: String? = null,
-  description: String? = null,
-  dim: String? = null,
-  isVerified: Boolean? = null,
-  uri: String,
-  val artworkUri: String? = null,
-  val authorName: String? = null,
+    localFile: File?,
+    mimeType: String? = null,
+    description: String? = null,
+    dim: String? = null,
+    isVerified: Boolean? = null,
+    uri: String,
+    val artworkUri: String? = null,
+    val authorName: String? = null,
 ) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
 
 fun figureOutMimeType(fullUrl: String): ZoomableContent {
-  val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-  val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-  val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+    val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
+    val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+    val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
 
-  return if (isImage) {
-    ZoomableUrlImage(fullUrl)
-  } else if (isVideo) {
-    ZoomableUrlVideo(fullUrl)
-  } else {
-    ZoomableUrlImage(fullUrl)
-  }
+    return if (isImage) {
+        ZoomableUrlImage(fullUrl)
+    } else if (isVideo) {
+        ZoomableUrlVideo(fullUrl)
+    } else {
+        ZoomableUrlImage(fullUrl)
+    }
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun ZoomableContentView(
-  content: ZoomableContent,
-  images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
-  roundedCorner: Boolean,
-  accountViewModel: AccountViewModel,
+    content: ZoomableContent,
+    images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
+    roundedCorner: Boolean,
+    accountViewModel: AccountViewModel,
 ) {
-  // store the dialog open or close state
-  var dialogOpen by remember { mutableStateOf(false) }
+    // store the dialog open or close state
+    var dialogOpen by remember { mutableStateOf(false) }
 
-  // store the dialog open or close state
-  val shareOpen = remember { mutableStateOf(false) }
+    // store the dialog open or close state
+    val shareOpen = remember { mutableStateOf(false) }
 
-  if (shareOpen.value) {
-    ShareImageAction(shareOpen, content) { shareOpen.value = false }
-  }
-
-  var mainImageModifier =
-    if (roundedCorner) {
-      MaterialTheme.colorScheme.imageModifier
-    } else {
-      Modifier.fillMaxWidth()
+    if (shareOpen.value) {
+        ShareImageAction(shareOpen, content) { shareOpen.value = false }
     }
 
-  if (content is ZoomableUrlContent) {
-    mainImageModifier =
-      mainImageModifier.combinedClickable(
-        onClick = { dialogOpen = true },
-        onLongClick = { shareOpen.value = true },
-      )
-  } else if (content is ZoomablePreloadedContent) {
-    mainImageModifier =
-      mainImageModifier.combinedClickable(
-        onClick = { dialogOpen = true },
-        onLongClick = { shareOpen.value = true },
-      )
-  } else {
-    mainImageModifier = mainImageModifier.clickable { dialogOpen = true }
-  }
+    var mainImageModifier =
+        if (roundedCorner) {
+            MaterialTheme.colorScheme.imageModifier
+        } else {
+            Modifier.fillMaxWidth()
+        }
 
-  when (content) {
-    is ZoomableUrlImage ->
-      UrlImageView(content, mainImageModifier, accountViewModel = accountViewModel)
-    is ZoomableUrlVideo ->
-      VideoView(
-        videoUri = content.url,
-        title = content.description,
-        artworkUri = content.artworkUri,
-        authorName = content.authorName,
-        dimensions = content.dim,
-        blurhash = content.blurhash,
-        roundedCorner = roundedCorner,
-        nostrUriCallback = content.uri,
-        onDialog = { dialogOpen = true },
-        accountViewModel = accountViewModel,
-      )
-    is ZoomableLocalImage ->
-      LocalImageView(content, mainImageModifier, accountViewModel = accountViewModel)
-    is ZoomableLocalVideo ->
-      content.localFile?.let {
-        VideoView(
-          videoUri = it.toUri().toString(),
-          title = content.description,
-          artworkUri = content.artworkUri,
-          authorName = content.authorName,
-          roundedCorner = roundedCorner,
-          nostrUriCallback = content.uri,
-          onDialog = { dialogOpen = true },
-          accountViewModel = accountViewModel,
-        )
-      }
-  }
+    if (content is ZoomableUrlContent) {
+        mainImageModifier =
+            mainImageModifier.combinedClickable(
+                onClick = { dialogOpen = true },
+                onLongClick = { shareOpen.value = true },
+            )
+    } else if (content is ZoomablePreloadedContent) {
+        mainImageModifier =
+            mainImageModifier.combinedClickable(
+                onClick = { dialogOpen = true },
+                onLongClick = { shareOpen.value = true },
+            )
+    } else {
+        mainImageModifier = mainImageModifier.clickable { dialogOpen = true }
+    }
 
-  if (dialogOpen) {
-    ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
-  }
+    when (content) {
+        is ZoomableUrlImage ->
+            UrlImageView(content, mainImageModifier, accountViewModel = accountViewModel)
+        is ZoomableUrlVideo ->
+            VideoView(
+                videoUri = content.url,
+                title = content.description,
+                artworkUri = content.artworkUri,
+                authorName = content.authorName,
+                dimensions = content.dim,
+                blurhash = content.blurhash,
+                roundedCorner = roundedCorner,
+                nostrUriCallback = content.uri,
+                onDialog = { dialogOpen = true },
+                accountViewModel = accountViewModel,
+            )
+        is ZoomableLocalImage ->
+            LocalImageView(content, mainImageModifier, accountViewModel = accountViewModel)
+        is ZoomableLocalVideo ->
+            content.localFile?.let {
+                VideoView(
+                    videoUri = it.toUri().toString(),
+                    title = content.description,
+                    artworkUri = content.artworkUri,
+                    authorName = content.authorName,
+                    roundedCorner = roundedCorner,
+                    nostrUriCallback = content.uri,
+                    onDialog = { dialogOpen = true },
+                    accountViewModel = accountViewModel,
+                )
+            }
+    }
+
+    if (dialogOpen) {
+        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
+    }
 }
 
 @Composable
 private fun LocalImageView(
-  content: ZoomableLocalImage,
-  mainImageModifier: Modifier,
-  topPaddingForControllers: Dp = Dp.Unspecified,
-  accountViewModel: AccountViewModel,
-  alwayShowImage: Boolean = false,
+    content: ZoomableLocalImage,
+    mainImageModifier: Modifier,
+    topPaddingForControllers: Dp = Dp.Unspecified,
+    accountViewModel: AccountViewModel,
+    alwayShowImage: Boolean = false,
 ) {
-  if (content.localFile != null && content.localFile.exists()) {
-    BoxWithConstraints(contentAlignment = Alignment.Center) {
-      val showImage = remember {
-        mutableStateOf(
-          if (alwayShowImage) true else accountViewModel.settings.showImages.value,
-        )
-      }
+    if (content.localFile != null && content.localFile.exists()) {
+        BoxWithConstraints(contentAlignment = Alignment.Center) {
+            val showImage =
+                remember {
+                    mutableStateOf(
+                        if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                    )
+                }
 
-      val myModifier = remember {
-        mainImageModifier.widthIn(max = maxWidth).heightIn(max = maxHeight)
+            val myModifier =
+                remember {
+                    mainImageModifier.widthIn(max = maxWidth).heightIn(max = maxHeight)
         /*
         .run {
             aspectRatio(content.dim)?.let { ratio ->
@@ -326,62 +328,65 @@ private fun LocalImageView(
             } ?: this
         }
          */
-      }
+                }
 
-      val contentScale = remember {
-        if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
-      }
+            val contentScale =
+                remember {
+                    if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+                }
 
-      val verifierModifier =
-        if (topPaddingForControllers.isSpecified) {
-          Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
-        } else {
-          Modifier.align(Alignment.TopEnd)
+            val verifierModifier =
+                if (topPaddingForControllers.isSpecified) {
+                    Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
+                } else {
+                    Modifier.align(Alignment.TopEnd)
+                }
+
+            val painterState = remember { mutableStateOf<AsyncImagePainter.State?>(null) }
+
+            if (showImage.value) {
+                AsyncImage(
+                    model = content.localFile,
+                    contentDescription = content.description,
+                    contentScale = contentScale,
+                    modifier = myModifier,
+                    onState = { painterState.value = it },
+                )
+            }
+
+            AddedImageFeatures(
+                painterState,
+                content,
+                contentScale,
+                myModifier,
+                verifierModifier,
+                showImage,
+            )
         }
-
-      val painterState = remember { mutableStateOf<AsyncImagePainter.State?>(null) }
-
-      if (showImage.value) {
-        AsyncImage(
-          model = content.localFile,
-          contentDescription = content.description,
-          contentScale = contentScale,
-          modifier = myModifier,
-          onState = { painterState.value = it },
-        )
-      }
-
-      AddedImageFeatures(
-        painterState,
-        content,
-        contentScale,
-        myModifier,
-        verifierModifier,
-        showImage,
-      )
+    } else {
+        BlankNote()
     }
-  } else {
-    BlankNote()
-  }
 }
 
 @Composable
 private fun UrlImageView(
-  content: ZoomableUrlImage,
-  mainImageModifier: Modifier,
-  topPaddingForControllers: Dp = Dp.Unspecified,
-  accountViewModel: AccountViewModel,
-  alwayShowImage: Boolean = false,
+    content: ZoomableUrlImage,
+    mainImageModifier: Modifier,
+    topPaddingForControllers: Dp = Dp.Unspecified,
+    accountViewModel: AccountViewModel,
+    alwayShowImage: Boolean = false,
 ) {
-  BoxWithConstraints(contentAlignment = Alignment.Center) {
-    val showImage = remember {
-      mutableStateOf<Boolean>(
-        if (alwayShowImage) true else accountViewModel.settings.showImages.value,
-      )
-    }
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val showImage =
+            remember {
+                mutableStateOf<Boolean>(
+                    if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                )
+            }
 
-    val myModifier = remember {
-      mainImageModifier.widthIn(max = maxWidth).heightIn(max = maxHeight)
+        val myModifier =
+            remember {
+                mainImageModifier.widthIn(max = maxWidth).heightIn(max = maxHeight)
       /* Is this necessary? It makes images bleed into other pages
       .run {
           aspectRatio(content.dim)?.let { ratio ->
@@ -389,730 +394,736 @@ private fun UrlImageView(
           } ?: this
       }
        */
+            }
+
+        val contentScale =
+            remember {
+                if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
+            }
+
+        val verifierModifier =
+            if (topPaddingForControllers.isSpecified) {
+                Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
+            } else {
+                Modifier.align(Alignment.TopEnd)
+            }
+
+        val painterState = remember { mutableStateOf<AsyncImagePainter.State?>(null) }
+
+        if (showImage.value) {
+            AsyncImage(
+                model = content.url,
+                contentDescription = content.description,
+                contentScale = contentScale,
+                modifier = myModifier,
+                onState = { painterState.value = it },
+            )
+        }
+
+        AddedImageFeatures(
+            painterState,
+            content,
+            contentScale,
+            myModifier,
+            verifierModifier,
+            showImage,
+        )
     }
-
-    val contentScale = remember {
-      if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
-    }
-
-    val verifierModifier =
-      if (topPaddingForControllers.isSpecified) {
-        Modifier.padding(top = topPaddingForControllers).align(Alignment.TopEnd)
-      } else {
-        Modifier.align(Alignment.TopEnd)
-      }
-
-    val painterState = remember { mutableStateOf<AsyncImagePainter.State?>(null) }
-
-    if (showImage.value) {
-      AsyncImage(
-        model = content.url,
-        contentDescription = content.description,
-        contentScale = contentScale,
-        modifier = myModifier,
-        onState = { painterState.value = it },
-      )
-    }
-
-    AddedImageFeatures(
-      painterState,
-      content,
-      contentScale,
-      myModifier,
-      verifierModifier,
-      showImage,
-    )
-  }
 }
 
 @Composable
 fun ImageUrlWithDownloadButton(
-  url: String,
-  showImage: MutableState<Boolean>,
+    url: String,
+    showImage: MutableState<Boolean>,
 ) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  val primary = MaterialTheme.colorScheme.primary
-  val background = MaterialTheme.colorScheme.onBackground
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
 
-  val regularText = remember { SpanStyle(color = background) }
-  val clickableTextStyle = remember { SpanStyle(color = primary) }
+    val regularText = remember { SpanStyle(color = background) }
+    val clickableTextStyle = remember { SpanStyle(color = primary) }
 
-  val annotatedTermsString = remember {
-    buildAnnotatedString {
-      withStyle(clickableTextStyle) {
-        pushStringAnnotation("routeToImage", "")
-        append("$url ")
-      }
+    val annotatedTermsString =
+        remember {
+            buildAnnotatedString {
+                withStyle(clickableTextStyle) {
+                    pushStringAnnotation("routeToImage", "")
+                    append("$url ")
+                }
 
-      withStyle(clickableTextStyle) {
-        pushStringAnnotation("routeToImage", "")
-        appendInlineContent("inlineContent", "[icon]")
-      }
+                withStyle(clickableTextStyle) {
+                    pushStringAnnotation("routeToImage", "")
+                    appendInlineContent("inlineContent", "[icon]")
+                }
 
-      withStyle(regularText) { append(" ") }
-    }
-  }
+                withStyle(regularText) { append(" ") }
+            }
+        }
 
-  val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
+    val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
 
-  val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
+    val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
 
-  Text(
-    text = annotatedTermsString,
-    modifier = pressIndicator,
-    inlineContent = inlineContent,
-  )
+    Text(
+        text = annotatedTermsString,
+        modifier = pressIndicator,
+        inlineContent = inlineContent,
+    )
 }
 
 @Composable
 private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
-  InlineTextContent(
-    Placeholder(
-      width = Font17SP,
-      height = Font17SP,
-      placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-    ),
-  ) {
-    IconButton(
-      modifier = Modifier.size(Size20dp),
-      onClick = { showImage.value = true },
+    InlineTextContent(
+        Placeholder(
+            width = Font17SP,
+            height = Font17SP,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+        ),
     ) {
-      DownloadForOfflineIcon(Size24dp)
+        IconButton(
+            modifier = Modifier.size(Size20dp),
+            onClick = { showImage.value = true },
+        ) {
+            DownloadForOfflineIcon(Size24dp)
+        }
     }
-  }
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun AddedImageFeatures(
-  painter: MutableState<AsyncImagePainter.State?>,
-  content: ZoomableLocalImage,
-  contentScale: ContentScale,
-  myModifier: Modifier,
-  verifiedModifier: Modifier,
-  showImage: MutableState<Boolean>,
+    painter: MutableState<AsyncImagePainter.State?>,
+    content: ZoomableLocalImage,
+    contentScale: ContentScale,
+    myModifier: Modifier,
+    verifiedModifier: Modifier,
+    showImage: MutableState<Boolean>,
 ) {
-  val ratio = remember { aspectRatio(content.dim) }
+    val ratio = remember { aspectRatio(content.dim) }
 
-  if (!showImage.value) {
-    if (content.blurhash != null && ratio != null) {
-      DisplayBlurHash(
-        content.blurhash,
-        content.description,
-        ContentScale.Crop,
-        myModifier.aspectRatio(ratio).clickable { showImage.value = true },
-      )
-      IconButton(
-        modifier = Modifier.size(Size75dp),
-        onClick = { showImage.value = true },
-      ) {
-        DownloadForOfflineIcon(Size75dp, Color.White)
-      }
-    } else {
-      ImageUrlWithDownloadButton(content.uri, showImage)
-    }
-  } else {
-    when (painter.value) {
-      null,
-      is AsyncImagePainter.State.Loading, -> {
-        if (content.blurhash != null) {
-          if (ratio != null) {
+    if (!showImage.value) {
+        if (content.blurhash != null && ratio != null) {
             DisplayBlurHash(
-              content.blurhash,
-              content.description,
-              ContentScale.Crop,
-              myModifier.aspectRatio(ratio),
+                content.blurhash,
+                content.description,
+                ContentScale.Crop,
+                myModifier.aspectRatio(ratio).clickable { showImage.value = true },
             )
-          } else {
-            DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-          }
+            IconButton(
+                modifier = Modifier.size(Size75dp),
+                onClick = { showImage.value = true },
+            ) {
+                DownloadForOfflineIcon(Size75dp, Color.White)
+            }
         } else {
-          FlowRow { DisplayUrlWithLoadingSymbol(content) }
+            ImageUrlWithDownloadButton(content.uri, showImage)
         }
-      }
-      is AsyncImagePainter.State.Error -> {
-        BlankNote()
-      }
-      is AsyncImagePainter.State.Success -> {
-        if (content.isVerified != null) {
-          HashVerificationSymbol(content.isVerified, verifiedModifier)
+    } else {
+        when (painter.value) {
+            null,
+            is AsyncImagePainter.State.Loading,
+            -> {
+                if (content.blurhash != null) {
+                    if (ratio != null) {
+                        DisplayBlurHash(
+                            content.blurhash,
+                            content.description,
+                            ContentScale.Crop,
+                            myModifier.aspectRatio(ratio),
+                        )
+                    } else {
+                        DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                    }
+                } else {
+                    FlowRow { DisplayUrlWithLoadingSymbol(content) }
+                }
+            }
+            is AsyncImagePainter.State.Error -> {
+                BlankNote()
+            }
+            is AsyncImagePainter.State.Success -> {
+                if (content.isVerified != null) {
+                    HashVerificationSymbol(content.isVerified, verifiedModifier)
+                }
+            }
+            else -> {}
         }
-      }
-      else -> {}
     }
-  }
 }
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun AddedImageFeatures(
-  painter: MutableState<AsyncImagePainter.State?>,
-  content: ZoomableUrlImage,
-  contentScale: ContentScale,
-  myModifier: Modifier,
-  verifiedModifier: Modifier,
-  showImage: MutableState<Boolean>,
+    painter: MutableState<AsyncImagePainter.State?>,
+    content: ZoomableUrlImage,
+    contentScale: ContentScale,
+    myModifier: Modifier,
+    verifiedModifier: Modifier,
+    showImage: MutableState<Boolean>,
 ) {
-  val ratio = remember { aspectRatio(content.dim) }
+    val ratio = remember { aspectRatio(content.dim) }
 
-  if (!showImage.value) {
-    if (content.blurhash != null && ratio != null) {
-      DisplayBlurHash(
-        content.blurhash,
-        content.description,
-        ContentScale.Crop,
-        myModifier.aspectRatio(ratio).clickable { showImage.value = true },
-      )
-      IconButton(
-        modifier = Modifier.size(Size75dp),
-        onClick = { showImage.value = true },
-      ) {
-        DownloadForOfflineIcon(Size75dp, Color.White)
-      }
-    } else {
-      ImageUrlWithDownloadButton(content.url, showImage)
-    }
-  } else {
-    var verifiedHash by remember { mutableStateOf<Boolean?>(null) }
-
-    when (painter.value) {
-      null,
-      is AsyncImagePainter.State.Loading, -> {
-        if (content.blurhash != null) {
-          if (ratio != null) {
+    if (!showImage.value) {
+        if (content.blurhash != null && ratio != null) {
             DisplayBlurHash(
-              content.blurhash,
-              content.description,
-              ContentScale.Crop,
-              myModifier.aspectRatio(ratio),
+                content.blurhash,
+                content.description,
+                ContentScale.Crop,
+                myModifier.aspectRatio(ratio).clickable { showImage.value = true },
             )
-          } else {
-            DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
-          }
-        } else {
-          FlowRow(Modifier.fillMaxWidth()) { DisplayUrlWithLoadingSymbol(content) }
-        }
-      }
-      is AsyncImagePainter.State.Error -> {
-        FlowRow(Modifier.fillMaxWidth()) {
-          ClickableUrl(urlText = "${content.url} ", url = content.url)
-        }
-      }
-      is AsyncImagePainter.State.Success -> {
-        if (content.hash != null) {
-          val context = LocalContext.current
-          LaunchedEffect(key1 = content.url) {
-            launch(Dispatchers.IO) {
-              val newVerifiedHash = verifyHash(content, context)
-              if (newVerifiedHash != verifiedHash) {
-                verifiedHash = newVerifiedHash
-              }
+            IconButton(
+                modifier = Modifier.size(Size75dp),
+                onClick = { showImage.value = true },
+            ) {
+                DownloadForOfflineIcon(Size75dp, Color.White)
             }
-          }
+        } else {
+            ImageUrlWithDownloadButton(content.url, showImage)
         }
+    } else {
+        var verifiedHash by remember { mutableStateOf<Boolean?>(null) }
 
-        verifiedHash?.let { HashVerificationSymbol(it, verifiedModifier) }
-      }
-      else -> {}
+        when (painter.value) {
+            null,
+            is AsyncImagePainter.State.Loading,
+            -> {
+                if (content.blurhash != null) {
+                    if (ratio != null) {
+                        DisplayBlurHash(
+                            content.blurhash,
+                            content.description,
+                            ContentScale.Crop,
+                            myModifier.aspectRatio(ratio),
+                        )
+                    } else {
+                        DisplayBlurHash(content.blurhash, content.description, contentScale, myModifier)
+                    }
+                } else {
+                    FlowRow(Modifier.fillMaxWidth()) { DisplayUrlWithLoadingSymbol(content) }
+                }
+            }
+            is AsyncImagePainter.State.Error -> {
+                FlowRow(Modifier.fillMaxWidth()) {
+                    ClickableUrl(urlText = "${content.url} ", url = content.url)
+                }
+            }
+            is AsyncImagePainter.State.Success -> {
+                if (content.hash != null) {
+                    val context = LocalContext.current
+                    LaunchedEffect(key1 = content.url) {
+                        launch(Dispatchers.IO) {
+                            val newVerifiedHash = verifyHash(content, context)
+                            if (newVerifiedHash != verifiedHash) {
+                                verifiedHash = newVerifiedHash
+                            }
+                        }
+                    }
+                }
+
+                verifiedHash?.let { HashVerificationSymbol(it, verifiedModifier) }
+            }
+            else -> {}
+        }
     }
-  }
 }
 
 fun aspectRatio(dim: String?): Float? {
-  if (dim == null) return null
-  if (dim == "0x0") return null
+    if (dim == null) return null
+    if (dim == "0x0") return null
 
-  val parts = dim.split("x")
-  if (parts.size != 2) return null
+    val parts = dim.split("x")
+    if (parts.size != 2) return null
 
-  return try {
-    val width = parts[0].toFloat()
-    val height = parts[1].toFloat()
+    return try {
+        val width = parts[0].toFloat()
+        val height = parts[1].toFloat()
 
-    if (width < 0.1 || height < 0.1) {
-      null
-    } else {
-      width / height
+        if (width < 0.1 || height < 0.1) {
+            null
+        } else {
+            width / height
+        }
+    } catch (e: Exception) {
+        null
     }
-  } catch (e: Exception) {
-    null
-  }
 }
 
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
-  var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
+    var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
 
-  LaunchedEffect(Unit) {
-    launch(Dispatchers.IO) {
-      delay(200)
-      cnt = content
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            delay(200)
+            cnt = content
+        }
     }
-  }
 
-  cnt?.let { DisplayUrlWithLoadingSymbolWait(it) }
+    cnt?.let { DisplayUrlWithLoadingSymbolWait(it) }
 }
 
 @Composable
 private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  val primary = MaterialTheme.colorScheme.primary
-  val background = MaterialTheme.colorScheme.onBackground
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
 
-  val regularText = remember { SpanStyle(color = background) }
-  val clickableTextStyle = remember { SpanStyle(color = primary) }
+    val regularText = remember { SpanStyle(color = background) }
+    val clickableTextStyle = remember { SpanStyle(color = primary) }
 
-  val annotatedTermsString = remember {
-    buildAnnotatedString {
-      if (content is ZoomableUrlContent) {
-        withStyle(clickableTextStyle) {
-          pushStringAnnotation("routeToImage", "")
-          append(content.url + " ")
+    val annotatedTermsString =
+        remember {
+            buildAnnotatedString {
+                if (content is ZoomableUrlContent) {
+                    withStyle(clickableTextStyle) {
+                        pushStringAnnotation("routeToImage", "")
+                        append(content.url + " ")
+                    }
+                } else {
+                    withStyle(regularText) { append("Loading content...") }
+                }
+
+                withStyle(clickableTextStyle) {
+                    pushStringAnnotation("routeToImage", "")
+                    appendInlineContent("inlineContent", "[icon]")
+                }
+
+                withStyle(regularText) { append(" ") }
+            }
         }
-      } else {
-        withStyle(regularText) { append("Loading content...") }
-      }
 
-      withStyle(clickableTextStyle) {
-        pushStringAnnotation("routeToImage", "")
-        appendInlineContent("inlineContent", "[icon]")
-      }
+    val inlineContent = mapOf("inlineContent" to InlineLoadingIcon())
 
-      withStyle(regularText) { append(" ") }
-    }
-  }
+    val pressIndicator =
+        remember {
+            if (content is ZoomableUrlContent) {
+                Modifier.clickable { runCatching { uri.openUri(content.url) } }
+            } else {
+                Modifier
+            }
+        }
 
-  val inlineContent = mapOf("inlineContent" to InlineLoadingIcon())
-
-  val pressIndicator = remember {
-    if (content is ZoomableUrlContent) {
-      Modifier.clickable { runCatching { uri.openUri(content.url) } }
-    } else {
-      Modifier
-    }
-  }
-
-  Text(
-    text = annotatedTermsString,
-    modifier = pressIndicator,
-    inlineContent = inlineContent,
-  )
+    Text(
+        text = annotatedTermsString,
+        modifier = pressIndicator,
+        inlineContent = inlineContent,
+    )
 }
 
 @Composable
 private fun InlineLoadingIcon() =
-  InlineTextContent(
-    Placeholder(
-      width = Font17SP,
-      height = Font17SP,
-      placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-    ),
-  ) {
-    LoadingAnimation()
-  }
+    InlineTextContent(
+        Placeholder(
+            width = Font17SP,
+            height = Font17SP,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+        ),
+    ) {
+        LoadingAnimation()
+    }
 
 @Composable
 fun DisplayBlurHash(
-  blurhash: String?,
-  description: String?,
-  contentScale: ContentScale,
-  modifier: Modifier,
+    blurhash: String?,
+    description: String?,
+    contentScale: ContentScale,
+    modifier: Modifier,
 ) {
-  if (blurhash == null) return
+    if (blurhash == null) return
 
-  val context = LocalContext.current
-  AsyncImage(
-    model =
-      remember {
-        BlurHashRequester.imageRequest(
-          context,
-          blurhash,
-        )
-      },
-    contentDescription = description,
-    contentScale = contentScale,
-    modifier = modifier,
-  )
+    val context = LocalContext.current
+    AsyncImage(
+        model =
+            remember {
+                BlurHashRequester.imageRequest(
+                    context,
+                    blurhash,
+                )
+            },
+        contentDescription = description,
+        contentScale = contentScale,
+        modifier = modifier,
+    )
 }
 
 @Composable
 fun ZoomableImageDialog(
-  imageUrl: ZoomableContent,
-  allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(),
-  onDismiss: () -> Unit,
-  accountViewModel: AccountViewModel,
+    imageUrl: ZoomableContent,
+    allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(),
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
 ) {
-  val orientation = LocalConfiguration.current.orientation
-
-  Dialog(
-    onDismissRequest = onDismiss,
-    properties =
-      DialogProperties(
-        usePlatformDefaultWidth = true,
-        decorFitsSystemWindows = false,
-      ),
-  ) {
-    val view = LocalView.current
-    val insets = ViewCompat.getRootWindowInsets(view)
-
     val orientation = LocalConfiguration.current.orientation
-    println("This Log only exists to force orientation listener $orientation")
 
-    val activityWindow = getActivityWindow()
-    val dialogWindow = getDialogWindow()
-    val parentView = LocalView.current.parent as View
-    SideEffect {
-      if (activityWindow != null && dialogWindow != null) {
-        val attributes = WindowManager.LayoutParams()
-        attributes.copyFrom(activityWindow.attributes)
-        attributes.type = dialogWindow.attributes.type
-        dialogWindow.attributes = attributes
-        parentView.layoutParams =
-          FrameLayout.LayoutParams(activityWindow.decorView.width, activityWindow.decorView.height)
-        view.layoutParams =
-          FrameLayout.LayoutParams(activityWindow.decorView.width, activityWindow.decorView.height)
-      }
-    }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties =
+            DialogProperties(
+                usePlatformDefaultWidth = true,
+                decorFitsSystemWindows = false,
+            ),
+    ) {
+        val view = LocalView.current
+        val insets = ViewCompat.getRootWindowInsets(view)
 
-    DisposableEffect(key1 = Unit) {
-      if (Build.VERSION.SDK_INT >= 30) {
-        view.windowInsetsController?.hide(
-          android.view.WindowInsets.Type.systemBars(),
-        )
-      }
+        val orientation = LocalConfiguration.current.orientation
+        println("This Log only exists to force orientation listener $orientation")
 
-      onDispose {
-        if (Build.VERSION.SDK_INT >= 30) {
-          view.windowInsetsController?.show(
-            android.view.WindowInsets.Type.systemBars(),
-          )
+        val activityWindow = getActivityWindow()
+        val dialogWindow = getDialogWindow()
+        val parentView = LocalView.current.parent as View
+        SideEffect {
+            if (activityWindow != null && dialogWindow != null) {
+                val attributes = WindowManager.LayoutParams()
+                attributes.copyFrom(activityWindow.attributes)
+                attributes.type = dialogWindow.attributes.type
+                dialogWindow.attributes = attributes
+                parentView.layoutParams =
+                    FrameLayout.LayoutParams(activityWindow.decorView.width, activityWindow.decorView.height)
+                view.layoutParams =
+                    FrameLayout.LayoutParams(activityWindow.decorView.width, activityWindow.decorView.height)
+            }
         }
-      }
-    }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
-      }
+        DisposableEffect(key1 = Unit) {
+            if (Build.VERSION.SDK_INT >= 30) {
+                view.windowInsetsController?.hide(
+                    android.view.WindowInsets.Type.systemBars(),
+                )
+            }
+
+            onDispose {
+                if (Build.VERSION.SDK_INT >= 30) {
+                    view.windowInsetsController?.show(
+                        android.view.WindowInsets.Type.systemBars(),
+                    )
+                }
+            }
+        }
+
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
+            }
+        }
     }
-  }
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun DialogContent(
-  allImages: ImmutableList<ZoomableContent>,
-  imageUrl: ZoomableContent,
-  onDismiss: () -> Unit,
-  accountViewModel: AccountViewModel,
+    allImages: ImmutableList<ZoomableContent>,
+    imageUrl: ZoomableContent,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
 ) {
-  val pagerState: PagerState = rememberPagerState { allImages.size }
-  val controllerVisible = remember { mutableStateOf(false) }
-  val holdOn = remember { mutableStateOf<Boolean>(true) }
+    val pagerState: PagerState = rememberPagerState { allImages.size }
+    val controllerVisible = remember { mutableStateOf(false) }
+    val holdOn = remember { mutableStateOf<Boolean>(true) }
 
-  LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
-    launch {
-      val page = allImages.indexOf(imageUrl)
-      if (page > -1) {
-        pagerState.scrollToPage(page)
-      }
-    }
-    launch(Dispatchers.Default) {
-      delay(2000)
-      holdOn.value = false
-    }
-  }
-
-  if (allImages.size > 1) {
-    SlidingCarousel(
-      pagerState = pagerState,
-    ) { index ->
-      RenderImageOrVideo(
-        content = allImages[index],
-        roundedCorner = false,
-        topPaddingForControllers = Size55dp,
-        onControllerVisibilityChanged = { controllerVisible.value = it },
-        onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
-        accountViewModel = accountViewModel,
-      )
-    }
-  } else {
-    RenderImageOrVideo(
-      content = imageUrl,
-      roundedCorner = false,
-      topPaddingForControllers = Size55dp,
-      onControllerVisibilityChanged = { controllerVisible.value = it },
-      onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
-      accountViewModel = accountViewModel,
-    )
-  }
-
-  AnimatedVisibility(
-    visible = holdOn.value || controllerVisible.value,
-    enter = remember { fadeIn() },
-    exit = remember { fadeOut() },
-  ) {
-    Row(
-      modifier = Modifier.padding(10.dp).statusBarsPadding().systemBarsPadding().fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      CloseButton(onPress = onDismiss)
-
-      val myContent = allImages[pagerState.currentPage]
-      if (myContent is ZoomableUrlContent) {
-        Row {
-          CopyToClipboard(content = myContent)
-          Spacer(modifier = StdHorzSpacer)
-          SaveToGallery(url = myContent.url)
+    LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
+        launch {
+            val page = allImages.indexOf(imageUrl)
+            if (page > -1) {
+                pagerState.scrollToPage(page)
+            }
         }
-      } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
-        SaveToGallery(
-          localFile = myContent.localFile,
-          mimeType = myContent.mimeType,
-        )
-      }
+        launch(Dispatchers.Default) {
+            delay(2000)
+            holdOn.value = false
+        }
     }
-  }
+
+    if (allImages.size > 1) {
+        SlidingCarousel(
+            pagerState = pagerState,
+        ) { index ->
+            RenderImageOrVideo(
+                content = allImages[index],
+                roundedCorner = false,
+                topPaddingForControllers = Size55dp,
+                onControllerVisibilityChanged = { controllerVisible.value = it },
+                onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
+                accountViewModel = accountViewModel,
+            )
+        }
+    } else {
+        RenderImageOrVideo(
+            content = imageUrl,
+            roundedCorner = false,
+            topPaddingForControllers = Size55dp,
+            onControllerVisibilityChanged = { controllerVisible.value = it },
+            onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
+            accountViewModel = accountViewModel,
+        )
+    }
+
+    AnimatedVisibility(
+        visible = holdOn.value || controllerVisible.value,
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() },
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp).statusBarsPadding().systemBarsPadding().fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CloseButton(onPress = onDismiss)
+
+            val myContent = allImages[pagerState.currentPage]
+            if (myContent is ZoomableUrlContent) {
+                Row {
+                    CopyToClipboard(content = myContent)
+                    Spacer(modifier = StdHorzSpacer)
+                    SaveToGallery(url = myContent.url)
+                }
+            } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
+                SaveToGallery(
+                    localFile = myContent.localFile,
+                    mimeType = myContent.mimeType,
+                )
+            }
+        }
+    }
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun InlineCarrousel(
-  allImages: ImmutableList<String>,
-  imageUrl: String,
+    allImages: ImmutableList<String>,
+    imageUrl: String,
 ) {
-  val pagerState: PagerState = rememberPagerState { allImages.size }
+    val pagerState: PagerState = rememberPagerState { allImages.size }
 
-  LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
-    launch {
-      val page = allImages.indexOf(imageUrl)
-      if (page > -1) {
-        pagerState.scrollToPage(page)
-      }
+    LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
+        launch {
+            val page = allImages.indexOf(imageUrl)
+            if (page > -1) {
+                pagerState.scrollToPage(page)
+            }
+        }
     }
-  }
 
-  if (allImages.size > 1) {
-    SlidingCarousel(
-      pagerState = pagerState,
-    ) { index ->
-      AsyncImage(
-        model = allImages[index],
-        contentDescription = null,
-        contentScale = ContentScale.FillWidth,
-        modifier = Modifier.fillMaxWidth(),
-      )
+    if (allImages.size > 1) {
+        SlidingCarousel(
+            pagerState = pagerState,
+        ) { index ->
+            AsyncImage(
+                model = allImages[index],
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    } else {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
-  } else {
-    AsyncImage(
-      model = imageUrl,
-      contentDescription = null,
-      contentScale = ContentScale.FillWidth,
-      modifier = Modifier.fillMaxWidth(),
-    )
-  }
 }
 
 @Composable
 private fun CopyToClipboard(content: ZoomableContent) {
-  val popupExpanded = remember { mutableStateOf(false) }
+    val popupExpanded = remember { mutableStateOf(false) }
 
-  OutlinedButton(
-    modifier = Modifier.padding(horizontal = Size5dp),
-    onClick = { popupExpanded.value = true },
-  ) {
-    Icon(
-      imageVector = Icons.Default.Share,
-      modifier = Size20Modifier,
-      contentDescription = stringResource(R.string.copy_url_to_clipboard),
-    )
+    OutlinedButton(
+        modifier = Modifier.padding(horizontal = Size5dp),
+        onClick = { popupExpanded.value = true },
+    ) {
+        Icon(
+            imageVector = Icons.Default.Share,
+            modifier = Size20Modifier,
+            contentDescription = stringResource(R.string.copy_url_to_clipboard),
+        )
 
-    ShareImageAction(popupExpanded, content) { popupExpanded.value = false }
-  }
+        ShareImageAction(popupExpanded, content) { popupExpanded.value = false }
+    }
 }
 
 @Composable
 private fun ShareImageAction(
-  popupExpanded: MutableState<Boolean>,
-  content: ZoomableContent,
-  onDismiss: () -> Unit,
+    popupExpanded: MutableState<Boolean>,
+    content: ZoomableContent,
+    onDismiss: () -> Unit,
 ) {
-  DropdownMenu(
-    expanded = popupExpanded.value,
-    onDismissRequest = onDismiss,
-  ) {
-    val clipboardManager = LocalClipboardManager.current
+    DropdownMenu(
+        expanded = popupExpanded.value,
+        onDismissRequest = onDismiss,
+    ) {
+        val clipboardManager = LocalClipboardManager.current
 
-    if (content is ZoomableUrlContent) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
-        onClick = {
-          clipboardManager.setText(AnnotatedString(content.url))
-          onDismiss()
-        },
-      )
-      if (content.uri != null) {
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
-          onClick = {
-            clipboardManager.setText(AnnotatedString(content.uri))
-            onDismiss()
-          },
-        )
-      }
-    }
+        if (content is ZoomableUrlContent) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(content.url))
+                    onDismiss()
+                },
+            )
+            if (content.uri != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(content.uri))
+                        onDismiss()
+                    },
+                )
+            }
+        }
 
-    if (content is ZoomablePreloadedContent) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
-        onClick = {
-          clipboardManager.setText(AnnotatedString(content.uri))
-          onDismiss()
-        },
-      )
+        if (content is ZoomablePreloadedContent) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(content.uri))
+                    onDismiss()
+                },
+            )
+        }
     }
-  }
 }
 
 @Composable
 private fun RenderImageOrVideo(
-  content: ZoomableContent,
-  roundedCorner: Boolean,
-  topPaddingForControllers: Dp = Dp.Unspecified,
-  onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
-  onToggleControllerVisibility: (() -> Unit)? = null,
-  accountViewModel: AccountViewModel,
+    content: ZoomableContent,
+    roundedCorner: Boolean,
+    topPaddingForControllers: Dp = Dp.Unspecified,
+    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
+    onToggleControllerVisibility: (() -> Unit)? = null,
+    accountViewModel: AccountViewModel,
 ) {
-  val automaticallyStartPlayback = remember { mutableStateOf<Boolean>(true) }
+    val automaticallyStartPlayback = remember { mutableStateOf<Boolean>(true) }
 
-  if (content is ZoomableUrlImage) {
-    val mainModifier =
-      Modifier.fillMaxSize()
-        .zoomable(
-          rememberZoomState(),
-          onTap = {
-            if (onToggleControllerVisibility != null) {
-              onToggleControllerVisibility()
+    if (content is ZoomableUrlImage) {
+        val mainModifier =
+            Modifier.fillMaxSize()
+                .zoomable(
+                    rememberZoomState(),
+                    onTap = {
+                        if (onToggleControllerVisibility != null) {
+                            onToggleControllerVisibility()
+                        }
+                    },
+                )
+
+        UrlImageView(
+            content = content,
+            mainImageModifier = mainModifier,
+            topPaddingForControllers = topPaddingForControllers,
+            accountViewModel,
+            alwayShowImage = true,
+        )
+    } else if (content is ZoomableUrlVideo) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
+            VideoViewInner(
+                videoUri = content.url,
+                title = content.description,
+                artworkUri = content.artworkUri,
+                authorName = content.authorName,
+                roundedCorner = roundedCorner,
+                topPaddingForControllers = topPaddingForControllers,
+                automaticallyStartPlayback = automaticallyStartPlayback,
+                onControllerVisibilityChanged = onControllerVisibilityChanged,
+            )
+        }
+    } else if (content is ZoomableLocalImage) {
+        val mainModifier =
+            Modifier.fillMaxSize()
+                .zoomable(
+                    rememberZoomState(),
+                    onTap = {
+                        if (onToggleControllerVisibility != null) {
+                            onToggleControllerVisibility()
+                        }
+                    },
+                )
+
+        LocalImageView(
+            content = content,
+            mainImageModifier = mainModifier,
+            topPaddingForControllers = topPaddingForControllers,
+            accountViewModel,
+            alwayShowImage = true,
+        )
+    } else if (content is ZoomableLocalVideo) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
+            content.localFile?.let {
+                VideoViewInner(
+                    videoUri = it.toUri().toString(),
+                    title = content.description,
+                    artworkUri = content.artworkUri,
+                    authorName = content.authorName,
+                    roundedCorner = roundedCorner,
+                    topPaddingForControllers = topPaddingForControllers,
+                    automaticallyStartPlayback = automaticallyStartPlayback,
+                    onControllerVisibilityChanged = onControllerVisibilityChanged,
+                )
             }
-          },
-        )
-
-    UrlImageView(
-      content = content,
-      mainImageModifier = mainModifier,
-      topPaddingForControllers = topPaddingForControllers,
-      accountViewModel,
-      alwayShowImage = true,
-    )
-  } else if (content is ZoomableUrlVideo) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-      VideoViewInner(
-        videoUri = content.url,
-        title = content.description,
-        artworkUri = content.artworkUri,
-        authorName = content.authorName,
-        roundedCorner = roundedCorner,
-        topPaddingForControllers = topPaddingForControllers,
-        automaticallyStartPlayback = automaticallyStartPlayback,
-        onControllerVisibilityChanged = onControllerVisibilityChanged,
-      )
+        }
     }
-  } else if (content is ZoomableLocalImage) {
-    val mainModifier =
-      Modifier.fillMaxSize()
-        .zoomable(
-          rememberZoomState(),
-          onTap = {
-            if (onToggleControllerVisibility != null) {
-              onToggleControllerVisibility()
-            }
-          },
-        )
-
-    LocalImageView(
-      content = content,
-      mainImageModifier = mainModifier,
-      topPaddingForControllers = topPaddingForControllers,
-      accountViewModel,
-      alwayShowImage = true,
-    )
-  } else if (content is ZoomableLocalVideo) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
-      content.localFile?.let {
-        VideoViewInner(
-          videoUri = it.toUri().toString(),
-          title = content.description,
-          artworkUri = content.artworkUri,
-          authorName = content.authorName,
-          roundedCorner = roundedCorner,
-          topPaddingForControllers = topPaddingForControllers,
-          automaticallyStartPlayback = automaticallyStartPlayback,
-          onControllerVisibilityChanged = onControllerVisibilityChanged,
-        )
-      }
-    }
-  }
 }
 
 @OptIn(ExperimentalCoilApi::class)
 private fun verifyHash(
-  content: ZoomableUrlContent,
-  context: Context,
+    content: ZoomableUrlContent,
+    context: Context,
 ): Boolean? {
-  if (content.hash == null) return null
+    if (content.hash == null) return null
 
-  context.imageLoader.diskCache?.get(content.url)?.use { snapshot ->
-    val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
+    context.imageLoader.diskCache?.get(content.url)?.use { snapshot ->
+        val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
-    Log.d("Image Hash Verification", "$hash == ${content.hash}")
+        Log.d("Image Hash Verification", "$hash == ${content.hash}")
 
-    return hash == content.hash
-  }
+        return hash == content.hash
+    }
 
-  return null
+    return null
 }
 
 @Composable
 private fun HashVerificationSymbol(
-  verifiedHash: Boolean,
-  modifier: Modifier,
+    verifiedHash: Boolean,
+    modifier: Modifier,
 ) {
-  val localContext = LocalContext.current
+    val localContext = LocalContext.current
 
-  val openDialogMsg = remember { mutableStateOf<String?>(null) }
+    val openDialogMsg = remember { mutableStateOf<String?>(null) }
 
-  openDialogMsg.value?.let {
-    InformationDialog(
-      title = localContext.getString(R.string.hash_verification_info_title),
-      textContent = it,
+    openDialogMsg.value?.let {
+        InformationDialog(
+            title = localContext.getString(R.string.hash_verification_info_title),
+            textContent = it,
+        ) {
+            openDialogMsg.value = null
+        }
+    }
+
+    Box(
+        modifier.width(40.dp).height(40.dp).padding(10.dp),
     ) {
-      openDialogMsg.value = null
+        if (verifiedHash) {
+            IconButton(
+                onClick = {
+                    openDialogMsg.value = localContext.getString(R.string.hash_verification_passed)
+                },
+            ) {
+                HashCheckIcon(Size30dp)
+            }
+        } else {
+            IconButton(
+                onClick = {
+                    openDialogMsg.value = localContext.getString(R.string.hash_verification_failed)
+                },
+            ) {
+                HashCheckFailedIcon(Size30dp)
+            }
+        }
     }
-  }
-
-  Box(
-    modifier.width(40.dp).height(40.dp).padding(10.dp),
-  ) {
-    if (verifiedHash) {
-      IconButton(
-        onClick = {
-          openDialogMsg.value = localContext.getString(R.string.hash_verification_passed)
-        },
-      ) {
-        HashCheckIcon(Size30dp)
-      }
-    } else {
-      IconButton(
-        onClick = {
-          openDialogMsg.value = localContext.getString(R.string.hash_verification_failed)
-        },
-      ) {
-        HashCheckFailedIcon(Size30dp)
-      }
-    }
-  }
 }
 
 // Window utils
@@ -1122,17 +1133,17 @@ fun getDialogWindow(): Window? = (LocalView.current.parent as? DialogWindowProvi
 @Composable fun getActivityWindow(): Window? = LocalView.current.context.getActivityWindow()
 
 private tailrec fun Context.getActivityWindow(): Window? =
-  when (this) {
-    is Activity -> window
-    is ContextWrapper -> baseContext.getActivityWindow()
-    else -> null
-  }
+    when (this) {
+        is Activity -> window
+        is ContextWrapper -> baseContext.getActivityWindow()
+        else -> null
+    }
 
 @Composable fun getActivity(): Activity? = LocalView.current.context.getActivity()
 
 private tailrec fun Context.getActivity(): Activity? =
-  when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.getActivity()
-    else -> null
-  }
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.getActivity()
+        else -> null
+    }

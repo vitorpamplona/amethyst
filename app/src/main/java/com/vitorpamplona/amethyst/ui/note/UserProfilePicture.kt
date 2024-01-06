@@ -77,606 +77,610 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun NoteAuthorPicture(
-  baseNote: Note,
-  nav: (String) -> Unit,
-  accountViewModel: AccountViewModel,
-  size: Dp,
-  pictureModifier: Modifier = Modifier,
+    baseNote: Note,
+    nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    size: Dp,
+    pictureModifier: Modifier = Modifier,
 ) {
-  NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
-    nav("User/${it.pubkeyHex}")
-  }
+    NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
+        nav("User/${it.pubkeyHex}")
+    }
 }
 
 @Composable
 fun NoteAuthorPicture(
-  baseNote: Note,
-  size: Dp,
-  accountViewModel: AccountViewModel,
-  modifier: Modifier = Modifier,
-  onClick: ((User) -> Unit)? = null,
+    baseNote: Note,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    onClick: ((User) -> Unit)? = null,
 ) {
-  val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
+    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
 
-  Crossfade(targetState = author, label = "NoteAuthorPicture") {
-    if (it == null) {
-      DisplayBlankAuthor(size, modifier)
-    } else {
-      ClickableUserPicture(it, size, accountViewModel, modifier, onClick)
+    Crossfade(targetState = author, label = "NoteAuthorPicture") {
+        if (it == null) {
+            DisplayBlankAuthor(size, modifier)
+        } else {
+            ClickableUserPicture(it, size, accountViewModel, modifier, onClick)
+        }
     }
-  }
 }
 
 @Composable
 fun DisplayBlankAuthor(
-  size: Dp,
-  modifier: Modifier = Modifier,
+    size: Dp,
+    modifier: Modifier = Modifier,
 ) {
-  val backgroundColor = MaterialTheme.colorScheme.background
+    val backgroundColor = MaterialTheme.colorScheme.background
 
-  val nullModifier = remember {
-    modifier.size(size).clip(shape = CircleShape).background(backgroundColor)
-  }
+    val nullModifier =
+        remember {
+            modifier.size(size).clip(shape = CircleShape).background(backgroundColor)
+        }
 
-  RobohashAsyncImage(
-    robot = "authornotfound",
-    contentDescription = stringResource(R.string.unknown_author),
-    modifier = nullModifier,
-  )
+    RobohashAsyncImage(
+        robot = "authornotfound",
+        contentDescription = stringResource(R.string.unknown_author),
+        modifier = nullModifier,
+    )
 }
 
 @Composable
 fun UserPicture(
-  userHex: String,
-  size: Dp,
-  pictureModifier: Modifier = Modifier,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    userHex: String,
+    size: Dp,
+    pictureModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  LoadUser(baseUserHex = userHex, accountViewModel) {
-    if (it != null) {
-      UserPicture(
-        user = it,
-        size = size,
-        pictureModifier = pictureModifier,
-        accountViewModel = accountViewModel,
-        nav = nav,
-      )
-    } else {
-      DisplayBlankAuthor(
-        size,
-        pictureModifier,
-      )
+    LoadUser(baseUserHex = userHex, accountViewModel) {
+        if (it != null) {
+            UserPicture(
+                user = it,
+                size = size,
+                pictureModifier = pictureModifier,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        } else {
+            DisplayBlankAuthor(
+                size,
+                pictureModifier,
+            )
+        }
     }
-  }
 }
 
 @Composable
 fun UserPicture(
-  user: User,
-  size: Dp,
-  pictureModifier: Modifier = Modifier,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    user: User,
+    size: Dp,
+    pictureModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  ClickableUserPicture(
-    baseUser = user,
-    size = size,
-    accountViewModel = accountViewModel,
-    modifier = pictureModifier,
-    onClick = { nav("User/${user.pubkeyHex}") },
-  )
+    ClickableUserPicture(
+        baseUser = user,
+        size = size,
+        accountViewModel = accountViewModel,
+        modifier = pictureModifier,
+        onClick = { nav("User/${user.pubkeyHex}") },
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClickableUserPicture(
-  baseUser: User,
-  size: Dp,
-  accountViewModel: AccountViewModel,
-  modifier: Modifier = Modifier,
-  onClick: ((User) -> Unit)? = null,
-  onLongClick: ((User) -> Unit)? = null,
+    baseUser: User,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    onClick: ((User) -> Unit)? = null,
+    onLongClick: ((User) -> Unit)? = null,
 ) {
-  val interactionSource = remember { MutableInteractionSource() }
-  val ripple = rememberRipple(bounded = false, radius = size)
+    val interactionSource = remember { MutableInteractionSource() }
+    val ripple = rememberRipple(bounded = false, radius = size)
 
-  // BaseUser is the same reference as accountState.user
-  val myModifier = remember {
-    if (onClick != null && onLongClick != null) {
-      Modifier.size(size)
-        .combinedClickable(
-          onClick = { onClick(baseUser) },
-          onLongClick = { onLongClick(baseUser) },
-          role = Role.Button,
-          interactionSource = interactionSource,
-          indication = ripple,
-        )
-    } else if (onClick != null) {
-      Modifier.size(size)
-        .clickable(
-          onClick = { onClick(baseUser) },
-          role = Role.Button,
-          interactionSource = interactionSource,
-          indication = ripple,
-        )
-    } else {
-      Modifier.size(size)
+    // BaseUser is the same reference as accountState.user
+    val myModifier =
+        remember {
+            if (onClick != null && onLongClick != null) {
+                Modifier.size(size)
+                    .combinedClickable(
+                        onClick = { onClick(baseUser) },
+                        onLongClick = { onLongClick(baseUser) },
+                        role = Role.Button,
+                        interactionSource = interactionSource,
+                        indication = ripple,
+                    )
+            } else if (onClick != null) {
+                Modifier.size(size)
+                    .clickable(
+                        onClick = { onClick(baseUser) },
+                        role = Role.Button,
+                        interactionSource = interactionSource,
+                        indication = ripple,
+                    )
+            } else {
+                Modifier.size(size)
+            }
+        }
+
+    Box(modifier = myModifier, contentAlignment = Alignment.TopEnd) {
+        BaseUserPicture(baseUser, size, accountViewModel, modifier)
     }
-  }
-
-  Box(modifier = myModifier, contentAlignment = Alignment.TopEnd) {
-    BaseUserPicture(baseUser, size, accountViewModel, modifier)
-  }
 }
 
 @Composable
 fun NonClickableUserPictures(
-  users: ImmutableSet<HexKey>,
-  size: Dp,
-  accountViewModel: AccountViewModel,
+    users: ImmutableSet<HexKey>,
+    size: Dp,
+    accountViewModel: AccountViewModel,
 ) {
-  val myBoxModifier = remember { Modifier.size(size) }
+    val myBoxModifier = remember { Modifier.size(size) }
 
-  Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-    val userList = remember(users) { users.toList() }
+    Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
+        val userList = remember(users) { users.toList() }
 
-    when (userList.size) {
-      0 -> {}
-      1 ->
-        LoadUser(baseUserHex = userList[0], accountViewModel) {
-          it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier) }
+        when (userList.size) {
+            0 -> {}
+            1 ->
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier) }
+                }
+            2 -> {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(1.5f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.CenterStart),
+                        )
+                    }
+                }
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(1.5f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.CenterEnd),
+                        )
+                    }
+                }
+            }
+            3 -> {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(1.8f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.BottomStart),
+                        )
+                    }
+                }
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(1.8f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.TopCenter),
+                        )
+                    }
+                }
+                LoadUser(baseUserHex = userList[2], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(1.8f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.BottomEnd),
+                        )
+                    }
+                }
+            }
+            else -> {
+                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(2f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.BottomStart),
+                        )
+                    }
+                }
+                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(2f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.TopStart),
+                        )
+                    }
+                }
+                LoadUser(baseUserHex = userList[2], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(2f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.BottomEnd),
+                        )
+                    }
+                }
+                LoadUser(baseUserHex = userList[3], accountViewModel) {
+                    it?.let {
+                        BaseUserPicture(
+                            it,
+                            size.div(2f),
+                            accountViewModel,
+                            outerModifier = Modifier.align(Alignment.TopEnd),
+                        )
+                    }
+                }
+            }
         }
-      2 -> {
-        LoadUser(baseUserHex = userList[0], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(1.5f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.CenterStart),
-            )
-          }
-        }
-        LoadUser(baseUserHex = userList[1], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(1.5f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.CenterEnd),
-            )
-          }
-        }
-      }
-      3 -> {
-        LoadUser(baseUserHex = userList[0], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(1.8f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.BottomStart),
-            )
-          }
-        }
-        LoadUser(baseUserHex = userList[1], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(1.8f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.TopCenter),
-            )
-          }
-        }
-        LoadUser(baseUserHex = userList[2], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(1.8f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.BottomEnd),
-            )
-          }
-        }
-      }
-      else -> {
-        LoadUser(baseUserHex = userList[0], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(2f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.BottomStart),
-            )
-          }
-        }
-        LoadUser(baseUserHex = userList[1], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(2f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.TopStart),
-            )
-          }
-        }
-        LoadUser(baseUserHex = userList[2], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(2f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.BottomEnd),
-            )
-          }
-        }
-        LoadUser(baseUserHex = userList[3], accountViewModel) {
-          it?.let {
-            BaseUserPicture(
-              it,
-              size.div(2f),
-              accountViewModel,
-              outerModifier = Modifier.align(Alignment.TopEnd),
-            )
-          }
-        }
-      }
     }
-  }
 }
 
 @Composable
 fun BaseUserPicture(
-  baseUser: User,
-  size: Dp,
-  accountViewModel: AccountViewModel,
-  innerModifier: Modifier = Modifier,
-  outerModifier: Modifier = remember { Modifier.size(size) },
+    baseUser: User,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    innerModifier: Modifier = Modifier,
+    outerModifier: Modifier = remember { Modifier.size(size) },
 ) {
-  val myIconSize by remember(size) { derivedStateOf { size.div(3.5f) } }
+    val myIconSize by remember(size) { derivedStateOf { size.div(3.5f) } }
 
-  Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-    LoadUserProfilePicture(baseUser) { userProfilePicture ->
-      InnerUserPicture(
-        userHex = baseUser.pubkeyHex,
-        userPicture = userProfilePicture,
-        size = size,
-        modifier = innerModifier,
-        accountViewModel = accountViewModel,
-      )
+    Box(outerModifier, contentAlignment = Alignment.TopEnd) {
+        LoadUserProfilePicture(baseUser) { userProfilePicture ->
+            InnerUserPicture(
+                userHex = baseUser.pubkeyHex,
+                userPicture = userProfilePicture,
+                size = size,
+                modifier = innerModifier,
+                accountViewModel = accountViewModel,
+            )
+        }
+
+        ObserveAndDisplayFollowingMark(baseUser.pubkeyHex, myIconSize, accountViewModel)
     }
-
-    ObserveAndDisplayFollowingMark(baseUser.pubkeyHex, myIconSize, accountViewModel)
-  }
 }
 
 @Composable
 fun LoadUserProfilePicture(
-  baseUser: User,
-  innerContent: @Composable (String?) -> Unit,
+    baseUser: User,
+    innerContent: @Composable (String?) -> Unit,
 ) {
-  val userProfile by baseUser.live().profilePictureChanges.observeAsState(baseUser.profilePicture())
+    val userProfile by baseUser.live().profilePictureChanges.observeAsState(baseUser.profilePicture())
 
-  innerContent(userProfile)
+    innerContent(userProfile)
 }
 
 @Composable
 fun InnerUserPicture(
-  userHex: String,
-  userPicture: String?,
-  size: Dp,
-  modifier: Modifier,
-  accountViewModel: AccountViewModel,
+    userHex: String,
+    userPicture: String?,
+    size: Dp,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
 ) {
-  val backgroundColor = MaterialTheme.colorScheme.background
-  val myImageModifier = remember {
-    modifier.size(size).clip(shape = CircleShape).background(backgroundColor)
-  }
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val myImageModifier =
+        remember {
+            modifier.size(size).clip(shape = CircleShape).background(backgroundColor)
+        }
 
-  val automaticallyShowProfilePicture = remember {
-    accountViewModel.settings.showProfilePictures.value
-  }
+    val automaticallyShowProfilePicture =
+        remember {
+            accountViewModel.settings.showProfilePictures.value
+        }
 
-  RobohashFallbackAsyncImage(
-    robot = userHex,
-    model = userPicture,
-    contentDescription = stringResource(id = R.string.profile_image),
-    modifier = myImageModifier,
-    contentScale = ContentScale.Crop,
-    loadProfilePicture = automaticallyShowProfilePicture,
-  )
+    RobohashFallbackAsyncImage(
+        robot = userHex,
+        model = userPicture,
+        contentDescription = stringResource(id = R.string.profile_image),
+        modifier = myImageModifier,
+        contentScale = ContentScale.Crop,
+        loadProfilePicture = automaticallyShowProfilePicture,
+    )
 }
 
 @Composable
 fun ObserveAndDisplayFollowingMark(
-  userHex: String,
-  iconSize: Dp,
-  accountViewModel: AccountViewModel,
+    userHex: String,
+    iconSize: Dp,
+    accountViewModel: AccountViewModel,
 ) {
-  WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
-    AnimatedVisibility(
-      visible = newFollowingState,
-      enter = remember { fadeIn() },
-      exit = remember { fadeOut() },
-    ) {
-      FollowingIcon(iconSize)
+    WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
+        AnimatedVisibility(
+            visible = newFollowingState,
+            enter = remember { fadeIn() },
+            exit = remember { fadeOut() },
+        ) {
+            FollowingIcon(iconSize)
+        }
     }
-  }
 }
 
 @Composable
 fun WatchUserFollows(
-  userHex: String,
-  accountViewModel: AccountViewModel,
-  onFollowChanges: @Composable (Boolean) -> Unit,
+    userHex: String,
+    accountViewModel: AccountViewModel,
+    onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-  val showFollowingMark by
-    remember {
-        accountViewModel.userFollows
-          .map {
-            it.user.isFollowingCached(userHex) ||
-              (userHex == accountViewModel.account.userProfile().pubkeyHex)
-          }
-          .distinctUntilChanged()
-      }
-      .observeAsState(
-        accountViewModel.account.userProfile().isFollowingCached(userHex) ||
-          (userHex == accountViewModel.account.userProfile().pubkeyHex),
-      )
+    val showFollowingMark by
+        remember {
+            accountViewModel.userFollows
+                .map {
+                    it.user.isFollowingCached(userHex) ||
+                        (userHex == accountViewModel.account.userProfile().pubkeyHex)
+                }
+                .distinctUntilChanged()
+        }
+            .observeAsState(
+                accountViewModel.account.userProfile().isFollowingCached(userHex) ||
+                    (userHex == accountViewModel.account.userProfile().pubkeyHex),
+            )
 
-  onFollowChanges(showFollowingMark)
+    onFollowChanges(showFollowingMark)
 }
 
 @Immutable
 data class DropDownParams(
-  val isFollowingAuthor: Boolean,
-  val isPrivateBookmarkNote: Boolean,
-  val isPublicBookmarkNote: Boolean,
-  val isLoggedUser: Boolean,
-  val isSensitive: Boolean,
-  val showSensitiveContent: Boolean?,
+    val isFollowingAuthor: Boolean,
+    val isPrivateBookmarkNote: Boolean,
+    val isPublicBookmarkNote: Boolean,
+    val isLoggedUser: Boolean,
+    val isSensitive: Boolean,
+    val showSensitiveContent: Boolean?,
 )
 
 @Composable
 fun NoteDropDownMenu(
-  note: Note,
-  popupExpanded: MutableState<Boolean>,
-  accountViewModel: AccountViewModel,
+    note: Note,
+    popupExpanded: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
 ) {
-  var reportDialogShowing by remember { mutableStateOf(false) }
+    var reportDialogShowing by remember { mutableStateOf(false) }
 
-  var state by remember {
-    mutableStateOf<DropDownParams>(
-      DropDownParams(
-        isFollowingAuthor = false,
-        isPrivateBookmarkNote = false,
-        isPublicBookmarkNote = false,
-        isLoggedUser = false,
-        isSensitive = false,
-        showSensitiveContent = null,
-      ),
-    )
-  }
-
-  val onDismiss = remember(popupExpanded) { { popupExpanded.value = false } }
-
-  DropdownMenu(
-    expanded = popupExpanded.value,
-    onDismissRequest = onDismiss,
-  ) {
-    val clipboardManager = LocalClipboardManager.current
-    val appContext = LocalContext.current.applicationContext
-    val actContext = LocalContext.current
-
-    WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
-      if (state != newState) {
-        state = newState
-      }
+    var state by remember {
+        mutableStateOf<DropDownParams>(
+            DropDownParams(
+                isFollowingAuthor = false,
+                isPrivateBookmarkNote = false,
+                isPublicBookmarkNote = false,
+                isLoggedUser = false,
+                isSensitive = false,
+                showSensitiveContent = null,
+            ),
+        )
     }
 
-    val scope = rememberCoroutineScope()
+    val onDismiss = remember(popupExpanded) { { popupExpanded.value = false } }
 
-    if (!state.isFollowingAuthor) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.follow)) },
-        onClick = {
-          val author = note.author ?: return@DropdownMenuItem
-          accountViewModel.follow(author)
-          onDismiss()
-        },
-      )
-      Divider()
-    }
-    DropdownMenuItem(
-      text = { Text(stringResource(R.string.copy_text)) },
-      onClick = {
-        scope.launch(Dispatchers.IO) {
-          accountViewModel.decrypt(note) { clipboardManager.setText(AnnotatedString(it)) }
-          onDismiss()
+    DropdownMenu(
+        expanded = popupExpanded.value,
+        onDismissRequest = onDismiss,
+    ) {
+        val clipboardManager = LocalClipboardManager.current
+        val appContext = LocalContext.current.applicationContext
+        val actContext = LocalContext.current
+
+        WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
+            if (state != newState) {
+                state = newState
+            }
         }
-      },
-    )
-    DropdownMenuItem(
-      text = { Text(stringResource(R.string.copy_user_pubkey)) },
-      onClick = {
-        scope.launch(Dispatchers.IO) {
-          clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
-          onDismiss()
-        }
-      },
-    )
-    DropdownMenuItem(
-      text = { Text(stringResource(R.string.copy_note_id)) },
-      onClick = {
-        scope.launch(Dispatchers.IO) {
-          clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
-          onDismiss()
-        }
-      },
-    )
-    DropdownMenuItem(
-      text = { Text(stringResource(R.string.quick_action_share)) },
-      onClick = {
-        val sendIntent =
-          Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(
-              Intent.EXTRA_TEXT,
-              externalLinkForNote(note),
+
+        val scope = rememberCoroutineScope()
+
+        if (!state.isFollowingAuthor) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.follow)) },
+                onClick = {
+                    val author = note.author ?: return@DropdownMenuItem
+                    accountViewModel.follow(author)
+                    onDismiss()
+                },
             )
-            putExtra(
-              Intent.EXTRA_TITLE,
-              actContext.getString(R.string.quick_action_share_browser_link),
-            )
-          }
-
-        val shareIntent =
-          Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
-        ContextCompat.startActivity(actContext, shareIntent, null)
-        onDismiss()
-      },
-    )
-    Divider()
-    DropdownMenuItem(
-      text = { Text(stringResource(R.string.broadcast)) },
-      onClick = {
-        scope.launch(Dispatchers.IO) {
-          accountViewModel.broadcast(note)
-          onDismiss()
+            Divider()
         }
-      },
-    )
-    Divider()
-    if (state.isPrivateBookmarkNote) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.remove_from_private_bookmarks)) },
-        onClick = {
-          accountViewModel.removePrivateBookmark(note)
-          onDismiss()
-        },
-      )
-    } else {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.add_to_private_bookmarks)) },
-        onClick = {
-          accountViewModel.addPrivateBookmark(note)
-          onDismiss()
-        },
-      )
-    }
-    if (state.isPublicBookmarkNote) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.remove_from_public_bookmarks)) },
-        onClick = {
-          accountViewModel.removePublicBookmark(note)
-          onDismiss()
-        },
-      )
-    } else {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.add_to_public_bookmarks)) },
-        onClick = {
-          accountViewModel.addPublicBookmark(note)
-          onDismiss()
-        },
-      )
-    }
-    Divider()
-    if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.content_warning_hide_all_sensitive_content)) },
-        onClick = {
-          scope.launch(Dispatchers.IO) {
-            accountViewModel.hideSensitiveContent()
-            onDismiss()
-          }
-        },
-      )
-    }
-    if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.content_warning_show_all_sensitive_content)) },
-        onClick = {
-          scope.launch(Dispatchers.IO) {
-            accountViewModel.disableContentWarnings()
-            onDismiss()
-          }
-        },
-      )
-    }
-    if (state.showSensitiveContent != null) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.content_warning_see_warnings)) },
-        onClick = {
-          scope.launch(Dispatchers.IO) {
-            accountViewModel.seeContentWarnings()
-            onDismiss()
-          }
-        },
-      )
-    }
-    Divider()
-    if (state.isLoggedUser) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.request_deletion)) },
-        onClick = {
-          scope.launch(Dispatchers.IO) {
-            accountViewModel.delete(note)
-            onDismiss()
-          }
-        },
-      )
-    } else {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.block_report)) },
-        onClick = { reportDialogShowing = true },
-      )
-    }
-  }
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.copy_text)) },
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.decrypt(note) { clipboardManager.setText(AnnotatedString(it)) }
+                    onDismiss()
+                }
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.copy_user_pubkey)) },
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
+                    onDismiss()
+                }
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.copy_note_id)) },
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
+                    onDismiss()
+                }
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.quick_action_share)) },
+            onClick = {
+                val sendIntent =
+                    Intent().apply {
+                        action = Intent.ACTION_SEND
+                        type = "text/plain"
+                        putExtra(
+                            Intent.EXTRA_TEXT,
+                            externalLinkForNote(note),
+                        )
+                        putExtra(
+                            Intent.EXTRA_TITLE,
+                            actContext.getString(R.string.quick_action_share_browser_link),
+                        )
+                    }
 
-  if (reportDialogShowing) {
-    ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
-      reportDialogShowing = false
-      onDismiss()
+                val shareIntent =
+                    Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
+                ContextCompat.startActivity(actContext, shareIntent, null)
+                onDismiss()
+            },
+        )
+        Divider()
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.broadcast)) },
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    accountViewModel.broadcast(note)
+                    onDismiss()
+                }
+            },
+        )
+        Divider()
+        if (state.isPrivateBookmarkNote) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.remove_from_private_bookmarks)) },
+                onClick = {
+                    accountViewModel.removePrivateBookmark(note)
+                    onDismiss()
+                },
+            )
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.add_to_private_bookmarks)) },
+                onClick = {
+                    accountViewModel.addPrivateBookmark(note)
+                    onDismiss()
+                },
+            )
+        }
+        if (state.isPublicBookmarkNote) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.remove_from_public_bookmarks)) },
+                onClick = {
+                    accountViewModel.removePublicBookmark(note)
+                    onDismiss()
+                },
+            )
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.add_to_public_bookmarks)) },
+                onClick = {
+                    accountViewModel.addPublicBookmark(note)
+                    onDismiss()
+                },
+            )
+        }
+        Divider()
+        if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.content_warning_hide_all_sensitive_content)) },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.hideSensitiveContent()
+                        onDismiss()
+                    }
+                },
+            )
+        }
+        if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.content_warning_show_all_sensitive_content)) },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.disableContentWarnings()
+                        onDismiss()
+                    }
+                },
+            )
+        }
+        if (state.showSensitiveContent != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.content_warning_see_warnings)) },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.seeContentWarnings()
+                        onDismiss()
+                    }
+                },
+            )
+        }
+        Divider()
+        if (state.isLoggedUser) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.request_deletion)) },
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.delete(note)
+                        onDismiss()
+                    }
+                },
+            )
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.block_report)) },
+                onClick = { reportDialogShowing = true },
+            )
+        }
     }
-  }
+
+    if (reportDialogShowing) {
+        ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
+            reportDialogShowing = false
+            onDismiss()
+        }
+    }
 }
 
 @Composable
 fun WatchBookmarksFollowsAndAccount(
-  note: Note,
-  accountViewModel: AccountViewModel,
-  onNew: (DropDownParams) -> Unit,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onNew: (DropDownParams) -> Unit,
 ) {
-  val followState by accountViewModel.userProfile().live().follows.observeAsState()
-  val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
-  val showSensitiveContent by
-    accountViewModel.showSensitiveContentChanges.observeAsState(
-      accountViewModel.account.showSensitiveContent,
-    )
+    val followState by accountViewModel.userProfile().live().follows.observeAsState()
+    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+    val showSensitiveContent by
+        accountViewModel.showSensitiveContentChanges.observeAsState(
+            accountViewModel.account.showSensitiveContent,
+        )
 
-  LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-    launch(Dispatchers.IO) {
-      accountViewModel.isInPrivateBookmarks(note) {
-        val newState =
-          DropDownParams(
-            isFollowingAuthor = accountViewModel.isFollowing(note.author),
-            isPrivateBookmarkNote = it,
-            isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-            isLoggedUser = accountViewModel.isLoggedUser(note.author),
-            isSensitive = note.event?.isSensitive() ?: false,
-            showSensitiveContent = showSensitiveContent,
-          )
+    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
+        launch(Dispatchers.IO) {
+            accountViewModel.isInPrivateBookmarks(note) {
+                val newState =
+                    DropDownParams(
+                        isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                        isPrivateBookmarkNote = it,
+                        isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                        isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                        isSensitive = note.event?.isSensitive() ?: false,
+                        showSensitiveContent = showSensitiveContent,
+                    )
 
-        launch(Dispatchers.Main) {
-          onNew(
-            newState,
-          )
+                launch(Dispatchers.Main) {
+                    onNew(
+                        newState,
+                    )
+                }
+            }
         }
-      }
     }
-  }
 }

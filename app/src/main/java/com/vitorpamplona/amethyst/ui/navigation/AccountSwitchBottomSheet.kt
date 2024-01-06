@@ -86,229 +86,230 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountSwitchBottomSheet(
-  accountViewModel: AccountViewModel,
-  accountStateViewModel: AccountStateViewModel,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
 ) {
-  val accounts = LocalPreferences.allSavedAccounts()
+    val accounts = LocalPreferences.allSavedAccounts()
 
-  var popupExpanded by remember { mutableStateOf(false) }
-  val scrollState = rememberScrollState()
+    var popupExpanded by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
-  Column(modifier = Modifier.verticalScroll(scrollState)) {
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(Size10dp),
-      horizontalArrangement = Arrangement.Center,
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(stringResource(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
-    }
-    accounts.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(top = Size10dp, bottom = Size55dp),
-      horizontalArrangement = Arrangement.Center,
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      TextButton(onClick = { popupExpanded = true }) {
-        Text(stringResource(R.string.account_switch_add_account_btn))
-      }
-    }
-  }
-
-  if (popupExpanded) {
-    Dialog(
-      onDismissRequest = { popupExpanded = false },
-      properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-      Surface(modifier = Modifier.fillMaxSize()) {
-        Box {
-          LoginPage(accountStateViewModel, isFirstLogin = false)
-          TopAppBar(
-            title = {
-              Text(text = stringResource(R.string.account_switch_add_account_dialog_title))
-            },
-            navigationIcon = {
-              IconButton(onClick = { popupExpanded = false }) { ArrowBackIcon() }
-            },
-            colors =
-              TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-              ),
-          )
+    Column(modifier = Modifier.verticalScroll(scrollState)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Size10dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
-      }
+        accounts.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = Size10dp, bottom = Size55dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { popupExpanded = true }) {
+                Text(stringResource(R.string.account_switch_add_account_btn))
+            }
+        }
     }
-  }
+
+    if (popupExpanded) {
+        Dialog(
+            onDismissRequest = { popupExpanded = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Box {
+                    LoginPage(accountStateViewModel, isFirstLogin = false)
+                    TopAppBar(
+                        title = {
+                            Text(text = stringResource(R.string.account_switch_add_account_dialog_title))
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { popupExpanded = false }) { ArrowBackIcon() }
+                        },
+                        colors =
+                            TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun DisplayAccount(
-  acc: AccountInfo,
-  accountViewModel: AccountViewModel,
-  accountStateViewModel: AccountStateViewModel,
+    acc: AccountInfo,
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
 ) {
-  var baseUser by remember {
-    mutableStateOf<User?>(
-      LocalCache.getUserIfExists(
-        decodePublicKey(
-            acc.npub,
-          )
-          .toHexKey(),
-      ),
-    )
-  }
-
-  if (baseUser == null) {
-    LaunchedEffect(key1 = acc.npub) {
-      launch(Dispatchers.IO) {
-        baseUser =
-          try {
-            LocalCache.getOrCreateUser(
-              decodePublicKey(acc.npub).toHexKey(),
-            )
-          } catch (e: Exception) {
-            null
-          }
-      }
+    var baseUser by remember {
+        mutableStateOf<User?>(
+            LocalCache.getUserIfExists(
+                decodePublicKey(
+                    acc.npub,
+                )
+                    .toHexKey(),
+            ),
+        )
     }
-  }
 
-  baseUser?.let {
-    Row(
-      modifier =
-        Modifier.fillMaxWidth()
-          .clickable { accountStateViewModel.switchUser(acc) }
-          .padding(16.dp, 16.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Row(
-        modifier = Modifier.weight(1f),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
+    if (baseUser == null) {
+        LaunchedEffect(key1 = acc.npub) {
+            launch(Dispatchers.IO) {
+                baseUser =
+                    try {
+                        LocalCache.getOrCreateUser(
+                            decodePublicKey(acc.npub).toHexKey(),
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+            }
+        }
+    }
+
+    baseUser?.let {
         Row(
-          modifier = Modifier.weight(1f),
-          verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clickable { accountStateViewModel.switchUser(acc) }
+                    .padding(16.dp, 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-          Box(
-            modifier = Modifier.width(55.dp).padding(0.dp),
-          ) {
-            val automaticallyShowProfilePicture = remember {
-              accountViewModel.settings.showProfilePictures.value
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier.width(55.dp).padding(0.dp),
+                    ) {
+                        val automaticallyShowProfilePicture =
+                            remember {
+                                accountViewModel.settings.showProfilePictures.value
+                            }
+
+                        AccountPicture(it, automaticallyShowProfilePicture)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) { AccountName(acc, it) }
+                    Column(modifier = Modifier.width(32.dp)) { ActiveMarker(acc, accountViewModel) }
+                }
             }
 
-            AccountPicture(it, automaticallyShowProfilePicture)
-          }
-          Spacer(modifier = Modifier.width(16.dp))
-          Column(modifier = Modifier.weight(1f)) { AccountName(acc, it) }
-          Column(modifier = Modifier.width(32.dp)) { ActiveMarker(acc, accountViewModel) }
+            LogoutButton(acc, accountStateViewModel)
         }
-      }
-
-      LogoutButton(acc, accountStateViewModel)
     }
-  }
 }
 
 @Composable
 private fun ActiveMarker(
-  acc: AccountInfo,
-  accountViewModel: AccountViewModel,
+    acc: AccountInfo,
+    accountViewModel: AccountViewModel,
 ) {
-  val isCurrentUser by
-    remember(accountViewModel) {
-      derivedStateOf { accountViewModel.account.userProfile().pubkeyNpub() == acc.npub }
-    }
+    val isCurrentUser by
+        remember(accountViewModel) {
+            derivedStateOf { accountViewModel.account.userProfile().pubkeyNpub() == acc.npub }
+        }
 
-  if (isCurrentUser) {
-    Icon(
-      imageVector = Icons.Default.RadioButtonChecked,
-      contentDescription = stringResource(R.string.account_switch_active_account),
-      tint = MaterialTheme.colorScheme.secondary,
-    )
-  }
+    if (isCurrentUser) {
+        Icon(
+            imageVector = Icons.Default.RadioButtonChecked,
+            contentDescription = stringResource(R.string.account_switch_active_account),
+            tint = MaterialTheme.colorScheme.secondary,
+        )
+    }
 }
 
 @Composable
 private fun AccountPicture(
-  user: User,
-  loadProfilePicture: Boolean,
+    user: User,
+    loadProfilePicture: Boolean,
 ) {
-  val profilePicture by user.live().profilePictureChanges.observeAsState()
+    val profilePicture by user.live().profilePictureChanges.observeAsState()
 
-  RobohashFallbackAsyncImage(
-    robot = user.pubkeyHex,
-    model = profilePicture,
-    contentDescription = stringResource(R.string.profile_image),
-    modifier = AccountPictureModifier,
-    loadProfilePicture = loadProfilePicture,
-  )
+    RobohashFallbackAsyncImage(
+        robot = user.pubkeyHex,
+        model = profilePicture,
+        contentDescription = stringResource(R.string.profile_image),
+        modifier = AccountPictureModifier,
+        loadProfilePicture = loadProfilePicture,
+    )
 }
 
 @Composable
 private fun AccountName(
-  acc: AccountInfo,
-  user: User,
+    acc: AccountInfo,
+    user: User,
 ) {
-  val displayName by user.live().metadata.map { user.bestDisplayName() }.observeAsState()
+    val displayName by user.live().metadata.map { user.bestDisplayName() }.observeAsState()
 
-  val tags by
-    user
-      .live()
-      .metadata
-      .map { user.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-      .observeAsState()
+    val tags by
+        user
+            .live()
+            .metadata
+            .map { user.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+            .observeAsState()
 
-  displayName?.let {
-    CreateTextWithEmoji(
-      text = it,
-      tags = tags,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
+    displayName?.let {
+        CreateTextWithEmoji(
+            text = it,
+            tags = tags,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+
+    Text(
+        text = remember(user) { acc.npub.toShortenHex() },
     )
-  }
-
-  Text(
-    text = remember(user) { acc.npub.toShortenHex() },
-  )
 }
 
 @Composable
 private fun LogoutButton(
-  acc: AccountInfo,
-  accountStateViewModel: AccountStateViewModel,
+    acc: AccountInfo,
+    accountStateViewModel: AccountStateViewModel,
 ) {
-  var logoutDialog by remember { mutableStateOf(false) }
-  if (logoutDialog) {
-    AlertDialog(
-      title = { Text(text = stringResource(R.string.log_out)) },
-      text = { Text(text = stringResource(R.string.are_you_sure_you_want_to_log_out)) },
-      onDismissRequest = { logoutDialog = false },
-      confirmButton = {
-        TextButton(
-          onClick = {
-            logoutDialog = false
-            accountStateViewModel.logOff(acc)
-          },
-        ) {
-          Text(text = stringResource(R.string.log_out))
-        }
-      },
-      dismissButton = {
-        TextButton(
-          onClick = { logoutDialog = false },
-        ) {
-          Text(text = stringResource(R.string.cancel))
-        }
-      },
-    )
-  }
+    var logoutDialog by remember { mutableStateOf(false) }
+    if (logoutDialog) {
+        AlertDialog(
+            title = { Text(text = stringResource(R.string.log_out)) },
+            text = { Text(text = stringResource(R.string.are_you_sure_you_want_to_log_out)) },
+            onDismissRequest = { logoutDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        logoutDialog = false
+                        accountStateViewModel.logOff(acc)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.log_out))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { logoutDialog = false },
+                ) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 
-  IconButton(
-    onClick = { logoutDialog = true },
-  ) {
-    Icon(
-      imageVector = Icons.Default.Logout,
-      contentDescription = stringResource(R.string.log_out),
-      tint = MaterialTheme.colorScheme.onSurface,
-    )
-  }
+    IconButton(
+        onClick = { logoutDialog = true },
+    ) {
+        Icon(
+            imageVector = Icons.Default.Logout,
+            contentDescription = stringResource(R.string.log_out),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }

@@ -27,30 +27,30 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class PinListEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun pins() = tags.filter { it.size > 1 && it[0] == "pin" }.map { it[1] }
+    fun pins() = tags.filter { it.size > 1 && it[0] == "pin" }.map { it[1] }
 
-  companion object {
-    const val KIND = 33888
-    const val ALT = "Pinned Posts"
+    companion object {
+        const val KIND = 33888
+        const val ALT = "Pinned Posts"
 
-    fun create(
-      pins: List<String>,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (PinListEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
-      pins.forEach { tags.add(arrayOf("pin", it)) }
-      tags.add(arrayOf("alt", ALT))
+        fun create(
+            pins: List<String>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PinListEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            pins.forEach { tags.add(arrayOf("pin", it)) }
+            tags.add(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        }
     }
-  }
 }

@@ -38,39 +38,39 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
 fun UserCompose(
-  baseUser: User,
-  overallModifier: Modifier = StdPadding,
-  showDiviser: Boolean = true,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseUser: User,
+    overallModifier: Modifier = StdPadding,
+    showDiviser: Boolean = true,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  Column(
-    modifier =
-      Modifier.clickable(
-        onClick = { nav("User/${baseUser.pubkeyHex}") },
-      ),
-  ) {
-    Row(
-      modifier = overallModifier,
-      verticalAlignment = Alignment.CenterVertically,
+    Column(
+        modifier =
+            Modifier.clickable(
+                onClick = { nav("User/${baseUser.pubkeyHex}") },
+            ),
     ) {
-      UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        Row(
+            modifier = overallModifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
-      Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
-        Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
+            Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
 
-        AboutDisplay(baseUser)
-      }
+                AboutDisplay(baseUser)
+            }
 
-      Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-        UserActionOptions(baseUser, accountViewModel)
-      }
+            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+                UserActionOptions(baseUser, accountViewModel)
+            }
+        }
+
+        if (showDiviser) {
+            Divider(
+                thickness = DividerThickness,
+            )
+        }
     }
-
-    if (showDiviser) {
-      Divider(
-        thickness = DividerThickness,
-      )
-    }
-  }
 }

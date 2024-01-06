@@ -29,35 +29,35 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class HTTPAuthorizationEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 27235
+    companion object {
+        const val KIND = 27235
 
-    fun create(
-      url: String,
-      method: String,
-      file: ByteArray? = null,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (HTTPAuthorizationEvent) -> Unit,
-    ) {
-      var hash = ""
-      file?.let { hash = CryptoUtils.sha256(file).toHexKey() }
+        fun create(
+            url: String,
+            method: String,
+            file: ByteArray? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (HTTPAuthorizationEvent) -> Unit,
+        ) {
+            var hash = ""
+            file?.let { hash = CryptoUtils.sha256(file).toHexKey() }
 
-      val tags =
-        listOfNotNull(
-          arrayOf("u", url),
-          arrayOf("method", method),
-          arrayOf("payload", hash),
-        )
+            val tags =
+                listOfNotNull(
+                    arrayOf("u", url),
+                    arrayOf("method", method),
+                    arrayOf("payload", hash),
+                )
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        }
     }
-  }
 }

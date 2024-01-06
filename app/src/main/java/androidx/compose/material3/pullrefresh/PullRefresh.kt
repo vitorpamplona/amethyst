@@ -42,19 +42,18 @@ import androidx.compose.ui.unit.Velocity
  * @sample androidx.compose.material.samples.PullRefreshSample
  */
 fun Modifier.pullRefresh(
-  state: PullRefreshState,
-  enabled: Boolean = true,
-) =
-  inspectable(
+    state: PullRefreshState,
+    enabled: Boolean = true,
+) = inspectable(
     inspectorInfo =
-      debugInspectorInfo {
-        name = "pullRefresh"
-        properties["state"] = state
-        properties["enabled"] = enabled
-      },
-  ) {
+        debugInspectorInfo {
+            name = "pullRefresh"
+            properties["state"] = state
+            properties["enabled"] = enabled
+        },
+) {
     Modifier.pullRefresh(state::onPull, state::onRelease, enabled)
-  }
+}
 
 /**
  * A nested scroll modifier that provides [onPull] and [onRelease] callbacks to aid building custom
@@ -78,49 +77,48 @@ fun Modifier.pullRefresh(
  * @sample androidx.compose.material.samples.CustomPullRefreshSample
  */
 fun Modifier.pullRefresh(
-  onPull: (pullDelta: Float) -> Float,
-  onRelease: suspend (flingVelocity: Float) -> Float,
-  enabled: Boolean = true,
-) =
-  inspectable(
+    onPull: (pullDelta: Float) -> Float,
+    onRelease: suspend (flingVelocity: Float) -> Float,
+    enabled: Boolean = true,
+) = inspectable(
     inspectorInfo =
-      debugInspectorInfo {
-        name = "pullRefresh"
-        properties["onPull"] = onPull
-        properties["onRelease"] = onRelease
-        properties["enabled"] = enabled
-      },
-  ) {
+        debugInspectorInfo {
+            name = "pullRefresh"
+            properties["onPull"] = onPull
+            properties["onRelease"] = onRelease
+            properties["enabled"] = enabled
+        },
+) {
     Modifier.nestedScroll(PullRefreshNestedScrollConnection(onPull, onRelease, enabled))
-  }
+}
 
 private class PullRefreshNestedScrollConnection(
-  private val onPull: (pullDelta: Float) -> Float,
-  private val onRelease: suspend (flingVelocity: Float) -> Float,
-  private val enabled: Boolean,
+    private val onPull: (pullDelta: Float) -> Float,
+    private val onRelease: suspend (flingVelocity: Float) -> Float,
+    private val enabled: Boolean,
 ) : NestedScrollConnection {
-  override fun onPreScroll(
-    available: Offset,
-    source: NestedScrollSource,
-  ): Offset =
-    when {
-      !enabled -> Offset.Zero
-      source == Drag && available.y < 0 -> Offset(0f, onPull(available.y)) // Swiping up
-      else -> Offset.Zero
-    }
+    override fun onPreScroll(
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset =
+        when {
+            !enabled -> Offset.Zero
+            source == Drag && available.y < 0 -> Offset(0f, onPull(available.y)) // Swiping up
+            else -> Offset.Zero
+        }
 
-  override fun onPostScroll(
-    consumed: Offset,
-    available: Offset,
-    source: NestedScrollSource,
-  ): Offset =
-    when {
-      !enabled -> Offset.Zero
-      source == Drag && available.y > 0 -> Offset(0f, onPull(available.y)) // Pulling down
-      else -> Offset.Zero
-    }
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset =
+        when {
+            !enabled -> Offset.Zero
+            source == Drag && available.y > 0 -> Offset(0f, onPull(available.y)) // Pulling down
+            else -> Offset.Zero
+        }
 
-  override suspend fun onPreFling(available: Velocity): Velocity {
-    return Velocity(0f, onRelease(available.y))
-  }
+    override suspend fun onPreFling(available: Velocity): Velocity {
+        return Velocity(0f, onRelease(available.y))
+    }
 }

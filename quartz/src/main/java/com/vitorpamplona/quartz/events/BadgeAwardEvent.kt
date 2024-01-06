@@ -25,19 +25,19 @@ import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
 class BadgeAwardEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun awardees() = taggedUsers()
+    fun awardees() = taggedUsers()
 
-  fun awardDefinition() = taggedAddresses()
+    fun awardDefinition() = taggedAddresses()
 
-  companion object {
-    const val KIND = 8
-    const val ALT = "Badge award"
-  }
+    companion object {
+        const val KIND = 8
+        const val ALT = "Badge award"
+    }
 }

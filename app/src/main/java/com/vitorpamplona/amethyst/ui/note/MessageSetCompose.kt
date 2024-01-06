@@ -52,89 +52,89 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageSetCompose(
-  messageSetCard: MessageSetCard,
-  routeForLastRead: String,
-  showHidden: Boolean = false,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    messageSetCard: MessageSetCard,
+    routeForLastRead: String,
+    showHidden: Boolean = false,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val baseNote = remember { messageSetCard.note }
+    val baseNote = remember { messageSetCard.note }
 
-  val popupExpanded = remember { mutableStateOf(false) }
-  val enablePopup = remember { { popupExpanded.value = true } }
+    val popupExpanded = remember { mutableStateOf(false) }
+    val enablePopup = remember { { popupExpanded.value = true } }
 
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  val defaultBackgroundColor = MaterialTheme.colorScheme.background
-  val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-  val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
-  LaunchedEffect(key1 = messageSetCard) {
-    accountViewModel.loadAndMarkAsRead(routeForLastRead, messageSetCard.createdAt()) { isNew ->
-      val newBackgroundColor =
-        if (isNew) {
-          newItemColor.compositeOver(defaultBackgroundColor)
-        } else {
-          defaultBackgroundColor
+    LaunchedEffect(key1 = messageSetCard) {
+        accountViewModel.loadAndMarkAsRead(routeForLastRead, messageSetCard.createdAt()) { isNew ->
+            val newBackgroundColor =
+                if (isNew) {
+                    newItemColor.compositeOver(defaultBackgroundColor)
+                } else {
+                    defaultBackgroundColor
+                }
+
+            if (backgroundColor.value != newBackgroundColor) {
+                backgroundColor.value = newBackgroundColor
+            }
+        }
+    }
+
+    val columnModifier =
+        remember(backgroundColor.value) {
+            Modifier.background(backgroundColor.value)
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp,
+                )
+                .combinedClickable(
+                    onClick = {
+                        scope.launch {
+                            routeFor(
+                                baseNote,
+                                accountViewModel.userProfile(),
+                            )
+                                ?.let { nav(it) }
+                        }
+                    },
+                    onLongClick = enablePopup,
+                )
+                .fillMaxWidth()
         }
 
-      if (backgroundColor.value != newBackgroundColor) {
-        backgroundColor.value = newBackgroundColor
-      }
-    }
-  }
-
-  val columnModifier =
-    remember(backgroundColor.value) {
-      Modifier.background(backgroundColor.value)
-        .padding(
-          start = 12.dp,
-          end = 12.dp,
-          top = 10.dp,
-        )
-        .combinedClickable(
-          onClick = {
-            scope.launch {
-              routeFor(
-                  baseNote,
-                  accountViewModel.userProfile(),
+    Column(columnModifier) {
+        Row(Modifier.fillMaxWidth()) {
+            Box(
+                modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) },
+            ) {
+                MessageIcon(
+                    remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
                 )
-                ?.let { nav(it) }
             }
-          },
-          onLongClick = enablePopup,
+
+            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+                NoteCompose(
+                    baseNote = baseNote,
+                    routeForLastRead = null,
+                    isBoostedNote = true,
+                    addMarginTop = false,
+                    showHidden = showHidden,
+                    parentBackgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+
+                NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
+            }
+        }
+
+        Divider(
+            thickness = DividerThickness,
         )
-        .fillMaxWidth()
     }
-
-  Column(columnModifier) {
-    Row(Modifier.fillMaxWidth()) {
-      Box(
-        modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) },
-      ) {
-        MessageIcon(
-          remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
-        )
-      }
-
-      Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-        NoteCompose(
-          baseNote = baseNote,
-          routeForLastRead = null,
-          isBoostedNote = true,
-          addMarginTop = false,
-          showHidden = showHidden,
-          parentBackgroundColor = backgroundColor,
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-
-        NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
-      }
-    }
-
-    Divider(
-      thickness = DividerThickness,
-    )
-  }
 }

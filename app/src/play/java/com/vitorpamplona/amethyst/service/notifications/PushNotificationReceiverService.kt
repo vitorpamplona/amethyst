@@ -31,65 +31,65 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrC
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
-import kotlin.time.measureTimedValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlin.time.measureTimedValue
 
 class PushNotificationReceiverService : FirebaseMessagingService() {
-  private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-  private val eventCache = LruCache<String, String>(100)
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val eventCache = LruCache<String, String>(100)
 
-  // this is called when a message is received
-  override fun onMessageReceived(remoteMessage: RemoteMessage) {
-    Log.d("Time", "Notification received $remoteMessage")
-    scope.launch(Dispatchers.IO) {
-      val (value, elapsed) =
-        measureTimedValue { parseMessage(remoteMessage.data)?.let { receiveIfNew(it) } }
-      Log.d("Time", "Notification processed in $elapsed")
+    // this is called when a message is received
+    override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        Log.d("Time", "Notification received $remoteMessage")
+        scope.launch(Dispatchers.IO) {
+            val (value, elapsed) =
+                measureTimedValue { parseMessage(remoteMessage.data)?.let { receiveIfNew(it) } }
+            Log.d("Time", "Notification processed in $elapsed")
+        }
     }
-  }
 
-  private suspend fun parseMessage(params: Map<String, String>): GiftWrapEvent? {
-    params["encryptedEvent"]?.let { eventStr ->
-      (Event.fromJson(eventStr) as? GiftWrapEvent)?.let {
-        return it
-      }
+    private suspend fun parseMessage(params: Map<String, String>): GiftWrapEvent? {
+        params["encryptedEvent"]?.let { eventStr ->
+            (Event.fromJson(eventStr) as? GiftWrapEvent)?.let {
+                return it
+            }
+        }
+        return null
     }
-    return null
-  }
 
-  private suspend fun receiveIfNew(event: GiftWrapEvent) {
-    if (eventCache.get(event.id) == null) {
-      eventCache.put(event.id, event.id)
-      EventNotificationConsumer(applicationContext).consume(event)
+    private suspend fun receiveIfNew(event: GiftWrapEvent) {
+        if (eventCache.get(event.id) == null) {
+            eventCache.put(event.id, event.id)
+            EventNotificationConsumer(applicationContext).consume(event)
+        }
     }
-  }
 
-  override fun onCreate() {
-    super.onCreate()
-    Log.d("Lifetime Event", "PushNotificationReceiverService.onCreate")
-  }
-
-  override fun onDestroy() {
-    Log.d("Lifetime Event", "PushNotificationReceiverService.onDestroy")
-
-    scope.cancel()
-    super.onDestroy()
-  }
-
-  override fun onNewToken(token: String) {
-    scope.launch(Dispatchers.IO) {
-      RegisterAccounts(LocalPreferences.allSavedAccounts()).go(token)
-      notificationManager().getOrCreateZapChannel(applicationContext)
-      notificationManager().getOrCreateDMChannel(applicationContext)
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("Lifetime Event", "PushNotificationReceiverService.onCreate")
     }
-  }
 
-  fun notificationManager(): NotificationManager {
-    return ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
-      as NotificationManager
-  }
+    override fun onDestroy() {
+        Log.d("Lifetime Event", "PushNotificationReceiverService.onDestroy")
+
+        scope.cancel()
+        super.onDestroy()
+    }
+
+    override fun onNewToken(token: String) {
+        scope.launch(Dispatchers.IO) {
+            RegisterAccounts(LocalPreferences.allSavedAccounts()).go(token)
+            notificationManager().getOrCreateZapChannel(applicationContext)
+            notificationManager().getOrCreateDMChannel(applicationContext)
+        }
+    }
+
+    fun notificationManager(): NotificationManager {
+        return ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
+            as NotificationManager
+    }
 }

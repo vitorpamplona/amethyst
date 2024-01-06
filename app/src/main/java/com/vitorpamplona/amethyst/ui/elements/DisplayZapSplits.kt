@@ -53,50 +53,50 @@ import com.vitorpamplona.quartz.events.EventInterface
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayZapSplits(
-  noteEvent: EventInterface,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    noteEvent: EventInterface,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val list = remember(noteEvent) { noteEvent.zapSplitSetup() }
-  if (list.isEmpty()) return
+    val list = remember(noteEvent) { noteEvent.zapSplitSetup() }
+    if (list.isEmpty()) return
 
-  Row(verticalAlignment = Alignment.CenterVertically) {
-    Box(
-      Modifier.height(20.dp).width(25.dp),
-    ) {
-      Icon(
-        imageVector = Icons.Outlined.Bolt,
-        contentDescription = stringResource(id = R.string.zaps),
-        modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
-        tint = BitcoinOrange,
-      )
-      Icon(
-        imageVector = Icons.Outlined.ArrowForwardIos,
-        contentDescription = stringResource(id = R.string.zaps),
-        modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
-        tint = BitcoinOrange,
-      )
-    }
-
-    Spacer(modifier = StdHorzSpacer)
-
-    FlowRow {
-      list.forEach {
-        if (it.isLnAddress) {
-          ClickableText(
-            text = AnnotatedString(it.lnAddressOrPubKeyHex),
-            onClick = {},
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-          )
-        } else {
-          UserPicture(
-            userHex = it.lnAddressOrPubKeyHex,
-            size = Size25dp,
-            accountViewModel = accountViewModel,
-            nav = nav,
-          )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.height(20.dp).width(25.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Bolt,
+                contentDescription = stringResource(id = R.string.zaps),
+                modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                tint = BitcoinOrange,
+            )
+            Icon(
+                imageVector = Icons.Outlined.ArrowForwardIos,
+                contentDescription = stringResource(id = R.string.zaps),
+                modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                tint = BitcoinOrange,
+            )
         }
-      }
+
+        Spacer(modifier = StdHorzSpacer)
+
+        FlowRow {
+            list.forEach {
+                if (it.isLnAddress) {
+                    ClickableText(
+                        text = AnnotatedString(it.lnAddressOrPubKeyHex),
+                        onClick = {},
+                        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+                    )
+                } else {
+                    UserPicture(
+                        userHex = it.lnAddressOrPubKeyHex,
+                        size = Size25dp,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        }
     }
-  }
 }

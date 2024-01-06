@@ -27,24 +27,24 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CalendarEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 31924
-    const val ALT = "Calendar"
+    companion object {
+        const val KIND = 31924
+        const val ALT = "Calendar"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (CalendarEvent) -> Unit,
-    ) {
-      val tags = arrayOf(arrayOf("alt", ALT))
-      signer.sign(createdAt, KIND, tags, "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CalendarEvent) -> Unit,
+        ) {
+            val tags = arrayOf(arrayOf("alt", ALT))
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-  }
 }

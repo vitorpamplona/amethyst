@@ -29,15 +29,14 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 @Composable
 fun TranslatableRichTextViewer(
-  content: String,
-  canPreview: Boolean,
-  modifier: Modifier = Modifier,
-  tags: ImmutableListOfLists<String>,
-  backgroundColor: MutableState<Color>,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-) =
-  ExpandableRichTextViewer(
+    content: String,
+    canPreview: Boolean,
+    modifier: Modifier = Modifier,
+    tags: ImmutableListOfLists<String>,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) = ExpandableRichTextViewer(
     content,
     canPreview,
     modifier,
@@ -45,4 +44,4 @@ fun TranslatableRichTextViewer(
     backgroundColor,
     accountViewModel,
     nav,
-  )
+)

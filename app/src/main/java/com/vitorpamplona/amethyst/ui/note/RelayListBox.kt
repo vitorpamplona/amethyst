@@ -48,49 +48,49 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RelayBadges(
-  baseNote: Note,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
-  val relayList by baseNote.live().relayInfo.observeAsState(baseNote.relays)
+    val relayList by baseNote.live().relayInfo.observeAsState(baseNote.relays)
 
-  Spacer(DoubleVertSpacer)
+    Spacer(DoubleVertSpacer)
 
-  // FlowRow Seems to be a lot faster than LazyVerticalGrid
-  FlowRow {
-    if (expanded) {
-      relayList?.forEach { RenderRelay(it, accountViewModel, nav) }
-    } else {
-      relayList?.getOrNull(0)?.let { RenderRelay(it, accountViewModel, nav) }
-      relayList?.getOrNull(1)?.let { RenderRelay(it, accountViewModel, nav) }
-      relayList?.getOrNull(2)?.let { RenderRelay(it, accountViewModel, nav) }
+    // FlowRow Seems to be a lot faster than LazyVerticalGrid
+    FlowRow {
+        if (expanded) {
+            relayList?.forEach { RenderRelay(it, accountViewModel, nav) }
+        } else {
+            relayList?.getOrNull(0)?.let { RenderRelay(it, accountViewModel, nav) }
+            relayList?.getOrNull(1)?.let { RenderRelay(it, accountViewModel, nav) }
+            relayList?.getOrNull(2)?.let { RenderRelay(it, accountViewModel, nav) }
+        }
     }
-  }
 
-  if (relayList.size > 3 && !expanded) {
-    ShowMoreRelaysButton { expanded = true }
-  }
+    if (relayList.size > 3 && !expanded) {
+        ShowMoreRelaysButton { expanded = true }
+    }
 }
 
 @Composable
 private fun ShowMoreRelaysButton(onClick: () -> Unit) {
-  Row(
-    modifier = ShowMoreRelaysButtonBoxModifer,
-    horizontalArrangement = Arrangement.Center,
-    verticalAlignment = Alignment.Top,
-  ) {
-    IconButton(
-      modifier = ShowMoreRelaysButtonIconButtonModifier,
-      onClick = onClick,
+    Row(
+        modifier = ShowMoreRelaysButtonBoxModifer,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.Top,
     ) {
-      Icon(
-        imageVector = Icons.Default.ExpandMore,
-        null,
-        modifier = ShowMoreRelaysButtonIconModifier,
-        tint = MaterialTheme.colorScheme.placeholderText,
-      )
+        IconButton(
+            modifier = ShowMoreRelaysButtonIconButtonModifier,
+            onClick = onClick,
+        ) {
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                null,
+                modifier = ShowMoreRelaysButtonIconModifier,
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
     }
-  }
 }

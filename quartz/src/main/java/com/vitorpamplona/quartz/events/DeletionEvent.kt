@@ -27,29 +27,29 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class DeletionEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun deleteEvents() = tags.map { it[1] }
+    fun deleteEvents() = tags.map { it[1] }
 
-  companion object {
-    const val KIND = 5
-    const val ALT = "Deletion event"
+    companion object {
+        const val KIND = 5
+        const val ALT = "Deletion event"
 
-    fun create(
-      deleteEvents: List<String>,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (DeletionEvent) -> Unit,
-    ) {
-      val content = ""
-      val tags =
-        deleteEvents.map { arrayOf("e", it) }.plusElement(arrayOf("alt", ALT)).toTypedArray()
-      signer.sign(createdAt, KIND, tags, content, onReady)
+        fun create(
+            deleteEvents: List<String>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DeletionEvent) -> Unit,
+        ) {
+            val content = ""
+            val tags =
+                deleteEvents.map { arrayOf("e", it) }.plusElement(arrayOf("alt", ALT)).toTypedArray()
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
-  }
 }

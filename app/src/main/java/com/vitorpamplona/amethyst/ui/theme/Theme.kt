@@ -58,22 +58,22 @@ import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 
 private val DarkColorPalette =
-  darkColorScheme(
-    primary = Purple200,
-    secondary = Teal200,
-    tertiary = Teal200,
-    background = Color(0xFF000000),
-    surface = Color(0xFF000000),
-    surfaceVariant = Color(red = 29, green = 26, blue = 34),
-  )
+    darkColorScheme(
+        primary = Purple200,
+        secondary = Teal200,
+        tertiary = Teal200,
+        background = Color(0xFF000000),
+        surface = Color(0xFF000000),
+        surfaceVariant = Color(red = 29, green = 26, blue = 34),
+    )
 
 private val LightColorPalette =
-  lightColorScheme(
-    primary = Purple500,
-    secondary = Teal200,
-    tertiary = Teal200,
-    surfaceVariant = Color(red = 250, green = 245, blue = 252),
-  )
+    lightColorScheme(
+        primary = Purple500,
+        secondary = Teal200,
+        tertiary = Teal200,
+        surfaceVariant = Color(red = 250, green = 245, blue = 252),
+    )
 
 private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
 private val LightNewItemBackground = LightColorPalette.primary.copy(0.12f)
@@ -82,9 +82,9 @@ private val DarkSelectedNote = DarkNewItemBackground.compositeOver(DarkColorPale
 private val LightSelectedNote = LightNewItemBackground.compositeOver(LightColorPalette.background)
 
 private val DarkButtonBackground =
-  DarkColorPalette.primary.copy(alpha = 0.32f).compositeOver(DarkColorPalette.background)
+    DarkColorPalette.primary.copy(alpha = 0.32f).compositeOver(DarkColorPalette.background)
 private val LightButtonBackground =
-  LightColorPalette.primary.copy(alpha = 0.32f).compositeOver(LightColorPalette.background)
+    LightColorPalette.primary.copy(alpha = 0.32f).compositeOver(LightColorPalette.background)
 
 private val DarkLessImportantLink = DarkColorPalette.primary.copy(alpha = 0.52f)
 private val LightLessImportantLink = LightColorPalette.primary.copy(alpha = 0.52f)
@@ -117,9 +117,9 @@ private val DarkReplyItemBackground = DarkColorPalette.onSurface.copy(alpha = 0.
 private val LightReplyItemBackground = LightColorPalette.onSurface.copy(alpha = 0.05f)
 
 private val DarkZapraiserBackground =
-  BitcoinOrange.copy(0.52f).compositeOver(DarkColorPalette.background)
+    BitcoinOrange.copy(0.52f).compositeOver(DarkColorPalette.background)
 private val LightZapraiserBackground =
-  BitcoinOrange.copy(0.52f).compositeOver(LightColorPalette.background)
+    BitcoinOrange.copy(0.52f).compositeOver(LightColorPalette.background)
 
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
@@ -128,293 +128,293 @@ val RepostPictureBorderDark = Modifier.border(2.dp, DarkColorPalette.background,
 val RepostPictureBorderLight = Modifier.border(2.dp, LightColorPalette.background, CircleShape)
 
 val DarkImageModifier =
-  Modifier.fillMaxWidth().clip(shape = QuoteBorder).border(1.dp, DarkSubtleBorder, QuoteBorder)
+    Modifier.fillMaxWidth().clip(shape = QuoteBorder).border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightImageModifier =
-  Modifier.fillMaxWidth().clip(shape = QuoteBorder).border(1.dp, LightSubtleBorder, QuoteBorder)
+    Modifier.fillMaxWidth().clip(shape = QuoteBorder).border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkProfile35dpModifier = Modifier.size(Size35dp).clip(shape = CircleShape)
 
 val LightProfile35dpModifier = Modifier.fillMaxWidth().clip(shape = CircleShape)
 
 val DarkReplyBorderModifier =
-  Modifier.padding(top = 5.dp)
-    .fillMaxWidth()
-    .clip(shape = QuoteBorder)
-    .border(1.dp, DarkSubtleBorder, QuoteBorder)
+    Modifier.padding(top = 5.dp)
+        .fillMaxWidth()
+        .clip(shape = QuoteBorder)
+        .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightReplyBorderModifier =
-  Modifier.padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-    .fillMaxWidth()
-    .clip(shape = QuoteBorder)
-    .border(1.dp, LightSubtleBorder, QuoteBorder)
+    Modifier.padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+        .fillMaxWidth()
+        .clip(shape = QuoteBorder)
+        .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkInnerPostBorderModifier =
-  Modifier.padding(top = 5.dp)
-    .fillMaxWidth()
-    .clip(shape = QuoteBorder)
-    .border(1.dp, DarkSubtleBorder, QuoteBorder)
+    Modifier.padding(top = 5.dp)
+        .fillMaxWidth()
+        .clip(shape = QuoteBorder)
+        .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightInnerPostBorderModifier =
-  Modifier.padding(top = 5.dp)
-    .fillMaxWidth()
-    .clip(shape = QuoteBorder)
-    .border(1.dp, LightSubtleBorder, QuoteBorder)
+    Modifier.padding(top = 5.dp)
+        .fillMaxWidth()
+        .clip(shape = QuoteBorder)
+        .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkChannelNotePictureModifier =
-  Modifier.size(30.dp)
-    .clip(shape = CircleShape)
-    .background(DarkColorPalette.background)
-    .border(2.dp, DarkColorPalette.background, CircleShape)
+    Modifier.size(30.dp)
+        .clip(shape = CircleShape)
+        .background(DarkColorPalette.background)
+        .border(2.dp, DarkColorPalette.background, CircleShape)
 
 val LightChannelNotePictureModifier =
-  Modifier.size(30.dp)
-    .clip(shape = CircleShape)
-    .background(LightColorPalette.background)
-    .border(2.dp, LightColorPalette.background, CircleShape)
+    Modifier.size(30.dp)
+        .clip(shape = CircleShape)
+        .background(LightColorPalette.background)
+        .border(2.dp, LightColorPalette.background, CircleShape)
 
 val LightRelayIconModifier =
-  Modifier.size(Size13dp).clip(shape = CircleShape).background(LightColorPalette.background)
+    Modifier.size(Size13dp).clip(shape = CircleShape).background(LightColorPalette.background)
 
 val DarkRelayIconModifier =
-  Modifier.size(Size13dp).clip(shape = CircleShape).background(DarkColorPalette.background)
+    Modifier.size(Size13dp).clip(shape = CircleShape).background(DarkColorPalette.background)
 
 val LightLargeRelayIconModifier =
-  Modifier.size(Size55dp).clip(shape = CircleShape).background(LightColorPalette.background)
+    Modifier.size(Size55dp).clip(shape = CircleShape).background(LightColorPalette.background)
 
 val DarkLargeRelayIconModifier =
-  Modifier.size(Size55dp).clip(shape = CircleShape).background(DarkColorPalette.background)
+    Modifier.size(Size55dp).clip(shape = CircleShape).background(DarkColorPalette.background)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
 val MarkDownStyleOnDark =
-  RichTextDefaults.copy(
-    paragraphSpacing = DefaultParagraphSpacing,
-    headingStyle = DefaultHeadingStyle,
-    listStyle =
-      RichTextDefaults.listStyle?.copy(
-        itemSpacing = 10.sp,
-      ),
-    codeBlockStyle =
-      RichTextDefaults.codeBlockStyle?.copy(
-        textStyle =
-          TextStyle(
-            fontFamily = FontFamily.Monospace,
-            fontSize = Font14SP,
-          ),
-        modifier =
-          Modifier.padding(0.dp)
-            .fillMaxWidth()
-            .clip(shape = QuoteBorder)
-            .border(1.dp, DarkSubtleBorder, QuoteBorder)
-            .background(DarkColorPalette.onSurface.copy(alpha = 0.05f)),
-      ),
-    stringStyle =
-      RichTextDefaults.stringStyle?.copy(
-        linkStyle =
-          SpanStyle(
-            color = DarkColorPalette.primary,
-          ),
-        codeStyle =
-          SpanStyle(
-            fontFamily = FontFamily.Monospace,
-            fontSize = Font14SP,
-            background = DarkColorPalette.onSurface.copy(alpha = 0.22f),
-          ),
-      ),
-  )
+    RichTextDefaults.copy(
+        paragraphSpacing = DefaultParagraphSpacing,
+        headingStyle = DefaultHeadingStyle,
+        listStyle =
+            RichTextDefaults.listStyle?.copy(
+                itemSpacing = 10.sp,
+            ),
+        codeBlockStyle =
+            RichTextDefaults.codeBlockStyle?.copy(
+                textStyle =
+                    TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = Font14SP,
+                    ),
+                modifier =
+                    Modifier.padding(0.dp)
+                        .fillMaxWidth()
+                        .clip(shape = QuoteBorder)
+                        .border(1.dp, DarkSubtleBorder, QuoteBorder)
+                        .background(DarkColorPalette.onSurface.copy(alpha = 0.05f)),
+            ),
+        stringStyle =
+            RichTextDefaults.stringStyle?.copy(
+                linkStyle =
+                    SpanStyle(
+                        color = DarkColorPalette.primary,
+                    ),
+                codeStyle =
+                    SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = Font14SP,
+                        background = DarkColorPalette.onSurface.copy(alpha = 0.22f),
+                    ),
+            ),
+    )
 
 val MarkDownStyleOnLight =
-  RichTextDefaults.copy(
-    paragraphSpacing = DefaultParagraphSpacing,
-    headingStyle = DefaultHeadingStyle,
-    listStyle =
-      RichTextDefaults.listStyle?.copy(
-        itemSpacing = 10.sp,
-      ),
-    codeBlockStyle =
-      RichTextDefaults.codeBlockStyle?.copy(
-        textStyle =
-          TextStyle(
-            fontFamily = FontFamily.Monospace,
-            fontSize = Font14SP,
-          ),
-        modifier =
-          Modifier.padding(0.dp)
-            .fillMaxWidth()
-            .clip(shape = QuoteBorder)
-            .border(1.dp, LightSubtleBorder, QuoteBorder)
-            .background(DarkColorPalette.onSurface.copy(alpha = 0.05f)),
-      ),
-    stringStyle =
-      RichTextDefaults.stringStyle?.copy(
-        linkStyle =
-          SpanStyle(
-            color = LightColorPalette.primary,
-          ),
-        codeStyle =
-          SpanStyle(
-            fontFamily = FontFamily.Monospace,
-            fontSize = Font14SP,
-            background = LightColorPalette.onSurface.copy(alpha = 0.22f),
-          ),
-      ),
-  )
+    RichTextDefaults.copy(
+        paragraphSpacing = DefaultParagraphSpacing,
+        headingStyle = DefaultHeadingStyle,
+        listStyle =
+            RichTextDefaults.listStyle?.copy(
+                itemSpacing = 10.sp,
+            ),
+        codeBlockStyle =
+            RichTextDefaults.codeBlockStyle?.copy(
+                textStyle =
+                    TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = Font14SP,
+                    ),
+                modifier =
+                    Modifier.padding(0.dp)
+                        .fillMaxWidth()
+                        .clip(shape = QuoteBorder)
+                        .border(1.dp, LightSubtleBorder, QuoteBorder)
+                        .background(DarkColorPalette.onSurface.copy(alpha = 0.05f)),
+            ),
+        stringStyle =
+            RichTextDefaults.stringStyle?.copy(
+                linkStyle =
+                    SpanStyle(
+                        color = LightColorPalette.primary,
+                    ),
+                codeStyle =
+                    SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = Font14SP,
+                        background = LightColorPalette.onSurface.copy(alpha = 0.22f),
+                    ),
+            ),
+    )
 
 val ColorScheme.isLight: Boolean
-  get() = primary == Purple500
+    get() = primary == Purple500
 
 val ColorScheme.newItemBackgroundColor: Color
-  get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
+    get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
 
 val ColorScheme.replyBackground: Color
-  get() = if (isLight) LightReplyItemBackground else DarkReplyItemBackground
+    get() = if (isLight) LightReplyItemBackground else DarkReplyItemBackground
 
 val ColorScheme.selectedNote: Color
-  get() = if (isLight) LightSelectedNote else DarkSelectedNote
+    get() = if (isLight) LightSelectedNote else DarkSelectedNote
 
 val ColorScheme.secondaryButtonBackground: Color
-  get() = if (isLight) LightButtonBackground else DarkButtonBackground
+    get() = if (isLight) LightButtonBackground else DarkButtonBackground
 
 val ColorScheme.lessImportantLink: Color
-  get() = if (isLight) LightLessImportantLink else DarkLessImportantLink
+    get() = if (isLight) LightLessImportantLink else DarkLessImportantLink
 
 val ColorScheme.zapraiserBackground: Color
-  get() = if (isLight) LightZapraiserBackground else DarkZapraiserBackground
+    get() = if (isLight) LightZapraiserBackground else DarkZapraiserBackground
 
 val ColorScheme.mediumImportanceLink: Color
-  get() = if (isLight) LightMediumImportantLink else DarkMediumImportantLink
+    get() = if (isLight) LightMediumImportantLink else DarkMediumImportantLink
 val ColorScheme.veryImportantLink: Color
-  get() = if (isLight) LightVeryImportantLink else DarkVeryImportantLink
+    get() = if (isLight) LightVeryImportantLink else DarkVeryImportantLink
 
 val ColorScheme.placeholderText: Color
-  get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
+    get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
 
 val ColorScheme.nip05: Color
-  get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
+    get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
 
 val ColorScheme.placeholderTextColorFilter: ColorFilter
-  get() = if (isLight) LightPlaceholderTextColorFilter else DarkPlaceholderTextColorFilter
+    get() = if (isLight) LightPlaceholderTextColorFilter else DarkPlaceholderTextColorFilter
 
 val ColorScheme.onBackgroundColorFilter: ColorFilter
-  get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter
+    get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter
 
 val ColorScheme.grayText: Color
-  get() = if (isLight) LightGrayText else DarkGrayText
+    get() = if (isLight) LightGrayText else DarkGrayText
 
 val ColorScheme.subtleBorder: Color
-  get() = if (isLight) LightSubtleBorder else DarkSubtleBorder
+    get() = if (isLight) LightSubtleBorder else DarkSubtleBorder
 
 val ColorScheme.subtleButton: Color
-  get() = if (isLight) LightSubtleButton else DarkSubtleButton
+    get() = if (isLight) LightSubtleButton else DarkSubtleButton
 
 val ColorScheme.overPictureBackground: Color
-  get() = if (isLight) LightOverPictureBackground else DarkOverPictureBackground
+    get() = if (isLight) LightOverPictureBackground else DarkOverPictureBackground
 
 val ColorScheme.bitcoinColor: Color
-  get() = if (isLight) BitcoinLight else BitcoinDark
+    get() = if (isLight) BitcoinLight else BitcoinDark
 
 val ColorScheme.warningColor: Color
-  get() = if (isLight) LightWarningColor else DarkWarningColor
+    get() = if (isLight) LightWarningColor else DarkWarningColor
 
 val ColorScheme.allGoodColor: Color
-  get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
+    get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
 
 val ColorScheme.markdownStyle: RichTextStyle
-  get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
+    get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 
 val ColorScheme.repostProfileBorder: Modifier
-  get() = if (isLight) RepostPictureBorderLight else RepostPictureBorderDark
+    get() = if (isLight) RepostPictureBorderLight else RepostPictureBorderDark
 
 val ColorScheme.imageModifier: Modifier
-  get() = if (isLight) LightImageModifier else DarkImageModifier
+    get() = if (isLight) LightImageModifier else DarkImageModifier
 
 val ColorScheme.profile35dpModifier: Modifier
-  get() = if (isLight) LightProfile35dpModifier else DarkProfile35dpModifier
+    get() = if (isLight) LightProfile35dpModifier else DarkProfile35dpModifier
 
 val ColorScheme.replyModifier: Modifier
-  get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier
+    get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier
 
 val ColorScheme.innerPostModifier: Modifier
-  get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
+    get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
 
 val ColorScheme.channelNotePictureModifier: Modifier
-  get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
+    get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
 
 val ColorScheme.relayIconModifier: Modifier
-  get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
+    get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
 
 val ColorScheme.largeRelayIconModifier: Modifier
-  get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
+    get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
 
 val ColorScheme.chartStyle: ChartStyle
-  get() {
-    val defaultColors = if (isLight) DefaultColors.Light else DefaultColors.Dark
-    return ChartStyle.fromColors(
-      axisLabelColor = Color(defaultColors.axisLabelColor),
-      axisGuidelineColor = Color(defaultColors.axisGuidelineColor),
-      axisLineColor = Color(defaultColors.axisLineColor),
-      entityColors =
-        listOf(
-            defaultColors.entity1Color,
-            defaultColors.entity2Color,
-            defaultColors.entity3Color,
-          )
-          .map(::Color),
-      elevationOverlayColor = Color(defaultColors.elevationOverlayColor),
-    )
-  }
+    get() {
+        val defaultColors = if (isLight) DefaultColors.Light else DefaultColors.Dark
+        return ChartStyle.fromColors(
+            axisLabelColor = Color(defaultColors.axisLabelColor),
+            axisGuidelineColor = Color(defaultColors.axisGuidelineColor),
+            axisLineColor = Color(defaultColors.axisLineColor),
+            entityColors =
+                listOf(
+                    defaultColors.entity1Color,
+                    defaultColors.entity2Color,
+                    defaultColors.entity3Color,
+                )
+                    .map(::Color),
+            elevationOverlayColor = Color(defaultColors.elevationOverlayColor),
+        )
+    }
 
 @Composable
 fun AmethystTheme(
-  sharedPrefsViewModel: SharedPreferencesViewModel,
-  content: @Composable () -> Unit,
+    sharedPrefsViewModel: SharedPreferencesViewModel,
+    content: @Composable () -> Unit,
 ) {
-  val darkTheme =
-    when (sharedPrefsViewModel.sharedPrefs.theme) {
-      ThemeType.DARK -> true
-      ThemeType.LIGHT -> false
-      else -> isSystemInDarkTheme()
-    }
-  val colors = if (darkTheme) DarkColorPalette else LightColorPalette
+    val darkTheme =
+        when (sharedPrefsViewModel.sharedPrefs.theme) {
+            ThemeType.DARK -> true
+            ThemeType.LIGHT -> false
+            else -> isSystemInDarkTheme()
+        }
+    val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 
-  MaterialTheme(
-    colorScheme = colors,
-    typography = Typography,
-    shapes = Shapes,
-    content = content,
-  )
+    MaterialTheme(
+        colorScheme = colors,
+        typography = Typography,
+        shapes = Shapes,
+        content = content,
+    )
 
-  val view = LocalView.current
-  if (!view.isInEditMode) {
-    SideEffect {
-      val window = (view.context as Activity).window
-      val insetsController = WindowCompat.getInsetsController(window, view)
-      if (darkTheme) {
-        window.statusBarColor = colors.background.toArgb()
-      } else {
-        window.statusBarColor = colors.primary.toArgb()
-      }
-      window.navigationBarColor = colors.background.toArgb()
-      insetsController.isAppearanceLightNavigationBars = !darkTheme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            if (darkTheme) {
+                window.statusBarColor = colors.background.toArgb()
+            } else {
+                window.statusBarColor = colors.primary.toArgb()
+            }
+            window.navigationBarColor = colors.background.toArgb()
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
     }
-  }
 }
 
 @Composable
 fun ThemeComparison(
-  onDark: @Composable () -> Unit,
-  onLight: @Composable () -> Unit,
+    onDark: @Composable () -> Unit,
+    onLight: @Composable () -> Unit,
 ) {
-  Column {
-    val darkTheme: SharedPreferencesViewModel = viewModel()
-    darkTheme.updateTheme(ThemeType.DARK)
-    AmethystTheme(darkTheme) { Surface(color = MaterialTheme.colorScheme.background) { onDark() } }
+    Column {
+        val darkTheme: SharedPreferencesViewModel = viewModel()
+        darkTheme.updateTheme(ThemeType.DARK)
+        AmethystTheme(darkTheme) { Surface(color = MaterialTheme.colorScheme.background) { onDark() } }
 
-    val lightTheme: SharedPreferencesViewModel = viewModel()
-    lightTheme.updateTheme(ThemeType.LIGHT)
-    AmethystTheme(lightTheme) {
-      Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+        val lightTheme: SharedPreferencesViewModel = viewModel()
+        lightTheme.updateTheme(ThemeType.LIGHT)
+        AmethystTheme(lightTheme) {
+            Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+        }
     }
-  }
 }

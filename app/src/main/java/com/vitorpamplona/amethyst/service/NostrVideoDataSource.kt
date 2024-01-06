@@ -33,120 +33,121 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 object NostrVideoDataSource : NostrDataSource("VideoFeed") {
-  lateinit var account: Account
+    lateinit var account: Account
 
-  val scope = Amethyst.instance.applicationIOScope
-  val latestEOSEs = EOSEAccount()
+    val scope = Amethyst.instance.applicationIOScope
+    val latestEOSEs = EOSEAccount()
 
-  var job: Job? = null
+    var job: Job? = null
 
-  override fun start() {
-    job?.cancel()
-    job =
-      scope.launch(Dispatchers.IO) {
-        account.liveStoriesFollowLists.collect {
-          if (this@NostrVideoDataSource::account.isInitialized) {
-            invalidateFilters()
-          }
-        }
-      }
-    super.start()
-  }
+    override fun start() {
+        job?.cancel()
+        job =
+            scope.launch(Dispatchers.IO) {
+                account.liveStoriesFollowLists.collect {
+                    if (this@NostrVideoDataSource::account.isInitialized) {
+                        invalidateFilters()
+                    }
+                }
+            }
+        super.start()
+    }
 
-  override fun stop() {
-    super.stop()
-    job?.cancel()
-  }
+    override fun stop() {
+        super.stop()
+        job?.cancel()
+    }
 
-  fun createContextualFilter(): TypedFilter {
-    val follows = account.liveStoriesFollowLists.value?.users?.toList()
+    fun createContextualFilter(): TypedFilter {
+        val follows = account.liveStoriesFollowLists.value?.users?.toList()
 
-    return TypedFilter(
-      types = setOf(FeedType.GLOBAL),
-      filter =
-        JsonFilter(
-          authors = follows,
-          kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
-          limit = 200,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultStoriesFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  fun createFollowTagsFilter(): TypedFilter? {
-    val hashToLoad = account.liveStoriesFollowLists.value?.hashtags?.toList() ?: return null
-
-    if (hashToLoad.isEmpty()) return null
-
-    return TypedFilter(
-      types = setOf(FeedType.GLOBAL),
-      filter =
-        JsonFilter(
-          kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
-          tags =
-            mapOf(
-              "t" to
-                hashToLoad
-                  .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                  .flatten(),
-            ),
-          limit = 100,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultStoriesFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  fun createFollowGeohashesFilter(): TypedFilter? {
-    val hashToLoad = account.liveStoriesFollowLists.value?.geotags?.toList() ?: return null
-
-    if (hashToLoad.isEmpty()) return null
-
-    return TypedFilter(
-      types = setOf(FeedType.GLOBAL),
-      filter =
-        JsonFilter(
-          kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
-          tags =
-            mapOf(
-              "g" to
-                hashToLoad
-                  .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                  .flatten(),
-            ),
-          limit = 100,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultStoriesFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  val videoFeedChannel = requestNewChannel { time, relayUrl ->
-    latestEOSEs.addOrUpdate(
-      account.userProfile(),
-      account.defaultStoriesFollowList.value,
-      relayUrl,
-      time,
-    )
-  }
-
-  override fun updateChannelFilters() {
-    videoFeedChannel.typedFilters =
-      listOfNotNull(
-          createContextualFilter(),
-          createFollowTagsFilter(),
-          createFollowGeohashesFilter(),
+        return TypedFilter(
+            types = setOf(FeedType.GLOBAL),
+            filter =
+                JsonFilter(
+                    authors = follows,
+                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                    limit = 200,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultStoriesFollowList.value)
+                            ?.relayList,
+                ),
         )
-        .ifEmpty { null }
-  }
+    }
+
+    fun createFollowTagsFilter(): TypedFilter? {
+        val hashToLoad = account.liveStoriesFollowLists.value?.hashtags?.toList() ?: return null
+
+        if (hashToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.GLOBAL),
+            filter =
+                JsonFilter(
+                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                    tags =
+                        mapOf(
+                            "t" to
+                                hashToLoad
+                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                                    .flatten(),
+                        ),
+                    limit = 100,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultStoriesFollowList.value)
+                            ?.relayList,
+                ),
+        )
+    }
+
+    fun createFollowGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.liveStoriesFollowLists.value?.geotags?.toList() ?: return null
+
+        if (hashToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.GLOBAL),
+            filter =
+                JsonFilter(
+                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                    tags =
+                        mapOf(
+                            "g" to
+                                hashToLoad
+                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                                    .flatten(),
+                        ),
+                    limit = 100,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultStoriesFollowList.value)
+                            ?.relayList,
+                ),
+        )
+    }
+
+    val videoFeedChannel =
+        requestNewChannel { time, relayUrl ->
+            latestEOSEs.addOrUpdate(
+                account.userProfile(),
+                account.defaultStoriesFollowList.value,
+                relayUrl,
+                time,
+            )
+        }
+
+    override fun updateChannelFilters() {
+        videoFeedChannel.typedFilters =
+            listOfNotNull(
+                createContextualFilter(),
+                createFollowTagsFilter(),
+                createFollowGeohashesFilter(),
+            )
+                .ifEmpty { null }
+    }
 }

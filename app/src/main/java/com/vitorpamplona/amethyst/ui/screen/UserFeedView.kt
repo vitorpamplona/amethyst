@@ -34,54 +34,54 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefreshingFeedUserFeedView(
-  viewModel: UserFeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  enablePullRefresh: Boolean = true,
+    viewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    enablePullRefresh: Boolean = true,
 ) {
-  RefresheableView(viewModel, enablePullRefresh) { UserFeedView(viewModel, accountViewModel, nav) }
+    RefresheableView(viewModel, enablePullRefresh) { UserFeedView(viewModel, accountViewModel, nav) }
 }
 
 @Composable
 fun UserFeedView(
-  viewModel: UserFeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    viewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-  Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
-    when (state) {
-      is UserFeedState.Empty -> {
-        FeedEmpty { viewModel.invalidateData() }
-      }
-      is UserFeedState.FeedError -> {
-        FeedError(state.errorMessage) { viewModel.invalidateData() }
-      }
-      is UserFeedState.Loaded -> {
-        FeedLoaded(state, accountViewModel, nav)
-      }
-      is UserFeedState.Loading -> {
-        LoadingFeed()
-      }
+    Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+        when (state) {
+            is UserFeedState.Empty -> {
+                FeedEmpty { viewModel.invalidateData() }
+            }
+            is UserFeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is UserFeedState.Loaded -> {
+                FeedLoaded(state, accountViewModel, nav)
+            }
+            is UserFeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
     }
-  }
 }
 
 @Composable
 private fun FeedLoaded(
-  state: UserFeedState.Loaded,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    state: UserFeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val listState = rememberLazyListState()
+    val listState = rememberLazyListState()
 
-  LazyColumn(
-    contentPadding = FeedPadding,
-    state = listState,
-  ) {
-    itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex }) { _, item ->
-      UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex }) { _, item ->
+            UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+        }
     }
-  }
 }

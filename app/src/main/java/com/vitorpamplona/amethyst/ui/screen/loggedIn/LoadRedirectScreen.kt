@@ -55,99 +55,99 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun LoadRedirectScreen(
-  eventId: String?,
-  accountViewModel: AccountViewModel,
-  navController: NavController,
+    eventId: String?,
+    accountViewModel: AccountViewModel,
+    navController: NavController,
 ) {
-  if (eventId == null) return
+    if (eventId == null) return
 
-  var noteBase by remember { mutableStateOf<Note?>(null) }
-  val scope = rememberCoroutineScope()
+    var noteBase by remember { mutableStateOf<Note?>(null) }
+    val scope = rememberCoroutineScope()
 
-  val nav =
-    remember(navController) {
-      { route: String ->
-        scope.launch {
-          navController.navigate(route) { popUpTo(Route.Event.route) { inclusive = true } }
+    val nav =
+        remember(navController) {
+            { route: String ->
+                scope.launch {
+                    navController.navigate(route) { popUpTo(Route.Event.route) { inclusive = true } }
+                }
+                Unit
+            }
         }
-        Unit
-      }
+
+    LaunchedEffect(eventId) {
+        launch(Dispatchers.IO) {
+            val newNoteBase = LocalCache.checkGetOrCreateNote(eventId)
+            if (newNoteBase != noteBase) {
+                noteBase = newNoteBase
+            }
+        }
     }
 
-  LaunchedEffect(eventId) {
-    launch(Dispatchers.IO) {
-      val newNoteBase = LocalCache.checkGetOrCreateNote(eventId)
-      if (newNoteBase != noteBase) {
-        noteBase = newNoteBase
-      }
+    noteBase?.let {
+        LoadRedirectScreen(
+            baseNote = it,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
-  }
-
-  noteBase?.let {
-    LoadRedirectScreen(
-      baseNote = it,
-      accountViewModel = accountViewModel,
-      nav = nav,
-    )
-  }
 }
 
 @Composable
 fun LoadRedirectScreen(
-  baseNote: Note,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val noteState by baseNote.live().metadata.observeAsState()
+    val noteState by baseNote.live().metadata.observeAsState()
 
-  LaunchedEffect(key1 = noteState) {
-    val note = noteState?.note ?: return@LaunchedEffect
-    val event = note.event
+    LaunchedEffect(key1 = noteState) {
+        val note = noteState?.note ?: return@LaunchedEffect
+        val event = note.event
 
-    if (event != null) {
-      withContext(Dispatchers.IO) { redirect(event, note, accountViewModel, nav) }
+        if (event != null) {
+            withContext(Dispatchers.IO) { redirect(event, note, accountViewModel, nav) }
+        }
     }
-  }
 
-  Column(
-    Modifier.fillMaxHeight().fillMaxWidth().padding(horizontal = 50.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center,
-  ) {
-    Text(stringResource(R.string.looking_for_event, baseNote.idHex))
-  }
+    Column(
+        Modifier.fillMaxHeight().fillMaxWidth().padding(horizontal = 50.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(stringResource(R.string.looking_for_event, baseNote.idHex))
+    }
 }
 
 fun redirect(
-  event: EventInterface,
-  note: Note,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    event: EventInterface,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val channelHex = note.channelHex()
+    val channelHex = note.channelHex()
 
-  if (event is GiftWrapEvent) {
-    accountViewModel.unwrap(event) { redirect(it, note, accountViewModel, nav) }
-  } else if (event is SealedGossipEvent) {
-    accountViewModel.unseal(event) { redirect(it, note, accountViewModel, nav) }
-  } else {
-    if (event == null) {
-      // stay here, loading
-    } else if (event is ChannelCreateEvent) {
-      nav("Channel/${note.idHex}")
-    } else if (event is ChatroomKeyable) {
-      note.author?.let {
-        val withKey =
-          (event as ChatroomKeyable).chatroomKey(accountViewModel.userProfile().pubkeyHex)
-
-        accountViewModel.userProfile().createChatroom(withKey)
-
-        nav("Room/${withKey.hashCode()}")
-      }
-    } else if (channelHex != null) {
-      nav("Channel/$channelHex")
+    if (event is GiftWrapEvent) {
+        accountViewModel.unwrap(event) { redirect(it, note, accountViewModel, nav) }
+    } else if (event is SealedGossipEvent) {
+        accountViewModel.unseal(event) { redirect(it, note, accountViewModel, nav) }
     } else {
-      nav("Note/${note.idHex}")
+        if (event == null) {
+            // stay here, loading
+        } else if (event is ChannelCreateEvent) {
+            nav("Channel/${note.idHex}")
+        } else if (event is ChatroomKeyable) {
+            note.author?.let {
+                val withKey =
+                    (event as ChatroomKeyable).chatroomKey(accountViewModel.userProfile().pubkeyHex)
+
+                accountViewModel.userProfile().createChatroom(withKey)
+
+                nav("Room/${withKey.hashCode()}")
+            }
+        } else if (channelHex != null) {
+            nav("Channel/$channelHex")
+        } else {
+            nav("Note/${note.idHex}")
+        }
     }
-  }
 }

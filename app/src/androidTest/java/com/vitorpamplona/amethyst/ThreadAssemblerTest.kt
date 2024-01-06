@@ -38,8 +38,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ThreadAssemblerTest {
-  val db =
-    """
+    val db =
+        """
         [
             {"id":"741f5367a9415f4d6f19c0f57a1e4647c8ed8309b53b0da2d82fc4ebfba03b2c","pubkey":"d85c99afd244911e0aaf800cbea4221df557f06f8a4ff2cbe84b24e0b9e728fc","created_at":1684674845,"kind":1,"tags":[["p","fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52"],["e","532808e4d60f5f82b95aeaa3ed2e930a0c5973dccb0ede68b28b1931db91440f"],["p","6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93"],["a","30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599"]],"content":"Getting my head around this","sig":"069874040bac26a219777fc0f90b8f4df71e38c30e3e6a953d53222499d8e0c5a8f32c6b4204d14eb335bb654f01c5610372d9dc00062284b8e0f2bb98c7ed85"},
             {"id":"22323fc72b4c37f93ea21f6069684339ce5f63111161c81f2aa3de4a21bfe83b","pubkey":"73c7f6d5bb599bb7d7cee84c72e89dbd549df53da522ed6c7611055cc0db64bc","created_at":1683571810,"kind":1,"tags":[["p","fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52"],["e","532808e4d60f5f82b95aeaa3ed2e930a0c5973dccb0ede68b28b1931db91440f"],["p","6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93"],["a","30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599"]],"content":"test","sig":"f6d3bcf0f8e07d06720a2527f95910ee5a66aa889dd9261514921a155bbc3e9a3c7d721f5a2ec948cd795183f85dbe80f2ee2e36663f9d1de33fc03274ccb9d9"},
@@ -80,10 +80,10 @@ class ThreadAssemblerTest {
             {"id":"ce6e32e3e17b6901d2cc70b60f3743e24f885bb6e9da6d88cff516079eac1883","pubkey":"726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11","created_at":1688234921,"kind":1,"tags":[["a","30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599","","root"],["e","512962dbada5fd5015fc727a107d5c3f569662de67eab8e5da5a8065012cf11e","","reply"]],"content":"yet another one, testing 0.0.3","sig":"13bd41c4029c6a7ee41cb03d12e831e9e9b6e14d43a61c78a72657070b45385ba2ce98e8121049fbcbdb7b2dd777c36c7867ba70b5e6a4798a9b866910ae5b62"}
         ]
         """
-      .trimIndent()
+            .trimIndent()
 
-  val header =
-    """
+    val header =
+        """
         {
           "content": "Not too long ago, I tried to paint a picture of what\na [vision for a value-enabled web][vew]\ncould look like. Now, only a couple of months later,\nall this stuff is being built. On nostr, and on lightning. Orange and\npurple, a match made in heaven.\n\nIt goes without saying that I'm beyond delighted. What a time to be alive!\n\n## nostr\n\nHere's the thing that nostr got right, and it's the same thing that\nBitcoin got right: information is easy to spread and hard to stifle.[^fn-stifle]\nInformation can be copied quickly and perfectly, which is, I believe,\nthe underlying reason for its desire to be free.\n\n[^fn-stifle]: That's a [Satoshi quote][stifle], of course: \"Bitcoin's solution is to use a peer-to-peer network to check for double-spending. In a nutshell, the network works like a distributed timestamp server, stamping the first transaction to spend a coin. It takes advantage of the nature of information being easy to spread but hard to stifle.\"\n\n[stifle]: https://satoshi.nakamotoinstitute.org/posts/p2pfoundation/1/\n\nEasy to spread, hard to stifle. That's the base reality of the nature\nof information. As always, the smart thing is to work with nature, not\nagainst it.[^1] That's what's beautiful about the orange coin and\nthe purple ostrich: both manage to work with the peculiarities of\ninformation, not against them. Both realize that information can and should be\ncopied, as it can be perfectly read and easily spread, always. Both understand\nthat resistance to censorship comes from writing to many places, making the cost\nof deletion prohibitive.\n\n> Information does not just want to be free,\n> it longs to be free. Information expands to fill the available\n> storage space. Information is Rumor's younger, stronger cousin;\n> Information is fleeter of foot, has more eyes, knows more, and\n> understands less than Rumor.\n>\n> <cite>Eric Hughes, [A Cypherpunk's Manifesto][manifesto]</cite>\n\n[manifesto]: https://nakamotoinstitute.org/static/docs/cypherpunk-manifesto.txt\n\nNostr is quickly establishing itself as a base layer for information exchange,\none that is identity-native and value-enabled. It is distinctly different from\nsystems that came before it, just like Bitcoin is distinctly different from\nmonies that came before it.\n\nAs of today, the focus of nostr is mostly on short text notes, the so-called\n\"type 1\" events more commonly known as *tweets*.[^fn-kinds] However, as you should be aware\nby now, nostr is way more than just an alternative to twitter. It is a new\nparadigm. Change the note kind from `1` to `30023` and you don't have an\nalternative to Twitter, but a replacement for Medium, Substack, and all the\nother long-form platforms. I believe that special-purpose clients that focus on\ncertain content types will emerge over time, just like we have seen the\nemergence of special-purpose platforms in the Web 2.0 era. This time, however,\nthe network effects are cumulative, not separate. A new paradigm.\n\nLet me now turn to one such special-purpose client, a nostr-based reading app.\n\n[^fn-kinds]: Refer to the various NIPs to discover the multitude of [event kinds][kinds] defined by the protocol.\n\n[kinds]: https://github.com/nostr-protocol/nips#event-kinds\n[nip23]: https://github.com/nostr-protocol/nips/blob/master/23.md\n\n## Reading\n\nI'm constantly surprised that, even though most people do read a lot\nonline, very few people seem to have a reading workflow or reading\ntools.\n\nWhy that is is anyone's guess, but maybe the added value of such tools\nis not readily apparent. You can just read the stuff right there, on the\nad-ridden, dead-ugly site, right? Why should you sign up for another\nsite, use another app, or bind yourself to another closed platform?\n\nThat's a fair point, but the success of Medium and Substack shows that\nthere is an appetite for clean reading and writing, as well as providing\navenues for authors to get paid for their writing (and a willingness of\nreaders to support said authors, just because).\n\nThe problem is, of course, that all of these platforms are *platforms*,\nwhich is to say, walled gardens that imprison readers and writers alike.\nWorse than that: they are fiat platforms, which means that\npermissionless value-flows are not only absent from their DNA, they are\noutright impossible.[^2]\n\nNostr fixes this.\n\n![Nostriches like to read, or so I've heard](https://dergigi.com/assets/images/bitcoin/2023-04-04-purple-text-orange-highlights/nostrich-reading-a-newspaper.jpg)\n\nThe beauty of nostr is that it is not a platform. It's a protocol,\nwhich means that you don't have to sign up for it---you can create an\nidentity yourself. You don't have to ask for permission; you just *do*,\nwithout having to rely on the benevolence of whatever dictator is in\ncharge of the platform right now.\n\nNostr is *not* a platform, and yet, powerful tools and services can be\nbuilt and monetized on top of it. This is good for users, good for\nservice providers, and good for the network(s) at large. Win-win-win.\n\nSo what am I talking about, exactly? How can nostr improve everyone's\nreading (and writing) experience?\n\nAllow me to paint a (rough) picture of what I have in mind. Nostr\nalready supports private and public bookmarks, so let's start from\nthere.\n\nImagine a special-purpose client that scans all your bookmarks for long-form\ncontent.[^fn-urls] Everything that you marked to be read later is shown in an orderly\nfashion, which is to say searchable, sortable, filterable, and displayed without\ndistractions.  Voilà, you have yourself a reading app. That's, in essence, how\nPocket, Readwise, and other reading apps work. But all these apps are walled\ngardens without much interoperability and without direct monetization.\n\n[^fn-urls]: In the nostr world long-form content is simply markdown as defined in [NIP-23][nip23], but it could also be a link to an article or PDF, which in turn could get [converted into markdown][readability] and posted as an event to a special relay.\n\n[readability]: https://github.com/mozilla/readability\n\nBitcoin fixes the direct monetization part.[^fn-v4v] Nostr fixes the interoperability part.\n\n[^fn-v4v]: ...because Bitcoin makes [V4V][busking] practical. (Paywalls are not the way.)\n\nAlright, we got ourselves a boring reading app. Great. Now, imagine that\nusers are able to highlight passages. These highlights, just like\nbookmarks now, could be private or public. When shared publicly,\nsomething interesting emerges: an overlay on existing content, a lens on\nthe written Web. In other words: *swarm highlights*.\n\nImagine a visual overlay of all public highlights, automatically shining\na light on what the swarm of readers found most useful, insightful,\nfunny, etc.\n\n![Swarm Highlights](https://dergigi.com/assets/images/bitcoin/2023-04-04-purple-text-orange-highlights/highlights.png)\n\nFurther, imagine the possibility of sharing these highlights as a \"type 1\" event\nwith one click, automatically tagging the highlighter(s)---as well as the\nauthor, of course---so that eventual sat-flows can be split and forwarded\nautomatically.\n\n![Automated value splits](https://dergigi.com/assets/images/bitcoin/2023-04-04-purple-text-orange-highlights/sat-flows.png)\n\nVoilà, you have a system that allows for value to flow back to those who\nprovide it, be it authors, editors, curators, or readers that willingly\nslog through the information jungle to share and highlight the best\nstuff (which is a form of curation, of course).\n\nZaps make nostr a defacto address book[^fn-pp] of payment information, which is\nto say lightning addresses, as of now. Thanks to [nostr wallet connect][nwc] (among\nother developments), sending sats ~~will soon be~~ is already as\nfrictionless as leaving a like.\n\n[^fn-pp]: The Yellow Pages are dead, long live [The Purple Pages](http://purplepag.es/)!\n\nValue-for-value and participatory payment flows are something that\ntraditional reading apps desperately lack, be it Pocket, Instapaper,\nReadwise, or the simple reading mode that is part of every browser.\n\nA neat side-effect of a more structured way to share passages of text is\nthat it enables semi-structured discussions around said\npassages---which could be another useful overlay inside\nspecial-purpose clients, providing context and further insights.[^5]\n\nFurther, imagine the option of seamlessly switching from text-on-screen\nto text-to-speech, allowing the user to stream sats if desired, as\nPodcasting 2.0 clients already do.[^3]\n\nImagine user-built curations of the best articles of the week, bundled\nneatly for your reading pleasure, incentivized by a small value split\nthat allows the curator to participate in the flow of sats.\n\nYou get the idea.\n\nI'm sure that the various implementation details will be hashed out,\nbut as I see it, 90% of the stuff is already there. Maybe we'll need\nanother NIP or two, but I don't see a reason why this can't be\nbuilt---and, more importantly: I don't see a reason why it wouldn't\nbe sustainable for everyone involved.\n\nMost puzzle pieces are already there, and the rest of them can probably\nbe implemented by custom event types. From the point of view of nostr,\nmost everything is an event: bookmarks are events, highlights are\nevents, marking something as read is an event, and sharing an excerpt or\na highlight is an event. Public actions are out in the open, private\nactions are encrypted, the data is not in a silo, and everyone wins.\nEspecially the users, those who are at the edge of the network and\nusually lose out on the value generated.\n\nIn this case, the reading case, the users are mostly \"consumers\" of\ncontent. What changes from the producing perspective, the perspective of\nthe writer?\n\n## Writing\n\nBack to the one thing that nostr got right: information is easy to\nspread but hard to stifle. In addition to that, digital information can\nbe copied perfectly, which is why it shouldn't matter where stuff is\npublished in the first place.\n\nAllow me to repeat this point in all caps, for emphasis: **IT SHOULD NOT\nMATTER WHERE INFORMATION IS PUBLISHED**, and, maybe even more\nimportantly, it shouldn't matter if it is published in a hundred\ndifferent places at once.[^fn-torrents]\n\nWhat matters is trust and accuracy, which is to say, digital signatures\nand reputation. To translate this to nostr speak: because every event is\nsigned by default, as long as you trust the person behind the signature,\nit doesn't matter from which relay the information is fetched.\n\nThis is already true (or mostly true) on the regular web. Whether you\nread the internet archive version of an article or the version that is\npublished by an online magazine, the version on the author's website,\nor the version read by some guy that has read more about Bitcoin than\nanyone else you know[^fn-guy]---it's all the same, essentially. What matters\nis the information itself.\n\n[^fn-guy]: There is only one such guy, as we all know, and it's this Guy: nostr:npub1h8nk2346qezka5cpm8jjh3yl5j88pf4ly2ptu7s6uu55wcfqy0wq36rpev\n\nPractically speaking, the source of truth in a hypernostrized world is---you\nguessed it---an event. An event signed by the author, which allows for\nthe information to be wrapped in a tamper-proof manner, which in turn\nallows the information to spread far and wide---without it being\nhosted in one place.\n\nThe first clients that focus on long-form content already exist, and I expect\nmore clients to pop up over time.[^4] As mentioned before, one could easily\nimagine [prism-like value splits][prism] seamlessly integrated into these\nclients, splitting zaps automatically to compensate writers, editors,\nproofreaders, and illustrators in a V4V fashion. Further, one could imagine\nvarious compute-intensive services built into these special-purpose clients,\nsuch as GPT Ghostwriters, or writing aids such as Grammarly and the like. All\nthese services could be seamlessly paid for in sats, without the requirement of\nany sign-ups or the gathering of any user data. That's the beauty of [money\nproper][rediscovery].\n\n![A clean and simple reading and writing interface](https://dergigi.com/assets/images/bitcoin/2023-04-04-purple-text-orange-highlights/nostr-reader-and-writer.png)\n\nPlagiarism is one issue that needs to be dealt with, of course. Humans\nare greedy, and some humans are assholes. Neither bitcoin nor nostr\nfixes this. However, while plagiarism detection is not necessarily\ntrivial, it is also not impossible, especially if most texts are\npublished on nostr first. Nostr-based publishing tools allow for\nOpenTimestamp attestations thanks\nto [NIP-03](https://github.com/nostr-protocol/nips/blob/master/03.md),\nwhich in turn allows for plagiarism detection based on \"first seen\"\nlookups.\n\nThat's just one way to deal with the problem, of course. In any case,\nI'm confident that we'll figure it out.\n\n## Value\n\nI believe that in the open ~~attention~~ information economy we find\nourselves in, value will mostly derive from effective curation,\ndissemination, and transmission of information, *not* the exclusive\nownership of it.\n\nAlthough it is still early days,\nthe [statistics](https://stats.podcastindex.org/v4v) around Podcasting\n2.0 and [nostr zaps](https://zaplife.lol/) clearly show that (a) people\nare willing to monetarily reward content they care about, and (b) the\nwillingness to send sats *increases* as friction *decreases*.\n\nThe ingenious thing about boostagrams and zaps is that they are direct\nand visible, which is to say, public and interactive. They are neither\nregular transactions nor simple donations---they are something else\nentirely. An unforgable value signal, a special form of gratitude and\nappreciation.\n\nContrast that with a link to Paypal or Patreon: impersonal, slow,\nindirect, and friction-laden. It's the opposite of a super-charged\ninteraction.\n\nWhile today's information jungle increasingly presents itself in the\nform of (short) videos and (long-form) audio, I believe that we will see\na renaissance of the written word, especially if we manage to move away\nfrom an economy built around attention, towards an economy built upon\nvalue and insight.\n\nThe orange future now has a purple hue, and I believe that it will be as\nbright as ever. We just have a lot of building to do.\n\n---\n\n## Further Reading\n\n- [A Vision for a Value-Enabled Web][vew]\n- [The Freedom of Value][busking]\n- [The Rediscovery of Money][prism]\n- [Lightning Prisms][rediscovery]\n\n[vew]: https://dergigi.com/vew\n[prism]: https://dergigi.com/prism\n[rediscovery]: https://dergigi.com/rediscovery\n[busking]: https://dergigi.com/busking\n\n## NIPs and Resources\n\n- [Nostr Resources][nr]\n- [value4value.info](https://value4value.info/)\n- [nips.be](https://nips.be/)\n- [NIP-23: Long-form content](https://github.com/nostr-protocol/nips/blob/master/23.md)\n- [NIP-57: Event-specific zap markers](https://github.com/nostr-protocol/nips/blob/master/57.md)\n- [NIP-47: Nostr Wallet Connect](https://github.com/getAlby/nips/blob/master/47.md)\n- [NIP-03: OpenTimestamps attestations for events](https://github.com/nostr-protocol/nips/blob/master/03.md)\n\nOriginally published on [dergigi.com](https://dergigi.com/reader)\n\n---\n\n[^1]: Paywalls work against this nature, which is why I consider them misguided at best and incredibly retarded at worst.\n\n[^2]: Fiat doesn't work for the [value-enabled web][vew], as fiat rails can never be open and permissionless. Digital fiat is never money. It is---and always will be---[credit][rediscovery].\n\n[^3]: Whether the recipient is a text-to-speech service provider or a human narrator doesn't even matter too much, sats will flow just the same.\n\n[^4]: [BlogStack](https://blogstack.io/) and [Habla](https://habla.news/) being two of them.\n\n[^5]: Use a URI as the discussion base (instead of a highlight), and you got yourself a [Disqus](https://disqus.com/) in purple feathers!\n\n[^fn-torrents]: That's what torrents got right, and [ipfs] for that matter.\n\n[nr]: https://nostr-resources.com\n[nwc]: https://nwc.getalby.com/\n[ipfs]: https://fiatjaf.com/d5031e5b.html\n",
           "created_at": 1680614039,
@@ -112,80 +112,81 @@ class ThreadAssemblerTest {
           ]
         }
         """
-      .trimIndent()
+            .trimIndent()
 
-  @Test
-  fun threadOrderTest() = runBlocking {
-    val eventArray =
-      Event.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
+    @Test
+    fun threadOrderTest() =
+        runBlocking {
+            val eventArray =
+                Event.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
 
-    var counter = 0
-    eventArray.forEach {
-      TestCase.assertTrue("${it.id} failed signature check", it.hasValidSignature())
-      LocalCache.verifyAndConsume(it, null)
-      counter++
-    }
+            var counter = 0
+            eventArray.forEach {
+                TestCase.assertTrue("${it.id} failed signature check", it.hasValidSignature())
+                LocalCache.verifyAndConsume(it, null)
+                counter++
+            }
 
-    val naddr =
-      ATag(
-        30023,
-        "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93",
-        "1680612926599",
-        null,
-      )
+            val naddr =
+                ATag(
+                    30023,
+                    "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93",
+                    "1680612926599",
+                    null,
+                )
 
-    val account = Account(KeyPair())
-    withContext(Dispatchers.Main) {
-      val user = account.userProfile().live()
-    }
+            val account = Account(KeyPair())
+            withContext(Dispatchers.Main) {
+                val user = account.userProfile().live()
+            }
 
-    val filter = ThreadFeedFilter(account, naddr.toTag())
-    val calculatedFeed = filter.feed()
+            val filter = ThreadFeedFilter(account, naddr.toTag())
+            val calculatedFeed = filter.feed()
 
-    val expecteedOrder =
-      listOf(
-        "30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599",
-        "e15b386824fbfdcbf1b50b8860f03062cef534a3ea5339cc837536fb2a58465e",
-        "ba9a8a1a8afb0b53fb5d4fa3f5130fe557a8d8d56fac7af9ad3443531d2a2933",
-        "b0425132a3dd4142a0f78986166aaa28021cc8fb440c95c321a95afce3d5e056",
-        "e9bb4e2d56bd2be2952570bd52b102c23444a62ada5b78ba086f086d9147651a",
-        "4d7b21c462f3fbf27a1882dbaaec4e99e5a5d18a2c18d1f2d1f0736684ad157c",
-        "9cdbced750e6b1e1274b7df47cb433f565414dd08c897167eba761eadee841cc",
-        "5799aac7a9b06f3cae3d3791b79df29d14173515cfdbf34398aab73ed4a44121",
-        "741f5367a9415f4d6f19c0f57a1e4647c8ed8309b53b0da2d82fc4ebfba03b2c",
-        "22323fc72b4c37f93ea21f6069684339ce5f63111161c81f2aa3de4a21bfe83b",
-        "14525fcaae530a029f782fd361dd0cd66634c3e23020bd19e66fe11c1e254e32",
-        "98ae0d6d10e494ed0bf70feb577e8225c6a6732c7af3d29f88bfe1b87d4439e6",
-        "36e262e71b7e8bcae946f69885b8c3614e318e82864437342cf50e8b9ab7229d",
-        "37725c2924ca267d66c2c27c2dae65550c07e7b883034cf1ea69671883430642",
-        "8ba54cfb6375270e8ae97a7e0992c1a0dbaa4cd46af8309d67a839e86789fde6",
-        "53410bc6d47e87f3f18ecbc93c716b5a6ef8ee3805516b2ff4d155154a685b7c",
-        "a3b3825af621727f9af3bd77392fe38c04d71658024916af7fe4c5867ef73eaa",
-        "e383476cb1ce5accde11d4b1338424fa32c3724cf96e6214af8e5e852981728a",
-        "e2d8aaed336d3c0f73a9ca46a89fdb2da62a6d172936a91b0067a68797b3bcb8",
-        "b92e4d6a5d0e8d1d2d2421044b84a4d11f2188261c55145d782b1b6bf0995009",
-        "da13e14cc8bcc243e0373dde14533d3829b8b621e214ca3c99c90f3dd9e11b8a",
-        "b5234d90a1543ba60765c57ac3fc7140129a4ac28bbd013531ec9b85e256ea55",
-        "c5ad64b1b72776a068c39f4549d089032432814a146849eba0650d1b329fb285",
-        "fc4e4a1230b002e4ae08251a0b26107de7f518800188b7a504f5de62d8b07996",
-        "6a58f8315af5badb1bdaeb5489417b94621a4d8e192ae2fedcca0c5dcf0c9cd4",
-        "6e9bb03c7c40d67fec0d0bb872548ec207ba0ac4533efa137d7bcaca9fb4b191",
-        "e2ae784b239cac4bad38136e4bd758b87dd261b659ef460450064bf9073edcb3",
-        "674c62f84afdc045bc3623ea132d90afdfe4b64249807f65302231115af5406d",
-        "d54761f672669ea4f4b7592f3b0a30ee28de340b0a7e46b91af94e66905171c9",
-        "00813a18ac9084cd0948c27027a980e34039a3011f30279a8b52ad87da5a3031",
-        "87a5bd25aa084cefb3357fc9c2a5b327254fab35fdd7b2d4bd0acddc63d0abe8",
-        "512962dbada5fd5015fc727a107d5c3f569662de67eab8e5da5a8065012cf11e",
-        "ce6e32e3e17b6901d2cc70b60f3743e24f885bb6e9da6d88cff516079eac1883",
-        "7a4a2419824669f07081abe2132f8cc0027efbce066ccdf187c897bb7ffa5dc3",
-        "45d4fc726f2cc5b524be862c14fdadc1a24b25b8c6c011eedf2d2909589263e7",
-        "d4a0b4f08d98d82a04292654ec132723cc2cf3fa24ffb6c0833426cb9372f4d5",
-        "8cdc4676aca93bbafcfbe6784f9b2df54e8ca20fbe69ba55fda487736bfdb7f6",
-        "7a18dda355525d468b31bba4fa947cba98cc19048d4a3099d5e9ba045d878c26",
-      )
+            val expecteedOrder =
+                listOf(
+                    "30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599",
+                    "e15b386824fbfdcbf1b50b8860f03062cef534a3ea5339cc837536fb2a58465e",
+                    "ba9a8a1a8afb0b53fb5d4fa3f5130fe557a8d8d56fac7af9ad3443531d2a2933",
+                    "b0425132a3dd4142a0f78986166aaa28021cc8fb440c95c321a95afce3d5e056",
+                    "e9bb4e2d56bd2be2952570bd52b102c23444a62ada5b78ba086f086d9147651a",
+                    "4d7b21c462f3fbf27a1882dbaaec4e99e5a5d18a2c18d1f2d1f0736684ad157c",
+                    "9cdbced750e6b1e1274b7df47cb433f565414dd08c897167eba761eadee841cc",
+                    "5799aac7a9b06f3cae3d3791b79df29d14173515cfdbf34398aab73ed4a44121",
+                    "741f5367a9415f4d6f19c0f57a1e4647c8ed8309b53b0da2d82fc4ebfba03b2c",
+                    "22323fc72b4c37f93ea21f6069684339ce5f63111161c81f2aa3de4a21bfe83b",
+                    "14525fcaae530a029f782fd361dd0cd66634c3e23020bd19e66fe11c1e254e32",
+                    "98ae0d6d10e494ed0bf70feb577e8225c6a6732c7af3d29f88bfe1b87d4439e6",
+                    "36e262e71b7e8bcae946f69885b8c3614e318e82864437342cf50e8b9ab7229d",
+                    "37725c2924ca267d66c2c27c2dae65550c07e7b883034cf1ea69671883430642",
+                    "8ba54cfb6375270e8ae97a7e0992c1a0dbaa4cd46af8309d67a839e86789fde6",
+                    "53410bc6d47e87f3f18ecbc93c716b5a6ef8ee3805516b2ff4d155154a685b7c",
+                    "a3b3825af621727f9af3bd77392fe38c04d71658024916af7fe4c5867ef73eaa",
+                    "e383476cb1ce5accde11d4b1338424fa32c3724cf96e6214af8e5e852981728a",
+                    "e2d8aaed336d3c0f73a9ca46a89fdb2da62a6d172936a91b0067a68797b3bcb8",
+                    "b92e4d6a5d0e8d1d2d2421044b84a4d11f2188261c55145d782b1b6bf0995009",
+                    "da13e14cc8bcc243e0373dde14533d3829b8b621e214ca3c99c90f3dd9e11b8a",
+                    "b5234d90a1543ba60765c57ac3fc7140129a4ac28bbd013531ec9b85e256ea55",
+                    "c5ad64b1b72776a068c39f4549d089032432814a146849eba0650d1b329fb285",
+                    "fc4e4a1230b002e4ae08251a0b26107de7f518800188b7a504f5de62d8b07996",
+                    "6a58f8315af5badb1bdaeb5489417b94621a4d8e192ae2fedcca0c5dcf0c9cd4",
+                    "6e9bb03c7c40d67fec0d0bb872548ec207ba0ac4533efa137d7bcaca9fb4b191",
+                    "e2ae784b239cac4bad38136e4bd758b87dd261b659ef460450064bf9073edcb3",
+                    "674c62f84afdc045bc3623ea132d90afdfe4b64249807f65302231115af5406d",
+                    "d54761f672669ea4f4b7592f3b0a30ee28de340b0a7e46b91af94e66905171c9",
+                    "00813a18ac9084cd0948c27027a980e34039a3011f30279a8b52ad87da5a3031",
+                    "87a5bd25aa084cefb3357fc9c2a5b327254fab35fdd7b2d4bd0acddc63d0abe8",
+                    "512962dbada5fd5015fc727a107d5c3f569662de67eab8e5da5a8065012cf11e",
+                    "ce6e32e3e17b6901d2cc70b60f3743e24f885bb6e9da6d88cff516079eac1883",
+                    "7a4a2419824669f07081abe2132f8cc0027efbce066ccdf187c897bb7ffa5dc3",
+                    "45d4fc726f2cc5b524be862c14fdadc1a24b25b8c6c011eedf2d2909589263e7",
+                    "d4a0b4f08d98d82a04292654ec132723cc2cf3fa24ffb6c0833426cb9372f4d5",
+                    "8cdc4676aca93bbafcfbe6784f9b2df54e8ca20fbe69ba55fda487736bfdb7f6",
+                    "7a18dda355525d468b31bba4fa947cba98cc19048d4a3099d5e9ba045d878c26",
+                )
 
-    for (i in expecteedOrder.indices) {
-      assertEquals(expecteedOrder[i], calculatedFeed[i].idHex)
-    }
-  }
+            for (i in expecteedOrder.indices) {
+                assertEquals(expecteedOrder[i], calculatedFeed[i].idHex)
+            }
+        }
 }

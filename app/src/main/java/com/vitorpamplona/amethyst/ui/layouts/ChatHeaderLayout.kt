@@ -53,91 +53,91 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 @Composable
 @Preview
 fun ChannelNamePreview() {
-  Column {
-    ChatHeaderLayout(
-      channelPicture = {
-        Image(
-          painter = painterResource(R.drawable.github),
-          contentDescription = stringResource(id = R.string.profile_banner),
-          contentScale = ContentScale.FillWidth,
+    Column {
+        ChatHeaderLayout(
+            channelPicture = {
+                Image(
+                    painter = painterResource(R.drawable.github),
+                    contentDescription = stringResource(id = R.string.profile_banner),
+                    contentScale = ContentScale.FillWidth,
+                )
+            },
+            firstRow = {
+                Text("This is my author", Modifier.weight(1f))
+                TimeAgo(TimeUtils.now())
+            },
+            secondRow = {
+                Text("This is a message from this person", Modifier.weight(1f))
+                NewItemsBubble()
+            },
+            onClick = {},
         )
-      },
-      firstRow = {
-        Text("This is my author", Modifier.weight(1f))
-        TimeAgo(TimeUtils.now())
-      },
-      secondRow = {
-        Text("This is a message from this person", Modifier.weight(1f))
-        NewItemsBubble()
-      },
-      onClick = {},
-    )
 
-    Divider()
+        Divider()
 
-    ListItem(
-      headlineContent = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("This is my author", Modifier.weight(1f))
-          TimeAgo(TimeUtils.now())
-        }
-      },
-      supportingContent = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("This is a message from this person", Modifier.weight(1f))
-          NewItemsBubble()
-        }
-      },
-      leadingContent = {
-        Image(
-          painter = painterResource(R.drawable.github),
-          contentDescription = stringResource(id = R.string.profile_banner),
-          contentScale = ContentScale.FillWidth,
-          modifier = Size55Modifier,
+        ListItem(
+            headlineContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("This is my author", Modifier.weight(1f))
+                    TimeAgo(TimeUtils.now())
+                }
+            },
+            supportingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("This is a message from this person", Modifier.weight(1f))
+                    NewItemsBubble()
+                }
+            },
+            leadingContent = {
+                Image(
+                    painter = painterResource(R.drawable.github),
+                    contentDescription = stringResource(id = R.string.profile_banner),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Size55Modifier,
+                )
+            },
         )
-      },
-    )
-  }
+    }
 }
 
 @Composable
 fun ChatHeaderLayout(
-  channelPicture: @Composable () -> Unit,
-  firstRow: @Composable RowScope.() -> Unit,
-  secondRow: @Composable RowScope.() -> Unit,
-  onClick: () -> Unit,
+    channelPicture: @Composable () -> Unit,
+    firstRow: @Composable RowScope.() -> Unit,
+    secondRow: @Composable RowScope.() -> Unit,
+    onClick: () -> Unit,
 ) {
-  Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
-    Row(
-      modifier = ChatHeadlineBorders,
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Box(Size55Modifier) { channelPicture() }
-
-      Spacer(modifier = DoubleHorzSpacer)
-
-      Column(
-        modifier = Modifier.fillMaxWidth(),
-      ) {
+    Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
         Row(
-          verticalAlignment = Alignment.CenterVertically,
+            modifier = ChatHeadlineBorders,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-          firstRow()
+            Box(Size55Modifier) { channelPicture() }
+
+            Spacer(modifier = DoubleHorzSpacer)
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    firstRow()
+                }
+
+                Spacer(modifier = Height4dpModifier)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    secondRow()
+                }
+            }
         }
 
-        Spacer(modifier = Height4dpModifier)
-
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          secondRow()
-        }
-      }
+        Divider(
+            modifier = StdTopPadding,
+            thickness = DividerThickness,
+        )
     }
-
-    Divider(
-      modifier = StdTopPadding,
-      thickness = DividerThickness,
-    )
-  }
 }

@@ -35,50 +35,51 @@ import com.vitorpamplona.amethyst.ui.screen.ThreadFeedView
 
 @Composable
 fun ThreadScreen(
-  noteId: String?,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    noteId: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  if (noteId == null) return
+    if (noteId == null) return
 
-  val lifeCycleOwner = LocalLifecycleOwner.current
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
-  val feedViewModel: NostrThreadFeedViewModel =
-    viewModel(
-      key = noteId + "NostrThreadFeedViewModel",
-      factory = NostrThreadFeedViewModel.Factory(accountViewModel.account, noteId),
-    )
+    val feedViewModel: NostrThreadFeedViewModel =
+        viewModel(
+            key = noteId + "NostrThreadFeedViewModel",
+            factory = NostrThreadFeedViewModel.Factory(accountViewModel.account, noteId),
+        )
 
-  NostrThreadDataSource.loadThread(noteId)
+    NostrThreadDataSource.loadThread(noteId)
 
-  DisposableEffect(noteId) {
-    feedViewModel.invalidateData(true)
-    onDispose {
-      NostrThreadDataSource.loadThread(null)
-      NostrThreadDataSource.stop()
-    }
-  }
-
-  DisposableEffect(lifeCycleOwner) {
-    val observer = LifecycleEventObserver { _, event ->
-      if (event == Lifecycle.Event.ON_RESUME) {
-        println("Thread Start")
-        NostrThreadDataSource.loadThread(noteId)
-        NostrThreadDataSource.start()
+    DisposableEffect(noteId) {
         feedViewModel.invalidateData(true)
-      }
-      if (event == Lifecycle.Event.ON_PAUSE) {
-        println("Thread Stop")
-        NostrThreadDataSource.loadThread(null)
-        NostrThreadDataSource.stop()
-      }
+        onDispose {
+            NostrThreadDataSource.loadThread(null)
+            NostrThreadDataSource.stop()
+        }
     }
 
-    lifeCycleOwner.lifecycle.addObserver(observer)
-    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-  }
+    DisposableEffect(lifeCycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    println("Thread Start")
+                    NostrThreadDataSource.loadThread(noteId)
+                    NostrThreadDataSource.start()
+                    feedViewModel.invalidateData(true)
+                }
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    println("Thread Stop")
+                    NostrThreadDataSource.loadThread(null)
+                    NostrThreadDataSource.stop()
+                }
+            }
 
-  Column(Modifier.fillMaxHeight()) {
-    Column { ThreadFeedView(noteId, feedViewModel, accountViewModel, nav) }
-  }
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column { ThreadFeedView(noteId, feedViewModel, accountViewModel, nav) }
+    }
 }

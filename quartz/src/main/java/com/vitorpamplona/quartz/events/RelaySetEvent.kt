@@ -27,32 +27,32 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class RelaySetEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun relays() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
+    fun relays() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
-  fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
+    fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
-  companion object {
-    const val KIND = 30022
-    const val ALT = "Relay list"
+    companion object {
+        const val KIND = 30022
+        const val ALT = "Relay list"
 
-    fun create(
-      relays: List<String>,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (RelaySetEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
-      relays.forEach { tags.add(arrayOf("r", it)) }
-      tags.add(arrayOf("alt", ALT))
+        fun create(
+            relays: List<String>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (RelaySetEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            relays.forEach { tags.add(arrayOf("r", it)) }
+            tags.add(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        }
     }
-  }
 }

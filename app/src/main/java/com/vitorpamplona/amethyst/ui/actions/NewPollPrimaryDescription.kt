@@ -49,53 +49,53 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
-  // initialize focus reference to be able to request focus programmatically
-  val focusRequester = remember { FocusRequester() }
-  val keyboardController = LocalSoftwareKeyboardController.current
+    // initialize focus reference to be able to request focus programmatically
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-  var isInputValid = true
-  if (pollViewModel.message.text.isEmpty()) {
-    isInputValid = false
-  }
+    var isInputValid = true
+    if (pollViewModel.message.text.isEmpty()) {
+        isInputValid = false
+    }
 
-  val colorInValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.error,
-      unfocusedBorderColor = Color.Red,
+    val colorInValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.error,
+            unfocusedBorderColor = Color.Red,
+        )
+    val colorValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
+        )
+
+    OutlinedTextField(
+        value = pollViewModel.message,
+        onValueChange = { pollViewModel.updateMessage(it) },
+        label = {
+            Text(
+                text = stringResource(R.string.poll_primary_description),
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        },
+        keyboardOptions =
+            KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences,
+            ),
+        modifier =
+            Modifier.fillMaxWidth().padding(top = 8.dp).focusRequester(focusRequester).onFocusChanged {
+                if (it.isFocused) {
+                    keyboardController?.show()
+                }
+            },
+        placeholder = {
+            Text(
+                text = stringResource(R.string.poll_primary_description),
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        },
+        colors = if (isInputValid) colorValid else colorInValid,
+        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
     )
-  val colorValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.primary,
-      unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
-    )
-
-  OutlinedTextField(
-    value = pollViewModel.message,
-    onValueChange = { pollViewModel.updateMessage(it) },
-    label = {
-      Text(
-        text = stringResource(R.string.poll_primary_description),
-        color = MaterialTheme.colorScheme.placeholderText,
-      )
-    },
-    keyboardOptions =
-      KeyboardOptions.Default.copy(
-        capitalization = KeyboardCapitalization.Sentences,
-      ),
-    modifier =
-      Modifier.fillMaxWidth().padding(top = 8.dp).focusRequester(focusRequester).onFocusChanged {
-        if (it.isFocused) {
-          keyboardController?.show()
-        }
-      },
-    placeholder = {
-      Text(
-        text = stringResource(R.string.poll_primary_description),
-        color = MaterialTheme.colorScheme.placeholderText,
-      )
-    },
-    colors = if (isInputValid) colorValid else colorInValid,
-    visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
-    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-  )
 }

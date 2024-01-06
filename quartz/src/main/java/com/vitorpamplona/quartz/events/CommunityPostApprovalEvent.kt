@@ -29,69 +29,71 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CommunityPostApprovalEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun containedPost(): Event? =
-    try {
-      content.ifBlank { null }?.let { fromJson(it) }
-    } catch (e: Exception) {
-      Log.w(
-        "CommunityPostEvent",
-        "Failed to Parse Community Approval Contained Post of $id with $content",
-      )
-      null
-    }
-
-  fun communities() =
-    tags
-      .filter { it.size > 1 && it[0] == "a" }
-      .mapNotNull {
-        val aTag = ATag.parse(it[1], it.getOrNull(2))
-
-        if (aTag?.kind == CommunityDefinitionEvent.KIND) {
-          aTag
-        } else {
-          null
+    fun containedPost(): Event? =
+        try {
+            content.ifBlank { null }?.let { fromJson(it) }
+        } catch (e: Exception) {
+            Log.w(
+                "CommunityPostEvent",
+                "Failed to Parse Community Approval Contained Post of $id with $content",
+            )
+            null
         }
-      }
 
-  fun approvedEvents() =
-    tags
-      .filter {
-        it.size > 1 &&
-          (it[0] == "e" ||
-            (it[0] == "a" && ATag.parse(it[1], null)?.kind != CommunityDefinitionEvent.KIND))
-      }
-      .map { it[1] }
+    fun communities() =
+        tags
+            .filter { it.size > 1 && it[0] == "a" }
+            .mapNotNull {
+                val aTag = ATag.parse(it[1], it.getOrNull(2))
 
-  companion object {
-    const val KIND = 4550
-    const val ALT = "Community post approval"
+                if (aTag?.kind == CommunityDefinitionEvent.KIND) {
+                    aTag
+                } else {
+                    null
+                }
+            }
 
-    fun create(
-      approvedPost: Event,
-      community: CommunityDefinitionEvent,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (CommunityPostApprovalEvent) -> Unit,
-    ) {
-      val content = approvedPost.toJson()
+    fun approvedEvents() =
+        tags
+            .filter {
+                it.size > 1 &&
+                    (
+                        it[0] == "e" ||
+                            (it[0] == "a" && ATag.parse(it[1], null)?.kind != CommunityDefinitionEvent.KIND)
+                    )
+            }
+            .map { it[1] }
 
-      val communities = arrayOf("a", community.address().toTag())
-      val replyToPost = arrayOf("e", approvedPost.id())
-      val replyToAuthor = arrayOf("p", approvedPost.pubKey())
-      val innerKind = arrayOf("k", "${approvedPost.kind()}")
-      val alt = arrayOf("alt", ALT)
+    companion object {
+        const val KIND = 4550
+        const val ALT = "Community post approval"
 
-      val tags: Array<Array<String>> =
-        arrayOf(communities, replyToPost, replyToAuthor, innerKind, alt)
+        fun create(
+            approvedPost: Event,
+            community: CommunityDefinitionEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CommunityPostApprovalEvent) -> Unit,
+        ) {
+            val content = approvedPost.toJson()
 
-      signer.sign(createdAt, KIND, tags, content, onReady)
+            val communities = arrayOf("a", community.address().toTag())
+            val replyToPost = arrayOf("e", approvedPost.id())
+            val replyToAuthor = arrayOf("p", approvedPost.pubKey())
+            val innerKind = arrayOf("k", "${approvedPost.kind()}")
+            val alt = arrayOf("alt", ALT)
+
+            val tags: Array<Array<String>> =
+                arrayOf(communities, replyToPost, replyToAuthor, innerKind, alt)
+
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
-  }
 }

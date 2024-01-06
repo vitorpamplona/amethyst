@@ -42,51 +42,51 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
-  baseNote: Note,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val noteEvent = remember { baseNote.event } ?: return
+    val noteEvent = remember { baseNote.event } ?: return
 
-  val userFollowState by accountViewModel.userFollows.observeAsState()
-  var firstTag by remember { mutableStateOf<String?>(null) }
+    val userFollowState by accountViewModel.userFollows.observeAsState()
+    var firstTag by remember { mutableStateOf<String?>(null) }
 
-  LaunchedEffect(key1 = userFollowState) {
-    launch(Dispatchers.Default) {
-      val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
-      val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
+    LaunchedEffect(key1 = userFollowState) {
+        launch(Dispatchers.Default) {
+            val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
+            val newFirstTag = noteEvent.firstIsTaggedHashes(followingTags)
 
-      if (firstTag != newFirstTag) {
-        launch(Dispatchers.Main) { firstTag = newFirstTag }
-      }
+            if (firstTag != newFirstTag) {
+                launch(Dispatchers.Main) { firstTag = newFirstTag }
+            }
+        }
     }
-  }
 
-  firstTag?.let {
-    Column(verticalArrangement = Arrangement.Center) {
-      Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, nav) }
+    firstTag?.let {
+        Column(verticalArrangement = Arrangement.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, nav) }
+        }
     }
-  }
 }
 
 @Composable
 private fun DisplayTagList(
-  firstTag: String,
-  nav: (String) -> Unit,
+    firstTag: String,
+    nav: (String) -> Unit,
 ) {
-  val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
-  val route = remember(firstTag) { "Hashtag/$firstTag" }
+    val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
+    val route = remember(firstTag) { "Hashtag/$firstTag" }
 
-  ClickableText(
-    text = displayTag,
-    onClick = { nav(route) },
-    style =
-      LocalTextStyle.current.copy(
-        color =
-          MaterialTheme.colorScheme.primary.copy(
-            alpha = 0.52f,
-          ),
-      ),
-    maxLines = 1,
-  )
+    ClickableText(
+        text = displayTag,
+        onClick = { nav(route) },
+        style =
+            LocalTextStyle.current.copy(
+                color =
+                    MaterialTheme.colorScheme.primary.copy(
+                        alpha = 0.52f,
+                    ),
+            ),
+        maxLines = 1,
+    )
 }

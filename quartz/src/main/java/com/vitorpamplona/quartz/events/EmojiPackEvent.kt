@@ -27,48 +27,48 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class EmojiPackEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 30030
-    const val ALT = "Emoji pack"
+    companion object {
+        const val KIND = 30030
+        const val ALT = "Emoji pack"
 
-    fun create(
-      name: String = "",
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (EmojiPackEvent) -> Unit,
-    ) {
-      val content = ""
+        fun create(
+            name: String = "",
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (EmojiPackEvent) -> Unit,
+        ) {
+            val content = ""
 
-      val tags = mutableListOf<Array<String>>()
-      tags.add(arrayOf("d", name))
-      tags.add(arrayOf("alt", ALT))
+            val tags = mutableListOf<Array<String>>()
+            tags.add(arrayOf("d", name))
+            tags.add(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
     }
-  }
 }
 
 @Immutable
 data class EmojiUrl(val code: String, val url: String) {
-  fun encode(): String {
-    return ":$code:$url"
-  }
-
-  companion object {
-    fun decode(encodedEmojiSetup: String): EmojiUrl? {
-      val emojiParts = encodedEmojiSetup.split(":", limit = 3)
-      return if (emojiParts.size > 2) {
-        EmojiUrl(emojiParts[1], emojiParts[2])
-      } else {
-        null
-      }
+    fun encode(): String {
+        return ":$code:$url"
     }
-  }
+
+    companion object {
+        fun decode(encodedEmojiSetup: String): EmojiUrl? {
+            val emojiParts = encodedEmojiSetup.split(":", limit = 3)
+            return if (emojiParts.size > 2) {
+                EmojiUrl(emojiParts[1], emojiParts[2])
+            } else {
+                null
+            }
+        }
+    }
 }

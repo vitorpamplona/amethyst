@@ -35,27 +35,27 @@ import kotlinx.collections.immutable.ImmutableList
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayUncitedHashtags(
-  hashtags: ImmutableList<String>,
-  eventContent: String,
-  nav: (String) -> Unit,
+    hashtags: ImmutableList<String>,
+    eventContent: String,
+    nav: (String) -> Unit,
 ) {
-  val unusedHashtags =
-    remember(eventContent) { hashtags.filter { !eventContent.contains(it, true) } }
+    val unusedHashtags =
+        remember(eventContent) { hashtags.filter { !eventContent.contains(it, true) } }
 
-  if (unusedHashtags.isNotEmpty()) {
-    FlowRow(
-      modifier = HalfTopPadding,
-    ) {
-      unusedHashtags.forEach { hashtag ->
-        ClickableText(
-          text = remember { AnnotatedString("#$hashtag ") },
-          onClick = { nav("Hashtag/$hashtag") },
-          style =
-            LocalTextStyle.current.copy(
-              color = MaterialTheme.colorScheme.lessImportantLink,
-            ),
-        )
-      }
+    if (unusedHashtags.isNotEmpty()) {
+        FlowRow(
+            modifier = HalfTopPadding,
+        ) {
+            unusedHashtags.forEach { hashtag ->
+                ClickableText(
+                    text = remember { AnnotatedString("#$hashtag ") },
+                    onClick = { nav("Hashtag/$hashtag") },
+                    style =
+                        LocalTextStyle.current.copy(
+                            color = MaterialTheme.colorScheme.lessImportantLink,
+                        ),
+                )
+            }
+        }
     }
-  }
 }

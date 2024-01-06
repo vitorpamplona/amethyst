@@ -32,62 +32,62 @@ var yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
 var monthFormatter = SimpleDateFormat(" • MMM dd", locale)
 
 fun timeAgo(
-  time: Long?,
-  context: Context,
+    time: Long?,
+    context: Context,
 ): String {
-  if (time == null) return " "
-  if (time == 0L) return " • ${context.getString(R.string.never)}"
+    if (time == null) return " "
+    if (time == 0L) return " • ${context.getString(R.string.never)}"
 
-  val timeDifference = TimeUtils.now() - time
+    val timeDifference = TimeUtils.now() - time
 
-  return if (timeDifference > TimeUtils.ONE_YEAR) {
-    // Dec 12, 2022
+    return if (timeDifference > TimeUtils.ONE_YEAR) {
+        // Dec 12, 2022
 
-    if (locale != Locale.getDefault()) {
-      locale = Locale.getDefault()
-      yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
-      monthFormatter = SimpleDateFormat(" • MMM dd", locale)
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
+            monthFormatter = SimpleDateFormat(" • MMM dd", locale)
+        }
+
+        yearFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_MONTH) {
+        // Dec 12
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
+            monthFormatter = SimpleDateFormat(" • MMM dd", locale)
+        }
+
+        monthFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_DAY) {
+        // 2 days
+        " • " + (timeDifference / TimeUtils.ONE_DAY).toString() + context.getString(R.string.d)
+    } else if (timeDifference > TimeUtils.ONE_HOUR) {
+        " • " + (timeDifference / TimeUtils.ONE_HOUR).toString() + context.getString(R.string.h)
+    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
+        " • " + (timeDifference / TimeUtils.ONE_MINUTE).toString() + context.getString(R.string.m)
+    } else {
+        " • " + context.getString(R.string.now)
     }
-
-    yearFormatter.format(time * 1000)
-  } else if (timeDifference > TimeUtils.ONE_MONTH) {
-    // Dec 12
-    if (locale != Locale.getDefault()) {
-      locale = Locale.getDefault()
-      yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
-      monthFormatter = SimpleDateFormat(" • MMM dd", locale)
-    }
-
-    monthFormatter.format(time * 1000)
-  } else if (timeDifference > TimeUtils.ONE_DAY) {
-    // 2 days
-    " • " + (timeDifference / TimeUtils.ONE_DAY).toString() + context.getString(R.string.d)
-  } else if (timeDifference > TimeUtils.ONE_HOUR) {
-    " • " + (timeDifference / TimeUtils.ONE_HOUR).toString() + context.getString(R.string.h)
-  } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-    " • " + (timeDifference / TimeUtils.ONE_MINUTE).toString() + context.getString(R.string.m)
-  } else {
-    " • " + context.getString(R.string.now)
-  }
 }
 
 fun timeAgoShort(
-  mills: Long?,
-  stringForNow: String,
+    mills: Long?,
+    stringForNow: String,
 ): String {
-  if (mills == null) return " "
+    if (mills == null) return " "
 
-  var humanReadable =
-    DateUtils.getRelativeTimeSpanString(
-        mills * 1000,
-        System.currentTimeMillis(),
-        DateUtils.MINUTE_IN_MILLIS,
-        DateUtils.FORMAT_ABBREV_ALL,
-      )
-      .toString()
-  if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
-    humanReadable = stringForNow
-  }
+    var humanReadable =
+        DateUtils.getRelativeTimeSpanString(
+            mills * 1000,
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS,
+            DateUtils.FORMAT_ABBREV_ALL,
+        )
+            .toString()
+    if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
+        humanReadable = stringForNow
+    }
 
-  return humanReadable
+    return humanReadable
 }

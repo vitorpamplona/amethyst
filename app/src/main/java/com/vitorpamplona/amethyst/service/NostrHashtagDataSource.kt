@@ -34,51 +34,51 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrHashtagDataSource : NostrDataSource("SingleHashtagFeed") {
-  private var hashtagToWatch: String? = null
+    private var hashtagToWatch: String? = null
 
-  fun createLoadHashtagFilter(): TypedFilter? {
-    val hashToLoad = hashtagToWatch ?: return null
+    fun createLoadHashtagFilter(): TypedFilter? {
+        val hashToLoad = hashtagToWatch ?: return null
 
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          tags =
-            mapOf(
-              "t" to
-                listOf(
-                  hashToLoad,
-                  hashToLoad.lowercase(),
-                  hashToLoad.uppercase(),
-                  hashToLoad.capitalize(),
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    tags =
+                        mapOf(
+                            "t" to
+                                listOf(
+                                    hashToLoad,
+                                    hashToLoad.lowercase(),
+                                    hashToLoad.uppercase(),
+                                    hashToLoad.capitalize(),
+                                ),
+                        ),
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            ChannelMessageEvent.KIND,
+                            LongTextNoteEvent.KIND,
+                            PollNoteEvent.KIND,
+                            LiveActivitiesChatMessageEvent.KIND,
+                            ClassifiedsEvent.KIND,
+                            HighlightEvent.KIND,
+                            AudioTrackEvent.KIND,
+                            AudioHeaderEvent.KIND,
+                        ),
+                    limit = 200,
                 ),
-            ),
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              ChannelMessageEvent.KIND,
-              LongTextNoteEvent.KIND,
-              PollNoteEvent.KIND,
-              LiveActivitiesChatMessageEvent.KIND,
-              ClassifiedsEvent.KIND,
-              HighlightEvent.KIND,
-              AudioTrackEvent.KIND,
-              AudioHeaderEvent.KIND,
-            ),
-          limit = 200,
-        ),
-    )
-  }
+        )
+    }
 
-  val loadHashtagChannel = requestNewChannel()
+    val loadHashtagChannel = requestNewChannel()
 
-  override fun updateChannelFilters() {
-    loadHashtagChannel.typedFilters = listOfNotNull(createLoadHashtagFilter()).ifEmpty { null }
-  }
+    override fun updateChannelFilters() {
+        loadHashtagChannel.typedFilters = listOfNotNull(createLoadHashtagFilter()).ifEmpty { null }
+    }
 
-  fun loadHashtag(tag: String?) {
-    hashtagToWatch = tag
+    fun loadHashtag(tag: String?) {
+        hashtagToWatch = tag
 
-    invalidateFilters()
-  }
+        invalidateFilters()
+    }
 }

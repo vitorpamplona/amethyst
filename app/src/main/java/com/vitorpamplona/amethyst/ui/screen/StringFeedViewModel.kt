@@ -42,90 +42,88 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NostrHiddenWordsFeedViewModel(val account: Account) :
-  StringFeedViewModel(
-    HiddenWordsFeedFilter(account),
-  ) {
-  class Factory(val account: Account) : ViewModelProvider.Factory {
-    override fun <NostrHiddenWordsFeedViewModel : ViewModel> create(
-      modelClass: Class<NostrHiddenWordsFeedViewModel>
-    ): NostrHiddenWordsFeedViewModel {
-      return NostrHiddenWordsFeedViewModel(account) as NostrHiddenWordsFeedViewModel
+    StringFeedViewModel(
+        HiddenWordsFeedFilter(account),
+    ) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrHiddenWordsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenWordsFeedViewModel>): NostrHiddenWordsFeedViewModel {
+            return NostrHiddenWordsFeedViewModel(account) as NostrHiddenWordsFeedViewModel
+        }
     }
-  }
 }
 
 @Stable
 open class StringFeedViewModel(val dataSource: FeedFilter<String>) :
-  ViewModel(), InvalidatableViewModel {
-  private val _feedContent = MutableStateFlow<StringFeedState>(StringFeedState.Loading)
-  val feedContent = _feedContent.asStateFlow()
+    ViewModel(), InvalidatableViewModel {
+    private val _feedContent = MutableStateFlow<StringFeedState>(StringFeedState.Loading)
+    val feedContent = _feedContent.asStateFlow()
 
-  private fun refresh() {
-    viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
-  }
-
-  private fun refreshSuspended() {
-    checkNotInMainThread()
-
-    val notes = dataSource.loadTop().toImmutableList()
-
-    val oldNotesState = _feedContent.value
-    if (oldNotesState is StringFeedState.Loaded) {
-      // Using size as a proxy for has changed.
-      if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
-        updateFeed(notes)
-      }
-    } else {
-      updateFeed(notes)
+    private fun refresh() {
+        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
-  }
 
-  private fun updateFeed(notes: ImmutableList<String>) {
-    viewModelScope.launch(Dispatchers.Main) {
-      val currentState = _feedContent.value
-      if (notes.isEmpty()) {
-        _feedContent.update { StringFeedState.Empty }
-      } else if (currentState is StringFeedState.Loaded) {
-        // updates the current list
-        currentState.feed.value = notes
-      } else {
-        _feedContent.update { StringFeedState.Loaded(mutableStateOf(notes)) }
-      }
-    }
-  }
-
-  private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-  override fun invalidateData(ignoreIfDoing: Boolean) {
-    viewModelScope.launch(Dispatchers.IO) {
-      bundler.invalidate(ignoreIfDoing) {
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        refreshSuspended()
-      }
-    }
-  }
-
-  var collectorJob: Job? = null
-
-  init {
-    Log.d("Init", this.javaClass.simpleName)
-    collectorJob =
-      viewModelScope.launch(Dispatchers.IO) {
+    private fun refreshSuspended() {
         checkNotInMainThread()
 
-        LocalCache.live.newEventBundles.collect { newNotes ->
-          checkNotInMainThread()
+        val notes = dataSource.loadTop().toImmutableList()
 
-          invalidateData()
+        val oldNotesState = _feedContent.value
+        if (oldNotesState is StringFeedState.Loaded) {
+            // Using size as a proxy for has changed.
+            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
+                updateFeed(notes)
+            }
+        } else {
+            updateFeed(notes)
         }
-      }
-  }
+    }
 
-  override fun onCleared() {
-    Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-    bundler.cancel()
-    collectorJob?.cancel()
-    super.onCleared()
-  }
+    private fun updateFeed(notes: ImmutableList<String>) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val currentState = _feedContent.value
+            if (notes.isEmpty()) {
+                _feedContent.update { StringFeedState.Empty }
+            } else if (currentState is StringFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
+            } else {
+                _feedContent.update { StringFeedState.Loaded(mutableStateOf(notes)) }
+            }
+        }
+    }
+
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
+
+    override fun invalidateData(ignoreIfDoing: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            bundler.invalidate(ignoreIfDoing) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+            }
+        }
+    }
+
+    var collectorJob: Job? = null
+
+    init {
+        Log.d("Init", this.javaClass.simpleName)
+        collectorJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                checkNotInMainThread()
+
+                LocalCache.live.newEventBundles.collect { newNotes ->
+                    checkNotInMainThread()
+
+                    invalidateData()
+                }
+            }
+    }
+
+    override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        bundler.cancel()
+        collectorJob?.cancel()
+        super.onCleared()
+    }
 }

@@ -48,120 +48,120 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
-  private var searchString: String? = null
+    private var searchString: String? = null
 
-  private fun createAnythingWithIDFilter(): List<TypedFilter>? {
-    val mySearchString = searchString
-    if (mySearchString.isNullOrBlank()) {
-      return null
-    }
+    private fun createAnythingWithIDFilter(): List<TypedFilter>? {
+        val mySearchString = searchString
+        if (mySearchString.isNullOrBlank()) {
+            return null
+        }
 
-    val hexToWatch =
-      try {
-        val isAStraightHex =
-          if (HexValidator.isHex(mySearchString)) {
-            Hex.decode(mySearchString).toHexKey()
-          } else {
-            null
-          }
+        val hexToWatch =
+            try {
+                val isAStraightHex =
+                    if (HexValidator.isHex(mySearchString)) {
+                        Hex.decode(mySearchString).toHexKey()
+                    } else {
+                        null
+                    }
 
-        Nip19.uriToRoute(mySearchString)?.hex ?: isAStraightHex
-      } catch (e: Exception) {
-        null
-      }
+                Nip19.uriToRoute(mySearchString)?.hex ?: isAStraightHex
+            } catch (e: Exception) {
+                null
+            }
 
-    // downloads all the reactions to a given event.
-    return listOfNotNull(
-      hexToWatch?.let {
-        TypedFilter(
-          types = COMMON_FEED_TYPES,
-          filter =
-            JsonFilter(
-              ids = listOfNotNull(hexToWatch),
+        // downloads all the reactions to a given event.
+        return listOfNotNull(
+            hexToWatch?.let {
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            ids = listOfNotNull(hexToWatch),
+                        ),
+                )
+            },
+            hexToWatch?.let {
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            kinds = listOf(MetadataEvent.KIND),
+                            authors = listOfNotNull(hexToWatch),
+                        ),
+                )
+            },
+            TypedFilter(
+                types = setOf(FeedType.SEARCH),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(MetadataEvent.KIND),
+                        search = mySearchString,
+                        limit = 100,
+                    ),
+            ),
+            TypedFilter(
+                types = setOf(FeedType.SEARCH),
+                filter =
+                    JsonFilter(
+                        kinds =
+                            listOf(
+                                TextNoteEvent.KIND,
+                                LongTextNoteEvent.KIND,
+                                BadgeDefinitionEvent.KIND,
+                                PeopleListEvent.KIND,
+                                BookmarkListEvent.KIND,
+                                AudioHeaderEvent.KIND,
+                                AudioTrackEvent.KIND,
+                                PinListEvent.KIND,
+                                PollNoteEvent.KIND,
+                                ChannelCreateEvent.KIND,
+                            ),
+                        search = mySearchString,
+                        limit = 100,
+                    ),
+            ),
+            TypedFilter(
+                types = setOf(FeedType.SEARCH),
+                filter =
+                    JsonFilter(
+                        kinds =
+                            listOf(
+                                ChannelMetadataEvent.KIND,
+                                ClassifiedsEvent.KIND,
+                                CommunityDefinitionEvent.KIND,
+                                EmojiPackEvent.KIND,
+                                HighlightEvent.KIND,
+                                LiveActivitiesEvent.KIND,
+                                PollNoteEvent.KIND,
+                                NNSEvent.KIND,
+                            ),
+                        search = mySearchString,
+                        limit = 100,
+                    ),
             ),
         )
-      },
-      hexToWatch?.let {
-        TypedFilter(
-          types = COMMON_FEED_TYPES,
-          filter =
-            JsonFilter(
-              kinds = listOf(MetadataEvent.KIND),
-              authors = listOfNotNull(hexToWatch),
-            ),
-        )
-      },
-      TypedFilter(
-        types = setOf(FeedType.SEARCH),
-        filter =
-          JsonFilter(
-            kinds = listOf(MetadataEvent.KIND),
-            search = mySearchString,
-            limit = 100,
-          ),
-      ),
-      TypedFilter(
-        types = setOf(FeedType.SEARCH),
-        filter =
-          JsonFilter(
-            kinds =
-              listOf(
-                TextNoteEvent.KIND,
-                LongTextNoteEvent.KIND,
-                BadgeDefinitionEvent.KIND,
-                PeopleListEvent.KIND,
-                BookmarkListEvent.KIND,
-                AudioHeaderEvent.KIND,
-                AudioTrackEvent.KIND,
-                PinListEvent.KIND,
-                PollNoteEvent.KIND,
-                ChannelCreateEvent.KIND,
-              ),
-            search = mySearchString,
-            limit = 100,
-          ),
-      ),
-      TypedFilter(
-        types = setOf(FeedType.SEARCH),
-        filter =
-          JsonFilter(
-            kinds =
-              listOf(
-                ChannelMetadataEvent.KIND,
-                ClassifiedsEvent.KIND,
-                CommunityDefinitionEvent.KIND,
-                EmojiPackEvent.KIND,
-                HighlightEvent.KIND,
-                LiveActivitiesEvent.KIND,
-                PollNoteEvent.KIND,
-                NNSEvent.KIND,
-              ),
-            search = mySearchString,
-            limit = 100,
-          ),
-      ),
-    )
-  }
-
-  val searchChannel = requestNewChannel()
-
-  override fun updateChannelFilters() {
-    searchChannel.typedFilters = createAnythingWithIDFilter()
-  }
-
-  fun search(searchString: String) {
-    if (this.searchString != searchString) {
-      println("DataSource: ${this.javaClass.simpleName} Search for $searchString")
-      this.searchString = searchString
-      invalidateFilters()
     }
-  }
 
-  fun clear() {
-    if (searchString != null) {
-      println("DataSource: ${this.javaClass.simpleName} Clear")
-      searchString = null
-      invalidateFilters()
+    val searchChannel = requestNewChannel()
+
+    override fun updateChannelFilters() {
+        searchChannel.typedFilters = createAnythingWithIDFilter()
     }
-  }
+
+    fun search(searchString: String) {
+        if (this.searchString != searchString) {
+            println("DataSource: ${this.javaClass.simpleName} Search for $searchString")
+            this.searchString = searchString
+            invalidateFilters()
+        }
+    }
+
+    fun clear() {
+        if (searchString != null) {
+            println("DataSource: ${this.javaClass.simpleName} Clear")
+            searchString = null
+            invalidateFilters()
+        }
+    }
 }

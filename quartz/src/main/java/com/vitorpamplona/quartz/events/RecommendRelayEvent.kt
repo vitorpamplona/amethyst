@@ -28,26 +28,26 @@ import java.net.URI
 
 @Immutable
 class RecommendRelayEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun relay() = URI.create(content.trim())
+    fun relay() = URI.create(content.trim())
 
-  companion object {
-    const val KIND = 2
+    companion object {
+        const val KIND = 2
 
-    fun create(
-      relay: URI,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (RecommendRelayEvent) -> Unit,
-    ) {
-      val content = relay.toString()
-      signer.sign(createdAt, KIND, emptyArray(), content, onReady)
+        fun create(
+            relay: URI,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (RecommendRelayEvent) -> Unit,
+        ) {
+            val content = relay.toString()
+            signer.sign(createdAt, KIND, emptyArray(), content, onReady)
+        }
     }
-  }
 }

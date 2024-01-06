@@ -28,31 +28,31 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class ThreadFeedFilter(val account: Account, val noteId: String) : FeedFilter<Note>() {
-  override fun feedKey(): String {
-    return noteId
-  }
+    override fun feedKey(): String {
+        return noteId
+    }
 
-  override fun feed(): List<Note> {
-    val cachedSignatures: MutableMap<Note, Note.LevelSignature> = mutableMapOf()
-    val followingKeySet = account.liveKind3Follows.value.users
-    val eventsToWatch = ThreadAssembler().findThreadFor(noteId)
-    val eventsInHex = eventsToWatch.map { it.idHex }.toSet()
-    val now = TimeUtils.now()
+    override fun feed(): List<Note> {
+        val cachedSignatures: MutableMap<Note, Note.LevelSignature> = mutableMapOf()
+        val followingKeySet = account.liveKind3Follows.value.users
+        val eventsToWatch = ThreadAssembler().findThreadFor(noteId)
+        val eventsInHex = eventsToWatch.map { it.idHex }.toSet()
+        val now = TimeUtils.now()
 
-    // Currently orders by date of each event, descending, at each level of the reply stack
-    val order =
-      compareByDescending<Note> {
-        it
-          .replyLevelSignature(
-            eventsInHex,
-            cachedSignatures,
-            account.userProfile(),
-            followingKeySet,
-            now,
-          )
-          .signature
-      }
+        // Currently orders by date of each event, descending, at each level of the reply stack
+        val order =
+            compareByDescending<Note> {
+                it
+                    .replyLevelSignature(
+                        eventsInHex,
+                        cachedSignatures,
+                        account.userProfile(),
+                        followingKeySet,
+                        now,
+                    )
+                    .signature
+            }
 
-    return eventsToWatch.sortedWith(order)
-  }
+        return eventsToWatch.sortedWith(order)
+    }
 }

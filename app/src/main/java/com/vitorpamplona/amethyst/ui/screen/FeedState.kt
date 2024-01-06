@@ -25,12 +25,12 @@ import com.vitorpamplona.amethyst.model.Note
 import kotlinx.collections.immutable.ImmutableList
 
 sealed class FeedState {
-  object Loading : FeedState()
+    object Loading : FeedState()
 
-  class Loaded(val feed: MutableState<ImmutableList<Note>>, val showHidden: MutableState<Boolean>) :
-    FeedState()
+    class Loaded(val feed: MutableState<ImmutableList<Note>>, val showHidden: MutableState<Boolean>) :
+        FeedState()
 
-  object Empty : FeedState()
+    object Empty : FeedState()
 
-  class FeedError(val errorMessage: String) : FeedState()
+    class FeedError(val errorMessage: String) : FeedState()
 }

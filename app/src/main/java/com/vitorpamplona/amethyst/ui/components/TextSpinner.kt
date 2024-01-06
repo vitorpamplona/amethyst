@@ -59,145 +59,145 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun TextSpinner(
-  label: String?,
-  placeholder: String,
-  options: ImmutableList<TitleExplainer>,
-  onSelect: (Int) -> Unit,
-  modifier: Modifier = Modifier,
+    label: String?,
+    placeholder: String,
+    options: ImmutableList<TitleExplainer>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-  TextSpinner(
-    placeholder,
-    options,
-    onSelect,
-    modifier,
-  ) { currentOption, modifier ->
-    OutlinedTextField(
-      value = currentOption,
-      onValueChange = {},
-      readOnly = true,
-      label = { label?.let { Text(it) } },
-      modifier = modifier,
-    )
-  }
+    TextSpinner(
+        placeholder,
+        options,
+        onSelect,
+        modifier,
+    ) { currentOption, modifier ->
+        OutlinedTextField(
+            value = currentOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { label?.let { Text(it) } },
+            modifier = modifier,
+        )
+    }
 }
 
 @Composable
 fun TextSpinner(
-  placeholder: String,
-  options: ImmutableList<TitleExplainer>,
-  onSelect: (Int) -> Unit,
-  modifier: Modifier = Modifier,
-  mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit,
+    placeholder: String,
+    options: ImmutableList<TitleExplainer>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit,
 ) {
-  val focusRequester = remember { FocusRequester() }
-  val interactionSource = remember { MutableInteractionSource() }
-  var optionsShowing by remember { mutableStateOf(false) }
-  var currentText by remember { mutableStateOf(placeholder) }
+    val focusRequester = remember { FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
+    var optionsShowing by remember { mutableStateOf(false) }
+    var currentText by remember { mutableStateOf(placeholder) }
 
-  Box(
-    modifier = modifier,
-    contentAlignment = Alignment.Center,
-  ) {
-    mainElement(
-      currentText,
-      remember { Modifier.fillMaxWidth().focusRequester(focusRequester) },
-    )
     Box(
-      modifier =
-        Modifier.matchParentSize().clickable(
-          interactionSource = interactionSource,
-          indication = null,
-        ) {
-          optionsShowing = true
-          focusRequester.requestFocus()
-        },
-    )
-  }
-
-  if (optionsShowing) {
-    options.isNotEmpty().also {
-      SpinnerSelectionDialog(options = options, onDismiss = { optionsShowing = false }) {
-        currentText = options[it].title
-        optionsShowing = false
-        onSelect(it)
-      }
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        mainElement(
+            currentText,
+            remember { Modifier.fillMaxWidth().focusRequester(focusRequester) },
+        )
+        Box(
+            modifier =
+                Modifier.matchParentSize().clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                ) {
+                    optionsShowing = true
+                    focusRequester.requestFocus()
+                },
+        )
     }
-  }
+
+    if (optionsShowing) {
+        options.isNotEmpty().also {
+            SpinnerSelectionDialog(options = options, onDismiss = { optionsShowing = false }) {
+                currentText = options[it].title
+                optionsShowing = false
+                onSelect(it)
+            }
+        }
+    }
 }
 
 @Composable
 fun SpinnerSelectionDialog(
-  title: String? = null,
-  options: ImmutableList<TitleExplainer>,
-  onDismiss: () -> Unit,
-  onSelect: (Int) -> Unit,
+    title: String? = null,
+    options: ImmutableList<TitleExplainer>,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit,
 ) {
-  SpinnerSelectionDialog(
-    title = title,
-    options = options,
-    onSelect = onSelect,
-    onDismiss = onDismiss,
-  ) { item ->
-    Row(
-      horizontalArrangement = Arrangement.Center,
-      modifier = Modifier.fillMaxWidth(),
-    ) {
-      Text(text = item.title, color = MaterialTheme.colorScheme.onSurface)
+    SpinnerSelectionDialog(
+        title = title,
+        options = options,
+        onSelect = onSelect,
+        onDismiss = onDismiss,
+    ) { item ->
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = item.title, color = MaterialTheme.colorScheme.onSurface)
+        }
+        item.explainer?.let {
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = it, color = Color.Gray, fontSize = Font14SP)
+            }
+        }
     }
-    item.explainer?.let {
-      Spacer(modifier = Modifier.height(5.dp))
-      Row(
-        horizontalArrangement = Arrangement.Start,
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Text(text = it, color = Color.Gray, fontSize = Font14SP)
-      }
-    }
-  }
 }
 
 @Composable
 fun <T> SpinnerSelectionDialog(
-  title: String? = null,
-  options: ImmutableList<T>,
-  onSelect: (Int) -> Unit,
-  onDismiss: () -> Unit,
-  onRenderItem: @Composable (T) -> Unit,
+    title: String? = null,
+    options: ImmutableList<T>,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onRenderItem: @Composable (T) -> Unit,
 ) {
-  Dialog(onDismissRequest = onDismiss) {
-    Surface(
-      border = BorderStroke(0.25.dp, Color.LightGray),
-      shape = RoundedCornerShape(5.dp),
-    ) {
-      LazyColumn {
-        title?.let {
-          item {
-            Row(
-              modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp),
-              horizontalArrangement = Arrangement.Center,
-            ) {
-              Text(
-                text = title,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-              )
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            border = BorderStroke(0.25.dp, Color.LightGray),
+            shape = RoundedCornerShape(5.dp),
+        ) {
+            LazyColumn {
+                title?.let {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = title,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        Divider(color = Color.LightGray, thickness = DividerThickness)
+                    }
+                }
+                itemsIndexed(options) { index, item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onSelect(index) }.padding(16.dp, 16.dp),
+                    ) {
+                        Column { onRenderItem(item) }
+                    }
+                    if (index < options.lastIndex) {
+                        Divider(color = Color.LightGray, thickness = DividerThickness)
+                    }
+                }
             }
-            Divider(color = Color.LightGray, thickness = DividerThickness)
-          }
         }
-        itemsIndexed(options) { index, item ->
-          Row(
-            modifier = Modifier.fillMaxWidth().clickable { onSelect(index) }.padding(16.dp, 16.dp),
-          ) {
-            Column { onRenderItem(item) }
-          }
-          if (index < options.lastIndex) {
-            Divider(color = Color.LightGray, thickness = DividerThickness)
-          }
-        }
-      }
     }
-  }
 }
 
 @Immutable data class TitleExplainer(val title: String, val explainer: String? = null)

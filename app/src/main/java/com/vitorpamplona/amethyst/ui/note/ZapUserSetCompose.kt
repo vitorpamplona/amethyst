@@ -51,89 +51,89 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 
 @Composable
 fun ZapUserSetCompose(
-  zapSetCard: ZapUserSetCard,
-  isInnerNote: Boolean = false,
-  routeForLastRead: String,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    zapSetCard: ZapUserSetCard,
+    isInnerNote: Boolean = false,
+    routeForLastRead: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val defaultBackgroundColor = MaterialTheme.colorScheme.background
-  val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-  val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
+    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
-  LaunchedEffect(key1 = zapSetCard.createdAt()) {
-    accountViewModel.loadAndMarkAsRead(routeForLastRead, zapSetCard.createdAt) { isNew ->
-      val newBackgroundColor =
-        if (isNew) {
-          newItemColor.compositeOver(defaultBackgroundColor)
-        } else {
-          defaultBackgroundColor
+    LaunchedEffect(key1 = zapSetCard.createdAt()) {
+        accountViewModel.loadAndMarkAsRead(routeForLastRead, zapSetCard.createdAt) { isNew ->
+            val newBackgroundColor =
+                if (isNew) {
+                    newItemColor.compositeOver(defaultBackgroundColor)
+                } else {
+                    defaultBackgroundColor
+                }
+
+            if (backgroundColor.value != newBackgroundColor) {
+                backgroundColor.value = newBackgroundColor
+            }
         }
-
-      if (backgroundColor.value != newBackgroundColor) {
-        backgroundColor.value = newBackgroundColor
-      }
     }
-  }
 
-  Column(
-    modifier =
-      Modifier.background(backgroundColor.value).clickable {
-        nav("User/${zapSetCard.user.pubkeyHex}")
-      },
-  ) {
-    Row(
-      modifier =
-        Modifier.padding(
-          start = if (!isInnerNote) 12.dp else 0.dp,
-          end = if (!isInnerNote) 12.dp else 0.dp,
-          top = 10.dp,
-        ),
+    Column(
+        modifier =
+            Modifier.background(backgroundColor.value).clickable {
+                nav("User/${zapSetCard.user.pubkeyHex}")
+            },
     ) {
-      // Draws the like picture outside the boosted card.
-      if (!isInnerNote) {
-        Box(
-          modifier = Size55Modifier,
-        ) {
-          ZappedIcon(
-            remember { Modifier.size(Size25dp).align(Alignment.TopEnd) },
-          )
-        }
-      }
-
-      Column(modifier = Modifier) {
-        Row(Modifier.fillMaxWidth()) {
-          MapZaps(zapSetCard.zapEvents, accountViewModel) {
-            AuthorGalleryZaps(it, backgroundColor, nav, accountViewModel)
-          }
-        }
-
-        Spacer(DoubleVertSpacer)
-
         Row(
-          Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp).fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.padding(
+                    start = if (!isInnerNote) 12.dp else 0.dp,
+                    end = if (!isInnerNote) 12.dp else 0.dp,
+                    top = 10.dp,
+                ),
         ) {
-          UserPicture(
-            zapSetCard.user,
-            Size55dp,
-            accountViewModel = accountViewModel,
-            nav = nav,
-          )
+            // Draws the like picture outside the boosted card.
+            if (!isInnerNote) {
+                Box(
+                    modifier = Size55Modifier,
+                ) {
+                    ZappedIcon(
+                        remember { Modifier.size(Size25dp).align(Alignment.TopEnd) },
+                    )
+                }
+            }
 
-          Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user) }
+            Column(modifier = Modifier) {
+                Row(Modifier.fillMaxWidth()) {
+                    MapZaps(zapSetCard.zapEvents, accountViewModel) {
+                        AuthorGalleryZaps(it, backgroundColor, nav, accountViewModel)
+                    }
+                }
 
-            AboutDisplay(zapSetCard.user)
-          }
+                Spacer(DoubleVertSpacer)
+
+                Row(
+                    Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    UserPicture(
+                        zapSetCard.user,
+                        Size55dp,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+
+                    Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user) }
+
+                        AboutDisplay(zapSetCard.user)
+                    }
+                }
+
+                Spacer(DoubleVertSpacer)
+            }
         }
 
-        Spacer(DoubleVertSpacer)
-      }
+        Divider(
+            thickness = DividerThickness,
+        )
     }
-
-    Divider(
-      thickness = DividerThickness,
-    )
-  }
 }

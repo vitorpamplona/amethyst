@@ -28,54 +28,54 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class VideoViewEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 34237
+    companion object {
+        const val KIND = 34237
 
-    fun create(
-      video: ATag,
-      signer: NostrSigner,
-      viewStart: Long?,
-      viewEnd: Long?,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (VideoViewEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
+        fun create(
+            video: ATag,
+            signer: NostrSigner,
+            viewStart: Long?,
+            viewEnd: Long?,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (VideoViewEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
 
-      val aTag = video.toTag()
-      tags.add(arrayOf("d", aTag))
-      tags.add(arrayOf("a", aTag))
-      if (viewEnd != null) {
-        tags.add(arrayOf("viewed", viewStart?.toString() ?: "0", viewEnd.toString()))
-      } else {
-        tags.add(arrayOf("viewed", viewStart?.toString() ?: "0"))
-      }
+            val aTag = video.toTag()
+            tags.add(arrayOf("d", aTag))
+            tags.add(arrayOf("a", aTag))
+            if (viewEnd != null) {
+                tags.add(arrayOf("viewed", viewStart?.toString() ?: "0", viewEnd.toString()))
+            } else {
+                tags.add(arrayOf("viewed", viewStart?.toString() ?: "0"))
+            }
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        }
+
+        fun addViewedTime(
+            event: VideoViewEvent,
+            viewStart: Long?,
+            viewEnd: Long?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (VideoViewEvent) -> Unit,
+        ) {
+            val tags = event.tags.toMutableList()
+            if (viewEnd != null) {
+                tags.add(arrayOf("viewed", viewStart?.toString() ?: "0", viewEnd.toString()))
+            } else {
+                tags.add(arrayOf("viewed", viewStart?.toString() ?: "0"))
+            }
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        }
     }
-
-    fun addViewedTime(
-      event: VideoViewEvent,
-      viewStart: Long?,
-      viewEnd: Long?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (VideoViewEvent) -> Unit,
-    ) {
-      val tags = event.tags.toMutableList()
-      if (viewEnd != null) {
-        tags.add(arrayOf("viewed", viewStart?.toString() ?: "0", viewEnd.toString()))
-      } else {
-        tags.add(arrayOf("viewed", viewStart?.toString() ?: "0"))
-      }
-
-      signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
-    }
-  }
 }

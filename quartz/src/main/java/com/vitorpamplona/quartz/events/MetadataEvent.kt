@@ -29,170 +29,170 @@ import java.io.ByteArrayInputStream
 
 @Stable
 abstract class IdentityClaim(
-  val identity: String,
-  val proof: String,
+    val identity: String,
+    val proof: String,
 ) {
-  abstract fun toProofUrl(): String
+    abstract fun toProofUrl(): String
 
-  abstract fun platform(): String
+    abstract fun platform(): String
 
-  fun platformIdentity() = "${platform()}:$identity"
+    fun platformIdentity() = "${platform()}:$identity"
 
-  companion object {
-    fun create(
-      platformIdentity: String,
-      proof: String,
-    ): IdentityClaim? {
-      val (platform, identity) = platformIdentity.split(':')
+    companion object {
+        fun create(
+            platformIdentity: String,
+            proof: String,
+        ): IdentityClaim? {
+            val (platform, identity) = platformIdentity.split(':')
 
-      return when (platform.lowercase()) {
-        GitHubIdentity.platform -> GitHubIdentity(identity, proof)
-        TwitterIdentity.platform -> TwitterIdentity(identity, proof)
-        TelegramIdentity.platform -> TelegramIdentity(identity, proof)
-        MastodonIdentity.platform -> MastodonIdentity(identity, proof)
-        else -> throw IllegalArgumentException("Platform $platform not supported")
-      }
+            return when (platform.lowercase()) {
+                GitHubIdentity.platform -> GitHubIdentity(identity, proof)
+                TwitterIdentity.platform -> TwitterIdentity(identity, proof)
+                TelegramIdentity.platform -> TelegramIdentity(identity, proof)
+                MastodonIdentity.platform -> MastodonIdentity(identity, proof)
+                else -> throw IllegalArgumentException("Platform $platform not supported")
+            }
+        }
     }
-  }
 }
 
 class GitHubIdentity(
-  identity: String,
-  proof: String,
+    identity: String,
+    proof: String,
 ) : IdentityClaim(identity, proof) {
-  override fun toProofUrl() = "https://gist.github.com/$identity/$proof"
+    override fun toProofUrl() = "https://gist.github.com/$identity/$proof"
 
-  override fun platform() = platform
+    override fun platform() = platform
 
-  companion object {
-    val platform = "github"
+    companion object {
+        val platform = "github"
 
-    fun parseProofUrl(proofUrl: String): GitHubIdentity? {
-      return try {
-        if (proofUrl.isBlank()) return null
-        val path = proofUrl.removePrefix("https://gist.github.com/").split("?")[0].split("/")
+        fun parseProofUrl(proofUrl: String): GitHubIdentity? {
+            return try {
+                if (proofUrl.isBlank()) return null
+                val path = proofUrl.removePrefix("https://gist.github.com/").split("?")[0].split("/")
 
-        GitHubIdentity(path[0], path[1])
-      } catch (e: Exception) {
-        null
-      }
+                GitHubIdentity(path[0], path[1])
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
-  }
 }
 
 class TwitterIdentity(
-  identity: String,
-  proof: String,
+    identity: String,
+    proof: String,
 ) : IdentityClaim(identity, proof) {
-  override fun toProofUrl() = "https://twitter.com/$identity/status/$proof"
+    override fun toProofUrl() = "https://twitter.com/$identity/status/$proof"
 
-  override fun platform() = platform
+    override fun platform() = platform
 
-  companion object {
-    val platform = "twitter"
+    companion object {
+        val platform = "twitter"
 
-    fun parseProofUrl(proofUrl: String): TwitterIdentity? {
-      return try {
-        if (proofUrl.isBlank()) return null
-        val path = proofUrl.removePrefix("https://twitter.com/").split("?")[0].split("/")
+        fun parseProofUrl(proofUrl: String): TwitterIdentity? {
+            return try {
+                if (proofUrl.isBlank()) return null
+                val path = proofUrl.removePrefix("https://twitter.com/").split("?")[0].split("/")
 
-        TwitterIdentity(path[0], path[2])
-      } catch (e: Exception) {
-        null
-      }
+                TwitterIdentity(path[0], path[2])
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
-  }
 }
 
 class TelegramIdentity(
-  identity: String,
-  proof: String,
+    identity: String,
+    proof: String,
 ) : IdentityClaim(identity, proof) {
-  override fun toProofUrl() = "https://t.me/$proof"
+    override fun toProofUrl() = "https://t.me/$proof"
 
-  override fun platform() = platform
+    override fun platform() = platform
 
-  companion object {
-    val platform = "telegram"
-  }
+    companion object {
+        val platform = "telegram"
+    }
 }
 
 class MastodonIdentity(
-  identity: String,
-  proof: String,
+    identity: String,
+    proof: String,
 ) : IdentityClaim(identity, proof) {
-  override fun toProofUrl() = "https://$identity/$proof"
+    override fun toProofUrl() = "https://$identity/$proof"
 
-  override fun platform() = platform
+    override fun platform() = platform
 
-  companion object {
-    val platform = "mastodon"
+    companion object {
+        val platform = "mastodon"
 
-    fun parseProofUrl(proofUrl: String): MastodonIdentity? {
-      return try {
-        if (proofUrl.isBlank()) return null
-        val path = proofUrl.removePrefix("https://").split("?")[0].split("/")
+        fun parseProofUrl(proofUrl: String): MastodonIdentity? {
+            return try {
+                if (proofUrl.isBlank()) return null
+                val path = proofUrl.removePrefix("https://").split("?")[0].split("/")
 
-        return MastodonIdentity("${path[0]}/${path[1]}", path[2])
-      } catch (e: Exception) {
-        null
-      }
+                return MastodonIdentity("${path[0]}/${path[1]}", path[2])
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
-  }
 }
 
 class MetadataEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun contactMetaData() =
-    try {
-      mapper.readValue(
-        ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
-        UserMetadata::class.java,
-      )
-    } catch (e: Exception) {
-      // e.printStackTrace()
-      Log.w("MT", "Content Parse Error: ${e.localizedMessage} $content")
-      null
-    }
-
-  fun identityClaims() =
-    tags
-      .filter { it.firstOrNull() == "i" }
-      .mapNotNull {
+    fun contactMetaData() =
         try {
-          IdentityClaim.create(it.get(1), it.get(2))
+            mapper.readValue(
+                ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
+                UserMetadata::class.java,
+            )
         } catch (e: Exception) {
-          Log.e("MetadataEvent", "Can't parse identity [${it.joinToString { "," }}]", e)
-          null
+            // e.printStackTrace()
+            Log.w("MT", "Content Parse Error: ${e.localizedMessage} $content")
+            null
         }
-      }
 
-  companion object {
-    const val KIND = 0
+    fun identityClaims() =
+        tags
+            .filter { it.firstOrNull() == "i" }
+            .mapNotNull {
+                try {
+                    IdentityClaim.create(it.get(1), it.get(2))
+                } catch (e: Exception) {
+                    Log.e("MetadataEvent", "Can't parse identity [${it.joinToString { "," }}]", e)
+                    null
+                }
+            }
 
-    fun create(
-      contactMetaData: String,
-      newName: String,
-      identities: List<IdentityClaim>,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (MetadataEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
+    companion object {
+        const val KIND = 0
 
-      tags.add(
-        arrayOf("alt", "User profile for $newName"),
-      )
+        fun create(
+            contactMetaData: String,
+            newName: String,
+            identities: List<IdentityClaim>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (MetadataEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
 
-      identities.forEach { tags.add(arrayOf("i", it.platformIdentity(), it.proof)) }
+            tags.add(
+                arrayOf("alt", "User profile for $newName"),
+            )
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), contactMetaData, onReady)
+            identities.forEach { tags.add(arrayOf("i", it.platformIdentity(), it.proof)) }
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), contactMetaData, onReady)
+        }
     }
-  }
 }

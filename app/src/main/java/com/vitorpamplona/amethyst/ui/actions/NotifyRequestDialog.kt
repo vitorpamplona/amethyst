@@ -48,47 +48,47 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 
 @Composable
 fun NotifyRequestDialog(
-  title: String,
-  textContent: String,
-  buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  onDismiss: () -> Unit,
+    title: String,
+    textContent: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = { Text(title) },
-    text = {
-      val defaultBackground = MaterialTheme.colorScheme.background
-      val background = remember { mutableStateOf(defaultBackground) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            val defaultBackground = MaterialTheme.colorScheme.background
+            val background = remember { mutableStateOf(defaultBackground) }
 
-      TranslatableRichTextViewer(
-        textContent,
-        canPreview = true,
-        Modifier.fillMaxWidth(),
-        EmptyTagList,
-        background,
-        accountViewModel,
-        nav,
-      )
-    },
-    confirmButton = {
-      Button(
-        onClick = onDismiss,
-        colors = buttonColors,
-        contentPadding = PaddingValues(horizontal = Size16dp),
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Icon(
-            imageVector = Icons.Outlined.Done,
-            contentDescription = null,
-          )
-          Spacer(StdHorzSpacer)
-          Text(stringResource(R.string.error_dialog_button_ok))
-        }
-      }
-    },
-  )
+            TranslatableRichTextViewer(
+                textContent,
+                canPreview = true,
+                Modifier.fillMaxWidth(),
+                EmptyTagList,
+                background,
+                accountViewModel,
+                nav,
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = buttonColors,
+                contentPadding = PaddingValues(horizontal = Size16dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Done,
+                        contentDescription = null,
+                    )
+                    Spacer(StdHorzSpacer)
+                    Text(stringResource(R.string.error_dialog_button_ok))
+                }
+            }
+        },
+    )
 }

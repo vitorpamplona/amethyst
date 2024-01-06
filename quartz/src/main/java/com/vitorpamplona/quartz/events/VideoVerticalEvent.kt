@@ -27,55 +27,55 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class VideoVerticalEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : VideoEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 34236
-    const val ALT_DESCRIPTION = "Vertical Video"
+    companion object {
+        const val KIND = 34236
+        const val ALT_DESCRIPTION = "Vertical Video"
 
-    fun create(
-      url: String,
-      magnetUri: String? = null,
-      mimeType: String? = null,
-      alt: String? = null,
-      hash: String? = null,
-      size: String? = null,
-      dimensions: String? = null,
-      blurhash: String? = null,
-      originalHash: String? = null,
-      magnetURI: String? = null,
-      torrentInfoHash: String? = null,
-      encryptionKey: AESGCM? = null,
-      sensitiveContent: Boolean? = null,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (FileHeaderEvent) -> Unit,
-    ) {
-      create(
-        KIND,
-        url,
-        magnetUri,
-        mimeType,
-        alt,
-        hash,
-        size,
-        dimensions,
-        blurhash,
-        originalHash,
-        magnetURI,
-        torrentInfoHash,
-        encryptionKey,
-        sensitiveContent,
-        ALT_DESCRIPTION,
-        signer,
-        createdAt,
-        onReady,
-      )
+        fun create(
+            url: String,
+            magnetUri: String? = null,
+            mimeType: String? = null,
+            alt: String? = null,
+            hash: String? = null,
+            size: String? = null,
+            dimensions: String? = null,
+            blurhash: String? = null,
+            originalHash: String? = null,
+            magnetURI: String? = null,
+            torrentInfoHash: String? = null,
+            encryptionKey: AESGCM? = null,
+            sensitiveContent: Boolean? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (FileHeaderEvent) -> Unit,
+        ) {
+            create(
+                KIND,
+                url,
+                magnetUri,
+                mimeType,
+                alt,
+                hash,
+                size,
+                dimensions,
+                blurhash,
+                originalHash,
+                magnetURI,
+                torrentInfoHash,
+                encryptionKey,
+                sensitiveContent,
+                ALT_DESCRIPTION,
+                signer,
+                createdAt,
+                onReady,
+            )
+        }
     }
-  }
 }

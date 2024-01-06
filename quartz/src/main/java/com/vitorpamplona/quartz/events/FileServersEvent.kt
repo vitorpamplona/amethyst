@@ -27,33 +27,33 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class FileServersEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  override fun dTag() = FIXED_D_TAG
+    override fun dTag() = FIXED_D_TAG
 
-  companion object {
-    const val KIND = 10096
-    const val FIXED_D_TAG = ""
-    const val ALT = "File servers used by the author"
+    companion object {
+        const val KIND = 10096
+        const val FIXED_D_TAG = ""
+        const val ALT = "File servers used by the author"
 
-    fun create(
-      listOfServers: List<String>,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (FileServersEvent) -> Unit,
-    ) {
-      val msg = ""
-      val tags = mutableListOf<Array<String>>()
+        fun create(
+            listOfServers: List<String>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (FileServersEvent) -> Unit,
+        ) {
+            val msg = ""
+            val tags = mutableListOf<Array<String>>()
 
-      listOfServers.forEach { tags.add(arrayOf("server", it)) }
-      tags.add(arrayOf("alt", ALT))
+            listOfServers.forEach { tags.add(arrayOf("server", it)) }
+            tags.add(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+        }
     }
-  }
 }

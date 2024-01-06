@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CheckifItNeedsToRequestNoti
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-  CheckifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel)
+    CheckifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel)
 }
 
 @Composable

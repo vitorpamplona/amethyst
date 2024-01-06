@@ -30,11 +30,11 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Stable
 sealed class LnZapFeedState {
-  object Loading : LnZapFeedState()
+    object Loading : LnZapFeedState()
 
-  class Loaded(val feed: MutableState<ImmutableList<ZapReqResponse>>) : LnZapFeedState()
+    class Loaded(val feed: MutableState<ImmutableList<ZapReqResponse>>) : LnZapFeedState()
 
-  object Empty : LnZapFeedState()
+    object Empty : LnZapFeedState()
 
-  class FeedError(val errorMessage: String) : LnZapFeedState()
+    class FeedError(val errorMessage: String) : LnZapFeedState()
 }

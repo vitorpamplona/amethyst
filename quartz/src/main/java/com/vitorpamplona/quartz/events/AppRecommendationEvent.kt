@@ -28,30 +28,29 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class AppRecommendationEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun recommendations() =
-    tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull { ATag.parse(it[1], it.getOrNull(2)) }
+    fun recommendations() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull { ATag.parse(it[1], it.getOrNull(2)) }
 
-  companion object {
-    const val KIND = 31989
-    const val ALT = "App recommendations by the author"
+    companion object {
+        const val KIND = 31989
+        const val ALT = "App recommendations by the author"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (AppRecommendationEvent) -> Unit,
-    ) {
-      val tags =
-        arrayOf(
-          arrayOf("alt", ALT),
-        )
-      signer.sign(createdAt, KIND, tags, "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AppRecommendationEvent) -> Unit,
+        ) {
+            val tags =
+                arrayOf(
+                    arrayOf("alt", ALT),
+                )
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-  }
 }

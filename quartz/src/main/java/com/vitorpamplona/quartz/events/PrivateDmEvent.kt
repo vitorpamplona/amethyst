@@ -30,132 +30,132 @@ import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
 class PrivateDmEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig), ChatroomKeyable {
-  @Transient private var decryptedContent: Map<HexKey, String> = mapOf()
+    @Transient private var decryptedContent: Map<HexKey, String> = mapOf()
 
-  /**
-   * This may or may not be the actual recipient's pub key. The event is intended to look like a
-   * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used for
-   * initial messages.
-   */
-  private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    /**
+     * This may or may not be the actual recipient's pub key. The event is intended to look like a
+     * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used for
+     * initial messages.
+     */
+    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-  fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this) }?.getOrNull()
+    fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this) }?.getOrNull()
 
-  fun verifiedRecipientPubKey(): HexKey? {
-    val recipient = recipientPubKey()
-    return if (HexValidator.isHex(recipient)) {
-      recipient
-    } else {
-      null
-    }
-  }
-
-  fun talkingWith(oneSideHex: String): HexKey {
-    return if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
-  }
-
-  override fun chatroomKey(toRemove: String): ChatroomKey {
-    return ChatroomKey(persistentSetOf(talkingWith(toRemove)))
-  }
-
-  /**
-   * To be fully compatible with nip-04, we read e-tags that are in violation to nip-18.
-   *
-   * Nip-18 messages should refer to other events by inline references in the content like
-   * `[](e/c06f795e1234a9a1aecc731d768d4f3ca73e80031734767067c82d67ce82e506).
-   */
-  fun replyTo() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
-
-  fun with(pubkeyHex: String): Boolean {
-    return pubkeyHex == pubKey || tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
-  }
-
-  fun cachedContentFor(signer: NostrSigner): String? {
-    return decryptedContent[signer.pubKey]
-  }
-
-  fun plainContent(
-    signer: NostrSigner,
-    onReady: (String) -> Unit,
-  ) {
-    decryptedContent[signer.pubKey]?.let {
-      onReady(it)
-      return
-    }
-
-    signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { retVal ->
-      val content =
-        if (retVal.startsWith(NIP_18_ADVERTISEMENT)) {
-          retVal.substring(16)
+    fun verifiedRecipientPubKey(): HexKey? {
+        val recipient = recipientPubKey()
+        return if (HexValidator.isHex(recipient)) {
+            recipient
         } else {
-          retVal
+            null
+        }
+    }
+
+    fun talkingWith(oneSideHex: String): HexKey {
+        return if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
+    }
+
+    override fun chatroomKey(toRemove: String): ChatroomKey {
+        return ChatroomKey(persistentSetOf(talkingWith(toRemove)))
+    }
+
+    /**
+     * To be fully compatible with nip-04, we read e-tags that are in violation to nip-18.
+     *
+     * Nip-18 messages should refer to other events by inline references in the content like
+     * `[](e/c06f795e1234a9a1aecc731d768d4f3ca73e80031734767067c82d67ce82e506).
+     */
+    fun replyTo() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+
+    fun with(pubkeyHex: String): Boolean {
+        return pubkeyHex == pubKey || tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
+    }
+
+    fun cachedContentFor(signer: NostrSigner): String? {
+        return decryptedContent[signer.pubKey]
+    }
+
+    fun plainContent(
+        signer: NostrSigner,
+        onReady: (String) -> Unit,
+    ) {
+        decryptedContent[signer.pubKey]?.let {
+            onReady(it)
+            return
         }
 
-      decryptedContent = decryptedContent + Pair(signer.pubKey, content)
+        signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { retVal ->
+            val content =
+                if (retVal.startsWith(NIP_18_ADVERTISEMENT)) {
+                    retVal.substring(16)
+                } else {
+                    retVal
+                }
 
-      onReady(content)
+            decryptedContent = decryptedContent + Pair(signer.pubKey, content)
+
+            onReady(content)
+        }
     }
-  }
 
-  companion object {
-    const val KIND = 4
-    const val ALT = "Private Message"
-    const val NIP_18_ADVERTISEMENT = "[//]: # (nip18)\n"
+    companion object {
+        const val KIND = 4
+        const val ALT = "Private Message"
+        const val NIP_18_ADVERTISEMENT = "[//]: # (nip18)\n"
 
-    fun create(
-      recipientPubKey: HexKey,
-      msg: String,
-      replyTos: List<String>? = null,
-      mentions: List<String>? = null,
-      zapReceiver: List<ZapSplitSetup>? = null,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      publishedRecipientPubKey: HexKey? = null,
-      advertiseNip18: Boolean = true,
-      markAsSensitive: Boolean,
-      zapRaiserAmount: Long?,
-      geohash: String? = null,
-      onReady: (PrivateDmEvent) -> Unit,
-    ) {
-      val message =
-        if (advertiseNip18) {
-          NIP_18_ADVERTISEMENT
-        } else {
-          ""
-        } + msg
-      val tags = mutableListOf<Array<String>>()
-      publishedRecipientPubKey?.let { tags.add(arrayOf("p", publishedRecipientPubKey)) }
-      replyTos?.forEach { tags.add(arrayOf("e", it)) }
-      mentions?.forEach { tags.add(arrayOf("p", it)) }
-      zapReceiver?.forEach {
-        tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-      }
-      if (markAsSensitive) {
-        tags.add(arrayOf("content-warning", ""))
-      }
-      zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
-      geohash?.let { tags.addAll(geohashMipMap(it)) }
-      tags.add(arrayOf("alt", ALT))
+        fun create(
+            recipientPubKey: HexKey,
+            msg: String,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            publishedRecipientPubKey: HexKey? = null,
+            advertiseNip18: Boolean = true,
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?,
+            geohash: String? = null,
+            onReady: (PrivateDmEvent) -> Unit,
+        ) {
+            val message =
+                if (advertiseNip18) {
+                    NIP_18_ADVERTISEMENT
+                } else {
+                    ""
+                } + msg
+            val tags = mutableListOf<Array<String>>()
+            publishedRecipientPubKey?.let { tags.add(arrayOf("p", publishedRecipientPubKey)) }
+            replyTos?.forEach { tags.add(arrayOf("e", it)) }
+            mentions?.forEach { tags.add(arrayOf("p", it)) }
+            zapReceiver?.forEach {
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+            }
+            if (markAsSensitive) {
+                tags.add(arrayOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
+            geohash?.let { tags.addAll(geohashMipMap(it)) }
+            tags.add(arrayOf("alt", ALT))
 
-      signer.nip04Encrypt(message, recipientPubKey) { content ->
-        signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
-      }
+            signer.nip04Encrypt(message, recipientPubKey) { content ->
+                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            }
+        }
     }
-  }
 }
 
 fun geohashMipMap(geohash: String): Array<Array<String>> {
-  return geohash.indices
-    .asSequence()
-    .map { arrayOf("g", geohash.substring(0, it + 1)) }
-    .toList()
-    .reversed()
-    .toTypedArray()
+    return geohash.indices
+        .asSequence()
+        .map { arrayOf("g", geohash.substring(0, it + 1)) }
+        .toList()
+        .reversed()
+        .toTypedArray()
 }

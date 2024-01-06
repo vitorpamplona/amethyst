@@ -27,34 +27,33 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CommunityDefinitionEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
+    fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
-  fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
+    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
 
-  fun rules() = tags.firstOrNull { it.size > 1 && it[0] == "rules" }?.get(1)
+    fun rules() = tags.firstOrNull { it.size > 1 && it[0] == "rules" }?.get(1)
 
-  fun moderators() =
-    tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(3)) }
+    fun moderators() = tags.filter { it.size > 1 && it[0] == "p" }.map { Participant(it[1], it.getOrNull(3)) }
 
-  companion object {
-    const val KIND = 34550
-    const val ALT = "Community definition"
+    companion object {
+        const val KIND = 34550
+        const val ALT = "Community definition"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (CommunityDefinitionEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
-      tags.add(arrayOf("alt", ALT))
-      signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CommunityDefinitionEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            tags.add(arrayOf("alt", ALT))
+            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+        }
     }
-  }
 }

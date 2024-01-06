@@ -27,35 +27,37 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class ChannelHideMessageEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig), IsInPublicChatChannel {
-  override fun channel() =
-    tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
-      ?: tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    override fun channel() =
+        tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
+            ?: tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-  fun eventsToHide() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+    fun eventsToHide() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
-  companion object {
-    const val KIND = 43
-    const val ALT = "Hide message instruction for public chats"
+    companion object {
+        const val KIND = 43
+        const val ALT = "Hide message instruction for public chats"
 
-    fun create(
-      reason: String,
-      messagesToHide: List<String>?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ChannelHideMessageEvent) -> Unit,
-    ) {
-      val tags =
-        (messagesToHide?.map { arrayOf("e", it) }?.toTypedArray()
-          ?: emptyArray()) + arrayOf(arrayOf("alt", ALT))
+        fun create(
+            reason: String,
+            messagesToHide: List<String>?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelHideMessageEvent) -> Unit,
+        ) {
+            val tags =
+                (
+                    messagesToHide?.map { arrayOf("e", it) }?.toTypedArray()
+                        ?: emptyArray()
+                ) + arrayOf(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags, reason, onReady)
+            signer.sign(createdAt, KIND, tags, reason, onReady)
+        }
     }
-  }
 }

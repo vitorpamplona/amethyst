@@ -88,273 +88,274 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
-  discoveryMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
-  discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
-  discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
-  discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    discoveryMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
+    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
+    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
+    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val lifeCycleOwner = LocalLifecycleOwner.current
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
-  val tabs by
-    remember(
-      discoveryLiveFeedViewModel,
-      discoveryCommunityFeedViewModel,
-      discoveryChatFeedViewModel,
-    ) {
-      mutableStateOf(
-        listOf(
-            TabItem(
-              R.string.discover_marketplace,
-              discoveryMarketplaceFeedViewModel,
-              Route.Discover.base + "Marketplace",
-              ScrollStateKeys.DISCOVER_MARKETPLACE,
-              ClassifiedsEvent.KIND,
-            ),
-            TabItem(
-              R.string.discover_live,
-              discoveryLiveFeedViewModel,
-              Route.Discover.base + "Live",
-              ScrollStateKeys.DISCOVER_LIVE,
-              LiveActivitiesEvent.KIND,
-            ),
-            TabItem(
-              R.string.discover_community,
-              discoveryCommunityFeedViewModel,
-              Route.Discover.base + "Community",
-              ScrollStateKeys.DISCOVER_COMMUNITY,
-              CommunityDefinitionEvent.KIND,
-            ),
-            TabItem(
-              R.string.discover_chat,
-              discoveryChatFeedViewModel,
-              Route.Discover.base + "Chats",
-              ScrollStateKeys.DISCOVER_CHATS,
-              ChannelCreateEvent.KIND,
-            ),
-          )
-          .toImmutableList(),
-      )
+    val tabs by
+        remember(
+            discoveryLiveFeedViewModel,
+            discoveryCommunityFeedViewModel,
+            discoveryChatFeedViewModel,
+        ) {
+            mutableStateOf(
+                listOf(
+                    TabItem(
+                        R.string.discover_marketplace,
+                        discoveryMarketplaceFeedViewModel,
+                        Route.Discover.base + "Marketplace",
+                        ScrollStateKeys.DISCOVER_MARKETPLACE,
+                        ClassifiedsEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_live,
+                        discoveryLiveFeedViewModel,
+                        Route.Discover.base + "Live",
+                        ScrollStateKeys.DISCOVER_LIVE,
+                        LiveActivitiesEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_community,
+                        discoveryCommunityFeedViewModel,
+                        Route.Discover.base + "Community",
+                        ScrollStateKeys.DISCOVER_COMMUNITY,
+                        CommunityDefinitionEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_chat,
+                        discoveryChatFeedViewModel,
+                        Route.Discover.base + "Chats",
+                        ScrollStateKeys.DISCOVER_CHATS,
+                        ChannelCreateEvent.KIND,
+                    ),
+                )
+                    .toImmutableList(),
+            )
+        }
+
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
+
+    WatchAccountForDiscoveryScreen(
+        discoverMarketplaceFeedViewModel = discoveryMarketplaceFeedViewModel,
+        discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+        discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+        discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+        accountViewModel = accountViewModel,
+    )
+
+    DisposableEffect(lifeCycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    println("Discovery Start")
+                    NostrDiscoveryDataSource.start()
+                }
+            }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-  val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
-
-  WatchAccountForDiscoveryScreen(
-    discoverMarketplaceFeedViewModel = discoveryMarketplaceFeedViewModel,
-    discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-    discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-    discoveryChatFeedViewModel = discoveryChatFeedViewModel,
-    accountViewModel = accountViewModel,
-  )
-
-  DisposableEffect(lifeCycleOwner) {
-    val observer = LifecycleEventObserver { _, event ->
-      if (event == Lifecycle.Event.ON_RESUME) {
-        println("Discovery Start")
-        NostrDiscoveryDataSource.start()
-      }
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp),
+        ) {
+            DiscoverPages(pagerState, tabs, accountViewModel, nav)
+        }
     }
-
-    lifeCycleOwner.lifecycle.addObserver(observer)
-    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-  }
-
-  Column(Modifier.fillMaxHeight()) {
-    Column(
-      modifier = Modifier.padding(vertical = 0.dp),
-    ) {
-      DiscoverPages(pagerState, tabs, accountViewModel, nav)
-    }
-  }
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun DiscoverPages(
-  pagerState: PagerState,
-  tabs: ImmutableList<TabItem>,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    pagerState: PagerState,
+    tabs: ImmutableList<TabItem>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  ScrollableTabRow(
-    containerColor = MaterialTheme.colorScheme.background,
-    contentColor = MaterialTheme.colorScheme.onBackground,
-    selectedTabIndex = pagerState.currentPage,
-    modifier = TabRowHeight,
-    edgePadding = 8.dp,
-  ) {
-    val coroutineScope = rememberCoroutineScope()
+    ScrollableTabRow(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight,
+        edgePadding = 8.dp,
+    ) {
+        val coroutineScope = rememberCoroutineScope()
 
-    tabs.forEachIndexed { index, tab ->
-      Tab(
-        selected = pagerState.currentPage == index,
-        text = { Text(text = stringResource(tab.resource)) },
-        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-      )
+        tabs.forEachIndexed { index, tab ->
+            Tab(
+                selected = pagerState.currentPage == index,
+                text = { Text(text = stringResource(tab.resource)) },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+            )
+        }
     }
-  }
 
-  HorizontalPager(state = pagerState) { page ->
-    RefresheableView(tabs[page].viewModel, true) {
-      if (tabs[page].viewModel is NostrDiscoverMarketplaceFeedViewModel) {
-        SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
-          listState ->
-          RenderDiscoverFeed(
-            viewModel = tabs[page].viewModel,
-            routeForLastRead = tabs[page].routeForLastRead,
-            forceEventKind = tabs[page].forceEventKind,
-            listState = listState,
-            accountViewModel = accountViewModel,
-            nav = nav,
-          )
+    HorizontalPager(state = pagerState) { page ->
+        RefresheableView(tabs[page].viewModel, true) {
+            if (tabs[page].viewModel is NostrDiscoverMarketplaceFeedViewModel) {
+                SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
+                        listState ->
+                    RenderDiscoverFeed(
+                        viewModel = tabs[page].viewModel,
+                        routeForLastRead = tabs[page].routeForLastRead,
+                        forceEventKind = tabs[page].forceEventKind,
+                        listState = listState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            } else {
+                SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
+                        listState ->
+                    RenderDiscoverFeed(
+                        viewModel = tabs[page].viewModel,
+                        routeForLastRead = tabs[page].routeForLastRead,
+                        forceEventKind = tabs[page].forceEventKind,
+                        listState = listState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
         }
-      } else {
-        SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
-          listState ->
-          RenderDiscoverFeed(
-            viewModel = tabs[page].viewModel,
-            routeForLastRead = tabs[page].routeForLastRead,
-            forceEventKind = tabs[page].forceEventKind,
-            listState = listState,
-            accountViewModel = accountViewModel,
-            nav = nav,
-          )
-        }
-      }
     }
-  }
 }
 
 @Composable
 private fun RenderDiscoverFeed(
-  viewModel: FeedViewModel,
-  routeForLastRead: String?,
-  forceEventKind: Int?,
-  listState: ScrollableState,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    forceEventKind: Int?,
+    listState: ScrollableState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-  Crossfade(
-    targetState = feedState,
-    animationSpec = tween(durationMillis = 100),
-    label = "RenderDiscoverFeed",
-  ) { state ->
-    when (state) {
-      is FeedState.Empty -> {
-        FeedEmpty { viewModel.invalidateData() }
-      }
-      is FeedState.FeedError -> {
-        FeedError(state.errorMessage) { viewModel.invalidateData() }
-      }
-      is FeedState.Loaded -> {
-        if (listState is LazyGridState) {
-          DiscoverFeedColumnsLoaded(
-            state,
-            routeForLastRead,
-            listState,
-            forceEventKind,
-            accountViewModel,
-            nav,
-          )
-        } else if (listState is LazyListState) {
-          DiscoverFeedLoaded(
-            state,
-            routeForLastRead,
-            listState,
-            forceEventKind,
-            accountViewModel,
-            nav,
-          )
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100),
+        label = "RenderDiscoverFeed",
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty { viewModel.invalidateData() }
+            }
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is FeedState.Loaded -> {
+                if (listState is LazyGridState) {
+                    DiscoverFeedColumnsLoaded(
+                        state,
+                        routeForLastRead,
+                        listState,
+                        forceEventKind,
+                        accountViewModel,
+                        nav,
+                    )
+                } else if (listState is LazyListState) {
+                    DiscoverFeedLoaded(
+                        state,
+                        routeForLastRead,
+                        listState,
+                        forceEventKind,
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            }
+            is FeedState.Loading -> {
+                LoadingFeed()
+            }
         }
-      }
-      is FeedState.Loading -> {
-        LoadingFeed()
-      }
     }
-  }
 }
 
 @Composable
 fun WatchAccountForDiscoveryScreen(
-  discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
-  discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
-  discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
-  discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
-  accountViewModel: AccountViewModel,
+    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
+    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
+    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
+    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-  val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
 
-  LaunchedEffect(accountViewModel, listState) {
-    NostrDiscoveryDataSource.resetFilters()
-    discoverMarketplaceFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-    discoveryLiveFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-    discoveryCommunityFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-    discoveryChatFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-  }
+    LaunchedEffect(accountViewModel, listState) {
+        NostrDiscoveryDataSource.resetFilters()
+        discoverMarketplaceFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        discoveryLiveFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        discoveryCommunityFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        discoveryChatFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoverFeedLoaded(
-  state: FeedState.Loaded,
-  routeForLastRead: String?,
-  listState: LazyListState,
-  forceEventKind: Int?,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    state: FeedState.Loaded,
+    routeForLastRead: String?,
+    listState: LazyListState,
+    forceEventKind: Int?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  LazyColumn(
-    contentPadding = FeedPadding,
-    state = listState,
-  ) {
-    itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-      val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-      Row(defaultModifier) {
-        ChannelCardCompose(
-          baseNote = item,
-          routeForLastRead = routeForLastRead,
-          modifier = Modifier,
-          forceEventKind = forceEventKind,
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-      }
+            Row(defaultModifier) {
+                ChannelCardCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier,
+                    forceEventKind = forceEventKind,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
     }
-  }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoverFeedColumnsLoaded(
-  state: FeedState.Loaded,
-  routeForLastRead: String?,
-  listState: LazyGridState,
-  forceEventKind: Int?,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    state: FeedState.Loaded,
+    routeForLastRead: String?,
+    listState: LazyGridState,
+    forceEventKind: Int?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  LazyVerticalGrid(
-    columns = GridCells.Fixed(2),
-    contentPadding = FeedPadding,
-    state = listState,
-  ) {
-    itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-      val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-      Row(defaultModifier) {
-        ChannelCardCompose(
-          baseNote = item,
-          routeForLastRead = routeForLastRead,
-          modifier = Modifier,
-          forceEventKind = forceEventKind,
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-      }
+            Row(defaultModifier) {
+                ChannelCardCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier,
+                    forceEventKind = forceEventKind,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
     }
-  }
 }

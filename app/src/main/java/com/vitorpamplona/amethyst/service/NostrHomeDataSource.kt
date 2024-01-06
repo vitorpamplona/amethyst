@@ -45,190 +45,191 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 object NostrHomeDataSource : NostrDataSource("HomeFeed") {
-  lateinit var account: Account
+    lateinit var account: Account
 
-  val scope = Amethyst.instance.applicationIOScope
-  val latestEOSEs = EOSEAccount()
+    val scope = Amethyst.instance.applicationIOScope
+    val latestEOSEs = EOSEAccount()
 
-  var job: Job? = null
+    var job: Job? = null
 
-  override fun start() {
-    job?.cancel()
-    job =
-      scope.launch(Dispatchers.IO) {
-        // creates cache on main
-        withContext(Dispatchers.Main) { account.userProfile().live() }
-        account.liveHomeFollowLists.collect {
-          if (this@NostrHomeDataSource::account.isInitialized) {
-            invalidateFilters()
-          }
-        }
-      }
-    super.start()
-  }
+    override fun start() {
+        job?.cancel()
+        job =
+            scope.launch(Dispatchers.IO) {
+                // creates cache on main
+                withContext(Dispatchers.Main) { account.userProfile().live() }
+                account.liveHomeFollowLists.collect {
+                    if (this@NostrHomeDataSource::account.isInitialized) {
+                        invalidateFilters()
+                    }
+                }
+            }
+        super.start()
+    }
 
-  override fun stop() {
-    super.stop()
-    job?.cancel()
-  }
+    override fun stop() {
+        super.stop()
+        job?.cancel()
+    }
 
-  fun createFollowAccountsFilter(): TypedFilter {
-    val follows = account.liveHomeFollowLists.value?.users
-    val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
+    fun createFollowAccountsFilter(): TypedFilter {
+        val follows = account.liveHomeFollowLists.value?.users
+        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
 
-    return TypedFilter(
-      types = setOf(FeedType.FOLLOWS),
-      filter =
-        JsonFilter(
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              RepostEvent.KIND,
-              GenericRepostEvent.KIND,
-              ClassifiedsEvent.KIND,
-              LongTextNoteEvent.KIND,
-              PollNoteEvent.KIND,
-              HighlightEvent.KIND,
-              AudioTrackEvent.KIND,
-              AudioHeaderEvent.KIND,
-              PinListEvent.KIND,
-              LiveActivitiesChatMessageEvent.KIND,
-              LiveActivitiesEvent.KIND,
-            ),
-          authors = followSet,
-          limit = 400,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultHomeFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  fun createFollowTagsFilter(): TypedFilter? {
-    val hashToLoad = account.liveHomeFollowLists.value?.hashtags ?: return null
-
-    if (hashToLoad.isEmpty()) return null
-
-    return TypedFilter(
-      types = setOf(FeedType.FOLLOWS),
-      filter =
-        JsonFilter(
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              LongTextNoteEvent.KIND,
-              ClassifiedsEvent.KIND,
-              HighlightEvent.KIND,
-              AudioHeaderEvent.KIND,
-              AudioTrackEvent.KIND,
-              PinListEvent.KIND,
-            ),
-          tags =
-            mapOf(
-              "t" to
-                hashToLoad
-                  .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                  .flatten(),
-            ),
-          limit = 100,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultHomeFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  fun createFollowGeohashesFilter(): TypedFilter? {
-    val hashToLoad = account.liveHomeFollowLists.value?.geotags ?: return null
-
-    if (hashToLoad.isEmpty()) return null
-
-    return TypedFilter(
-      types = setOf(FeedType.FOLLOWS),
-      filter =
-        JsonFilter(
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              LongTextNoteEvent.KIND,
-              ClassifiedsEvent.KIND,
-              HighlightEvent.KIND,
-              AudioHeaderEvent.KIND,
-              AudioTrackEvent.KIND,
-              PinListEvent.KIND,
-            ),
-          tags =
-            mapOf(
-              "g" to
-                hashToLoad
-                  .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                  .flatten(),
-            ),
-          limit = 100,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultHomeFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  fun createFollowCommunitiesFilter(): TypedFilter? {
-    val communitiesToLoad = account.liveHomeFollowLists.value?.communities ?: return null
-
-    if (communitiesToLoad.isEmpty()) return null
-
-    return TypedFilter(
-      types = setOf(FeedType.FOLLOWS),
-      filter =
-        JsonFilter(
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              LongTextNoteEvent.KIND,
-              ClassifiedsEvent.KIND,
-              HighlightEvent.KIND,
-              AudioHeaderEvent.KIND,
-              AudioTrackEvent.KIND,
-              PinListEvent.KIND,
-              CommunityPostApprovalEvent.KIND,
-            ),
-          tags =
-            mapOf(
-              "a" to communitiesToLoad.toList(),
-            ),
-          limit = 100,
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultHomeFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  val followAccountChannel = requestNewChannel { time, relayUrl ->
-    latestEOSEs.addOrUpdate(
-      account.userProfile(),
-      account.defaultHomeFollowList.value,
-      relayUrl,
-      time,
-    )
-  }
-
-  override fun updateChannelFilters() {
-    followAccountChannel.typedFilters =
-      listOfNotNull(
-          createFollowAccountsFilter(),
-          createFollowCommunitiesFilter(),
-          createFollowTagsFilter(),
-          createFollowGeohashesFilter(),
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            RepostEvent.KIND,
+                            GenericRepostEvent.KIND,
+                            ClassifiedsEvent.KIND,
+                            LongTextNoteEvent.KIND,
+                            PollNoteEvent.KIND,
+                            HighlightEvent.KIND,
+                            AudioTrackEvent.KIND,
+                            AudioHeaderEvent.KIND,
+                            PinListEvent.KIND,
+                            LiveActivitiesChatMessageEvent.KIND,
+                            LiveActivitiesEvent.KIND,
+                        ),
+                    authors = followSet,
+                    limit = 400,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultHomeFollowList.value)
+                            ?.relayList,
+                ),
         )
-        .ifEmpty { null }
-  }
+    }
+
+    fun createFollowTagsFilter(): TypedFilter? {
+        val hashToLoad = account.liveHomeFollowLists.value?.hashtags ?: return null
+
+        if (hashToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            LongTextNoteEvent.KIND,
+                            ClassifiedsEvent.KIND,
+                            HighlightEvent.KIND,
+                            AudioHeaderEvent.KIND,
+                            AudioTrackEvent.KIND,
+                            PinListEvent.KIND,
+                        ),
+                    tags =
+                        mapOf(
+                            "t" to
+                                hashToLoad
+                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                                    .flatten(),
+                        ),
+                    limit = 100,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultHomeFollowList.value)
+                            ?.relayList,
+                ),
+        )
+    }
+
+    fun createFollowGeohashesFilter(): TypedFilter? {
+        val hashToLoad = account.liveHomeFollowLists.value?.geotags ?: return null
+
+        if (hashToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            LongTextNoteEvent.KIND,
+                            ClassifiedsEvent.KIND,
+                            HighlightEvent.KIND,
+                            AudioHeaderEvent.KIND,
+                            AudioTrackEvent.KIND,
+                            PinListEvent.KIND,
+                        ),
+                    tags =
+                        mapOf(
+                            "g" to
+                                hashToLoad
+                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                                    .flatten(),
+                        ),
+                    limit = 100,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultHomeFollowList.value)
+                            ?.relayList,
+                ),
+        )
+    }
+
+    fun createFollowCommunitiesFilter(): TypedFilter? {
+        val communitiesToLoad = account.liveHomeFollowLists.value?.communities ?: return null
+
+        if (communitiesToLoad.isEmpty()) return null
+
+        return TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            LongTextNoteEvent.KIND,
+                            ClassifiedsEvent.KIND,
+                            HighlightEvent.KIND,
+                            AudioHeaderEvent.KIND,
+                            AudioTrackEvent.KIND,
+                            PinListEvent.KIND,
+                            CommunityPostApprovalEvent.KIND,
+                        ),
+                    tags =
+                        mapOf(
+                            "a" to communitiesToLoad.toList(),
+                        ),
+                    limit = 100,
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultHomeFollowList.value)
+                            ?.relayList,
+                ),
+        )
+    }
+
+    val followAccountChannel =
+        requestNewChannel { time, relayUrl ->
+            latestEOSEs.addOrUpdate(
+                account.userProfile(),
+                account.defaultHomeFollowList.value,
+                relayUrl,
+                time,
+            )
+        }
+
+    override fun updateChannelFilters() {
+        followAccountChannel.typedFilters =
+            listOfNotNull(
+                createFollowAccountsFilter(),
+                createFollowCommunitiesFilter(),
+                createFollowTagsFilter(),
+                createFollowGeohashesFilter(),
+            )
+                .ifEmpty { null }
+    }
 }

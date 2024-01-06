@@ -36,11 +36,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
 val Shapes =
-  Shapes(
-    small = RoundedCornerShape(4.dp),
-    medium = RoundedCornerShape(4.dp),
-    large = RoundedCornerShape(0.dp),
-  )
+    Shapes(
+        small = RoundedCornerShape(4.dp),
+        medium = RoundedCornerShape(4.dp),
+        large = RoundedCornerShape(0.dp),
+    )
 
 val RippleRadius45dp = 45.dp // Ripple should be +10.dp over the component size
 
@@ -164,7 +164,7 @@ val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
 val EditFieldModifier =
-  Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
+    Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
 val EditFieldTrailingIconModifier = Modifier.height(26.dp).padding(start = 5.dp, end = 0.dp)
 val EditFieldLeadingIconModifier = Modifier.height(32.dp).padding(start = 2.dp)
 
@@ -174,16 +174,16 @@ val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
 val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp, end = 5.dp)
 val ChatPaddingModifier =
-  Modifier.fillMaxWidth(1f)
-    .padding(
-      start = 12.dp,
-      end = 12.dp,
-      top = 5.dp,
-      bottom = 5.dp,
-    )
+    Modifier.fillMaxWidth(1f)
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 5.dp,
+            bottom = 5.dp,
+        )
 
 val profileContentHeaderModifier =
-  Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
+    Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)
 val bannerModifier = Modifier.fillMaxWidth().height(120.dp)
 val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Size25dp)
 
@@ -193,25 +193,25 @@ val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizont
 val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
 
 val normalNoteModifier =
-  Modifier.fillMaxWidth()
-    .padding(
-      start = 12.dp,
-      end = 12.dp,
-      top = 0.dp,
-    )
+    Modifier.fillMaxWidth()
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 0.dp,
+        )
 
 val normalWithTopMarginNoteModifier =
-  Modifier.fillMaxWidth()
-    .padding(
-      start = 12.dp,
-      end = 12.dp,
-      top = 10.dp,
-    )
+    Modifier.fillMaxWidth()
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 10.dp,
+        )
 
 val boostedNoteModifier =
-  Modifier.fillMaxWidth()
-    .padding(
-      start = 0.dp,
-      end = 0.dp,
-      top = 0.dp,
-    )
+    Modifier.fillMaxWidth()
+        .padding(
+            start = 0.dp,
+            end = 0.dp,
+            top = 0.dp,
+        )

@@ -24,8 +24,8 @@ import junit.framework.TestCase.assertEquals
 import org.junit.Test
 
 class Nip96Test {
-  val json =
-    """
+    val json =
+        """
         {
           "api_url": "https://nostr.build/api/v2/nip96/upload",
           "download_url": "https://media.nostr.build",
@@ -113,28 +113,28 @@ class Nip96Test {
           }
         }
         """
-      .trimIndent()
+            .trimIndent()
 
-  @Test()
-  fun parseNostrBuild() {
-    val info = Nip96Retriever().parse(json)
+    @Test()
+    fun parseNostrBuild() {
+        val info = Nip96Retriever().parse(json)
 
-    assertEquals("https://nostr.build/api/v2/nip96/upload", info.apiUrl)
-    assertEquals("https://media.nostr.build", info.downloadUrl)
-    assertEquals(listOf(94, 96, 98), info.supportedNips)
-    assertEquals("https://nostr.build/tos/", info.tosUrl)
-    assertEquals(listOf("image/*", "video/*", "audio/*"), info.contentTypes)
+        assertEquals("https://nostr.build/api/v2/nip96/upload", info.apiUrl)
+        assertEquals("https://media.nostr.build", info.downloadUrl)
+        assertEquals(listOf(94, 96, 98), info.supportedNips)
+        assertEquals("https://nostr.build/tos/", info.tosUrl)
+        assertEquals(listOf("image/*", "video/*", "audio/*"), info.contentTypes)
 
-    assertEquals(listOf("creator", "free", "professional"), info.plans.keys.sorted())
+        assertEquals(listOf("creator", "free", "professional"), info.plans.keys.sorted())
 
-    assertEquals("Free", info.plans["free"]?.name)
-    assertEquals(true, info.plans["free"]?.isNip98Required)
-    assertEquals("https://nostr.build", info.plans["free"]?.url)
-    assertEquals(26214400L, info.plans["free"]?.maxByteSize)
-    assertEquals(listOf(0, 0), info.plans["free"]?.fileExpiration)
-    assertEquals(listOf("image", "video"), info.plans["free"]?.mediaTransformations?.keys?.sorted())
+        assertEquals("Free", info.plans["free"]?.name)
+        assertEquals(true, info.plans["free"]?.isNip98Required)
+        assertEquals("https://nostr.build", info.plans["free"]?.url)
+        assertEquals(26214400L, info.plans["free"]?.maxByteSize)
+        assertEquals(listOf(0, 0), info.plans["free"]?.fileExpiration)
+        assertEquals(listOf("image", "video"), info.plans["free"]?.mediaTransformations?.keys?.sorted())
 
-    assertEquals(26843545600L, info.plans["creator"]?.maxByteSize)
-    assertEquals(10737418240L, info.plans["professional"]?.maxByteSize)
-  }
+        assertEquals(26843545600L, info.plans["creator"]?.maxByteSize)
+        assertEquals(10737418240L, info.plans["professional"]?.maxByteSize)
+    }
 }

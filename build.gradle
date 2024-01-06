@@ -56,7 +56,7 @@ subprojects {
             targetExclude("$buildDir/**/*.kt")
 
             ktlint("1.1.0")
-            ktfmt().googleStyle()
+            //ktfmt().googleStyle()
             licenseHeaderFile rootProject.file('spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
         }
 

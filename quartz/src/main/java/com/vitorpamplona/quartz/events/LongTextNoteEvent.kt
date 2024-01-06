@@ -28,54 +28,50 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class LongTextNoteEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig), AddressableEvent {
-  override fun dTag() =
-    tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
+    override fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
 
-  override fun address() = ATag(kind, pubKey, dTag(), null)
+    override fun address() = ATag(kind, pubKey, dTag(), null)
 
-  fun topics() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+    fun topics() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
 
-  fun title() =
-    tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun title() = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
-  fun image() =
-    tags.filter { it.firstOrNull() == "image" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun image() = tags.filter { it.firstOrNull() == "image" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
-  fun summary() =
-    tags.filter { it.firstOrNull() == "summary" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun summary() = tags.filter { it.firstOrNull() == "summary" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
 
-  fun publishedAt() =
-    try {
-      tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
-    } catch (_: Exception) {
-      null
+    fun publishedAt() =
+        try {
+            tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
+        } catch (_: Exception) {
+            null
+        }
+
+    companion object {
+        const val KIND = 30023
+
+        fun create(
+            msg: String,
+            title: String?,
+            replyTos: List<String>?,
+            mentions: List<String>?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (LongTextNoteEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            replyTos?.forEach { tags.add(arrayOf("e", it)) }
+            mentions?.forEach { tags.add(arrayOf("p", it)) }
+            title?.let { tags.add(arrayOf("title", it)) }
+            tags.add(arrayOf("alt", "Blog post: $title"))
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+        }
     }
-
-  companion object {
-    const val KIND = 30023
-
-    fun create(
-      msg: String,
-      title: String?,
-      replyTos: List<String>?,
-      mentions: List<String>?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (LongTextNoteEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
-      replyTos?.forEach { tags.add(arrayOf("e", it)) }
-      mentions?.forEach { tags.add(arrayOf("p", it)) }
-      title?.let { tags.add(arrayOf("title", it)) }
-      tags.add(arrayOf("alt", "Blog post: $title"))
-      signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
-    }
-  }
 }

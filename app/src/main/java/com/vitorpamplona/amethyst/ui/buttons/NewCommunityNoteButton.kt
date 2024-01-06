@@ -43,38 +43,38 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun NewCommunityNoteButton(
-  communityIdHex: String,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    communityIdHex: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  LoadNote(baseNoteHex = communityIdHex, accountViewModel) {
-    it?.let { NewCommunityNoteButton(it, accountViewModel, nav) }
-  }
+    LoadNote(baseNoteHex = communityIdHex, accountViewModel) {
+        it?.let { NewCommunityNoteButton(it, accountViewModel, nav) }
+    }
 }
 
 @Composable
 fun NewCommunityNoteButton(
-  note: Note,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  var wantsToPost by remember { mutableStateOf(false) }
+    var wantsToPost by remember { mutableStateOf(false) }
 
-  if (wantsToPost) {
-    NewPostView({ wantsToPost = false }, note, accountViewModel = accountViewModel, nav = nav)
-  }
+    if (wantsToPost) {
+        NewPostView({ wantsToPost = false }, note, accountViewModel = accountViewModel, nav = nav)
+    }
 
-  FloatingActionButton(
-    onClick = { wantsToPost = true },
-    modifier = Size55Modifier,
-    shape = CircleShape,
-    containerColor = MaterialTheme.colorScheme.primary,
-  ) {
-    Icon(
-      painter = painterResource(R.drawable.ic_compose),
-      null,
-      modifier = Modifier.size(26.dp),
-      tint = Color.White,
-    )
-  }
+    FloatingActionButton(
+        onClick = { wantsToPost = true },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_compose),
+            null,
+            modifier = Modifier.size(26.dp),
+            tint = Color.White,
+        )
+    }
 }

@@ -26,28 +26,28 @@ import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
 class BadgeProfilesEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun badgeAwardEvents() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+    fun badgeAwardEvents() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
 
-  fun badgeAwardDefinitions() =
-    tags
-      .filter { it.firstOrNull() == "a" }
-      .mapNotNull {
-        val aTagValue = it.getOrNull(1)
-        val relay = it.getOrNull(2)
+    fun badgeAwardDefinitions() =
+        tags
+            .filter { it.firstOrNull() == "a" }
+            .mapNotNull {
+                val aTagValue = it.getOrNull(1)
+                val relay = it.getOrNull(2)
 
-        if (aTagValue != null) ATag.parse(aTagValue, relay) else null
-      }
+                if (aTagValue != null) ATag.parse(aTagValue, relay) else null
+            }
 
-  companion object {
-    const val KIND = 30008
-    const val STANDARD_D_TAG = "profile_badges"
-    const val ALT = "List of accepted badges by the author"
-  }
+    companion object {
+        const val KIND = 30008
+        const val STANDARD_D_TAG = "profile_badges"
+        const val ALT = "List of accepted badges by the author"
+    }
 }

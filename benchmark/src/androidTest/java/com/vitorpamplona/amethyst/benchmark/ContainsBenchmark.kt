@@ -32,71 +32,71 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ContainsBenchmark {
-  @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule val benchmarkRule = BenchmarkRule()
 
-  private val test =
-    """Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+    private val test =
+        """Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
 
 The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.
 """
-      .intern()
+            .intern()
 
-  val atTheMiddle = DualCase("Lorem Ipsum".lowercase(), "Lorem Ipsum".uppercase())
-  val atTheBeginning = DualCase("contrAry".lowercase(), "contrAry".uppercase())
+    val atTheMiddle = DualCase("Lorem Ipsum".lowercase(), "Lorem Ipsum".uppercase())
+    val atTheBeginning = DualCase("contrAry".lowercase(), "contrAry".uppercase())
 
-  val atTheEndCase = DualCase("h. rackham".lowercase(), "h. rackham".uppercase())
+    val atTheEndCase = DualCase("h. rackham".lowercase(), "h. rackham".uppercase())
 
-  val lastCase =
-    listOf(
-      DualCase("my mom".lowercase(), "my mom".uppercase()),
-      DualCase("my dad".lowercase(), "my dad".uppercase()),
-      DualCase("h. rackham".lowercase(), "h. rackham".uppercase()),
-    )
+    val lastCase =
+        listOf(
+            DualCase("my mom".lowercase(), "my mom".uppercase()),
+            DualCase("my dad".lowercase(), "my dad".uppercase()),
+            DualCase("h. rackham".lowercase(), "h. rackham".uppercase()),
+        )
 
-  @Test
-  fun middleCaseKotlin() {
-    benchmarkRule.measureRepeated { assertTrue(test.contains(atTheMiddle.lowercase, true)) }
-  }
-
-  @Test
-  fun middleCaseOurs() {
-    val list = listOf(atTheMiddle)
-    benchmarkRule.measureRepeated { assertTrue(test.containsAny(list)) }
-  }
-
-  @Test
-  fun atTheBeginningKotlin() {
-    benchmarkRule.measureRepeated { assertTrue(test.contains(atTheBeginning.lowercase, true)) }
-  }
-
-  @Test
-  fun atTheBeginningOurs() {
-    val list = listOf(atTheBeginning)
-    benchmarkRule.measureRepeated { assertTrue(test.containsAny(list)) }
-  }
-
-  @Test
-  fun atTheEndKotlin() {
-    benchmarkRule.measureRepeated { assertTrue(test.contains(atTheEndCase.lowercase, true)) }
-  }
-
-  @Test
-  fun atTheEndOurs() {
-    val list = listOf(atTheEndCase)
-    benchmarkRule.measureRepeated { assertTrue(test.containsAny(list)) }
-  }
-
-  @Test
-  fun theLastAtTheEndKotlin() {
-    benchmarkRule.measureRepeated {
-      assertTrue(
-        lastCase.any { test.contains(it.lowercase, true) },
-      )
+    @Test
+    fun middleCaseKotlin() {
+        benchmarkRule.measureRepeated { assertTrue(test.contains(atTheMiddle.lowercase, true)) }
     }
-  }
 
-  @Test
-  fun theLastAtTheEndOurs() {
-    benchmarkRule.measureRepeated { assertTrue(test.containsAny(lastCase)) }
-  }
+    @Test
+    fun middleCaseOurs() {
+        val list = listOf(atTheMiddle)
+        benchmarkRule.measureRepeated { assertTrue(test.containsAny(list)) }
+    }
+
+    @Test
+    fun atTheBeginningKotlin() {
+        benchmarkRule.measureRepeated { assertTrue(test.contains(atTheBeginning.lowercase, true)) }
+    }
+
+    @Test
+    fun atTheBeginningOurs() {
+        val list = listOf(atTheBeginning)
+        benchmarkRule.measureRepeated { assertTrue(test.containsAny(list)) }
+    }
+
+    @Test
+    fun atTheEndKotlin() {
+        benchmarkRule.measureRepeated { assertTrue(test.contains(atTheEndCase.lowercase, true)) }
+    }
+
+    @Test
+    fun atTheEndOurs() {
+        val list = listOf(atTheEndCase)
+        benchmarkRule.measureRepeated { assertTrue(test.containsAny(list)) }
+    }
+
+    @Test
+    fun theLastAtTheEndKotlin() {
+        benchmarkRule.measureRepeated {
+            assertTrue(
+                lastCase.any { test.contains(it.lowercase, true) },
+            )
+        }
+    }
+
+    @Test
+    fun theLastAtTheEndOurs() {
+        benchmarkRule.measureRepeated { assertTrue(test.containsAny(lastCase)) }
+    }
 }

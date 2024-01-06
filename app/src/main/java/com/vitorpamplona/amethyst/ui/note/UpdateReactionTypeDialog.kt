@@ -95,317 +95,315 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
-  var nextChoice by mutableStateOf(TextFieldValue(""))
-  var reactionSet by mutableStateOf(listOf<String>())
+    var nextChoice by mutableStateOf(TextFieldValue(""))
+    var reactionSet by mutableStateOf(listOf<String>())
 
-  fun load() {
-    this.reactionSet = account.reactionChoices
-  }
-
-  fun toListOfChoices(commaSeparatedAmounts: String): List<Long> {
-    return commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
-  }
-
-  fun addChoice() {
-    val newValue = nextChoice.text.trim().firstFullChar()
-    reactionSet = reactionSet + newValue
-
-    nextChoice = TextFieldValue("")
-  }
-
-  fun addChoice(customEmoji: EmojiUrl) {
-    reactionSet = reactionSet + (customEmoji.encode())
-  }
-
-  fun removeChoice(reaction: String) {
-    reactionSet = reactionSet - reaction
-  }
-
-  fun sendPost() {
-    account.changeReactionTypes(reactionSet)
-    nextChoice = TextFieldValue("")
-  }
-
-  fun cancel() {
-    nextChoice = TextFieldValue("")
-  }
-
-  fun hasChanged(): Boolean {
-    return reactionSet != account.reactionChoices
-  }
-
-  class Factory(val account: Account) : ViewModelProvider.Factory {
-    override fun <UpdateReactionTypeViewModel : ViewModel> create(
-      modelClass: Class<UpdateReactionTypeViewModel>
-    ): UpdateReactionTypeViewModel {
-      return UpdateReactionTypeViewModel(account) as UpdateReactionTypeViewModel
+    fun load() {
+        this.reactionSet = account.reactionChoices
     }
-  }
+
+    fun toListOfChoices(commaSeparatedAmounts: String): List<Long> {
+        return commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
+    }
+
+    fun addChoice() {
+        val newValue = nextChoice.text.trim().firstFullChar()
+        reactionSet = reactionSet + newValue
+
+        nextChoice = TextFieldValue("")
+    }
+
+    fun addChoice(customEmoji: EmojiUrl) {
+        reactionSet = reactionSet + (customEmoji.encode())
+    }
+
+    fun removeChoice(reaction: String) {
+        reactionSet = reactionSet - reaction
+    }
+
+    fun sendPost() {
+        account.changeReactionTypes(reactionSet)
+        nextChoice = TextFieldValue("")
+    }
+
+    fun cancel() {
+        nextChoice = TextFieldValue("")
+    }
+
+    fun hasChanged(): Boolean {
+        return reactionSet != account.reactionChoices
+    }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <UpdateReactionTypeViewModel : ViewModel> create(modelClass: Class<UpdateReactionTypeViewModel>): UpdateReactionTypeViewModel {
+            return UpdateReactionTypeViewModel(account) as UpdateReactionTypeViewModel
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UpdateReactionTypeDialog(
-  onClose: () -> Unit,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    onClose: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val postViewModel: UpdateReactionTypeViewModel =
-    viewModel(
-      key = "UpdateReactionTypeViewModel",
-      factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account),
-    )
+    val postViewModel: UpdateReactionTypeViewModel =
+        viewModel(
+            key = "UpdateReactionTypeViewModel",
+            factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account),
+        )
 
-  LaunchedEffect(accountViewModel) { postViewModel.load() }
+    LaunchedEffect(accountViewModel) { postViewModel.load() }
 
-  Dialog(
-    onDismissRequest = { onClose() },
-    properties =
-      DialogProperties(
-        usePlatformDefaultWidth = false,
-        dismissOnClickOutside = false,
-        decorFitsSystemWindows = false,
-      ),
-  ) {
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
+    Dialog(
+        onDismissRequest = { onClose() },
+        properties =
+            DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false,
+                decorFitsSystemWindows = false,
+            ),
     ) {
-      Column(
-        modifier = Modifier.padding(10.dp).imePadding(),
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
         ) {
-          CloseButton(
-            onPress = {
-              postViewModel.cancel()
-              onClose()
-            },
-          )
-
-          SaveButton(
-            onPost = {
-              postViewModel.sendPost()
-              onClose()
-            },
-            isActive = postViewModel.hasChanged(),
-          )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-        ) {
-          Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-          ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-              Column(modifier = Modifier.animateContentSize()) {
-                FlowRow(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.Center,
-                ) {
-                  postViewModel.reactionSet.forEach { reactionType ->
-                    RenderReactionOption(reactionType, postViewModel)
-                  }
-                }
-              }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-              modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-              verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier.padding(10.dp).imePadding(),
             ) {
-              OutlinedTextField(
-                label = { Text(text = stringResource(R.string.new_reaction_symbol)) },
-                value = postViewModel.nextChoice,
-                onValueChange = { postViewModel.nextChoice = it },
-                keyboardOptions =
-                  KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.None,
-                    keyboardType = KeyboardType.Text,
-                  ),
-                placeholder = {
-                  Text(
-                    text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
-                    color = MaterialTheme.colorScheme.placeholderText,
-                  )
-                },
-                singleLine = true,
-                modifier = Modifier.padding(end = 10.dp).weight(1f),
-              )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CloseButton(
+                        onPress = {
+                            postViewModel.cancel()
+                            onClose()
+                        },
+                    )
 
-              Button(
-                onClick = { postViewModel.addChoice() },
-                shape = ButtonBorder,
-                colors =
-                  ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                  ),
-              ) {
-                Text(text = stringResource(R.string.add), color = Color.White)
-              }
+                    SaveButton(
+                        onPost = {
+                            postViewModel.sendPost()
+                            onClose()
+                        },
+                        isActive = postViewModel.hasChanged(),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.animateContentSize()) {
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    postViewModel.reactionSet.forEach { reactionType ->
+                                        RenderReactionOption(reactionType, postViewModel)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            OutlinedTextField(
+                                label = { Text(text = stringResource(R.string.new_reaction_symbol)) },
+                                value = postViewModel.nextChoice,
+                                onValueChange = { postViewModel.nextChoice = it },
+                                keyboardOptions =
+                                    KeyboardOptions.Default.copy(
+                                        capitalization = KeyboardCapitalization.None,
+                                        keyboardType = KeyboardType.Text,
+                                    ),
+                                placeholder = {
+                                    Text(
+                                        text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
+                                        color = MaterialTheme.colorScheme.placeholderText,
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.padding(end = 10.dp).weight(1f),
+                            )
+
+                            Button(
+                                onClick = { postViewModel.addChoice() },
+                                shape = ButtonBorder,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                            ) {
+                                Text(text = stringResource(R.string.add), color = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                EmojiSelector(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                ) {
+                    postViewModel.addChoice(it)
+                }
             }
-          }
         }
-
-        EmojiSelector(
-          accountViewModel = accountViewModel,
-          nav = nav,
-        ) {
-          postViewModel.addChoice(it)
-        }
-      }
     }
-  }
 }
 
 @Composable
 private fun RenderReactionOption(
-  reactionType: String,
-  postViewModel: UpdateReactionTypeViewModel,
+    reactionType: String,
+    postViewModel: UpdateReactionTypeViewModel,
 ) {
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp),
-    shape = ButtonBorder,
-    colors =
-      ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.primary,
-      ),
-    onClick = { postViewModel.removeChoice(reactionType) },
-    contentPadding = PaddingValues(horizontal = 5.dp),
-  ) {
-    if (reactionType.startsWith(":")) {
-      val noStartColon = reactionType.removePrefix(":")
-      val url = noStartColon.substringAfter(":")
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        onClick = { postViewModel.removeChoice(reactionType) },
+        contentPadding = PaddingValues(horizontal = 5.dp),
+    ) {
+        if (reactionType.startsWith(":")) {
+            val noStartColon = reactionType.removePrefix(":")
+            val url = noStartColon.substringAfter(":")
 
-      val renderable =
-        listOf(
-            ImageUrlType(url),
-            TextType(" ✖"),
-          )
-          .toImmutableList()
+            val renderable =
+                listOf(
+                    ImageUrlType(url),
+                    TextType(" ✖"),
+                )
+                    .toImmutableList()
 
-      InLineIconRenderer(
-        renderable,
-        style = SpanStyle(color = Color.White),
-        maxLines = 1,
-      )
-    } else {
-      when (reactionType) {
-        "+" -> {
-          Icon(
-            painter = painterResource(R.drawable.ic_liked),
-            null,
-            modifier = remember { Modifier.size(16.dp) },
-            tint = Color.White,
-          )
-          Text(
-            text = " ✖",
-            color = Color.White,
-            textAlign = TextAlign.Center,
-          )
+            InLineIconRenderer(
+                renderable,
+                style = SpanStyle(color = Color.White),
+                maxLines = 1,
+            )
+        } else {
+            when (reactionType) {
+                "+" -> {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_liked),
+                        null,
+                        modifier = remember { Modifier.size(16.dp) },
+                        tint = Color.White,
+                    )
+                    Text(
+                        text = " ✖",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                "-" ->
+                    Text(
+                        text = "\uD83D\uDC4E ✖",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
+                else ->
+                    Text(
+                        text = "$reactionType ✖",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
+            }
         }
-        "-" ->
-          Text(
-            text = "\uD83D\uDC4E ✖",
-            color = Color.White,
-            textAlign = TextAlign.Center,
-          )
-        else ->
-          Text(
-            text = "$reactionType ✖",
-            color = Color.White,
-            textAlign = TextAlign.Center,
-          )
-      }
     }
-  }
 }
 
 @Composable
 private fun EmojiSelector(
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  onClick: ((EmojiUrl) -> Unit)? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onClick: ((EmojiUrl) -> Unit)? = null,
 ) {
-  LoadAddressableNote(
-    aTag =
-      ATag(
-        EmojiPackSelectionEvent.KIND,
-        accountViewModel.userProfile().pubkeyHex,
-        "",
-        null,
-      ),
-    accountViewModel,
-  ) { emptyNote ->
-    emptyNote?.let { usersEmojiList ->
-      val collections by
-        usersEmojiList
-          .live()
-          .metadata
-          .map { (it.note.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList() }
-          .distinctUntilChanged()
-          .observeAsState(
-            (usersEmojiList.event as? EmojiPackSelectionEvent)
-              ?.taggedAddresses()
-              ?.toImmutableList(),
-          )
+    LoadAddressableNote(
+        aTag =
+            ATag(
+                EmojiPackSelectionEvent.KIND,
+                accountViewModel.userProfile().pubkeyHex,
+                "",
+                null,
+            ),
+        accountViewModel,
+    ) { emptyNote ->
+        emptyNote?.let { usersEmojiList ->
+            val collections by
+                usersEmojiList
+                    .live()
+                    .metadata
+                    .map { (it.note.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList() }
+                    .distinctUntilChanged()
+                    .observeAsState(
+                        (usersEmojiList.event as? EmojiPackSelectionEvent)
+                            ?.taggedAddresses()
+                            ?.toImmutableList(),
+                    )
 
-      collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
+            collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
+        }
     }
-  }
 }
 
 @Composable
 fun EmojiCollectionGallery(
-  emojiCollections: ImmutableList<ATag>,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  onClick: ((EmojiUrl) -> Unit)? = null,
+    emojiCollections: ImmutableList<ATag>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onClick: ((EmojiUrl) -> Unit)? = null,
 ) {
-  val color = MaterialTheme.colorScheme.background
-  val bgColor = remember { mutableStateOf(color) }
+    val color = MaterialTheme.colorScheme.background
+    val bgColor = remember { mutableStateOf(color) }
 
-  val listState = rememberLazyListState()
+    val listState = rememberLazyListState()
 
-  LazyColumn(
-    state = listState,
-  ) {
-    itemsIndexed(emojiCollections, key = { _, item -> item.toTag() }) { _, item ->
-      LoadAddressableNote(aTag = item, accountViewModel) {
-        it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
-      }
+    LazyColumn(
+        state = listState,
+    ) {
+        itemsIndexed(emojiCollections, key = { _, item -> item.toTag() }) { _, item ->
+            LoadAddressableNote(aTag = item, accountViewModel) {
+                it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
+            }
+        }
     }
-  }
 }
 
 @Composable
 private fun WatchAndRenderNote(
-  emojiPack: AddressableNote,
-  bgColor: MutableState<Color>,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  onClick: ((EmojiUrl) -> Unit)?,
+    emojiPack: AddressableNote,
+    bgColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onClick: ((EmojiUrl) -> Unit)?,
 ) {
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  Column(
-    Modifier.fillMaxWidth().clickable {
-      scope.launch { routeFor(emojiPack, accountViewModel.userProfile())?.let { nav(it) } }
-    },
-  ) {
-    RenderEmojiPack(
-      baseNote = emojiPack,
-      actionable = false,
-      backgroundColor = bgColor,
-      accountViewModel = accountViewModel,
-      onClick = onClick,
-    )
-  }
+    Column(
+        Modifier.fillMaxWidth().clickable {
+            scope.launch { routeFor(emojiPack, accountViewModel.userProfile())?.let { nav(it) } }
+        },
+    ) {
+        RenderEmojiPack(
+            baseNote = emojiPack,
+            actionable = false,
+            backgroundColor = bgColor,
+            accountViewModel = accountViewModel,
+            onClick = onClick,
+        )
+    }
 }

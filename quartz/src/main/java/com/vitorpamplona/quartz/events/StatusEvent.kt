@@ -27,52 +27,52 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class StatusEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 30315
+    companion object {
+        const val KIND = 30315
 
-    fun create(
-      msg: String,
-      type: String,
-      expiration: Long?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (StatusEvent) -> Unit,
-    ) {
-      val tags = mutableListOf<Array<String>>()
+        fun create(
+            msg: String,
+            type: String,
+            expiration: Long?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (StatusEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
 
-      tags.add(arrayOf("d", type))
-      expiration?.let { tags.add(arrayOf("expiration", it.toString())) }
+            tags.add(arrayOf("d", type))
+            expiration?.let { tags.add(arrayOf("expiration", it.toString())) }
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+        }
+
+        fun update(
+            event: StatusEvent,
+            newStatus: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (StatusEvent) -> Unit,
+        ) {
+            val tags = event.tags
+            signer.sign(createdAt, KIND, tags, newStatus, onReady)
+        }
+
+        fun clear(
+            event: StatusEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (StatusEvent) -> Unit,
+        ) {
+            val msg = ""
+            val tags = event.tags.filter { it.size > 1 && it[0] == "d" }
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+        }
     }
-
-    fun update(
-      event: StatusEvent,
-      newStatus: String,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (StatusEvent) -> Unit,
-    ) {
-      val tags = event.tags
-      signer.sign(createdAt, KIND, tags, newStatus, onReady)
-    }
-
-    fun clear(
-      event: StatusEvent,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (StatusEvent) -> Unit,
-    ) {
-      val msg = ""
-      val tags = event.tags.filter { it.size > 1 && it[0] == "d" }
-      signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
-    }
-  }
 }

@@ -73,11 +73,6 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
-import java.math.BigDecimal
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,401 +80,404 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun UserReactionsRow(
-  model: UserReactionsViewModel,
-  onClick: () -> Unit,
+    model: UserReactionsViewModel,
+    onClick: () -> Unit,
 ) {
-  Row(
-    verticalAlignment = CenterVertically,
-    modifier = Modifier.clickable(onClick = onClick).padding(10.dp),
-  ) {
-    Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
-      Text(
-        text = stringResource(id = R.string.today),
-        fontWeight = FontWeight.Bold,
-      )
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier = Modifier.clickable(onClick = onClick).padding(10.dp),
+    ) {
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
+            Text(
+                text = stringResource(id = R.string.today),
+                fontWeight = FontWeight.Bold,
+            )
 
-      Icon(
-        imageVector = Icons.Default.ExpandMore,
-        null,
-        modifier = Size20Modifier,
-        tint = MaterialTheme.colorScheme.placeholderText,
-      )
-    }
+            Icon(
+                imageVector = Icons.Default.ExpandMore,
+                null,
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
 
-    Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
-      UserReplyModel(model)
-    }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReplyModel(model)
+        }
 
-    Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
-      UserBoostModel(model)
-    }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserBoostModel(model)
+        }
 
-    Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
-      UserReactionModel(model)
-    }
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserReactionModel(model)
+        }
 
-    Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
-      UserZapModel(model)
+        Row(verticalAlignment = CenterVertically, modifier = remember { Modifier.weight(1f) }) {
+            UserZapModel(model)
+        }
     }
-  }
 }
 
 @Composable
 private fun UserZapModel(model: UserReactionsViewModel) {
-  Icon(
-    imageVector = Icons.Default.Bolt,
-    contentDescription = stringResource(R.string.zaps),
-    modifier = Size24Modifier,
-    tint = BitcoinOrange,
-  )
+    Icon(
+        imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(R.string.zaps),
+        modifier = Size24Modifier,
+        tint = BitcoinOrange,
+    )
 
-  Spacer(modifier = Modifier.width(8.dp))
+    Spacer(modifier = Modifier.width(8.dp))
 
-  UserZapReaction(model)
+    UserZapReaction(model)
 }
 
 @Composable
 private fun UserReactionModel(model: UserReactionsViewModel) {
-  Icon(
-    painter = painterResource(R.drawable.ic_liked),
-    null,
-    modifier = Size20Modifier,
-    tint = Color.Unspecified,
-  )
+    Icon(
+        painter = painterResource(R.drawable.ic_liked),
+        null,
+        modifier = Size20Modifier,
+        tint = Color.Unspecified,
+    )
 
-  Spacer(modifier = StdHorzSpacer)
+    Spacer(modifier = StdHorzSpacer)
 
-  UserLikeReaction(model)
+    UserLikeReaction(model)
 }
 
 @Composable
 private fun UserBoostModel(model: UserReactionsViewModel) {
-  Icon(
-    painter = painterResource(R.drawable.ic_retweeted),
-    null,
-    modifier = Size24Modifier,
-    tint = Color.Unspecified,
-  )
+    Icon(
+        painter = painterResource(R.drawable.ic_retweeted),
+        null,
+        modifier = Size24Modifier,
+        tint = Color.Unspecified,
+    )
 
-  Spacer(modifier = StdHorzSpacer)
+    Spacer(modifier = StdHorzSpacer)
 
-  UserBoostReaction(model)
+    UserBoostReaction(model)
 }
 
 @Composable
 private fun UserReplyModel(model: UserReactionsViewModel) {
-  Icon(
-    painter = painterResource(R.drawable.ic_comment),
-    null,
-    modifier = Size20Modifier,
-    tint = RoyalBlue,
-  )
+    Icon(
+        painter = painterResource(R.drawable.ic_comment),
+        null,
+        modifier = Size20Modifier,
+        tint = RoyalBlue,
+    )
 
-  Spacer(modifier = StdHorzSpacer)
+    Spacer(modifier = StdHorzSpacer)
 
-  UserReplyReaction(model)
+    UserReplyReaction(model)
 }
 
 @Stable
 class UserReactionsViewModel(val account: Account) : ViewModel() {
-  val user: User = account.userProfile()
+    val user: User = account.userProfile()
 
-  private var _reactions = MutableStateFlow<Map<String, Int>>(emptyMap())
-  private var _boosts = MutableStateFlow<Map<String, Int>>(emptyMap())
-  private var _zaps = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
-  private var _replies = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var _reactions = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var _boosts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var _zaps = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
+    private var _replies = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-  private var _chartModel = MutableStateFlow<ComposedChartEntryModel<ChartEntryModel>?>(null)
-  private var _axisLabels = MutableStateFlow<List<String>>(emptyList())
+    private var _chartModel = MutableStateFlow<ComposedChartEntryModel<ChartEntryModel>?>(null)
+    private var _axisLabels = MutableStateFlow<List<String>>(emptyList())
 
-  val reactions = _reactions.asStateFlow()
-  val boosts = _boosts.asStateFlow()
-  val zaps = _zaps.asStateFlow()
-  val replies = _replies.asStateFlow()
+    val reactions = _reactions.asStateFlow()
+    val boosts = _boosts.asStateFlow()
+    val zaps = _zaps.asStateFlow()
+    val replies = _replies.asStateFlow()
 
-  val chartModel = _chartModel.asStateFlow()
-  val axisLabels = _axisLabels.asStateFlow()
+    val chartModel = _chartModel.asStateFlow()
+    val axisLabels = _axisLabels.asStateFlow()
 
-  private var takenIntoAccount = setOf<HexKey>()
-  private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
+    private var takenIntoAccount = setOf<HexKey>()
+    private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
-  val todaysReplyCount = _replies.map { showCount(it[today()]) }.distinctUntilChanged()
-  val todaysBoostCount = _boosts.map { showCount(it[today()]) }.distinctUntilChanged()
-  val todaysReactionCount = _reactions.map { showCount(it[today()]) }.distinctUntilChanged()
-  val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }.distinctUntilChanged()
+    val todaysReplyCount = _replies.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysBoostCount = _boosts.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysReactionCount = _reactions.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }.distinctUntilChanged()
 
-  var shouldShowDecimalsInAxis = false
+    var shouldShowDecimalsInAxis = false
 
-  fun formatDate(createAt: Long): String {
-    return sdf.format(
-      Instant.ofEpochSecond(createAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
-    )
-  }
-
-  fun today() = sdf.format(LocalDateTime.now())
-
-  private suspend fun initializeSuspend() {
-    checkNotInMainThread()
-
-    val currentUser = user.pubkeyHex
-
-    val reactions = mutableMapOf<String, Int>()
-    val boosts = mutableMapOf<String, Int>()
-    val zaps = mutableMapOf<String, BigDecimal>()
-    val replies = mutableMapOf<String, Int>()
-    val takenIntoAccount = mutableSetOf<HexKey>()
-
-    LocalCache.notes.values.forEach {
-      val noteEvent = it.event
-      if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
-        if (noteEvent is ReactionEvent) {
-          if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-            val netDate = formatDate(noteEvent.createdAt)
-            reactions[netDate] = (reactions[netDate] ?: 0) + 1
-            takenIntoAccount.add(noteEvent.id())
-          }
-        } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-          if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
-            val netDate = formatDate(noteEvent.createdAt())
-            boosts[netDate] = (boosts[netDate] ?: 0) + 1
-            takenIntoAccount.add(noteEvent.id())
-          }
-        } else if (noteEvent is LnZapEvent) {
-          if (
-            noteEvent.isTaggedUser(currentUser)
-          ) { // the user might be sending his own receipts noteEvent.pubKey != currentUser
-            val netDate = formatDate(noteEvent.createdAt)
-            zaps[netDate] =
-              (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-            takenIntoAccount.add(noteEvent.id())
-          }
-        } else if (noteEvent is TextNoteEvent) {
-          if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-            val netDate = formatDate(noteEvent.createdAt)
-            replies[netDate] = (replies[netDate] ?: 0) + 1
-            takenIntoAccount.add(noteEvent.id())
-          }
-        }
-      }
-    }
-
-    this.takenIntoAccount = takenIntoAccount
-    this._reactions.emit(reactions)
-    this._replies.emit(replies)
-    this._zaps.emit(zaps)
-    this._boosts.emit(boosts)
-
-    refreshChartModel()
-  }
-
-  suspend fun addToStatsSuspend(newNotes: Set<Note>) {
-    checkNotInMainThread()
-
-    val currentUser = user.pubkeyHex
-
-    val reactions = this._reactions.value.toMutableMap()
-    val boosts = this._boosts.value.toMutableMap()
-    val zaps = this._zaps.value.toMutableMap()
-    val replies = this._replies.value.toMutableMap()
-    val takenIntoAccount = this.takenIntoAccount.toMutableSet()
-    var hasNewElements = false
-
-    newNotes.forEach {
-      val noteEvent = it.event
-      if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
-        if (noteEvent is ReactionEvent) {
-          if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-            val netDate = formatDate(noteEvent.createdAt)
-            reactions[netDate] = (reactions[netDate] ?: 0) + 1
-            takenIntoAccount.add(noteEvent.id())
-            hasNewElements = true
-          }
-        } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-          if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
-            val netDate = formatDate(noteEvent.createdAt())
-            boosts[netDate] = (boosts[netDate] ?: 0) + 1
-            takenIntoAccount.add(noteEvent.id())
-            hasNewElements = true
-          }
-        } else if (noteEvent is LnZapEvent) {
-          if (
-            noteEvent.isTaggedUser(currentUser)
-          ) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
-            val netDate = formatDate(noteEvent.createdAt)
-            zaps[netDate] =
-              (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-            takenIntoAccount.add(noteEvent.id())
-            hasNewElements = true
-          }
-        } else if (noteEvent is TextNoteEvent) {
-          if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-            val netDate = formatDate(noteEvent.createdAt)
-            replies[netDate] = (replies[netDate] ?: 0) + 1
-            takenIntoAccount.add(noteEvent.id())
-            hasNewElements = true
-          }
-        }
-      }
-    }
-
-    if (hasNewElements) {
-      this.takenIntoAccount = takenIntoAccount
-      this._reactions.emit(reactions)
-      this._replies.emit(replies)
-      this._zaps.emit(zaps)
-      this._boosts.emit(boosts)
-
-      refreshChartModel()
-    }
-  }
-
-  private suspend fun refreshChartModel() {
-    checkNotInMainThread()
-
-    val day = 24 * 60 * 60L
-    val now = LocalDateTime.now()
-    val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
-
-    val dataAxisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { sdf.format(now.minusSeconds(day * it)) }
-
-    val listOfCountCurves =
-      listOf(
-        dataAxisLabels.mapIndexed { index, dateStr ->
-          entryOf(index, _replies.value[dateStr]?.toFloat() ?: 0f)
-        },
-        dataAxisLabels.mapIndexed { index, dateStr ->
-          entryOf(index, _boosts.value[dateStr]?.toFloat() ?: 0f)
-        },
-        dataAxisLabels.mapIndexed { index, dateStr ->
-          entryOf(index, _reactions.value[dateStr]?.toFloat() ?: 0f)
-        },
-      )
-
-    val listOfValueCurves =
-      listOf(
-        dataAxisLabels.mapIndexed { index, dateStr ->
-          entryOf(index, _zaps.value[dateStr]?.toFloat() ?: 0f)
-        },
-      )
-
-    val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
-    val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
-
-    chartEntryModelProducer1?.let { chart1 ->
-      chartEntryModelProducer2?.let { chart2 ->
-        this.shouldShowDecimalsInAxis = shouldShowDecimals(chart2.minY, chart2.maxY)
-
-        this._axisLabels.emit(
-          listOf(6, 5, 4, 3, 2, 1, 0).map {
-            displayAxisFormatter.format(now.minusSeconds(day * it))
-          },
+    fun formatDate(createAt: Long): String {
+        return sdf.format(
+            Instant.ofEpochSecond(createAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
         )
-        this._chartModel.emit(chart1.plus(chart2))
-      }
-    }
-  }
-
-  // determine if the min max are so close that they render to the same number.
-  fun shouldShowDecimals(
-    min: Float,
-    max: Float,
-  ): Boolean {
-    val step = (max - min) / 8
-
-    var previous = showAmountAxis(min.toBigDecimal())
-    for (i in 1..7) {
-      val current = showAmountAxis((min + (i * step)).toBigDecimal())
-      if (previous == current) {
-        return true
-      }
-      previous = current
     }
 
-    return false
-  }
+    fun today() = sdf.format(LocalDateTime.now())
 
-  var collectorJob: Job? = null
+    private suspend fun initializeSuspend() {
+        checkNotInMainThread()
 
-  init {
-    Log.d("Init", "User Reactions Row")
-    viewModelScope.launch(Dispatchers.IO) {
-      initializeSuspend()
+        val currentUser = user.pubkeyHex
 
-      collectorJob =
-        viewModelScope.launch(Dispatchers.IO) {
-          LocalCache.live.newEventBundles.collect { newNotes ->
-            checkNotInMainThread()
+        val reactions = mutableMapOf<String, Int>()
+        val boosts = mutableMapOf<String, Int>()
+        val zaps = mutableMapOf<String, BigDecimal>()
+        val replies = mutableMapOf<String, Int>()
+        val takenIntoAccount = mutableSetOf<HexKey>()
 
-            invalidateInsertData(newNotes)
-          }
+        LocalCache.notes.values.forEach {
+            val noteEvent = it.event
+            if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
+                if (noteEvent is ReactionEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt)
+                        reactions[netDate] = (reactions[netDate] ?: 0) + 1
+                        takenIntoAccount.add(noteEvent.id())
+                    }
+                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt())
+                        boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                        takenIntoAccount.add(noteEvent.id())
+                    }
+                } else if (noteEvent is LnZapEvent) {
+                    if (
+                        noteEvent.isTaggedUser(currentUser)
+                    ) { // the user might be sending his own receipts noteEvent.pubKey != currentUser
+                        val netDate = formatDate(noteEvent.createdAt)
+                        zaps[netDate] =
+                            (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                        takenIntoAccount.add(noteEvent.id())
+                    }
+                } else if (noteEvent is TextNoteEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt)
+                        replies[netDate] = (replies[netDate] ?: 0) + 1
+                        takenIntoAccount.add(noteEvent.id())
+                    }
+                }
+            }
+        }
+
+        this.takenIntoAccount = takenIntoAccount
+        this._reactions.emit(reactions)
+        this._replies.emit(replies)
+        this._zaps.emit(zaps)
+        this._boosts.emit(boosts)
+
+        refreshChartModel()
+    }
+
+    suspend fun addToStatsSuspend(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
+        val currentUser = user.pubkeyHex
+
+        val reactions = this._reactions.value.toMutableMap()
+        val boosts = this._boosts.value.toMutableMap()
+        val zaps = this._zaps.value.toMutableMap()
+        val replies = this._replies.value.toMutableMap()
+        val takenIntoAccount = this.takenIntoAccount.toMutableSet()
+        var hasNewElements = false
+
+        newNotes.forEach {
+            val noteEvent = it.event
+            if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
+                if (noteEvent is ReactionEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt)
+                        reactions[netDate] = (reactions[netDate] ?: 0) + 1
+                        takenIntoAccount.add(noteEvent.id())
+                        hasNewElements = true
+                    }
+                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt())
+                        boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                        takenIntoAccount.add(noteEvent.id())
+                        hasNewElements = true
+                    }
+                } else if (noteEvent is LnZapEvent) {
+                    if (
+                        noteEvent.isTaggedUser(currentUser)
+                    ) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
+                        val netDate = formatDate(noteEvent.createdAt)
+                        zaps[netDate] =
+                            (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                        takenIntoAccount.add(noteEvent.id())
+                        hasNewElements = true
+                    }
+                } else if (noteEvent is TextNoteEvent) {
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt)
+                        replies[netDate] = (replies[netDate] ?: 0) + 1
+                        takenIntoAccount.add(noteEvent.id())
+                        hasNewElements = true
+                    }
+                }
+            }
+        }
+
+        if (hasNewElements) {
+            this.takenIntoAccount = takenIntoAccount
+            this._reactions.emit(reactions)
+            this._replies.emit(replies)
+            this._zaps.emit(zaps)
+            this._boosts.emit(boosts)
+
+            refreshChartModel()
         }
     }
-  }
 
-  private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
+    private suspend fun refreshChartModel() {
+        checkNotInMainThread()
 
-  fun invalidateInsertData(newItems: Set<Note>) {
-    bundlerInsert.invalidateList(newItems) { addToStatsSuspend(it.flatten().toSet()) }
-  }
+        val day = 24 * 60 * 60L
+        val now = LocalDateTime.now()
+        val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
 
-  override fun onCleared() {
-    collectorJob?.cancel()
-    bundlerInsert.cancel()
-    Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-    super.onCleared()
-  }
+        val dataAxisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { sdf.format(now.minusSeconds(day * it)) }
 
-  class Factory(val account: Account) : ViewModelProvider.Factory {
-    override fun <UserReactionsViewModel : ViewModel> create(
-      modelClass: Class<UserReactionsViewModel>
-    ): UserReactionsViewModel {
-      return UserReactionsViewModel(account) as UserReactionsViewModel
+        val listOfCountCurves =
+            listOf(
+                dataAxisLabels.mapIndexed { index, dateStr ->
+                    entryOf(index, _replies.value[dateStr]?.toFloat() ?: 0f)
+                },
+                dataAxisLabels.mapIndexed { index, dateStr ->
+                    entryOf(index, _boosts.value[dateStr]?.toFloat() ?: 0f)
+                },
+                dataAxisLabels.mapIndexed { index, dateStr ->
+                    entryOf(index, _reactions.value[dateStr]?.toFloat() ?: 0f)
+                },
+            )
+
+        val listOfValueCurves =
+            listOf(
+                dataAxisLabels.mapIndexed { index, dateStr ->
+                    entryOf(index, _zaps.value[dateStr]?.toFloat() ?: 0f)
+                },
+            )
+
+        val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
+        val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
+
+        chartEntryModelProducer1?.let { chart1 ->
+            chartEntryModelProducer2?.let { chart2 ->
+                this.shouldShowDecimalsInAxis = shouldShowDecimals(chart2.minY, chart2.maxY)
+
+                this._axisLabels.emit(
+                    listOf(6, 5, 4, 3, 2, 1, 0).map {
+                        displayAxisFormatter.format(now.minusSeconds(day * it))
+                    },
+                )
+                this._chartModel.emit(chart1.plus(chart2))
+            }
+        }
     }
-  }
+
+    // determine if the min max are so close that they render to the same number.
+    fun shouldShowDecimals(
+        min: Float,
+        max: Float,
+    ): Boolean {
+        val step = (max - min) / 8
+
+        var previous = showAmountAxis(min.toBigDecimal())
+        for (i in 1..7) {
+            val current = showAmountAxis((min + (i * step)).toBigDecimal())
+            if (previous == current) {
+                return true
+            }
+            previous = current
+        }
+
+        return false
+    }
+
+    var collectorJob: Job? = null
+
+    init {
+        Log.d("Init", "User Reactions Row")
+        viewModelScope.launch(Dispatchers.IO) {
+            initializeSuspend()
+
+            collectorJob =
+                viewModelScope.launch(Dispatchers.IO) {
+                    LocalCache.live.newEventBundles.collect { newNotes ->
+                        checkNotInMainThread()
+
+                        invalidateInsertData(newNotes)
+                    }
+                }
+        }
+    }
+
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
+
+    fun invalidateInsertData(newItems: Set<Note>) {
+        bundlerInsert.invalidateList(newItems) { addToStatsSuspend(it.flatten().toSet()) }
+    }
+
+    override fun onCleared() {
+        collectorJob?.cancel()
+        bundlerInsert.cancel()
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        super.onCleared()
+    }
+
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <UserReactionsViewModel : ViewModel> create(modelClass: Class<UserReactionsViewModel>): UserReactionsViewModel {
+            return UserReactionsViewModel(account) as UserReactionsViewModel
+        }
+    }
 }
 
 @Composable
 fun UserReplyReaction(model: UserReactionsViewModel) {
-  val showCounts by model.todaysReplyCount.collectAsStateWithLifecycle("")
+    val showCounts by model.todaysReplyCount.collectAsStateWithLifecycle("")
 
-  Text(
-    showCounts,
-    fontWeight = FontWeight.Bold,
-    fontSize = 18.sp,
-  )
+    Text(
+        showCounts,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+    )
 }
 
 @Composable
 fun UserBoostReaction(model: UserReactionsViewModel) {
-  val boosts by model.todaysBoostCount.collectAsStateWithLifecycle("")
+    val boosts by model.todaysBoostCount.collectAsStateWithLifecycle("")
 
-  Text(
-    boosts,
-    fontWeight = FontWeight.Bold,
-    fontSize = 18.sp,
-  )
+    Text(
+        boosts,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+    )
 }
 
 @Composable
 fun UserLikeReaction(model: UserReactionsViewModel) {
-  val reactions by model.todaysReactionCount.collectAsStateWithLifecycle("")
+    val reactions by model.todaysReactionCount.collectAsStateWithLifecycle("")
 
-  Text(
-    text = reactions,
-    fontWeight = FontWeight.Bold,
-    fontSize = 18.sp,
-  )
+    Text(
+        text = reactions,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+    )
 }
 
 @Composable
 fun UserZapReaction(model: UserReactionsViewModel) {
-  val amount by model.todaysZapAmount.collectAsStateWithLifecycle("")
-  Text(
-    amount,
-    fontWeight = FontWeight.Bold,
-    fontSize = 18.sp,
-  )
+    val amount by model.todaysZapAmount.collectAsStateWithLifecycle("")
+    Text(
+        amount,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+    )
 }

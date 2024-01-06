@@ -157,1042 +157,1044 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import java.util.Locale
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @Composable
 fun ChannelScreen(
-  channelId: String?,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    channelId: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  if (channelId == null) return
+    if (channelId == null) return
 
-  LoadChannel(channelId, accountViewModel) {
-    PrepareChannelViewModels(
-      baseChannel = it,
-      accountViewModel = accountViewModel,
-      nav = nav,
-    )
-  }
+    LoadChannel(channelId, accountViewModel) {
+        PrepareChannelViewModels(
+            baseChannel = it,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 }
 
 @Composable
 fun PrepareChannelViewModels(
-  baseChannel: Channel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseChannel: Channel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val feedViewModel: NostrChannelFeedViewModel =
-    viewModel(
-      key = baseChannel.idHex + "ChannelFeedViewModel",
-      factory =
-        NostrChannelFeedViewModel.Factory(
-          baseChannel,
-          accountViewModel.account,
-        ),
+    val feedViewModel: NostrChannelFeedViewModel =
+        viewModel(
+            key = baseChannel.idHex + "ChannelFeedViewModel",
+            factory =
+                NostrChannelFeedViewModel.Factory(
+                    baseChannel,
+                    accountViewModel.account,
+                ),
+        )
+
+    val channelScreenModel: NewPostViewModel = viewModel()
+    channelScreenModel.accountViewModel = accountViewModel
+    channelScreenModel.account = accountViewModel.account
+
+    ChannelScreen(
+        channel = baseChannel,
+        feedViewModel = feedViewModel,
+        newPostModel = channelScreenModel,
+        accountViewModel = accountViewModel,
+        nav = nav,
     )
-
-  val channelScreenModel: NewPostViewModel = viewModel()
-  channelScreenModel.accountViewModel = accountViewModel
-  channelScreenModel.account = accountViewModel.account
-
-  ChannelScreen(
-    channel = baseChannel,
-    feedViewModel = feedViewModel,
-    newPostModel = channelScreenModel,
-    accountViewModel = accountViewModel,
-    nav = nav,
-  )
 }
 
 @Composable
 fun ChannelScreen(
-  channel: Channel,
-  feedViewModel: NostrChannelFeedViewModel,
-  newPostModel: NewPostViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    channel: Channel,
+    feedViewModel: NostrChannelFeedViewModel,
+    newPostModel: NewPostViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val context = LocalContext.current
+    val context = LocalContext.current
 
-  NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
-
-  val lifeCycleOwner = LocalLifecycleOwner.current
-
-  LaunchedEffect(Unit) {
-    launch(Dispatchers.IO) {
-      newPostModel.imageUploadingError.collect { error ->
-        withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-      }
-    }
-  }
-
-  DisposableEffect(accountViewModel) {
     NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
-    NostrChannelDataSource.start()
-    feedViewModel.invalidateData(true)
 
-    onDispose {
-      NostrChannelDataSource.clear()
-      NostrChannelDataSource.stop()
+    val lifeCycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            newPostModel.imageUploadingError.collect { error ->
+                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
+            }
+        }
     }
-  }
 
-  DisposableEffect(lifeCycleOwner) {
-    val observer = LifecycleEventObserver { _, event ->
-      if (event == Lifecycle.Event.ON_RESUME) {
-        println("Channel Start")
+    DisposableEffect(accountViewModel) {
+        NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
         NostrChannelDataSource.start()
         feedViewModel.invalidateData(true)
-      }
-      if (event == Lifecycle.Event.ON_PAUSE) {
-        println("Channel Stop")
 
-        NostrChannelDataSource.clear()
-        NostrChannelDataSource.stop()
-      }
-    }
-
-    lifeCycleOwner.lifecycle.addObserver(observer)
-    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-  }
-
-  Column(Modifier.fillMaxHeight()) {
-    val replyTo = remember { mutableStateOf<Note?>(null) }
-
-    Column(
-      modifier = remember { Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true) },
-    ) {
-      if (channel is LiveActivitiesChannel) {
-        ShowVideoStreaming(channel, accountViewModel)
-      }
-      RefreshingChatroomFeedView(
-        viewModel = feedViewModel,
-        accountViewModel = accountViewModel,
-        nav = nav,
-        routeForLastRead = "Channel/${channel.idHex}",
-        onWantsToReply = { replyTo.value = it },
-      )
-    }
-
-    Spacer(modifier = DoubleVertSpacer)
-
-    replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
-
-    val scope = rememberCoroutineScope()
-
-    // LAST ROW
-    EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
-      scope.launch(Dispatchers.IO) {
-        val tagger =
-          NewMessageTagger(
-            message = newPostModel.message.text,
-            pTags = listOfNotNull(replyTo.value?.author),
-            eTags = listOfNotNull(replyTo.value),
-            channelHex = channel.idHex,
-            dao = accountViewModel,
-          )
-        tagger.run()
-        if (channel is PublicChatChannel) {
-          accountViewModel.account.sendChannelMessage(
-            message = tagger.message,
-            toChannel = channel.idHex,
-            replyTo = tagger.eTags,
-            mentions = tagger.pTags,
-            wantsToMarkAsSensitive = false,
-          )
-        } else if (channel is LiveActivitiesChannel) {
-          accountViewModel.account.sendLiveMessage(
-            message = tagger.message,
-            toChannel = channel.address,
-            replyTo = tagger.eTags,
-            mentions = tagger.pTags,
-            wantsToMarkAsSensitive = false,
-          )
+        onDispose {
+            NostrChannelDataSource.clear()
+            NostrChannelDataSource.stop()
         }
-        newPostModel.message = TextFieldValue("")
-        replyTo.value = null
-        feedViewModel.sendToTop()
-      }
     }
-  }
+
+    DisposableEffect(lifeCycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    println("Channel Start")
+                    NostrChannelDataSource.start()
+                    feedViewModel.invalidateData(true)
+                }
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    println("Channel Stop")
+
+                    NostrChannelDataSource.clear()
+                    NostrChannelDataSource.stop()
+                }
+            }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    Column(Modifier.fillMaxHeight()) {
+        val replyTo = remember { mutableStateOf<Note?>(null) }
+
+        Column(
+            modifier = remember { Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true) },
+        ) {
+            if (channel is LiveActivitiesChannel) {
+                ShowVideoStreaming(channel, accountViewModel)
+            }
+            RefreshingChatroomFeedView(
+                viewModel = feedViewModel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = "Channel/${channel.idHex}",
+                onWantsToReply = { replyTo.value = it },
+            )
+        }
+
+        Spacer(modifier = DoubleVertSpacer)
+
+        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
+
+        val scope = rememberCoroutineScope()
+
+        // LAST ROW
+        EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
+            scope.launch(Dispatchers.IO) {
+                val tagger =
+                    NewMessageTagger(
+                        message = newPostModel.message.text,
+                        pTags = listOfNotNull(replyTo.value?.author),
+                        eTags = listOfNotNull(replyTo.value),
+                        channelHex = channel.idHex,
+                        dao = accountViewModel,
+                    )
+                tagger.run()
+                if (channel is PublicChatChannel) {
+                    accountViewModel.account.sendChannelMessage(
+                        message = tagger.message,
+                        toChannel = channel.idHex,
+                        replyTo = tagger.eTags,
+                        mentions = tagger.pTags,
+                        wantsToMarkAsSensitive = false,
+                    )
+                } else if (channel is LiveActivitiesChannel) {
+                    accountViewModel.account.sendLiveMessage(
+                        message = tagger.message,
+                        toChannel = channel.address,
+                        replyTo = tagger.eTags,
+                        mentions = tagger.pTags,
+                        wantsToMarkAsSensitive = false,
+                    )
+                }
+                newPostModel.message = TextFieldValue("")
+                replyTo.value = null
+                feedViewModel.sendToTop()
+            }
+        }
+    }
 }
 
 @Composable
 fun DisplayReplyingToNote(
-  replyingNote: Note?,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  onCancel: () -> Unit,
+    replyingNote: Note?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    onCancel: () -> Unit,
 ) {
-  Row(
-    Modifier.padding(horizontal = 10.dp).animateContentSize(),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    if (replyingNote != null) {
-      Column(remember { Modifier.weight(1f) }) {
-        ChatroomMessageCompose(
-          baseNote = replyingNote,
-          null,
-          innerQuote = true,
-          accountViewModel = accountViewModel,
-          nav = nav,
-          onWantsToReply = {},
-        )
-      }
+    Row(
+        Modifier.padding(horizontal = 10.dp).animateContentSize(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (replyingNote != null) {
+            Column(remember { Modifier.weight(1f) }) {
+                ChatroomMessageCompose(
+                    baseNote = replyingNote,
+                    null,
+                    innerQuote = true,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onWantsToReply = {},
+                )
+            }
 
-      Column(Modifier.padding(end = 10.dp)) {
-        IconButton(
-          modifier = Modifier.size(30.dp),
-          onClick = onCancel,
-        ) {
-          Icon(
-            imageVector = Icons.Default.Cancel,
-            null,
-            modifier = Modifier.padding(end = 5.dp).size(30.dp),
-            tint = MaterialTheme.colorScheme.placeholderText,
-          )
+            Column(Modifier.padding(end = 10.dp)) {
+                IconButton(
+                    modifier = Modifier.size(30.dp),
+                    onClick = onCancel,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        null,
+                        modifier = Modifier.padding(end = 5.dp).size(30.dp),
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
+            }
         }
-      }
     }
-  }
 }
 
 @Composable
 fun EditFieldRow(
-  channelScreenModel: NewPostViewModel,
-  isPrivate: Boolean,
-  accountViewModel: AccountViewModel,
-  onSendNewMessage: () -> Unit,
+    channelScreenModel: NewPostViewModel,
+    isPrivate: Boolean,
+    accountViewModel: AccountViewModel,
+    onSendNewMessage: () -> Unit,
 ) {
-  Row(
-    modifier = EditFieldModifier,
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    val context = LocalContext.current
+    Row(
+        modifier = EditFieldModifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val context = LocalContext.current
 
-    MyTextField(
-      value = channelScreenModel.message,
-      onValueChange = { channelScreenModel.updateMessage(it) },
-      keyboardOptions =
-        KeyboardOptions.Default.copy(
-          capitalization = KeyboardCapitalization.Sentences,
-        ),
-      shape = EditFieldBorder,
-      modifier = Modifier.weight(1f, true),
-      placeholder = {
-        Text(
-          text = stringResource(R.string.reply_here),
-          color = MaterialTheme.colorScheme.placeholderText,
+        MyTextField(
+            value = channelScreenModel.message,
+            onValueChange = { channelScreenModel.updateMessage(it) },
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+            shape = EditFieldBorder,
+            modifier = Modifier.weight(1f, true),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.reply_here),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            trailingIcon = {
+                ThinSendButton(
+                    isActive =
+                        channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
+                    modifier = EditFieldTrailingIconModifier,
+                ) {
+                    onSendNewMessage()
+                }
+            },
+            leadingIcon = {
+                UploadFromGallery(
+                    isUploading = channelScreenModel.isUploadingImage,
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                    modifier = EditFieldLeadingIconModifier,
+                ) {
+                    channelScreenModel.upload(
+                        galleryUri = it,
+                        alt = null,
+                        sensitiveContent = false,
+                        server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                        context = context,
+                    )
+                }
+            },
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
         )
-      },
-      textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-      trailingIcon = {
-        ThinSendButton(
-          isActive =
-            channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
-          modifier = EditFieldTrailingIconModifier,
-        ) {
-          onSendNewMessage()
-        }
-      },
-      leadingIcon = {
-        UploadFromGallery(
-          isUploading = channelScreenModel.isUploadingImage,
-          tint = MaterialTheme.colorScheme.placeholderText,
-          modifier = EditFieldLeadingIconModifier,
-        ) {
-          channelScreenModel.upload(
-            galleryUri = it,
-            alt = null,
-            sensitiveContent = false,
-            server = ServerOption(accountViewModel.account.defaultFileServer, false),
-            context = context,
-          )
-        }
-      },
-      colors =
-        TextFieldDefaults.colors(
-          focusedIndicatorColor = Color.Transparent,
-          unfocusedIndicatorColor = Color.Transparent,
-        ),
-    )
-  }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyTextField(
-  value: TextFieldValue,
-  onValueChange: (TextFieldValue) -> Unit,
-  modifier: Modifier = Modifier,
-  enabled: Boolean = true,
-  readOnly: Boolean = false,
-  textStyle: TextStyle = LocalTextStyle.current,
-  label: @Composable (() -> Unit)? = null,
-  placeholder: @Composable (() -> Unit)? = null,
-  leadingIcon: @Composable (() -> Unit)? = null,
-  trailingIcon: @Composable (() -> Unit)? = null,
-  prefix: @Composable (() -> Unit)? = null,
-  suffix: @Composable (() -> Unit)? = null,
-  supportingText: @Composable (() -> Unit)? = null,
-  isError: Boolean = false,
-  visualTransformation: VisualTransformation = VisualTransformation.None,
-  keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-  keyboardActions: KeyboardActions = KeyboardActions(),
-  singleLine: Boolean = false,
-  maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-  minLines: Int = 1,
-  interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-  shape: Shape = TextFieldDefaults.shape,
-  colors: TextFieldColors = TextFieldDefaults.colors(),
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    prefix: @Composable (() -> Unit)? = null,
+    suffix: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions(),
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = TextFieldDefaults.shape,
+    colors: TextFieldColors = TextFieldDefaults.colors(),
 ) {
-  // COPIED FROM TEXT FIELD
-  // The only change is the contentPadding below
+    // COPIED FROM TEXT FIELD
+    // The only change is the contentPadding below
 
-  val textColor =
-    textStyle.color.takeOrElse {
-      val focused by interactionSource.collectIsFocusedAsState()
+    val textColor =
+        textStyle.color.takeOrElse {
+            val focused by interactionSource.collectIsFocusedAsState()
 
-      val targetValue =
-        when {
-          !enabled -> MaterialTheme.colorScheme.placeholderText
-          isError -> MaterialTheme.colorScheme.onSurface
-          focused -> MaterialTheme.colorScheme.onSurface
-          else -> MaterialTheme.colorScheme.onSurface
+            val targetValue =
+                when {
+                    !enabled -> MaterialTheme.colorScheme.placeholderText
+                    isError -> MaterialTheme.colorScheme.onSurface
+                    focused -> MaterialTheme.colorScheme.onSurface
+                    else -> MaterialTheme.colorScheme.onSurface
+                }
+
+            rememberUpdatedState(targetValue).value
+        }
+    val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
+
+    CompositionLocalProvider(LocalTextSelectionColors provides LocalTextSelectionColors.current) {
+        BasicTextField(
+            value = value,
+            modifier =
+                modifier.defaultMinSize(
+                    minWidth = TextFieldDefaults.MinWidth,
+                    minHeight = 36.dp,
+                ),
+            onValueChange = onValueChange,
+            enabled = enabled,
+            readOnly = readOnly,
+            textStyle = mergedTextStyle,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
+            interactionSource = interactionSource,
+            singleLine = singleLine,
+            maxLines = maxLines,
+            minLines = minLines,
+            decorationBox =
+                @Composable { innerTextField ->
+                    TextFieldDefaults.DecorationBox(
+                        value = value.text,
+                        visualTransformation = visualTransformation,
+                        innerTextField = innerTextField,
+                        placeholder = placeholder,
+                        label = label,
+                        leadingIcon = leadingIcon,
+                        trailingIcon = trailingIcon,
+                        prefix = prefix,
+                        suffix = suffix,
+                        supportingText = supportingText,
+                        shape = shape,
+                        singleLine = singleLine,
+                        enabled = enabled,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        contentPadding =
+                            TextFieldDefaults.contentPaddingWithoutLabel(
+                                start = 10.dp,
+                                top = 12.dp,
+                                end = 10.dp,
+                                bottom = 12.dp,
+                            ),
+                    )
+                },
+        )
+    }
+}
+
+@Composable
+fun ChannelHeader(
+    channelNote: Note,
+    showVideo: Boolean,
+    showBottomDiviser: Boolean,
+    sendToChannel: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val channelHex by remember { derivedStateOf { channelNote.channelHex() } }
+    channelHex?.let {
+        ChannelHeader(
+            channelHex = it,
+            showVideo = showVideo,
+            showBottomDiviser = showBottomDiviser,
+            sendToChannel = sendToChannel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+@Composable
+fun ChannelHeader(
+    channelHex: String,
+    showVideo: Boolean,
+    showBottomDiviser: Boolean,
+    showFlag: Boolean = true,
+    sendToChannel: Boolean = false,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LoadChannel(channelHex, accountViewModel) {
+        ChannelHeader(
+            it,
+            showVideo,
+            showBottomDiviser,
+            showFlag,
+            sendToChannel,
+            modifier,
+            accountViewModel,
+            nav,
+        )
+    }
+}
+
+@Composable
+fun ChannelHeader(
+    baseChannel: Channel,
+    showVideo: Boolean,
+    showBottomDiviser: Boolean,
+    showFlag: Boolean = true,
+    sendToChannel: Boolean = false,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        if (showVideo && baseChannel is LiveActivitiesChannel) {
+            ShowVideoStreaming(baseChannel, accountViewModel)
         }
 
-      rememberUpdatedState(targetValue).value
+        val expanded = remember { mutableStateOf(false) }
+
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier =
+                modifier.clickable {
+                    if (sendToChannel) {
+                        nav(routeFor(baseChannel))
+                    } else {
+                        expanded.value = !expanded.value
+                    }
+                },
+        ) {
+            ShortChannelHeader(
+                baseChannel = baseChannel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                showFlag = showFlag,
+            )
+
+            if (expanded.value) {
+                LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
+            }
+        }
+
+        if (showBottomDiviser) {
+            Divider(
+                thickness = DividerThickness,
+            )
+        }
     }
-  val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
-
-  CompositionLocalProvider(LocalTextSelectionColors provides LocalTextSelectionColors.current) {
-    BasicTextField(
-      value = value,
-      modifier =
-        modifier.defaultMinSize(
-          minWidth = TextFieldDefaults.MinWidth,
-          minHeight = 36.dp,
-        ),
-      onValueChange = onValueChange,
-      enabled = enabled,
-      readOnly = readOnly,
-      textStyle = mergedTextStyle,
-      cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-      visualTransformation = visualTransformation,
-      keyboardOptions = keyboardOptions,
-      keyboardActions = keyboardActions,
-      interactionSource = interactionSource,
-      singleLine = singleLine,
-      maxLines = maxLines,
-      minLines = minLines,
-      decorationBox =
-        @Composable { innerTextField ->
-          TextFieldDefaults.DecorationBox(
-            value = value.text,
-            visualTransformation = visualTransformation,
-            innerTextField = innerTextField,
-            placeholder = placeholder,
-            label = label,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            supportingText = supportingText,
-            shape = shape,
-            singleLine = singleLine,
-            enabled = enabled,
-            isError = isError,
-            interactionSource = interactionSource,
-            colors = colors,
-            contentPadding =
-              TextFieldDefaults.contentPaddingWithoutLabel(
-                start = 10.dp,
-                top = 12.dp,
-                end = 10.dp,
-                bottom = 12.dp,
-              ),
-          )
-        },
-    )
-  }
-}
-
-@Composable
-fun ChannelHeader(
-  channelNote: Note,
-  showVideo: Boolean,
-  showBottomDiviser: Boolean,
-  sendToChannel: Boolean,
-  modifier: Modifier = StdPadding,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-) {
-  val channelHex by remember { derivedStateOf { channelNote.channelHex() } }
-  channelHex?.let {
-    ChannelHeader(
-      channelHex = it,
-      showVideo = showVideo,
-      showBottomDiviser = showBottomDiviser,
-      sendToChannel = sendToChannel,
-      accountViewModel = accountViewModel,
-      nav = nav,
-    )
-  }
-}
-
-@Composable
-fun ChannelHeader(
-  channelHex: String,
-  showVideo: Boolean,
-  showBottomDiviser: Boolean,
-  showFlag: Boolean = true,
-  sendToChannel: Boolean = false,
-  modifier: Modifier = StdPadding,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-) {
-  LoadChannel(channelHex, accountViewModel) {
-    ChannelHeader(
-      it,
-      showVideo,
-      showBottomDiviser,
-      showFlag,
-      sendToChannel,
-      modifier,
-      accountViewModel,
-      nav,
-    )
-  }
-}
-
-@Composable
-fun ChannelHeader(
-  baseChannel: Channel,
-  showVideo: Boolean,
-  showBottomDiviser: Boolean,
-  showFlag: Boolean = true,
-  sendToChannel: Boolean = false,
-  modifier: Modifier = StdPadding,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-) {
-  Column(Modifier.fillMaxWidth()) {
-    if (showVideo && baseChannel is LiveActivitiesChannel) {
-      ShowVideoStreaming(baseChannel, accountViewModel)
-    }
-
-    val expanded = remember { mutableStateOf(false) }
-
-    Column(
-      verticalArrangement = Arrangement.Center,
-      modifier =
-        modifier.clickable {
-          if (sendToChannel) {
-            nav(routeFor(baseChannel))
-          } else {
-            expanded.value = !expanded.value
-          }
-        },
-    ) {
-      ShortChannelHeader(
-        baseChannel = baseChannel,
-        accountViewModel = accountViewModel,
-        nav = nav,
-        showFlag = showFlag,
-      )
-
-      if (expanded.value) {
-        LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
-      }
-    }
-
-    if (showBottomDiviser) {
-      Divider(
-        thickness = DividerThickness,
-      )
-    }
-  }
 }
 
 @Composable
 fun ShowVideoStreaming(
-  baseChannel: LiveActivitiesChannel,
-  accountViewModel: AccountViewModel,
+    baseChannel: LiveActivitiesChannel,
+    accountViewModel: AccountViewModel,
 ) {
-  baseChannel.info?.let {
-    SensitivityWarning(
-      event = it,
-      accountViewModel = accountViewModel,
-    ) {
-      val streamingInfo by
-        baseChannel.live
-          .map {
-            val activity = it.channel as? LiveActivitiesChannel
-            activity?.info
-          }
-          .distinctUntilChanged()
-          .observeAsState(baseChannel.info)
+    baseChannel.info?.let {
+        SensitivityWarning(
+            event = it,
+            accountViewModel = accountViewModel,
+        ) {
+            val streamingInfo by
+                baseChannel.live
+                    .map {
+                        val activity = it.channel as? LiveActivitiesChannel
+                        activity?.info
+                    }
+                    .distinctUntilChanged()
+                    .observeAsState(baseChannel.info)
 
-      streamingInfo?.let { event ->
-        val url = remember(streamingInfo) { event.streaming() }
-        val artworkUri = remember(streamingInfo) { event.image() }
-        val title = remember(streamingInfo) { baseChannel.toBestDisplayName() }
+            streamingInfo?.let { event ->
+                val url = remember(streamingInfo) { event.streaming() }
+                val artworkUri = remember(streamingInfo) { event.image() }
+                val title = remember(streamingInfo) { baseChannel.toBestDisplayName() }
 
-        val author = remember(streamingInfo) { baseChannel.creatorName() }
+                val author = remember(streamingInfo) { baseChannel.creatorName() }
 
-        url?.let {
-          CrossfadeCheckIfUrlIsOnline(url, accountViewModel) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = remember { Modifier.heightIn(max = 300.dp) },
-            ) {
-              val zoomableUrlVideo =
-                remember(it) {
-                  ZoomableUrlVideo(
-                    url = url,
-                    description = title,
-                    artworkUri = artworkUri,
-                    authorName = author,
-                    uri = event.toNostrUri(),
-                  )
+                url?.let {
+                    CrossfadeCheckIfUrlIsOnline(url, accountViewModel) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = remember { Modifier.heightIn(max = 300.dp) },
+                        ) {
+                            val zoomableUrlVideo =
+                                remember(it) {
+                                    ZoomableUrlVideo(
+                                        url = url,
+                                        description = title,
+                                        artworkUri = artworkUri,
+                                        authorName = author,
+                                        uri = event.toNostrUri(),
+                                    )
+                                }
+
+                            ZoomableContentView(
+                                content = zoomableUrlVideo,
+                                roundedCorner = false,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
+                    }
                 }
-
-              ZoomableContentView(
-                content = zoomableUrlVideo,
-                roundedCorner = false,
-                accountViewModel = accountViewModel,
-              )
             }
-          }
         }
-      }
     }
-  }
 }
 
 @Composable
 fun ShortChannelHeader(
-  baseChannel: Channel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  showFlag: Boolean,
+    baseChannel: Channel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    showFlag: Boolean,
 ) {
-  val channelState = baseChannel.live.observeAsState()
-  val channel = remember(channelState) { channelState.value?.channel } ?: return
+    val channelState = baseChannel.live.observeAsState()
+    val channel = remember(channelState) { channelState.value?.channel } ?: return
 
-  val automaticallyShowProfilePicture = remember {
-    accountViewModel.settings.showProfilePictures.value
-  }
+    val automaticallyShowProfilePicture =
+        remember {
+            accountViewModel.settings.showProfilePictures.value
+        }
 
-  Row(verticalAlignment = Alignment.CenterVertically) {
-    if (channel is LiveActivitiesChannel) {
-      channel.creator?.let {
-        UserPicture(
-          user = it,
-          size = Size34dp,
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-      }
-    } else {
-      channel.profilePicture()?.let {
-        RobohashFallbackAsyncImage(
-          robot = channel.idHex,
-          model = it,
-          contentDescription = stringResource(R.string.profile_image),
-          contentScale = ContentScale.Crop,
-          modifier = HeaderPictureModifier,
-          loadProfilePicture = automaticallyShowProfilePicture,
-        )
-      }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (channel is LiveActivitiesChannel) {
+            channel.creator?.let {
+                UserPicture(
+                    user = it,
+                    size = Size34dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        } else {
+            channel.profilePicture()?.let {
+                RobohashFallbackAsyncImage(
+                    robot = channel.idHex,
+                    model = it,
+                    contentDescription = stringResource(R.string.profile_image),
+                    contentScale = ContentScale.Crop,
+                    modifier = HeaderPictureModifier,
+                    loadProfilePicture = automaticallyShowProfilePicture,
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(start = 10.dp).height(35.dp).weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = remember(channelState) { channel.toBestDisplayName() },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.height(Size35dp).padding(start = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (channel is PublicChatChannel) {
+                ShortChannelActionOptions(channel, accountViewModel, nav)
+            }
+            if (channel is LiveActivitiesChannel) {
+                LiveChannelActionOptions(channel, showFlag, accountViewModel, nav)
+            }
+        }
     }
-
-    Column(
-      modifier = Modifier.padding(start = 10.dp).height(35.dp).weight(1f),
-      verticalArrangement = Arrangement.Center,
-    ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-          text = remember(channelState) { channel.toBestDisplayName() },
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
-    }
-
-    Row(
-      modifier = Modifier.height(Size35dp).padding(start = 5.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      if (channel is PublicChatChannel) {
-        ShortChannelActionOptions(channel, accountViewModel, nav)
-      }
-      if (channel is LiveActivitiesChannel) {
-        LiveChannelActionOptions(channel, showFlag, accountViewModel, nav)
-      }
-    }
-  }
 }
 
 @Composable
 fun LongChannelHeader(
-  baseChannel: Channel,
-  lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseChannel: Channel,
+    lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val channelState = baseChannel.live.observeAsState()
-  val channel = remember(channelState) { channelState.value?.channel } ?: return
+    val channelState = baseChannel.live.observeAsState()
+    val channel = remember(channelState) { channelState.value?.channel } ?: return
 
-  Row(
-    lineModifier,
-  ) {
-    val summary = remember(channelState) { channel.summary()?.ifBlank { null } }
-
-    Column(
-      Modifier.weight(1f),
+    Row(
+        lineModifier,
     ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        val defaultBackground = MaterialTheme.colorScheme.background
-        val background = remember { mutableStateOf(defaultBackground) }
+        val summary = remember(channelState) { channel.summary()?.ifBlank { null } }
 
-        val tags =
-          remember(channelState) {
-            if (baseChannel is LiveActivitiesChannel) {
-              baseChannel.info?.tags()?.toImmutableListOfLists() ?: EmptyTagList
-            } else {
-              EmptyTagList
-            }
-          }
-
-        TranslatableRichTextViewer(
-          content = summary ?: stringResource(id = R.string.groups_no_descriptor),
-          canPreview = false,
-          tags = tags,
-          backgroundColor = background,
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-      }
-
-      if (baseChannel is LiveActivitiesChannel && baseChannel.info?.hasHashtags() == true) {
-        val hashtags =
-          remember(baseChannel.info) {
-            baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
-          }
-        DisplayUncitedHashtags(hashtags, summary ?: "", nav)
-      }
-    }
-
-    Column {
-      if (channel is PublicChatChannel) {
-        Row {
-          Spacer(DoubleHorzSpacer)
-          LongChannelActionOptions(channel, accountViewModel, nav)
-        }
-      }
-    }
-  }
-
-  LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
-    loadingNote?.let { note ->
-      Row(
-        lineModifier,
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Text(
-          text = stringResource(id = R.string.owner),
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          modifier = Modifier.width(75.dp),
-        )
-        Spacer(DoubleHorzSpacer)
-        NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
-        Spacer(DoubleHorzSpacer)
-        NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
-      }
-
-      Row(
-        lineModifier,
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Text(
-          text = stringResource(id = R.string.created_at),
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          modifier = Modifier.width(75.dp),
-        )
-        Spacer(DoubleHorzSpacer)
-        NormalTimeAgo(note, remember { Modifier.weight(1f) })
-        MoreOptionsButton(note, accountViewModel)
-      }
-    }
-  }
-
-  var participantUsers by
-    remember(baseChannel) {
-      mutableStateOf<ImmutableList<Pair<Participant, User>>>(
-        persistentListOf(),
-      )
-    }
-
-  if (channel is LiveActivitiesChannel) {
-    LaunchedEffect(key1 = channelState) {
-      launch(Dispatchers.IO) {
-        val newParticipantUsers =
-          channel.info
-            ?.participants()
-            ?.mapNotNull { part ->
-              LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
-            }
-            ?.toImmutableList()
-
-        if (
-          newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
+        Column(
+            Modifier.weight(1f),
         ) {
-          participantUsers = newParticipantUsers
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val defaultBackground = MaterialTheme.colorScheme.background
+                val background = remember { mutableStateOf(defaultBackground) }
+
+                val tags =
+                    remember(channelState) {
+                        if (baseChannel is LiveActivitiesChannel) {
+                            baseChannel.info?.tags()?.toImmutableListOfLists() ?: EmptyTagList
+                        } else {
+                            EmptyTagList
+                        }
+                    }
+
+                TranslatableRichTextViewer(
+                    content = summary ?: stringResource(id = R.string.groups_no_descriptor),
+                    canPreview = false,
+                    tags = tags,
+                    backgroundColor = background,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            if (baseChannel is LiveActivitiesChannel && baseChannel.info?.hasHashtags() == true) {
+                val hashtags =
+                    remember(baseChannel.info) {
+                        baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
+                    }
+                DisplayUncitedHashtags(hashtags, summary ?: "", nav)
+            }
         }
-      }
+
+        Column {
+            if (channel is PublicChatChannel) {
+                Row {
+                    Spacer(DoubleHorzSpacer)
+                    LongChannelActionOptions(channel, accountViewModel, nav)
+                }
+            }
+        }
     }
 
-    participantUsers.forEach {
-      Row(
-        lineModifier.clickable { nav("User/${it.second.pubkeyHex}") },
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        it.first.role?.let { it1 ->
-          Text(
-            text = it1.capitalize(Locale.ROOT),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(55.dp),
-          )
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
+        loadingNote?.let { note ->
+            Row(
+                lineModifier,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(id = R.string.owner),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(75.dp),
+                )
+                Spacer(DoubleHorzSpacer)
+                NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
+                Spacer(DoubleHorzSpacer)
+                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+            }
+
+            Row(
+                lineModifier,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(id = R.string.created_at),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(75.dp),
+                )
+                Spacer(DoubleHorzSpacer)
+                NormalTimeAgo(note, remember { Modifier.weight(1f) })
+                MoreOptionsButton(note, accountViewModel)
+            }
         }
-        Spacer(DoubleHorzSpacer)
-        ClickableUserPicture(it.second, Size25dp, accountViewModel)
-        Spacer(DoubleHorzSpacer)
-        UsernameDisplay(it.second, remember { Modifier.weight(1f) })
-      }
     }
-  }
+
+    var participantUsers by
+        remember(baseChannel) {
+            mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+                persistentListOf(),
+            )
+        }
+
+    if (channel is LiveActivitiesChannel) {
+        LaunchedEffect(key1 = channelState) {
+            launch(Dispatchers.IO) {
+                val newParticipantUsers =
+                    channel.info
+                        ?.participants()
+                        ?.mapNotNull { part ->
+                            LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+                        }
+                        ?.toImmutableList()
+
+                if (
+                    newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
+                ) {
+                    participantUsers = newParticipantUsers
+                }
+            }
+        }
+
+        participantUsers.forEach {
+            Row(
+                lineModifier.clickable { nav("User/${it.second.pubkeyHex}") },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                it.first.role?.let { it1 ->
+                    Text(
+                        text = it1.capitalize(Locale.ROOT),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(55.dp),
+                    )
+                }
+                Spacer(DoubleHorzSpacer)
+                ClickableUserPicture(it.second, Size25dp, accountViewModel)
+                Spacer(DoubleHorzSpacer)
+                UsernameDisplay(it.second, remember { Modifier.weight(1f) })
+            }
+        }
+    }
 }
 
 @Composable
 fun NormalTimeAgo(
-  baseNote: Note,
-  modifier: Modifier,
+    baseNote: Note,
+    modifier: Modifier,
 ) {
-  val nowStr = stringResource(id = R.string.now)
+    val nowStr = stringResource(id = R.string.now)
 
-  val time by
-    remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) } }
+    val time by
+        remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) } }
 
-  Text(
-    text = time,
-    maxLines = 1,
-    overflow = TextOverflow.Ellipsis,
-    modifier = modifier,
-  )
+    Text(
+        text = time,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
 }
 
 @Composable
 private fun ShortChannelActionOptions(
-  channel: PublicChatChannel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
-    it?.let {
-      Spacer(modifier = StdHorzSpacer)
-      LikeReaction(
-        baseNote = it,
-        grayTint = MaterialTheme.colorScheme.onSurface,
-        accountViewModel = accountViewModel,
-        nav,
-      )
-      Spacer(modifier = StdHorzSpacer)
-      ZapReaction(
-        baseNote = it,
-        grayTint = MaterialTheme.colorScheme.onSurface,
-        accountViewModel = accountViewModel,
-        nav = nav,
-      )
-      Spacer(modifier = StdHorzSpacer)
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
+        it?.let {
+            Spacer(modifier = StdHorzSpacer)
+            LikeReaction(
+                baseNote = it,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+                nav,
+            )
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(
+                baseNote = it,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+            Spacer(modifier = StdHorzSpacer)
+        }
     }
-  }
 
-  WatchChannelFollows(channel, accountViewModel) { isFollowing ->
-    if (!isFollowing) {
-      JoinChatButton(accountViewModel, channel, nav)
+    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
+        if (!isFollowing) {
+            JoinChatButton(accountViewModel, channel, nav)
+        }
     }
-  }
 }
 
 @Composable
 private fun WatchChannelFollows(
-  channel: PublicChatChannel,
-  accountViewModel: AccountViewModel,
-  content: @Composable (Boolean) -> Unit,
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    content: @Composable (Boolean) -> Unit,
 ) {
-  val isFollowing by
-    accountViewModel
-      .userProfile()
-      .live()
-      .follows
-      .map { it.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false }
-      .distinctUntilChanged()
-      .observeAsState(
-        accountViewModel.userProfile().latestContactList?.isTaggedEvent(channel.idHex) ?: false,
-      )
+    val isFollowing by
+        accountViewModel
+            .userProfile()
+            .live()
+            .follows
+            .map { it.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false }
+            .distinctUntilChanged()
+            .observeAsState(
+                accountViewModel.userProfile().latestContactList?.isTaggedEvent(channel.idHex) ?: false,
+            )
 
-  content(isFollowing)
+    content(isFollowing)
 }
 
 @Composable
 private fun LongChannelActionOptions(
-  channel: PublicChatChannel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val isMe by
-    remember(accountViewModel) {
-      derivedStateOf { channel.creator == accountViewModel.account.userProfile() }
+    val isMe by
+        remember(accountViewModel) {
+            derivedStateOf { channel.creator == accountViewModel.account.userProfile() }
+        }
+
+    if (isMe) {
+        EditButton(accountViewModel, channel)
     }
 
-  if (isMe) {
-    EditButton(accountViewModel, channel)
-  }
-
-  WatchChannelFollows(channel, accountViewModel) { isFollowing ->
-    if (isFollowing) {
-      LeaveChatButton(accountViewModel, channel, nav)
+    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
+        if (isFollowing) {
+            LeaveChatButton(accountViewModel, channel, nav)
+        }
     }
-  }
 }
 
 @Composable
 private fun LiveChannelActionOptions(
-  channel: LiveActivitiesChannel,
-  showFlag: Boolean = true,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    channel: LiveActivitiesChannel,
+    showFlag: Boolean = true,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val isLive by remember(channel) { derivedStateOf { channel.info?.status() == STATUS_LIVE } }
+    val isLive by remember(channel) { derivedStateOf { channel.info?.status() == STATUS_LIVE } }
 
-  val note = remember(channel.idHex) { LocalCache.getNoteIfExists(channel.idHex) }
+    val note = remember(channel.idHex) { LocalCache.getNoteIfExists(channel.idHex) }
 
-  note?.let {
-    if (showFlag && isLive) {
-      LiveFlag()
-      Spacer(modifier = StdHorzSpacer)
+    note?.let {
+        if (showFlag && isLive) {
+            LiveFlag()
+            Spacer(modifier = StdHorzSpacer)
+        }
+
+        LikeReaction(
+            baseNote = it,
+            grayTint = MaterialTheme.colorScheme.onSurface,
+            accountViewModel = accountViewModel,
+            nav,
+        )
+        Spacer(modifier = StdHorzSpacer)
+        ZapReaction(
+            baseNote = it,
+            grayTint = MaterialTheme.colorScheme.onSurface,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
-
-    LikeReaction(
-      baseNote = it,
-      grayTint = MaterialTheme.colorScheme.onSurface,
-      accountViewModel = accountViewModel,
-      nav,
-    )
-    Spacer(modifier = StdHorzSpacer)
-    ZapReaction(
-      baseNote = it,
-      grayTint = MaterialTheme.colorScheme.onSurface,
-      accountViewModel = accountViewModel,
-      nav = nav,
-    )
-  }
 }
 
 @Composable
 fun LiveFlag() {
-  Text(
-    text = stringResource(id = R.string.live_stream_live_tag),
-    color = Color.White,
-    fontWeight = FontWeight.Bold,
-    fontSize = 16.sp,
-    modifier =
-      remember { Modifier.clip(SmallBorder).background(Color.Red).padding(horizontal = 5.dp) },
-  )
+    Text(
+        text = stringResource(id = R.string.live_stream_live_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
+        modifier =
+            remember { Modifier.clip(SmallBorder).background(Color.Red).padding(horizontal = 5.dp) },
+    )
 }
 
 @Composable
 fun EndedFlag() {
-  Text(
-    text = stringResource(id = R.string.live_stream_ended_tag),
-    color = Color.White,
-    fontWeight = FontWeight.Bold,
-    modifier =
-      remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
-  )
+    Text(
+        text = stringResource(id = R.string.live_stream_ended_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier =
+            remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
+    )
 }
 
 @Composable
 fun OfflineFlag() {
-  Text(
-    text = stringResource(id = R.string.live_stream_offline_tag),
-    color = Color.White,
-    fontWeight = FontWeight.Bold,
-    modifier =
-      remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
-  )
+    Text(
+        text = stringResource(id = R.string.live_stream_offline_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier =
+            remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
+    )
 }
 
 @Composable
 fun ScheduledFlag(starts: Long?) {
-  val context = LocalContext.current
-  val startsIn = starts?.let { timeAgo(it, context) }
+    val context = LocalContext.current
+    val startsIn = starts?.let { timeAgo(it, context) }
 
-  Text(
-    text = startsIn ?: stringResource(id = R.string.live_stream_planned_tag),
-    color = Color.White,
-    fontWeight = FontWeight.Bold,
-    modifier =
-      remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
-  )
+    Text(
+        text = startsIn ?: stringResource(id = R.string.live_stream_planned_tag),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        modifier =
+            remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
+    )
 }
 
 @Composable
 private fun NoteCopyButton(note: Channel) {
-  var popupExpanded by remember { mutableStateOf(false) }
+    var popupExpanded by remember { mutableStateOf(false) }
 
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
-    onClick = { popupExpanded = true },
-    shape = ButtonBorder,
-    colors =
-      ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.placeholderText,
-      ),
-  ) {
-    Icon(
-      tint = Color.White,
-      imageVector = Icons.Default.Share,
-      contentDescription = stringResource(R.string.copies_the_note_id_to_the_clipboard_for_sharing),
-    )
-
-    DropdownMenu(
-      expanded = popupExpanded,
-      onDismissRequest = { popupExpanded = false },
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        onClick = { popupExpanded = true },
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.placeholderText,
+            ),
     ) {
-      val clipboardManager = LocalClipboardManager.current
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.Share,
+            contentDescription = stringResource(R.string.copies_the_note_id_to_the_clipboard_for_sharing),
+        )
 
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard)) },
-        onClick = {
-          clipboardManager.setText(AnnotatedString("nostr:" + note.idNote()))
-          popupExpanded = false
-        },
-      )
+        DropdownMenu(
+            expanded = popupExpanded,
+            onDismissRequest = { popupExpanded = false },
+        ) {
+            val clipboardManager = LocalClipboardManager.current
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard)) },
+                onClick = {
+                    clipboardManager.setText(AnnotatedString("nostr:" + note.idNote()))
+                    popupExpanded = false
+                },
+            )
+        }
     }
-  }
 }
 
 @Composable
 private fun EditButton(
-  accountViewModel: AccountViewModel,
-  channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    channel: PublicChatChannel,
 ) {
-  var wantsToPost by remember { mutableStateOf(false) }
+    var wantsToPost by remember { mutableStateOf(false) }
 
-  if (wantsToPost) {
-    NewChannelView({ wantsToPost = false }, accountViewModel, channel)
-  }
+    if (wantsToPost) {
+        NewChannelView({ wantsToPost = false }, accountViewModel, channel)
+    }
 
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
-    onClick = { wantsToPost = true },
-    contentPadding = ZeroPadding,
-  ) {
-    Icon(
-      tint = Color.White,
-      imageVector = Icons.Default.EditNote,
-      contentDescription = stringResource(R.string.edits_the_channel_metadata),
-    )
-  }
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        onClick = { wantsToPost = true },
+        contentPadding = ZeroPadding,
+    ) {
+        Icon(
+            tint = Color.White,
+            imageVector = Icons.Default.EditNote,
+            contentDescription = stringResource(R.string.edits_the_channel_metadata),
+        )
+    }
 }
 
 @Composable
 fun JoinChatButton(
-  accountViewModel: AccountViewModel,
-  channel: Channel,
-  nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    channel: Channel,
+    nav: (String) -> Unit,
 ) {
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp),
-    onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(channel) } },
-    contentPadding = ButtonPadding,
-  ) {
-    Text(text = stringResource(R.string.join), color = Color.White)
-  }
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(channel) } },
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringResource(R.string.join), color = Color.White)
+    }
 }
 
 @Composable
 fun LeaveChatButton(
-  accountViewModel: AccountViewModel,
-  channel: Channel,
-  nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    channel: Channel,
+    nav: (String) -> Unit,
 ) {
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp),
-    onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(channel) } },
-    contentPadding = ButtonPadding,
-  ) {
-    Text(text = stringResource(R.string.leave), color = Color.White)
-  }
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(channel) } },
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringResource(R.string.leave), color = Color.White)
+    }
 }
 
 @Composable
 fun JoinCommunityButton(
-  accountViewModel: AccountViewModel,
-  note: AddressableNote,
-  nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    note: AddressableNote,
+    nav: (String) -> Unit,
 ) {
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp),
-    onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(note) } },
-    shape = ButtonBorder,
-    colors =
-      ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.primary,
-      ),
-    contentPadding = ButtonPadding,
-  ) {
-    Text(text = stringResource(R.string.join), color = Color.White)
-  }
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(note) } },
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringResource(R.string.join), color = Color.White)
+    }
 }
 
 @Composable
 fun LeaveCommunityButton(
-  accountViewModel: AccountViewModel,
-  note: AddressableNote,
-  nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    note: AddressableNote,
+    nav: (String) -> Unit,
 ) {
-  val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-  Button(
-    modifier = Modifier.padding(horizontal = 3.dp),
-    onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(note) } },
-    shape = ButtonBorder,
-    colors =
-      ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.primary,
-      ),
-    contentPadding = ButtonPadding,
-  ) {
-    Text(text = stringResource(R.string.leave), color = Color.White)
-  }
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(note) } },
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringResource(R.string.leave), color = Color.White)
+    }
 }

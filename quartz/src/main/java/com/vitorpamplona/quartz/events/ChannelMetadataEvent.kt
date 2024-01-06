@@ -28,69 +28,69 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class ChannelMetadataEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig), IsInPublicChatChannel {
-  override fun channel() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    override fun channel() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-  fun channelInfo() =
-    try {
-      mapper.readValue(content, ChannelCreateEvent.ChannelData::class.java)
-    } catch (e: Exception) {
-      Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
-      ChannelCreateEvent.ChannelData(null, null, null)
-    }
-
-  companion object {
-    const val KIND = 41
-    const val ALT = "This is a public chat definition update"
-
-    fun create(
-      name: String?,
-      about: String?,
-      picture: String?,
-      originalChannelIdHex: String,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ChannelMetadataEvent) -> Unit,
-    ) {
-      create(
-        ChannelCreateEvent.ChannelData(
-          name,
-          about,
-          picture,
-        ),
-        originalChannelIdHex,
-        signer,
-        createdAt,
-        onReady,
-      )
-    }
-
-    fun create(
-      newChannelInfo: ChannelCreateEvent.ChannelData?,
-      originalChannelIdHex: String,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ChannelMetadataEvent) -> Unit,
-    ) {
-      val content =
-        if (newChannelInfo != null) {
-          mapper.writeValueAsString(newChannelInfo)
-        } else {
-          ""
+    fun channelInfo() =
+        try {
+            mapper.readValue(content, ChannelCreateEvent.ChannelData::class.java)
+        } catch (e: Exception) {
+            Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
+            ChannelCreateEvent.ChannelData(null, null, null)
         }
 
-      val tags =
-        listOf(
-          arrayOf("e", originalChannelIdHex, "", "root"),
-          arrayOf("alt", "Public chat update to ${newChannelInfo?.name}"),
-        )
-      signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+    companion object {
+        const val KIND = 41
+        const val ALT = "This is a public chat definition update"
+
+        fun create(
+            name: String?,
+            about: String?,
+            picture: String?,
+            originalChannelIdHex: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelMetadataEvent) -> Unit,
+        ) {
+            create(
+                ChannelCreateEvent.ChannelData(
+                    name,
+                    about,
+                    picture,
+                ),
+                originalChannelIdHex,
+                signer,
+                createdAt,
+                onReady,
+            )
+        }
+
+        fun create(
+            newChannelInfo: ChannelCreateEvent.ChannelData?,
+            originalChannelIdHex: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChannelMetadataEvent) -> Unit,
+        ) {
+            val content =
+                if (newChannelInfo != null) {
+                    mapper.writeValueAsString(newChannelInfo)
+                } else {
+                    ""
+                }
+
+            val tags =
+                listOf(
+                    arrayOf("e", originalChannelIdHex, "", "root"),
+                    arrayOf("alt", "Public chat update to ${newChannelInfo?.name}"),
+                )
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
     }
-  }
 }

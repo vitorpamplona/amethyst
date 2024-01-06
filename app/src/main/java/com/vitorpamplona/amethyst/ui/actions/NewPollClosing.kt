@@ -46,61 +46,61 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollClosing(pollViewModel: NewPostViewModel) {
-  var text by rememberSaveable { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
 
-  pollViewModel.isValidClosedAt.value = true
-  if (text.isNotEmpty()) {
-    try {
-      val int = text.toInt()
-      if (int < 0) {
-        pollViewModel.isValidClosedAt.value = false
-      } else {
-        pollViewModel.closedAt = int
-      }
-    } catch (e: Exception) {
-      pollViewModel.isValidClosedAt.value = false
+    pollViewModel.isValidClosedAt.value = true
+    if (text.isNotEmpty()) {
+        try {
+            val int = text.toInt()
+            if (int < 0) {
+                pollViewModel.isValidClosedAt.value = false
+            } else {
+                pollViewModel.closedAt = int
+            }
+        } catch (e: Exception) {
+            pollViewModel.isValidClosedAt.value = false
+        }
     }
-  }
 
-  val colorInValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.error,
-      unfocusedBorderColor = Color.Red,
-    )
-  val colorValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.primary,
-      unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
-    )
+    val colorInValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.error,
+            unfocusedBorderColor = Color.Red,
+        )
+    val colorValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
+        )
 
-  Row(
-    Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.Center,
-  ) {
-    OutlinedTextField(
-      value = text,
-      onValueChange = { text = it },
-      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-      modifier = Modifier.width(150.dp),
-      colors = if (pollViewModel.isValidClosedAt.value) colorValid else colorInValid,
-      label = {
-        Text(
-          text = stringResource(R.string.poll_closing_time),
-          color = MaterialTheme.colorScheme.placeholderText,
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.width(150.dp),
+            colors = if (pollViewModel.isValidClosedAt.value) colorValid else colorInValid,
+            label = {
+                Text(
+                    text = stringResource(R.string.poll_closing_time),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.poll_closing_time_days),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
         )
-      },
-      placeholder = {
-        Text(
-          text = stringResource(R.string.poll_closing_time_days),
-          color = MaterialTheme.colorScheme.placeholderText,
-        )
-      },
-    )
-  }
+    }
 }
 
 @Preview
 @Composable
 fun NewPollClosingPreview() {
-  NewPollClosing(NewPostViewModel())
+    NewPollClosing(NewPostViewModel())
 }

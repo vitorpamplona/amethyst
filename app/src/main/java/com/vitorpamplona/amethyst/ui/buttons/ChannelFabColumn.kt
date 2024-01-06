@@ -50,83 +50,83 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun ChannelFabColumn(
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  var isOpen by remember { mutableStateOf(false) }
+    var isOpen by remember { mutableStateOf(false) }
 
-  var wantsToSendNewMessage by remember { mutableStateOf(false) }
+    var wantsToSendNewMessage by remember { mutableStateOf(false) }
 
-  var wantsToCreateChannel by remember { mutableStateOf(false) }
+    var wantsToCreateChannel by remember { mutableStateOf(false) }
 
-  if (wantsToCreateChannel) {
-    NewChannelView({ wantsToCreateChannel = false }, accountViewModel = accountViewModel)
-  }
-
-  if (wantsToSendNewMessage) {
-    NewPostView(
-      { wantsToSendNewMessage = false },
-      enableMessageInterface = true,
-      accountViewModel = accountViewModel,
-      nav = nav,
-    )
-    // JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, accountViewModel =
-    // accountViewModel, nav = nav)
-  }
-
-  Column {
-    if (isOpen) {
-      FloatingActionButton(
-        onClick = {
-          wantsToSendNewMessage = true
-          isOpen = false
-        },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-      ) {
-        Text(
-          text = stringResource(R.string.messages_new_message),
-          color = Color.White,
-          textAlign = TextAlign.Center,
-          fontSize = Font12SP,
-        )
-      }
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      FloatingActionButton(
-        onClick = {
-          wantsToCreateChannel = true
-          isOpen = false
-        },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-      ) {
-        Text(
-          text = stringResource(R.string.messages_create_public_chat),
-          color = Color.White,
-          textAlign = TextAlign.Center,
-          fontSize = Font12SP,
-        )
-      }
-
-      Spacer(modifier = Modifier.height(20.dp))
+    if (wantsToCreateChannel) {
+        NewChannelView({ wantsToCreateChannel = false }, accountViewModel = accountViewModel)
     }
 
-    FloatingActionButton(
-      onClick = { isOpen = !isOpen },
-      modifier = Size55Modifier,
-      shape = CircleShape,
-      containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-      Icon(
-        imageVector = Icons.Outlined.Add,
-        contentDescription = stringResource(R.string.messages_create_public_chat),
-        modifier = Modifier.size(26.dp),
-        tint = Color.White,
-      )
+    if (wantsToSendNewMessage) {
+        NewPostView(
+            { wantsToSendNewMessage = false },
+            enableMessageInterface = true,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+        // JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, accountViewModel =
+        // accountViewModel, nav = nav)
     }
-  }
+
+    Column {
+        if (isOpen) {
+            FloatingActionButton(
+                onClick = {
+                    wantsToSendNewMessage = true
+                    isOpen = false
+                },
+                modifier = Size55Modifier,
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Text(
+                    text = stringResource(R.string.messages_new_message),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    fontSize = Font12SP,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            FloatingActionButton(
+                onClick = {
+                    wantsToCreateChannel = true
+                    isOpen = false
+                },
+                modifier = Size55Modifier,
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Text(
+                    text = stringResource(R.string.messages_create_public_chat),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    fontSize = Font12SP,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        FloatingActionButton(
+            onClick = { isOpen = !isOpen },
+            modifier = Size55Modifier,
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = stringResource(R.string.messages_create_public_chat),
+                modifier = Modifier.size(26.dp),
+                tint = Color.White,
+            )
+        }
+    }
 }

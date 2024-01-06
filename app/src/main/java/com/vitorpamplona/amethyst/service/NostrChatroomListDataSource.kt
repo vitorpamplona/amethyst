@@ -32,124 +32,125 @@ import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 
 object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
-  lateinit var account: Account
+    lateinit var account: Account
 
-  val latestEOSEs = EOSEAccount()
-  val chatRoomList = "ChatroomList"
+    val latestEOSEs = EOSEAccount()
+    val chatRoomList = "ChatroomList"
 
-  fun createMessagesToMeFilter() =
-    TypedFilter(
-      types = setOf(FeedType.PRIVATE_DMS),
-      filter =
-        JsonFilter(
-          kinds = listOf(PrivateDmEvent.KIND),
-          tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-          since =
-            latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
-        ),
-    )
-
-  fun createMessagesFromMeFilter() =
-    TypedFilter(
-      types = setOf(FeedType.PRIVATE_DMS),
-      filter =
-        JsonFilter(
-          kinds = listOf(PrivateDmEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          since =
-            latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
-        ),
-    )
-
-  fun createChannelsCreatedbyMeFilter() =
-    TypedFilter(
-      types = setOf(FeedType.PUBLIC_CHATS),
-      filter =
-        JsonFilter(
-          kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          since =
-            latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
-        ),
-    )
-
-  fun createMyChannelsFilter(): TypedFilter? {
-    val followingEvents = account.selectedChatsFollowList()
-
-    if (followingEvents.isEmpty()) return null
-
-    return TypedFilter(
-      // Metadata comes from any relay
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(ChannelCreateEvent.KIND),
-          ids = followingEvents.toList(),
-          since =
-            latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
-        ),
-    )
-  }
-
-  fun createLastChannelInfoFilter(): List<TypedFilter>? {
-    val followingEvents = account.selectedChatsFollowList()
-
-    if (followingEvents.isEmpty()) return null
-
-    return followingEvents.map {
-      TypedFilter(
-        // Metadata comes from any relay
-        types = COMMON_FEED_TYPES,
-        filter =
-          JsonFilter(
-            kinds = listOf(ChannelMetadataEvent.KIND),
-            tags = mapOf("e" to listOf(it)),
-            limit = 1,
-          ),
-      )
-    }
-  }
-
-  fun createLastMessageOfEachChannelFilter(): List<TypedFilter>? {
-    val followingEvents = account.selectedChatsFollowList()
-
-    if (followingEvents.isEmpty()) return null
-
-    return followingEvents.map {
-      TypedFilter(
-        types = setOf(FeedType.PUBLIC_CHATS),
-        filter =
-          JsonFilter(
-            kinds = listOf(ChannelMessageEvent.KIND),
-            tags = mapOf("e" to listOf(it)),
-            since =
-              latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
-            // Remember to consider spam that is being removed from the UI
-            limit = 50,
-          ),
-      )
-    }
-  }
-
-  val chatroomListChannel = requestNewChannel { time, relayUrl ->
-    latestEOSEs.addOrUpdate(account.userProfile(), chatRoomList, relayUrl, time)
-  }
-
-  override fun updateChannelFilters() {
-    val list =
-      listOfNotNull(
-        createMessagesToMeFilter(),
-        createMessagesFromMeFilter(),
-        createMyChannelsFilter(),
-      )
-
-    chatroomListChannel.typedFilters =
-      listOfNotNull(
-          list,
-          createLastChannelInfoFilter(),
-          createLastMessageOfEachChannelFilter(),
+    fun createMessagesToMeFilter() =
+        TypedFilter(
+            types = setOf(FeedType.PRIVATE_DMS),
+            filter =
+                JsonFilter(
+                    kinds = listOf(PrivateDmEvent.KIND),
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                    since =
+                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                ),
         )
-        .flatten()
-        .ifEmpty { null }
-  }
+
+    fun createMessagesFromMeFilter() =
+        TypedFilter(
+            types = setOf(FeedType.PRIVATE_DMS),
+            filter =
+                JsonFilter(
+                    kinds = listOf(PrivateDmEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    since =
+                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                ),
+        )
+
+    fun createChannelsCreatedbyMeFilter() =
+        TypedFilter(
+            types = setOf(FeedType.PUBLIC_CHATS),
+            filter =
+                JsonFilter(
+                    kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    since =
+                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                ),
+        )
+
+    fun createMyChannelsFilter(): TypedFilter? {
+        val followingEvents = account.selectedChatsFollowList()
+
+        if (followingEvents.isEmpty()) return null
+
+        return TypedFilter(
+            // Metadata comes from any relay
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(ChannelCreateEvent.KIND),
+                    ids = followingEvents.toList(),
+                    since =
+                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                ),
+        )
+    }
+
+    fun createLastChannelInfoFilter(): List<TypedFilter>? {
+        val followingEvents = account.selectedChatsFollowList()
+
+        if (followingEvents.isEmpty()) return null
+
+        return followingEvents.map {
+            TypedFilter(
+                // Metadata comes from any relay
+                types = COMMON_FEED_TYPES,
+                filter =
+                    JsonFilter(
+                        kinds = listOf(ChannelMetadataEvent.KIND),
+                        tags = mapOf("e" to listOf(it)),
+                        limit = 1,
+                    ),
+            )
+        }
+    }
+
+    fun createLastMessageOfEachChannelFilter(): List<TypedFilter>? {
+        val followingEvents = account.selectedChatsFollowList()
+
+        if (followingEvents.isEmpty()) return null
+
+        return followingEvents.map {
+            TypedFilter(
+                types = setOf(FeedType.PUBLIC_CHATS),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(ChannelMessageEvent.KIND),
+                        tags = mapOf("e" to listOf(it)),
+                        since =
+                            latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                        // Remember to consider spam that is being removed from the UI
+                        limit = 50,
+                    ),
+            )
+        }
+    }
+
+    val chatroomListChannel =
+        requestNewChannel { time, relayUrl ->
+            latestEOSEs.addOrUpdate(account.userProfile(), chatRoomList, relayUrl, time)
+        }
+
+    override fun updateChannelFilters() {
+        val list =
+            listOfNotNull(
+                createMessagesToMeFilter(),
+                createMessagesFromMeFilter(),
+                createMyChannelsFilter(),
+            )
+
+        chatroomListChannel.typedFilters =
+            listOfNotNull(
+                list,
+                createLastChannelInfoFilter(),
+                createLastMessageOfEachChannelFilter(),
+            )
+                .flatten()
+                .ifEmpty { null }
+    }
 }

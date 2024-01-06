@@ -25,49 +25,49 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlin.time.measureTimedValue
 
 abstract class FeedFilter<T> {
-  fun loadTop(): List<T> {
-    checkNotInMainThread()
+    fun loadTop(): List<T> {
+        checkNotInMainThread()
 
-    val (feed, elapsed) = measureTimedValue { feed() }
+        val (feed, elapsed) = measureTimedValue { feed() }
 
-    Log.d("Time", "${this.javaClass.simpleName} Full Feed in $elapsed with ${feed.size} objects")
-    return feed.take(limit())
-  }
+        Log.d("Time", "${this.javaClass.simpleName} Full Feed in $elapsed with ${feed.size} objects")
+        return feed.take(limit())
+    }
 
-  open fun limit() = 1000
+    open fun limit() = 1000
 
-  /** Returns a string that serves as the key to invalidate the list if it changes. */
-  abstract fun feedKey(): String
+    /** Returns a string that serves as the key to invalidate the list if it changes. */
+    abstract fun feedKey(): String
 
-  open fun showHiddenKey(): Boolean = false
+    open fun showHiddenKey(): Boolean = false
 
-  abstract fun feed(): List<T>
+    abstract fun feed(): List<T>
 }
 
 abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
-  abstract fun applyFilter(collection: Set<T>): Set<T>
+    abstract fun applyFilter(collection: Set<T>): Set<T>
 
-  abstract fun sort(collection: Set<T>): List<T>
+    abstract fun sort(collection: Set<T>): List<T>
 
-  open fun updateListWith(
-    oldList: List<T>,
-    newItems: Set<T>,
-  ): List<T> {
-    checkNotInMainThread()
+    open fun updateListWith(
+        oldList: List<T>,
+        newItems: Set<T>,
+    ): List<T> {
+        checkNotInMainThread()
 
-    val (feed, elapsed) =
-      measureTimedValue {
-        val newItemsToBeAdded = applyFilter(newItems)
-        if (newItemsToBeAdded.isNotEmpty()) {
-          val newList = oldList.toSet() + newItemsToBeAdded
-          sort(newList).take(limit())
-        } else {
-          oldList
-        }
-      }
+        val (feed, elapsed) =
+            measureTimedValue {
+                val newItemsToBeAdded = applyFilter(newItems)
+                if (newItemsToBeAdded.isNotEmpty()) {
+                    val newList = oldList.toSet() + newItemsToBeAdded
+                    sort(newList).take(limit())
+                } else {
+                    oldList
+                }
+            }
 
-    // Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size}
-    // objects")
-    return feed
-  }
+        // Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size}
+        // objects")
+        return feed
+    }
 }

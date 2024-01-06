@@ -77,233 +77,234 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun NewMediaView(
-  uri: Uri,
-  onClose: () -> Unit,
-  postViewModel: NewMediaModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    uri: Uri,
+    onClose: () -> Unit,
+    postViewModel: NewMediaModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val account = accountViewModel.account
-  val resolver = LocalContext.current.contentResolver
-  val context = LocalContext.current
+    val account = accountViewModel.account
+    val resolver = LocalContext.current.contentResolver
+    val context = LocalContext.current
 
-  val scroolState = rememberScrollState()
+    val scroolState = rememberScrollState()
 
-  LaunchedEffect(uri) {
-    val mediaType = resolver.getType(uri) ?: ""
-    postViewModel.load(account, uri, mediaType) {
-      accountViewModel.toast(context.getString(R.string.failed_to_upload_media_no_details), it)
+    LaunchedEffect(uri) {
+        val mediaType = resolver.getType(uri) ?: ""
+        postViewModel.load(account, uri, mediaType) {
+            accountViewModel.toast(context.getString(R.string.failed_to_upload_media_no_details), it)
+        }
     }
-  }
 
-  var showRelaysDialog by remember { mutableStateOf(false) }
-  var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+    var showRelaysDialog by remember { mutableStateOf(false) }
+    var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
 
-  Dialog(
-    onDismissRequest = { onClose() },
-    properties =
-      DialogProperties(
-        usePlatformDefaultWidth = false,
-        dismissOnClickOutside = false,
-        decorFitsSystemWindows = false,
-      ),
-  ) {
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
+    Dialog(
+        onDismissRequest = { onClose() },
+        properties =
+            DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false,
+                decorFitsSystemWindows = false,
+            ),
     ) {
-      if (showRelaysDialog) {
-        RelaySelectionDialog(
-          preSelectedList = relayList,
-          onClose = { showRelaysDialog = false },
-          onPost = { relayList = it },
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-      }
-
-      Column(
-        modifier =
-          Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp)
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .imePadding(),
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
         ) {
-          CloseButton(
-            onPress = {
-              postViewModel.cancel()
-              onClose()
-            },
-          )
-
-          Box {
-            IconButton(
-              modifier = Modifier.align(Alignment.Center),
-              onClick = { showRelaysDialog = true },
-            ) {
-              Icon(
-                painter = painterResource(R.drawable.relays),
-                contentDescription = null,
-                modifier = Modifier.height(25.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-              )
+            if (showRelaysDialog) {
+                RelaySelectionDialog(
+                    preSelectedList = relayList,
+                    onClose = { showRelaysDialog = false },
+                    onPost = { relayList = it },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
-          }
 
-          PostButton(
-            onPost = {
-              onClose()
-              postViewModel.upload(context, relayList)
-              postViewModel.selectedServer?.let {
-                if (!it.isNip95) {
-                  account.changeDefaultFileServer(it.server)
+            Column(
+                modifier =
+                    Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .imePadding(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CloseButton(
+                        onPress = {
+                            postViewModel.cancel()
+                            onClose()
+                        },
+                    )
+
+                    Box {
+                        IconButton(
+                            modifier = Modifier.align(Alignment.Center),
+                            onClick = { showRelaysDialog = true },
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.relays),
+                                contentDescription = null,
+                                modifier = Modifier.height(25.dp),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    }
+
+                    PostButton(
+                        onPost = {
+                            onClose()
+                            postViewModel.upload(context, relayList)
+                            postViewModel.selectedServer?.let {
+                                if (!it.isNip95) {
+                                    account.changeDefaultFileServer(it.server)
+                                }
+                            }
+                        },
+                        isActive = postViewModel.canPost(),
+                    )
                 }
-              }
-            },
-            isActive = postViewModel.canPost(),
-          )
-        }
 
-        Row(
-          modifier = Modifier.fillMaxWidth().weight(1f),
-        ) {
-          Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(scroolState),
-          ) {
-            ImageVideoPost(postViewModel, accountViewModel)
-          }
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().verticalScroll(scroolState),
+                    ) {
+                        ImageVideoPost(postViewModel, accountViewModel)
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }
 
 @Composable
 fun ImageVideoPost(
-  postViewModel: NewMediaModel,
-  accountViewModel: AccountViewModel,
+    postViewModel: NewMediaModel,
+    accountViewModel: AccountViewModel,
 ) {
-  val fileServers =
-    Nip96MediaServers.DEFAULT.map { ServerOption(it, false) } +
-      listOf(
-        ServerOption(
-          Nip96MediaServers.ServerName(
-            "NIP95",
-            stringResource(id = R.string.upload_server_relays_nip95),
-          ),
-          true,
-        ),
-      )
+    val fileServers =
+        Nip96MediaServers.DEFAULT.map { ServerOption(it, false) } +
+            listOf(
+                ServerOption(
+                    Nip96MediaServers.ServerName(
+                        "NIP95",
+                        stringResource(id = R.string.upload_server_relays_nip95),
+                    ),
+                    true,
+                ),
+            )
 
-  val fileServerOptions = remember {
-    fileServers.map { TitleExplainer(it.server.name, it.server.baseUrl) }.toImmutableList()
-  }
-  val resolver = LocalContext.current.contentResolver
-
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier =
-      Modifier.fillMaxWidth()
-        .padding(bottom = 10.dp)
-        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-  ) {
-    if (postViewModel.isImage() == true) {
-      AsyncImage(
-        model = postViewModel.galleryUri.toString(),
-        contentDescription = postViewModel.galleryUri.toString(),
-        contentScale = ContentScale.FillWidth,
-        modifier =
-          Modifier.padding(top = 4.dp)
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-      )
-    } else if (postViewModel.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-      LaunchedEffect(key1 = postViewModel.galleryUri) {
-        launch(Dispatchers.IO) {
-          postViewModel.galleryUri?.let {
-            try {
-              bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
-            } catch (e: Exception) {
-              Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
-            }
-          }
+    val fileServerOptions =
+        remember {
+            fileServers.map { TitleExplainer(it.server.name, it.server.baseUrl) }.toImmutableList()
         }
-      }
+    val resolver = LocalContext.current.contentResolver
 
-      bitmap?.let {
-        Image(
-          bitmap = it.asImageBitmap(),
-          contentDescription = "some useful description",
-          contentScale = ContentScale.FillWidth,
-          modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
-        )
-      }
-    } else {
-      postViewModel.galleryUri?.let {
-        VideoView(
-          videoUri = it.toString(),
-          roundedCorner = false,
-          accountViewModel = accountViewModel,
-        )
-      }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(bottom = 10.dp)
+                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+    ) {
+        if (postViewModel.isImage() == true) {
+            AsyncImage(
+                model = postViewModel.galleryUri.toString(),
+                contentDescription = postViewModel.galleryUri.toString(),
+                contentScale = ContentScale.FillWidth,
+                modifier =
+                    Modifier.padding(top = 4.dp)
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+            )
+        } else if (postViewModel.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+            LaunchedEffect(key1 = postViewModel.galleryUri) {
+                launch(Dispatchers.IO) {
+                    postViewModel.galleryUri?.let {
+                        try {
+                            bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
+                        } catch (e: Exception) {
+                            Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
+                        }
+                    }
+                }
+            }
+
+            bitmap?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = "some useful description",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
+                )
+            }
+        } else {
+            postViewModel.galleryUri?.let {
+                VideoView(
+                    videoUri = it.toString(),
+                    roundedCorner = false,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
     }
-  }
 
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    TextSpinner(
-      label = stringResource(id = R.string.file_server),
-      placeholder =
-        fileServers
-          .firstOrNull { it.server == accountViewModel.account.defaultFileServer }
-          ?.server
-          ?.name
-          ?: fileServers[0].server.name,
-      options = fileServerOptions,
-      onSelect = { postViewModel.selectedServer = fileServers[it] },
-      modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),
-    )
-  }
-
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    SettingSwitchItem(
-      checked = postViewModel.sensitiveContent,
-      onCheckedChange = { postViewModel.sensitiveContent = it },
-      title = R.string.add_sensitive_content_label,
-      description = R.string.add_sensitive_content_description,
-    )
-  }
-
-  Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-  ) {
-    OutlinedTextField(
-      label = { Text(text = stringResource(R.string.content_description)) },
-      modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-      value = postViewModel.alt,
-      onValueChange = { postViewModel.alt = it },
-      placeholder = {
-        Text(
-          text = stringResource(R.string.content_description_example),
-          color = MaterialTheme.colorScheme.placeholderText,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        TextSpinner(
+            label = stringResource(id = R.string.file_server),
+            placeholder =
+                fileServers
+                    .firstOrNull { it.server == accountViewModel.account.defaultFileServer }
+                    ?.server
+                    ?.name
+                    ?: fileServers[0].server.name,
+            options = fileServerOptions,
+            onSelect = { postViewModel.selectedServer = fileServers[it] },
+            modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),
         )
-      },
-      keyboardOptions =
-        KeyboardOptions.Default.copy(
-          capitalization = KeyboardCapitalization.Sentences,
-        ),
-    )
-  }
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        SettingSwitchItem(
+            checked = postViewModel.sensitiveContent,
+            onCheckedChange = { postViewModel.sensitiveContent = it },
+            title = R.string.add_sensitive_content_label,
+            description = R.string.add_sensitive_content_description,
+        )
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+    ) {
+        OutlinedTextField(
+            label = { Text(text = stringResource(R.string.content_description)) },
+            modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+            value = postViewModel.alt,
+            onValueChange = { postViewModel.alt = it },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.content_description_example),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+        )
+    }
 }

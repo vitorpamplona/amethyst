@@ -30,12 +30,12 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 
 @Composable
 fun ClickableNoteTag(
-  baseNote: Note,
-  nav: (String) -> Unit,
+    baseNote: Note,
+    nav: (String) -> Unit,
 ) {
-  ClickableText(
-    text = AnnotatedString("@${baseNote.idNote().toShortenHex()}"),
-    onClick = { nav("Note/${baseNote.idHex}") },
-    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-  )
+    ClickableText(
+        text = AnnotatedString("@${baseNote.idNote().toShortenHex()}"),
+        onClick = { nav("Note/${baseNote.idHex}") },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+    )
 }

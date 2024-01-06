@@ -48,103 +48,103 @@ import kotlinx.collections.immutable.ImmutableSet
 
 @Composable
 fun BlankNote(
-  modifier: Modifier = Modifier,
-  showDivider: Boolean = false,
-  idHex: String? = null,
+    modifier: Modifier = Modifier,
+    showDivider: Boolean = false,
+    idHex: String? = null,
 ) {
-  Column(modifier = modifier) {
-    Row {
-      Column {
-        Row(
-          modifier =
-            Modifier.padding(
-              start = 20.dp,
-              end = 20.dp,
-              bottom = 8.dp,
-              top = 15.dp,
-            ),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.Center,
-        ) {
-          Text(
-            text = stringResource(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
-            modifier = Modifier.padding(30.dp),
-            color = Color.Gray,
-          )
-        }
+    Column(modifier = modifier) {
+        Row {
+            Column {
+                Row(
+                    modifier =
+                        Modifier.padding(
+                            start = 20.dp,
+                            end = 20.dp,
+                            bottom = 8.dp,
+                            top = 15.dp,
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
+                        modifier = Modifier.padding(30.dp),
+                        color = Color.Gray,
+                    )
+                }
 
-        if (!showDivider) {
-          Divider(
-            modifier = Modifier.padding(vertical = 10.dp),
-            thickness = DividerThickness,
-          )
+                if (!showDivider) {
+                    Divider(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        thickness = DividerThickness,
+                    )
+                }
+            }
         }
-      }
     }
-  }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HiddenNote(
-  reports: ImmutableSet<Note>,
-  isHiddenAuthor: Boolean,
-  accountViewModel: AccountViewModel,
-  modifier: Modifier = Modifier,
-  isQuote: Boolean = false,
-  nav: (String) -> Unit,
-  onClick: () -> Unit,
+    reports: ImmutableSet<Note>,
+    isHiddenAuthor: Boolean,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    isQuote: Boolean = false,
+    nav: (String) -> Unit,
+    onClick: () -> Unit,
 ) {
-  Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-    Row(
-      modifier = Modifier.padding(start = if (!isQuote) 30.dp else 25.dp, end = 20.dp),
-      horizontalArrangement = Arrangement.Center,
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(30.dp),
-      ) {
-        Text(
-          text = stringResource(R.string.post_was_flagged_as_inappropriate_by),
-          color = Color.Gray,
-        )
-        FlowRow(modifier = Modifier.padding(top = 10.dp)) {
-          if (isHiddenAuthor) {
-            UserPicture(
-              user = accountViewModel.userProfile(),
-              size = Size35dp,
-              nav = nav,
-              accountViewModel = accountViewModel,
-            )
-          }
-          reports.forEach {
-            NoteAuthorPicture(
-              baseNote = it,
-              size = Size35dp,
-              nav = nav,
-              accountViewModel = accountViewModel,
-            )
-          }
-        }
-
-        Button(
-          modifier = Modifier.padding(top = 10.dp),
-          onClick = onClick,
-          shape = ButtonBorder,
-          colors =
-            ButtonDefaults.buttonColors(
-              contentColor = MaterialTheme.colorScheme.primary,
-            ),
-          contentPadding = ButtonPadding,
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = Modifier.padding(start = if (!isQuote) 30.dp else 25.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-          Text(text = stringResource(R.string.show_anyway), color = Color.White)
-        }
-      }
-    }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(30.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.post_was_flagged_as_inappropriate_by),
+                    color = Color.Gray,
+                )
+                FlowRow(modifier = Modifier.padding(top = 10.dp)) {
+                    if (isHiddenAuthor) {
+                        UserPicture(
+                            user = accountViewModel.userProfile(),
+                            size = Size35dp,
+                            nav = nav,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                    reports.forEach {
+                        NoteAuthorPicture(
+                            baseNote = it,
+                            size = Size35dp,
+                            nav = nav,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
 
-    Divider(
-      thickness = DividerThickness,
-    )
-  }
+                Button(
+                    modifier = Modifier.padding(top = 10.dp),
+                    onClick = onClick,
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    contentPadding = ButtonPadding,
+                ) {
+                    Text(text = stringResource(R.string.show_anyway), color = Color.White)
+                }
+            }
+        }
+
+        Divider(
+            thickness = DividerThickness,
+        )
+    }
 }

@@ -41,79 +41,79 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefreshingFeedStringFeedView(
-  viewModel: StringFeedViewModel,
-  enablePullRefresh: Boolean = true,
-  inner: @Composable (String) -> Unit,
+    viewModel: StringFeedViewModel,
+    enablePullRefresh: Boolean = true,
+    inner: @Composable (String) -> Unit,
 ) {
-  RefresheableView(viewModel, enablePullRefresh) { StringFeedView(viewModel, inner = inner) }
+    RefresheableView(viewModel, enablePullRefresh) { StringFeedView(viewModel, inner = inner) }
 }
 
 @Composable
 fun StringFeedView(
-  viewModel: StringFeedViewModel,
-  pre: (@Composable () -> Unit)? = null,
-  post: (@Composable () -> Unit)? = null,
-  inner: @Composable (String) -> Unit,
+    viewModel: StringFeedViewModel,
+    pre: (@Composable () -> Unit)? = null,
+    post: (@Composable () -> Unit)? = null,
+    inner: @Composable (String) -> Unit,
 ) {
-  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-  Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
-    when (state) {
-      is StringFeedState.Empty -> {
-        StringFeedEmpty(pre, post) { viewModel.invalidateData() }
-      }
-      is StringFeedState.FeedError -> {
-        FeedError(state.errorMessage) { viewModel.invalidateData() }
-      }
-      is StringFeedState.Loaded -> {
-        FeedLoaded(state, pre, post, inner)
-      }
-      is StringFeedState.Loading -> {
-        LoadingFeed()
-      }
+    Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+        when (state) {
+            is StringFeedState.Empty -> {
+                StringFeedEmpty(pre, post) { viewModel.invalidateData() }
+            }
+            is StringFeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is StringFeedState.Loaded -> {
+                FeedLoaded(state, pre, post, inner)
+            }
+            is StringFeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
     }
-  }
 }
 
 @Composable
 fun StringFeedEmpty(
-  pre: (@Composable () -> Unit)? = null,
-  post: (@Composable () -> Unit)? = null,
-  onRefresh: () -> Unit,
+    pre: (@Composable () -> Unit)? = null,
+    post: (@Composable () -> Unit)? = null,
+    onRefresh: () -> Unit,
 ) {
-  Column {
-    pre?.let { it() }
+    Column {
+        pre?.let { it() }
 
-    Column(
-      Modifier.weight(1f).fillMaxWidth(),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center,
-    ) {
-      Text(stringResource(R.string.feed_is_empty))
-      OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+        Column(
+            Modifier.weight(1f).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(stringResource(R.string.feed_is_empty))
+            OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+        }
+
+        post?.let { it() }
     }
-
-    post?.let { it() }
-  }
 }
 
 @Composable
 private fun FeedLoaded(
-  state: StringFeedState.Loaded,
-  pre: (@Composable () -> Unit)? = null,
-  post: (@Composable () -> Unit)? = null,
-  inner: @Composable (String) -> Unit,
+    state: StringFeedState.Loaded,
+    pre: (@Composable () -> Unit)? = null,
+    post: (@Composable () -> Unit)? = null,
+    inner: @Composable (String) -> Unit,
 ) {
-  val listState = rememberLazyListState()
+    val listState = rememberLazyListState()
 
-  LazyColumn(
-    contentPadding = FeedPadding,
-    state = listState,
-  ) {
-    item { pre?.let { it() } }
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        item { pre?.let { it() } }
 
-    itemsIndexed(state.feed.value, key = { _, item -> item }) { _, item -> inner(item) }
+        itemsIndexed(state.feed.value, key = { _, item -> item }) { _, item -> inner(item) }
 
-    item { post?.let { it() } }
-  }
+        item { post?.let { it() } }
+    }
 }

@@ -28,78 +28,78 @@ import com.goterl.lazysodium.utils.Key
  * it. There is some native method overriding bug when using Kotlin extensions
  */
 fun cryptoStreamXchacha20XorIc(
-  libSodium: SodiumAndroid,
-  cipher: ByteArray,
-  message: ByteArray,
-  messageLen: Long,
-  nonce: ByteArray,
-  ic: Long,
-  key: ByteArray,
+    libSodium: SodiumAndroid,
+    cipher: ByteArray,
+    message: ByteArray,
+    messageLen: Long,
+    nonce: ByteArray,
+    ic: Long,
+    key: ByteArray,
 ): Int {
-  /**
-   * C++ Code:
-   *
-   * unsigned char k2[crypto_core_hchacha20_OUTPUTBYTES]; crypto_core_hchacha20(k2, n, k, NULL);
-   * return crypto_stream_chacha20_xor_ic( c, m, mlen, n + crypto_core_hchacha20_INPUTBYTES, ic,
-   * k2);
-   */
-  val k2 = ByteArray(32)
+    /**
+     * C++ Code:
+     *
+     * unsigned char k2[crypto_core_hchacha20_OUTPUTBYTES]; crypto_core_hchacha20(k2, n, k, NULL);
+     * return crypto_stream_chacha20_xor_ic( c, m, mlen, n + crypto_core_hchacha20_INPUTBYTES, ic,
+     * k2);
+     */
+    val k2 = ByteArray(32)
 
-  val nonceChaCha = nonce.drop(16).toByteArray()
-  assert(nonceChaCha.size == 8)
+    val nonceChaCha = nonce.drop(16).toByteArray()
+    assert(nonceChaCha.size == 8)
 
-  libSodium.crypto_core_hchacha20(k2, nonce, key, null)
-  return libSodium.crypto_stream_chacha20_xor_ic(
-    cipher,
-    message,
-    messageLen,
-    nonceChaCha,
-    ic,
-    k2,
-  )
+    libSodium.crypto_core_hchacha20(k2, nonce, key, null)
+    return libSodium.crypto_stream_chacha20_xor_ic(
+        cipher,
+        message,
+        messageLen,
+        nonceChaCha,
+        ic,
+        k2,
+    )
 }
 
 fun cryptoStreamXchacha20Xor(
-  libSodium: SodiumAndroid,
-  cipher: ByteArray,
-  message: ByteArray,
-  messageLen: Long,
-  nonce: ByteArray,
-  key: ByteArray,
+    libSodium: SodiumAndroid,
+    cipher: ByteArray,
+    message: ByteArray,
+    messageLen: Long,
+    nonce: ByteArray,
+    key: ByteArray,
 ): Int {
-  return cryptoStreamXchacha20XorIc(libSodium, cipher, message, messageLen, nonce, 0, key)
+    return cryptoStreamXchacha20XorIc(libSodium, cipher, message, messageLen, nonce, 0, key)
 }
 
 fun cryptoStreamXChaCha20Xor(
-  libSodium: SodiumAndroid,
-  cipher: ByteArray,
-  message: ByteArray,
-  messageLen: Long,
-  nonce: ByteArray,
-  key: ByteArray,
+    libSodium: SodiumAndroid,
+    cipher: ByteArray,
+    message: ByteArray,
+    messageLen: Long,
+    nonce: ByteArray,
+    key: ByteArray,
 ): Boolean {
-  require(!(messageLen < 0 || messageLen > message.size)) {
-    "messageLen out of bounds: $messageLen"
-  }
-  return cryptoStreamXchacha20Xor(
-    libSodium,
-    cipher,
-    message,
-    messageLen,
-    nonce,
-    key,
-  ) == 0
+    require(!(messageLen < 0 || messageLen > message.size)) {
+        "messageLen out of bounds: $messageLen"
+    }
+    return cryptoStreamXchacha20Xor(
+        libSodium,
+        cipher,
+        message,
+        messageLen,
+        nonce,
+        key,
+    ) == 0
 }
 
 fun cryptoStreamXChaCha20Xor(
-  libSodium: SodiumAndroid,
-  messageBytes: ByteArray,
-  nonce: ByteArray,
-  key: Key,
+    libSodium: SodiumAndroid,
+    messageBytes: ByteArray,
+    nonce: ByteArray,
+    key: Key,
 ): ByteArray? {
-  val mLen = messageBytes.size
-  val cipher = ByteArray(mLen)
-  val successful =
-    cryptoStreamXChaCha20Xor(libSodium, cipher, messageBytes, mLen.toLong(), nonce, key.asBytes)
-  return if (successful) cipher else null
+    val mLen = messageBytes.size
+    val cipher = ByteArray(mLen)
+    val successful =
+        cryptoStreamXChaCha20Xor(libSodium, cipher, messageBytes, mLen.toLong(), nonce, key.asBytes)
+    return if (successful) cipher else null
 }

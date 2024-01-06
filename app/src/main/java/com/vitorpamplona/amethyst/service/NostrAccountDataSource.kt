@@ -58,289 +58,290 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 // TODO: Migrate this to a property of AccountVi
 object NostrAccountDataSource : NostrDataSource("AccountData") {
-  lateinit var account: Account
-  var otherAccounts = listOf<HexKey>()
+    lateinit var account: Account
+    var otherAccounts = listOf<HexKey>()
 
-  val latestEOSEs = EOSEAccount()
-  val hasLoadedTheBasics = mutableMapOf<User, Boolean>()
+    val latestEOSEs = EOSEAccount()
+    val hasLoadedTheBasics = mutableMapOf<User, Boolean>()
 
-  fun createAccountContactListFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(ContactListEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          limit = 1,
-        ),
-    )
-  }
-
-  fun createAccountMetadataFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(MetadataEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          limit = 1,
-        ),
-    )
-  }
-
-  fun createAccountRelayListFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(AdvertisedRelayListEvent.KIND, StatusEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          limit = 5,
-        ),
-    )
-  }
-
-  fun createOtherAccountsBaseFilter(): TypedFilter? {
-    if (otherAccounts.isEmpty()) return null
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds =
-            listOf(
-              MetadataEvent.KIND,
-              ContactListEvent.KIND,
-              AdvertisedRelayListEvent.KIND,
-              MuteListEvent.KIND,
-              PeopleListEvent.KIND,
-            ),
-          authors = otherAccounts.filter { it != account.userProfile().pubkeyHex },
-          limit = 100,
-        ),
-    )
-  }
-
-  fun createAccountAcceptedAwardsFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          limit = 10,
-        ),
-    )
-  }
-
-  fun createAccountBookmarkListFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          limit = 100,
-        ),
-    )
-  }
-
-  fun createAccountReportsFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(ReportEvent.KIND),
-          authors = listOf(account.userProfile().pubkeyHex),
-          since =
-            latestEOSEs.users[account.userProfile()]
-              ?.followList
-              ?.get(account.defaultNotificationFollowList.value)
-              ?.relayList,
-        ),
-    )
-  }
-
-  fun createAccountLastPostsListFilter(): TypedFilter {
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          authors = listOf(account.userProfile().pubkeyHex),
-          limit = 400,
-        ),
-    )
-  }
-
-  fun createNotificationFilter(): TypedFilter {
-    val since =
-      latestEOSEs.users[account.userProfile()]
-        ?.followList
-        ?.get(account.defaultNotificationFollowList.value)
-        ?.relayList
-        ?: account.activeRelays()?.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
-          ?: account.convertLocalRelays().associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
-
-    return TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds =
-            listOf(
-              TextNoteEvent.KIND,
-              PollNoteEvent.KIND,
-              ReactionEvent.KIND,
-              RepostEvent.KIND,
-              GenericRepostEvent.KIND,
-              ReportEvent.KIND,
-              LnZapEvent.KIND,
-              LnZapPaymentResponseEvent.KIND,
-              ChannelMessageEvent.KIND,
-              BadgeAwardEvent.KIND,
-            ),
-          tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-          limit = 4000,
-          since = since,
-        ),
-    )
-  }
-
-  fun createGiftWrapsToMeFilter() =
-    TypedFilter(
-      types = COMMON_FEED_TYPES,
-      filter =
-        JsonFilter(
-          kinds = listOf(GiftWrapEvent.KIND),
-          tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-        ),
-    )
-
-  val accountChannel = requestNewChannel { time, relayUrl ->
-    if (hasLoadedTheBasics[account.userProfile()] != null) {
-      latestEOSEs.addOrUpdate(
-        account.userProfile(),
-        account.defaultNotificationFollowList.value,
-        relayUrl,
-        time,
-      )
-    } else {
-      hasLoadedTheBasics[account.userProfile()] = true
-
-      invalidateFilters()
-    }
-  }
-
-  override fun consume(
-    event: Event,
-    relay: Relay,
-  ) {
-    checkNotInMainThread()
-
-    if (LocalCache.justVerify(event)) {
-      if (event is GiftWrapEvent) {
-        // Avoid decrypting over and over again if the event already exist.
-        val note = LocalCache.getNoteIfExists(event.id)
-        if (note != null && relay.brief in note.relays) return
-
-        event.cachedGift(account.signer) { this.consume(it, relay) }
-      }
-
-      if (event is SealedGossipEvent) {
-        // Avoid decrypting over and over again if the event already exist.
-        val note = LocalCache.getNoteIfExists(event.id)
-        if (note != null && relay.brief in note.relays) return
-
-        event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
-      } else {
-        LocalCache.justConsume(event, relay)
-      }
-    }
-  }
-
-  override fun markAsSeenOnRelay(
-    eventId: String,
-    relay: Relay,
-  ) {
-    checkNotInMainThread()
-
-    super.markAsSeenOnRelay(eventId, relay)
-
-    val note = LocalCache.getNoteIfExists(eventId) ?: return
-    val privKey = account.keyPair.privKey ?: return
-
-    val noteEvent = note.event ?: return
-    markInnerAsSeenOnRelay(noteEvent, privKey, relay)
-  }
-
-  private fun markInnerAsSeenOnRelay(
-    noteEvent: EventInterface,
-    privKey: ByteArray,
-    relay: Relay,
-  ) {
-    LocalCache.getNoteIfExists(noteEvent.id())?.addRelay(relay)
-
-    if (noteEvent is GiftWrapEvent) {
-      noteEvent.cachedGift(account.signer) { gift -> markInnerAsSeenOnRelay(gift, privKey, relay) }
-    } else if (noteEvent is SealedGossipEvent) {
-      noteEvent.cachedGossip(account.signer) { rumor ->
-        markInnerAsSeenOnRelay(rumor, privKey, relay)
-      }
-    }
-  }
-
-  override fun updateChannelFilters() {
-    return if (hasLoadedTheBasics[account.userProfile()] != null) {
-      // gets everything about the user logged in
-      accountChannel.typedFilters =
-        listOfNotNull(
-            createAccountMetadataFilter(),
-            createAccountContactListFilter(),
-            createAccountRelayListFilter(),
-            createNotificationFilter(),
-            createGiftWrapsToMeFilter(),
-            createAccountReportsFilter(),
-            createAccountAcceptedAwardsFilter(),
-            createAccountBookmarkListFilter(),
-            createAccountLastPostsListFilter(),
-            createOtherAccountsBaseFilter(),
-          )
-          .ifEmpty { null }
-    } else {
-      // just the basics.
-      accountChannel.typedFilters =
-        listOf(
-            createAccountMetadataFilter(),
-            createAccountContactListFilter(),
-            createAccountRelayListFilter(),
-            createAccountBookmarkListFilter(),
-          )
-          .ifEmpty { null }
-    }
-  }
-
-  override fun auth(
-    relay: Relay,
-    challenge: String,
-  ) {
-    super.auth(relay, challenge)
-
-    if (this::account.isInitialized) {
-      account.createAuthEvent(relay, challenge) {
-        Client.send(
-          it,
-          relay.url,
+    fun createAccountContactListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(ContactListEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    limit = 1,
+                ),
         )
-      }
     }
-  }
 
-  override fun notify(
-    relay: Relay,
-    description: String,
-  ) {
-    super.notify(relay, description)
-
-    if (this::account.isInitialized) {
-      account.addPaymentRequestIfNew(Account.PaymentRequest(relay.url, description))
+    fun createAccountMetadataFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(MetadataEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    limit = 1,
+                ),
+        )
     }
-  }
+
+    fun createAccountRelayListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(AdvertisedRelayListEvent.KIND, StatusEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    limit = 5,
+                ),
+        )
+    }
+
+    fun createOtherAccountsBaseFilter(): TypedFilter? {
+        if (otherAccounts.isEmpty()) return null
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            MetadataEvent.KIND,
+                            ContactListEvent.KIND,
+                            AdvertisedRelayListEvent.KIND,
+                            MuteListEvent.KIND,
+                            PeopleListEvent.KIND,
+                        ),
+                    authors = otherAccounts.filter { it != account.userProfile().pubkeyHex },
+                    limit = 100,
+                ),
+        )
+    }
+
+    fun createAccountAcceptedAwardsFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    limit = 10,
+                ),
+        )
+    }
+
+    fun createAccountBookmarkListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    limit = 100,
+                ),
+        )
+    }
+
+    fun createAccountReportsFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(ReportEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(account.defaultNotificationFollowList.value)
+                            ?.relayList,
+                ),
+        )
+    }
+
+    fun createAccountLastPostsListFilter(): TypedFilter {
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    limit = 400,
+                ),
+        )
+    }
+
+    fun createNotificationFilter(): TypedFilter {
+        val since =
+            latestEOSEs.users[account.userProfile()]
+                ?.followList
+                ?.get(account.defaultNotificationFollowList.value)
+                ?.relayList
+                ?: account.activeRelays()?.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+                ?: account.convertLocalRelays().associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            TextNoteEvent.KIND,
+                            PollNoteEvent.KIND,
+                            ReactionEvent.KIND,
+                            RepostEvent.KIND,
+                            GenericRepostEvent.KIND,
+                            ReportEvent.KIND,
+                            LnZapEvent.KIND,
+                            LnZapPaymentResponseEvent.KIND,
+                            ChannelMessageEvent.KIND,
+                            BadgeAwardEvent.KIND,
+                        ),
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                    limit = 4000,
+                    since = since,
+                ),
+        )
+    }
+
+    fun createGiftWrapsToMeFilter() =
+        TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(GiftWrapEvent.KIND),
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                ),
+        )
+
+    val accountChannel =
+        requestNewChannel { time, relayUrl ->
+            if (hasLoadedTheBasics[account.userProfile()] != null) {
+                latestEOSEs.addOrUpdate(
+                    account.userProfile(),
+                    account.defaultNotificationFollowList.value,
+                    relayUrl,
+                    time,
+                )
+            } else {
+                hasLoadedTheBasics[account.userProfile()] = true
+
+                invalidateFilters()
+            }
+        }
+
+    override fun consume(
+        event: Event,
+        relay: Relay,
+    ) {
+        checkNotInMainThread()
+
+        if (LocalCache.justVerify(event)) {
+            if (event is GiftWrapEvent) {
+                // Avoid decrypting over and over again if the event already exist.
+                val note = LocalCache.getNoteIfExists(event.id)
+                if (note != null && relay.brief in note.relays) return
+
+                event.cachedGift(account.signer) { this.consume(it, relay) }
+            }
+
+            if (event is SealedGossipEvent) {
+                // Avoid decrypting over and over again if the event already exist.
+                val note = LocalCache.getNoteIfExists(event.id)
+                if (note != null && relay.brief in note.relays) return
+
+                event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
+            } else {
+                LocalCache.justConsume(event, relay)
+            }
+        }
+    }
+
+    override fun markAsSeenOnRelay(
+        eventId: String,
+        relay: Relay,
+    ) {
+        checkNotInMainThread()
+
+        super.markAsSeenOnRelay(eventId, relay)
+
+        val note = LocalCache.getNoteIfExists(eventId) ?: return
+        val privKey = account.keyPair.privKey ?: return
+
+        val noteEvent = note.event ?: return
+        markInnerAsSeenOnRelay(noteEvent, privKey, relay)
+    }
+
+    private fun markInnerAsSeenOnRelay(
+        noteEvent: EventInterface,
+        privKey: ByteArray,
+        relay: Relay,
+    ) {
+        LocalCache.getNoteIfExists(noteEvent.id())?.addRelay(relay)
+
+        if (noteEvent is GiftWrapEvent) {
+            noteEvent.cachedGift(account.signer) { gift -> markInnerAsSeenOnRelay(gift, privKey, relay) }
+        } else if (noteEvent is SealedGossipEvent) {
+            noteEvent.cachedGossip(account.signer) { rumor ->
+                markInnerAsSeenOnRelay(rumor, privKey, relay)
+            }
+        }
+    }
+
+    override fun updateChannelFilters() {
+        return if (hasLoadedTheBasics[account.userProfile()] != null) {
+            // gets everything about the user logged in
+            accountChannel.typedFilters =
+                listOfNotNull(
+                    createAccountMetadataFilter(),
+                    createAccountContactListFilter(),
+                    createAccountRelayListFilter(),
+                    createNotificationFilter(),
+                    createGiftWrapsToMeFilter(),
+                    createAccountReportsFilter(),
+                    createAccountAcceptedAwardsFilter(),
+                    createAccountBookmarkListFilter(),
+                    createAccountLastPostsListFilter(),
+                    createOtherAccountsBaseFilter(),
+                )
+                    .ifEmpty { null }
+        } else {
+            // just the basics.
+            accountChannel.typedFilters =
+                listOf(
+                    createAccountMetadataFilter(),
+                    createAccountContactListFilter(),
+                    createAccountRelayListFilter(),
+                    createAccountBookmarkListFilter(),
+                )
+                    .ifEmpty { null }
+        }
+    }
+
+    override fun auth(
+        relay: Relay,
+        challenge: String,
+    ) {
+        super.auth(relay, challenge)
+
+        if (this::account.isInitialized) {
+            account.createAuthEvent(relay, challenge) {
+                Client.send(
+                    it,
+                    relay.url,
+                )
+            }
+        }
+    }
+
+    override fun notify(
+        relay: Relay,
+        description: String,
+    ) {
+        super.notify(relay, description)
+
+        if (this::account.isInitialized) {
+            account.addPaymentRequestIfNew(Account.PaymentRequest(relay.url, description))
+        }
+    }
 }

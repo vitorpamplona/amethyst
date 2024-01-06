@@ -29,53 +29,52 @@ import java.util.Base64
 
 @Immutable
 class FileStorageEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun type() = tags.firstOrNull { it.size > 1 && it[0] == TYPE }?.get(1)
+    fun type() = tags.firstOrNull { it.size > 1 && it[0] == TYPE }?.get(1)
 
-  fun decryptKey() =
-    tags.firstOrNull { it.size > 2 && it[0] == DECRYPT }?.let { AESGCM(it[1], it[2]) }
+    fun decryptKey() = tags.firstOrNull { it.size > 2 && it[0] == DECRYPT }?.let { AESGCM(it[1], it[2]) }
 
-  fun decode(): ByteArray? {
-    return try {
-      Base64.getDecoder().decode(content)
-    } catch (e: Exception) {
-      Log.e("FileStorageEvent", "Unable to decode base 64 ${e.message} $content")
-      null
-    }
-  }
-
-  companion object {
-    const val KIND = 1064
-    const val ALT = "Binary data"
-
-    private const val TYPE = "type"
-    private const val DECRYPT = "decrypt"
-
-    fun encode(bytes: ByteArray): String {
-      return Base64.getEncoder().encodeToString(bytes)
+    fun decode(): ByteArray? {
+        return try {
+            Base64.getDecoder().decode(content)
+        } catch (e: Exception) {
+            Log.e("FileStorageEvent", "Unable to decode base 64 ${e.message} $content")
+            null
+        }
     }
 
-    fun create(
-      mimeType: String,
-      data: ByteArray,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (FileStorageEvent) -> Unit,
-    ) {
-      val tags =
-        listOfNotNull(
-          arrayOf(TYPE, mimeType),
-          arrayOf("alt", ALT),
-        )
+    companion object {
+        const val KIND = 1064
+        const val ALT = "Binary data"
 
-      val content = encode(data)
-      signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        private const val TYPE = "type"
+        private const val DECRYPT = "decrypt"
+
+        fun encode(bytes: ByteArray): String {
+            return Base64.getEncoder().encodeToString(bytes)
+        }
+
+        fun create(
+            mimeType: String,
+            data: ByteArray,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (FileStorageEvent) -> Unit,
+        ) {
+            val tags =
+                listOfNotNull(
+                    arrayOf(TYPE, mimeType),
+                    arrayOf("alt", ALT),
+                )
+
+            val content = encode(data)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
     }
-  }
 }

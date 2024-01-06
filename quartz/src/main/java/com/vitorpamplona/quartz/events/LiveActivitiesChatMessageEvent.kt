@@ -28,74 +28,74 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class LiveActivitiesChatMessageEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  private fun innerActivity() =
-    tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }
-      ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
+    private fun innerActivity() =
+        tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }
+            ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
 
-  private fun activityHex() = innerActivity()?.let { it.getOrNull(1) }
+    private fun activityHex() = innerActivity()?.let { it.getOrNull(1) }
 
-  fun activity() =
-    innerActivity()?.let {
-      if (it.size > 1) {
-        val aTagValue = it[1]
-        val relay = it.getOrNull(2)
+    fun activity() =
+        innerActivity()?.let {
+            if (it.size > 1) {
+                val aTagValue = it[1]
+                val relay = it.getOrNull(2)
 
-        ATag.parse(aTagValue, relay)
-      } else {
-        null
-      }
-    }
-
-  override fun replyTos() = taggedEvents().minus(activityHex() ?: "")
-
-  companion object {
-    const val KIND = 1311
-    const val ALT = "Live activity chat message"
-
-    fun create(
-      message: String,
-      activity: ATag,
-      replyTos: List<String>? = null,
-      mentions: List<String>? = null,
-      zapReceiver: List<ZapSplitSetup>? = null,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      markAsSensitive: Boolean,
-      zapRaiserAmount: Long?,
-      geohash: String? = null,
-      nip94attachments: List<Event>? = null,
-      onReady: (LiveActivitiesChatMessageEvent) -> Unit,
-    ) {
-      val content = message
-      val tags =
-        mutableListOf(
-          arrayOf("a", activity.toTag(), "", "root"),
-        )
-      replyTos?.forEach { tags.add(arrayOf("e", it)) }
-      mentions?.forEach { tags.add(arrayOf("p", it)) }
-      zapReceiver?.forEach {
-        tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-      }
-      if (markAsSensitive) {
-        tags.add(arrayOf("content-warning", ""))
-      }
-      zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
-      geohash?.let { tags.addAll(geohashMipMap(it)) }
-      nip94attachments?.let {
-        it.forEach {
-          // tags.add(arrayOf("nip94", it.toJson()))
+                ATag.parse(aTagValue, relay)
+            } else {
+                null
+            }
         }
-      }
-      tags.add(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+    override fun replyTos() = taggedEvents().minus(activityHex() ?: "")
+
+    companion object {
+        const val KIND = 1311
+        const val ALT = "Live activity chat message"
+
+        fun create(
+            message: String,
+            activity: ATag,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            markAsSensitive: Boolean,
+            zapRaiserAmount: Long?,
+            geohash: String? = null,
+            nip94attachments: List<Event>? = null,
+            onReady: (LiveActivitiesChatMessageEvent) -> Unit,
+        ) {
+            val content = message
+            val tags =
+                mutableListOf(
+                    arrayOf("a", activity.toTag(), "", "root"),
+                )
+            replyTos?.forEach { tags.add(arrayOf("e", it)) }
+            mentions?.forEach { tags.add(arrayOf("p", it)) }
+            zapReceiver?.forEach {
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+            }
+            if (markAsSensitive) {
+                tags.add(arrayOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
+            geohash?.let { tags.addAll(geohashMipMap(it)) }
+            nip94attachments?.let {
+                it.forEach {
+                    // tags.add(arrayOf("nip94", it.toJson()))
+                }
+            }
+            tags.add(arrayOf("alt", ALT))
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
     }
-  }
 }

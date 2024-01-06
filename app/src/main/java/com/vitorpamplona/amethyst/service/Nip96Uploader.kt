@@ -30,9 +30,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.Account
-import java.io.InputStream
-import java.util.Base64
-import kotlin.coroutines.resume
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -42,276 +39,279 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.source
+import java.io.InputStream
+import java.util.Base64
+import kotlin.coroutines.resume
 
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
 class Nip96Uploader(val account: Account?) {
-  suspend fun uploadImage(
-    uri: Uri,
-    contentType: String?,
-    size: Long?,
-    alt: String?,
-    sensitiveContent: String?,
-    server: Nip96MediaServers.ServerName,
-    contentResolver: ContentResolver,
-    onProgress: (percentage: Float) -> Unit,
-  ): PartialEvent {
-    val serverInfo =
-      Nip96Retriever()
-        .loadInfo(
-          server.baseUrl,
+    suspend fun uploadImage(
+        uri: Uri,
+        contentType: String?,
+        size: Long?,
+        alt: String?,
+        sensitiveContent: String?,
+        server: Nip96MediaServers.ServerName,
+        contentResolver: ContentResolver,
+        onProgress: (percentage: Float) -> Unit,
+    ): PartialEvent {
+        val serverInfo =
+            Nip96Retriever()
+                .loadInfo(
+                    server.baseUrl,
+                )
+
+        return uploadImage(
+            uri,
+            contentType,
+            size,
+            alt,
+            sensitiveContent,
+            serverInfo,
+            contentResolver,
+            onProgress,
         )
+    }
 
-    return uploadImage(
-      uri,
-      contentType,
-      size,
-      alt,
-      sensitiveContent,
-      serverInfo,
-      contentResolver,
-      onProgress,
-    )
-  }
+    suspend fun uploadImage(
+        uri: Uri,
+        contentType: String?,
+        size: Long?,
+        alt: String?,
+        sensitiveContent: String?,
+        server: Nip96Retriever.ServerInfo,
+        contentResolver: ContentResolver,
+        onProgress: (percentage: Float) -> Unit,
+    ): PartialEvent {
+        checkNotInMainThread()
 
-  suspend fun uploadImage(
-    uri: Uri,
-    contentType: String?,
-    size: Long?,
-    alt: String?,
-    sensitiveContent: String?,
-    server: Nip96Retriever.ServerInfo,
-    contentResolver: ContentResolver,
-    onProgress: (percentage: Float) -> Unit,
-  ): PartialEvent {
-    checkNotInMainThread()
+        val myContentType = contentType ?: contentResolver.getType(uri)
+        val imageInputStream = contentResolver.openInputStream(uri)
 
-    val myContentType = contentType ?: contentResolver.getType(uri)
-    val imageInputStream = contentResolver.openInputStream(uri)
+        val length =
+            size
+                ?: contentResolver.query(uri, null, null, null, null)?.use {
+                    it.moveToFirst()
+                    val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+                    it.getLong(sizeIndex)
+                }
+                ?: kotlin.runCatching { uri.toFile().length() }.getOrNull() ?: 0
 
-    val length =
-      size
-        ?: contentResolver.query(uri, null, null, null, null)?.use {
-          it.moveToFirst()
-          val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-          it.getLong(sizeIndex)
-        }
-          ?: kotlin.runCatching { uri.toFile().length() }.getOrNull() ?: 0
+        checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-    checkNotNull(imageInputStream) { "Can't open the image input stream" }
+        return uploadImage(
+            imageInputStream,
+            length,
+            myContentType,
+            alt,
+            sensitiveContent,
+            server,
+            onProgress,
+        )
+    }
 
-    return uploadImage(
-      imageInputStream,
-      length,
-      myContentType,
-      alt,
-      sensitiveContent,
-      server,
-      onProgress,
-    )
-  }
+    suspend fun uploadImage(
+        inputStream: InputStream,
+        length: Long,
+        contentType: String?,
+        alt: String?,
+        sensitiveContent: String?,
+        server: Nip96Retriever.ServerInfo,
+        onProgress: (percentage: Float) -> Unit,
+    ): PartialEvent {
+        checkNotInMainThread()
 
-  suspend fun uploadImage(
-    inputStream: InputStream,
-    length: Long,
-    contentType: String?,
-    alt: String?,
-    sensitiveContent: String?,
-    server: Nip96Retriever.ServerInfo,
-    onProgress: (percentage: Float) -> Unit,
-  ): PartialEvent {
-    checkNotInMainThread()
+        val fileName = randomChars()
+        val extension =
+            contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-    val fileName = randomChars()
-    val extension =
-      contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+        val client = HttpClient.getHttpClient()
+        val requestBody: RequestBody
+        val requestBuilder = Request.Builder()
 
-    val client = HttpClient.getHttpClient()
-    val requestBody: RequestBody
-    val requestBuilder = Request.Builder()
+        requestBody =
+            MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("expiration", "")
+                .addFormDataPart("size", length.toString())
+                .also { body ->
+                    alt?.let { body.addFormDataPart("alt", it) }
+                    sensitiveContent?.let { body.addFormDataPart("content-warning", it) }
+                    contentType?.let { body.addFormDataPart("content_type", it) }
+                }
+                .addFormDataPart(
+                    "file",
+                    "$fileName.$extension",
+                    object : RequestBody() {
+                        override fun contentType() = contentType?.toMediaType()
 
-    requestBody =
-      MultipartBody.Builder()
-        .setType(MultipartBody.FORM)
-        .addFormDataPart("expiration", "")
-        .addFormDataPart("size", length.toString())
-        .also { body ->
-          alt?.let { body.addFormDataPart("alt", it) }
-          sensitiveContent?.let { body.addFormDataPart("content-warning", it) }
-          contentType?.let { body.addFormDataPart("content_type", it) }
-        }
-        .addFormDataPart(
-          "file",
-          "$fileName.$extension",
-          object : RequestBody() {
-            override fun contentType() = contentType?.toMediaType()
+                        override fun contentLength() = length
 
-            override fun contentLength() = length
+                        override fun writeTo(sink: BufferedSink) {
+                            inputStream.source().use(sink::writeAll)
+                        }
+                    },
+                )
+                .build()
 
-            override fun writeTo(sink: BufferedSink) {
-              inputStream.source().use(sink::writeAll)
+        nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
+
+        requestBuilder
+            .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+            .url(server.apiUrl)
+            .post(requestBody)
+
+        val request = requestBuilder.build()
+
+        client.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                response.body.use { body ->
+                    val str = body.string()
+                    val result = parseResults(str)
+
+                    if (!result.processingUrl.isNullOrBlank()) {
+                        return waitProcessing(result, server, onProgress)
+                    } else if (result.status == "success" && result.nip94Event != null) {
+                        return result.nip94Event
+                    } else {
+                        throw RuntimeException("Failed to upload with message: ${result.message}")
+                    }
+                }
+            } else {
+                throw RuntimeException("Error Uploading image: ${response.code}")
             }
-          },
-        )
-        .build()
-
-    nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
-
-    requestBuilder
-      .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-      .url(server.apiUrl)
-      .post(requestBody)
-
-    val request = requestBuilder.build()
-
-    client.newCall(request).execute().use { response ->
-      if (response.isSuccessful) {
-        response.body.use { body ->
-          val str = body.string()
-          val result = parseResults(str)
-
-          if (!result.processingUrl.isNullOrBlank()) {
-            return waitProcessing(result, server, onProgress)
-          } else if (result.status == "success" && result.nip94Event != null) {
-            return result.nip94Event
-          } else {
-            throw RuntimeException("Failed to upload with message: ${result.message}")
-          }
         }
-      } else {
-        throw RuntimeException("Error Uploading image: ${response.code}")
-      }
     }
-  }
 
-  suspend fun delete(
-    hash: String,
-    contentType: String?,
-    server: Nip96Retriever.ServerInfo,
-  ): Boolean {
-    val extension =
-      contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+    suspend fun delete(
+        hash: String,
+        contentType: String?,
+        server: Nip96Retriever.ServerInfo,
+    ): Boolean {
+        val extension =
+            contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-    val client = HttpClient.getHttpClient()
+        val client = HttpClient.getHttpClient()
 
-    val requestBuilder = Request.Builder()
+        val requestBuilder = Request.Builder()
 
-    nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
+        nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
 
-    println(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
+        println(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
 
-    val request =
-      requestBuilder
-        .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-        .url(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
-        .delete()
-        .build()
+        val request =
+            requestBuilder
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .url(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
+                .delete()
+                .build()
 
-    client.newCall(request).execute().use { response ->
-      if (response.isSuccessful) {
-        response.body.use { body ->
-          val str = body.string()
-          val result = parseDeleteResults(str)
-          return result.status == "success"
+        client.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                response.body.use { body ->
+                    val str = body.string()
+                    val result = parseDeleteResults(str)
+                    return result.status == "success"
+                }
+            } else {
+                throw RuntimeException("Error Uploading image: ${response.code}")
+            }
         }
-      } else {
-        throw RuntimeException("Error Uploading image: ${response.code}")
-      }
     }
-  }
 
-  private suspend fun waitProcessing(
-    result: Nip96Result,
-    server: Nip96Retriever.ServerInfo,
-    onProgress: (percentage: Float) -> Unit,
-  ): PartialEvent {
-    val client = HttpClient.getHttpClient()
-    var currentResult = result
+    private suspend fun waitProcessing(
+        result: Nip96Result,
+        server: Nip96Retriever.ServerInfo,
+        onProgress: (percentage: Float) -> Unit,
+    ): PartialEvent {
+        val client = HttpClient.getHttpClient()
+        var currentResult = result
 
-    while (!result.processingUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
-      onProgress((currentResult.percentage ?: 100) / 100f)
+        while (!result.processingUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
+            onProgress((currentResult.percentage ?: 100) / 100f)
 
-      val request: Request =
-        Request.Builder()
-          .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-          .url(result.processingUrl)
-          .build()
+            val request: Request =
+                Request.Builder()
+                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                    .url(result.processingUrl)
+                    .build()
 
-      client.newCall(request).execute().use {
-        if (it.isSuccessful) {
-          it.body.use { currentResult = parseResults(it.string()) }
+            client.newCall(request).execute().use {
+                if (it.isSuccessful) {
+                    it.body.use { currentResult = parseResults(it.string()) }
+                }
+            }
+
+            delay(500)
         }
-      }
+        onProgress((currentResult.percentage ?: 100) / 100f)
 
-      delay(500)
-    }
-    onProgress((currentResult.percentage ?: 100) / 100f)
+        val nip94 = currentResult.nip94Event
 
-    val nip94 = currentResult.nip94Event
-
-    if (nip94 != null) {
-      return nip94
-    } else {
-      throw RuntimeException("Error waiting for processing. Final result is unavailable")
-    }
-  }
-
-  suspend fun nip98Header(url: String): String? {
-    return withTimeoutOrNull(5000) {
-      suspendCancellableCoroutine { continuation ->
-        nip98Header(url, "POST") { authorizationToken -> continuation.resume(authorizationToken) }
-      }
-    }
-  }
-
-  fun nip98Header(
-    url: String,
-    method: String,
-    file: ByteArray? = null,
-    onReady: (String?) -> Unit,
-  ) {
-    val myAccount = account
-
-    if (myAccount == null) {
-      onReady(null)
-      return
+        if (nip94 != null) {
+            return nip94
+        } else {
+            throw RuntimeException("Error waiting for processing. Final result is unavailable")
+        }
     }
 
-    myAccount.createHTTPAuthorization(url, method, file) {
-      val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
-      onReady("Nostr $encodedNIP98Event")
+    suspend fun nip98Header(url: String): String? {
+        return withTimeoutOrNull(5000) {
+            suspendCancellableCoroutine { continuation ->
+                nip98Header(url, "POST") { authorizationToken -> continuation.resume(authorizationToken) }
+            }
+        }
     }
-  }
 
-  data class DeleteResult(
-    val status: String?,
-    val message: String?,
-  )
+    fun nip98Header(
+        url: String,
+        method: String,
+        file: ByteArray? = null,
+        onReady: (String?) -> Unit,
+    ) {
+        val myAccount = account
 
-  private fun parseDeleteResults(body: String): DeleteResult {
-    val mapper =
-      jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    return mapper.readValue(body, DeleteResult::class.java)
-  }
+        if (myAccount == null) {
+            onReady(null)
+            return
+        }
 
-  data class Nip96Result(
-    val status: String? = null,
-    val message: String? = null,
-    @JsonProperty("processing_url") val processingUrl: String? = null,
-    val percentage: Int? = null,
-    @JsonProperty("nip94_event") val nip94Event: PartialEvent? = null,
-  )
+        myAccount.createHTTPAuthorization(url, method, file) {
+            val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
+            onReady("Nostr $encodedNIP98Event")
+        }
+    }
 
-  class PartialEvent(
-    val tags: Array<Array<String>>? = null,
-    val content: String? = null,
-  )
+    data class DeleteResult(
+        val status: String?,
+        val message: String?,
+    )
 
-  private fun parseResults(body: String): Nip96Result {
-    val mapper =
-      jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    return mapper.readValue(body, Nip96Result::class.java)
-  }
+    private fun parseDeleteResults(body: String): DeleteResult {
+        val mapper =
+            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        return mapper.readValue(body, DeleteResult::class.java)
+    }
+
+    data class Nip96Result(
+        val status: String? = null,
+        val message: String? = null,
+        @JsonProperty("processing_url") val processingUrl: String? = null,
+        val percentage: Int? = null,
+        @JsonProperty("nip94_event") val nip94Event: PartialEvent? = null,
+    )
+
+    class PartialEvent(
+        val tags: Array<Array<String>>? = null,
+        val content: String? = null,
+    )
+
+    private fun parseResults(body: String): Nip96Result {
+        val mapper =
+            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        return mapper.readValue(body, Nip96Result::class.java)
+    }
 }

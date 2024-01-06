@@ -28,58 +28,58 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class AudioHeaderEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun download() = tags.firstOrNull { it.size > 1 && it[0] == DOWNLOAD_URL }?.get(1)
+    fun download() = tags.firstOrNull { it.size > 1 && it[0] == DOWNLOAD_URL }?.get(1)
 
-  fun stream() = tags.firstOrNull { it.size > 1 && it[0] == STREAM_URL }?.get(1)
+    fun stream() = tags.firstOrNull { it.size > 1 && it[0] == STREAM_URL }?.get(1)
 
-  fun wavefrom() =
-    tags
-      .firstOrNull { it.size > 1 && it[0] == WAVEFORM }
-      ?.get(1)
-      ?.let { mapper.readValue<List<Int>>(it) }
+    fun wavefrom() =
+        tags
+            .firstOrNull { it.size > 1 && it[0] == WAVEFORM }
+            ?.get(1)
+            ?.let { mapper.readValue<List<Int>>(it) }
 
-  companion object {
-    const val KIND = 1808
-    const val ALT = "Audio header"
+    companion object {
+        const val KIND = 1808
+        const val ALT = "Audio header"
 
-    private const val DOWNLOAD_URL = "download_url"
-    private const val STREAM_URL = "stream_url"
-    private const val WAVEFORM = "waveform"
+        private const val DOWNLOAD_URL = "download_url"
+        private const val STREAM_URL = "stream_url"
+        private const val WAVEFORM = "waveform"
 
-    fun create(
-      description: String,
-      downloadUrl: String,
-      streamUrl: String? = null,
-      wavefront: String? = null,
-      sensitiveContent: Boolean? = null,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (AudioHeaderEvent) -> Unit,
-    ) {
-      val tags =
-        listOfNotNull(
-            downloadUrl.let { arrayOf(DOWNLOAD_URL, it) },
-            streamUrl?.let { arrayOf(STREAM_URL, it) },
-            wavefront?.let { arrayOf(WAVEFORM, it) },
-            sensitiveContent?.let {
-              if (it) {
-                arrayOf("content-warning", "")
-              } else {
-                null
-              }
-            },
-            arrayOf("alt", ALT),
-          )
-          .toTypedArray()
+        fun create(
+            description: String,
+            downloadUrl: String,
+            streamUrl: String? = null,
+            wavefront: String? = null,
+            sensitiveContent: Boolean? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AudioHeaderEvent) -> Unit,
+        ) {
+            val tags =
+                listOfNotNull(
+                    downloadUrl.let { arrayOf(DOWNLOAD_URL, it) },
+                    streamUrl?.let { arrayOf(STREAM_URL, it) },
+                    wavefront?.let { arrayOf(WAVEFORM, it) },
+                    sensitiveContent?.let {
+                        if (it) {
+                            arrayOf("content-warning", "")
+                        } else {
+                            null
+                        }
+                    },
+                    arrayOf("alt", ALT),
+                )
+                    .toTypedArray()
 
-      signer.sign(createdAt, KIND, tags, description, onReady)
+            signer.sign(createdAt, KIND, tags, description, onReady)
+        }
     }
-  }
 }

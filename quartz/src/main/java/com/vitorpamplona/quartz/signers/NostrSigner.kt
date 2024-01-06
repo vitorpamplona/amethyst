@@ -26,40 +26,40 @@ import com.vitorpamplona.quartz.events.LnZapPrivateEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
 abstract class NostrSigner(val pubKey: HexKey) {
-  abstract fun <T : Event> sign(
-    createdAt: Long,
-    kind: Int,
-    tags: Array<Array<String>>,
-    content: String,
-    onReady: (T) -> Unit,
-  )
+    abstract fun <T : Event> sign(
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+        onReady: (T) -> Unit,
+    )
 
-  abstract fun nip04Encrypt(
-    decryptedContent: String,
-    toPublicKey: HexKey,
-    onReady: (String) -> Unit,
-  )
+    abstract fun nip04Encrypt(
+        decryptedContent: String,
+        toPublicKey: HexKey,
+        onReady: (String) -> Unit,
+    )
 
-  abstract fun nip04Decrypt(
-    encryptedContent: String,
-    fromPublicKey: HexKey,
-    onReady: (String) -> Unit,
-  )
+    abstract fun nip04Decrypt(
+        encryptedContent: String,
+        fromPublicKey: HexKey,
+        onReady: (String) -> Unit,
+    )
 
-  abstract fun nip44Encrypt(
-    decryptedContent: String,
-    toPublicKey: HexKey,
-    onReady: (String) -> Unit,
-  )
+    abstract fun nip44Encrypt(
+        decryptedContent: String,
+        toPublicKey: HexKey,
+        onReady: (String) -> Unit,
+    )
 
-  abstract fun nip44Decrypt(
-    encryptedContent: String,
-    fromPublicKey: HexKey,
-    onReady: (String) -> Unit,
-  )
+    abstract fun nip44Decrypt(
+        encryptedContent: String,
+        fromPublicKey: HexKey,
+        onReady: (String) -> Unit,
+    )
 
-  abstract fun decryptZapEvent(
-    event: LnZapRequestEvent,
-    onReady: (LnZapPrivateEvent) -> Unit,
-  )
+    abstract fun decryptZapEvent(
+        event: LnZapRequestEvent,
+        onReady: (LnZapPrivateEvent) -> Unit,
+    )
 }

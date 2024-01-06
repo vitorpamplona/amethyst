@@ -46,61 +46,61 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
-  var text by rememberSaveable { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
 
-  pollViewModel.isValidConsensusThreshold.value = true
-  if (text.isNotEmpty()) {
-    try {
-      val int = text.toInt()
-      if (int < 0 || int > 100) {
-        pollViewModel.isValidConsensusThreshold.value = false
-      } else {
-        pollViewModel.consensusThreshold = int
-      }
-    } catch (e: Exception) {
-      pollViewModel.isValidConsensusThreshold.value = false
+    pollViewModel.isValidConsensusThreshold.value = true
+    if (text.isNotEmpty()) {
+        try {
+            val int = text.toInt()
+            if (int < 0 || int > 100) {
+                pollViewModel.isValidConsensusThreshold.value = false
+            } else {
+                pollViewModel.consensusThreshold = int
+            }
+        } catch (e: Exception) {
+            pollViewModel.isValidConsensusThreshold.value = false
+        }
     }
-  }
 
-  val colorInValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.error,
-      unfocusedBorderColor = Color.Red,
-    )
-  val colorValid =
-    OutlinedTextFieldDefaults.colors(
-      focusedBorderColor = MaterialTheme.colorScheme.primary,
-      unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
-    )
+    val colorInValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.error,
+            unfocusedBorderColor = Color.Red,
+        )
+    val colorValid =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.placeholderText,
+        )
 
-  Row(
-    Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.Center,
-  ) {
-    OutlinedTextField(
-      value = text,
-      onValueChange = { text = it },
-      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-      modifier = Modifier.width(150.dp),
-      colors = if (pollViewModel.isValidConsensusThreshold.value) colorValid else colorInValid,
-      label = {
-        Text(
-          text = stringResource(R.string.poll_consensus_threshold),
-          color = MaterialTheme.colorScheme.placeholderText,
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.width(150.dp),
+            colors = if (pollViewModel.isValidConsensusThreshold.value) colorValid else colorInValid,
+            label = {
+                Text(
+                    text = stringResource(R.string.poll_consensus_threshold),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.poll_consensus_threshold_percent),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
         )
-      },
-      placeholder = {
-        Text(
-          text = stringResource(R.string.poll_consensus_threshold_percent),
-          color = MaterialTheme.colorScheme.placeholderText,
-        )
-      },
-    )
-  }
+    }
 }
 
 @Preview
 @Composable
 fun NewPollConsensusThresholdPreview() {
-  NewPollConsensusThreshold(NewPostViewModel())
+    NewPollConsensusThreshold(NewPostViewModel())
 }

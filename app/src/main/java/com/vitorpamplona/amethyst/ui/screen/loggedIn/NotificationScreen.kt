@@ -92,214 +92,213 @@ import kotlin.math.roundToInt
 
 @Composable
 fun NotificationScreen(
-  notifFeedViewModel: NotificationViewModel,
-  userReactionsStatsModel: UserReactionsViewModel,
-  sharedPreferencesViewModel: SharedPreferencesViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    notifFeedViewModel: NotificationViewModel,
+    userReactionsStatsModel: UserReactionsViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  SelectNotificationProvider(sharedPreferencesViewModel)
+    SelectNotificationProvider(sharedPreferencesViewModel)
 
-  WatchAccountForNotifications(notifFeedViewModel, accountViewModel)
+    WatchAccountForNotifications(notifFeedViewModel, accountViewModel)
 
-  val lifeCycleOwner = LocalLifecycleOwner.current
-  DisposableEffect(lifeCycleOwner) {
-    val observer = LifecycleEventObserver { _, event ->
-      if (event == Lifecycle.Event.ON_RESUME) {
-        NostrAccountDataSource.account = accountViewModel.account
-        NostrAccountDataSource.invalidateFilters()
-      }
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifeCycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    NostrAccountDataSource.account = accountViewModel.account
+                    NostrAccountDataSource.invalidateFilters()
+                }
+            }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    lifeCycleOwner.lifecycle.addObserver(observer)
-    onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-  }
+    Column(Modifier.fillMaxHeight()) {
+        SummaryBar(
+            model = userReactionsStatsModel,
+        )
 
-  Column(Modifier.fillMaxHeight()) {
-    SummaryBar(
-      model = userReactionsStatsModel,
-    )
-
-    RefresheableCardView(
-      viewModel = notifFeedViewModel,
-      accountViewModel = accountViewModel,
-      nav = nav,
-      routeForLastRead = Route.Notification.base,
-      scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
-    )
-  }
+        RefresheableCardView(
+            viewModel = notifFeedViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            routeForLastRead = Route.Notification.base,
+            scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
+        )
+    }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun CheckifItNeedsToRequestNotificationPermission(
-  sharedPreferencesViewModel: SharedPreferencesViewModel
-): PermissionState {
-  val notificationPermissionState =
-    rememberPermissionState(
-      Manifest.permission.POST_NOTIFICATIONS,
-    )
+fun CheckifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: SharedPreferencesViewModel): PermissionState {
+    val notificationPermissionState =
+        rememberPermissionState(
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
 
-  if (!sharedPreferencesViewModel.sharedPrefs.dontAskForNotificationPermissions) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      if (!notificationPermissionState.status.isGranted) {
-        sharedPreferencesViewModel.dontAskForNotificationPermissions()
+    if (!sharedPreferencesViewModel.sharedPrefs.dontAskForNotificationPermissions) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!notificationPermissionState.status.isGranted) {
+                sharedPreferencesViewModel.dontAskForNotificationPermissions()
 
-        // This will pause the APP, including the connection with relays.
-        LaunchedEffect(notificationPermissionState) {
-          notificationPermissionState.launchPermissionRequest()
+                // This will pause the APP, including the connection with relays.
+                LaunchedEffect(notificationPermissionState) {
+                    notificationPermissionState.launchPermissionRequest()
+                }
+            }
         }
-      }
     }
-  }
 
-  return notificationPermissionState
+    return notificationPermissionState
 }
 
 @Composable
 fun WatchAccountForNotifications(
-  notifFeedViewModel: NotificationViewModel,
-  accountViewModel: AccountViewModel,
+    notifFeedViewModel: NotificationViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-  val listState by
-    accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
+    val listState by
+        accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
 
-  LaunchedEffect(accountViewModel, listState) {
-    NostrAccountDataSource.account = accountViewModel.account
-    NostrAccountDataSource.invalidateFilters()
-    notifFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-  }
+    LaunchedEffect(accountViewModel, listState) {
+        NostrAccountDataSource.account = accountViewModel.account
+        NostrAccountDataSource.invalidateFilters()
+        notifFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+    }
 }
 
 @Composable
 fun SummaryBar(model: UserReactionsViewModel) {
-  var showChart by remember { mutableStateOf(false) }
+    var showChart by remember { mutableStateOf(false) }
 
-  UserReactionsRow(model) { showChart = !showChart }
+    UserReactionsRow(model) { showChart = !showChart }
 
-  if (showChart) {
-    val lineChartCount =
-      lineChart(
-        lines =
-          listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
-            LineChart.LineSpec(
-              lineColor = lineChartColor.toArgb(),
-              lineBackgroundShader =
-                DynamicShaders.fromBrush(
-                  Brush.verticalGradient(
-                    listOf(
-                      lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-                      lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END),
-                    ),
-                  ),
-                ),
+    if (showChart) {
+        val lineChartCount =
+            lineChart(
+                lines =
+                    listOf(RoyalBlue, Color.Green, Color.Red).map { lineChartColor ->
+                        LineChart.LineSpec(
+                            lineColor = lineChartColor.toArgb(),
+                            lineBackgroundShader =
+                                DynamicShaders.fromBrush(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
+                                            lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END),
+                                        ),
+                                    ),
+                                ),
+                        )
+                    },
+                targetVerticalAxisPosition = AxisPosition.Vertical.Start,
             )
-          },
-        targetVerticalAxisPosition = AxisPosition.Vertical.Start,
-      )
 
-    val lineChartZaps =
-      lineChart(
-        lines =
-          listOf(BitcoinOrange).map { lineChartColor ->
-            LineChart.LineSpec(
-              lineColor = lineChartColor.toArgb(),
-              lineBackgroundShader =
-                DynamicShaders.fromBrush(
-                  Brush.verticalGradient(
-                    listOf(
-                      lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-                      lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END),
-                    ),
-                  ),
-                ),
+        val lineChartZaps =
+            lineChart(
+                lines =
+                    listOf(BitcoinOrange).map { lineChartColor ->
+                        LineChart.LineSpec(
+                            lineColor = lineChartColor.toArgb(),
+                            lineBackgroundShader =
+                                DynamicShaders.fromBrush(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_START),
+                                            lineChartColor.copy(DefaultAlpha.LINE_BACKGROUND_SHADER_END),
+                                        ),
+                                    ),
+                                ),
+                        )
+                    },
+                targetVerticalAxisPosition = AxisPosition.Vertical.End,
             )
-          },
-        targetVerticalAxisPosition = AxisPosition.Vertical.End,
-      )
 
-    Row(
-      modifier =
-        Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
-          .clickable(onClick = { showChart = !showChart }),
-    ) {
-      ProvideChartStyle(
-        chartStyle = MaterialTheme.colorScheme.chartStyle,
-      ) {
-        ObserveAndShowChart(model, lineChartCount, lineChartZaps)
-      }
+        Row(
+            modifier =
+                Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
+                    .clickable(onClick = { showChart = !showChart }),
+        ) {
+            ProvideChartStyle(
+                chartStyle = MaterialTheme.colorScheme.chartStyle,
+            ) {
+                ObserveAndShowChart(model, lineChartCount, lineChartZaps)
+            }
+        }
     }
-  }
 
-  Divider(
-    thickness = DividerThickness,
-  )
+    Divider(
+        thickness = DividerThickness,
+    )
 }
 
 @Composable
 private fun ObserveAndShowChart(
-  model: UserReactionsViewModel,
-  lineChartCount: LineChart,
-  lineChartZaps: LineChart,
+    model: UserReactionsViewModel,
+    lineChartCount: LineChart,
+    lineChartZaps: LineChart,
 ) {
-  val axisModel = model.axisLabels.collectAsStateWithLifecycle()
-  val chartModel by model.chartModel.collectAsStateWithLifecycle()
+    val axisModel = model.axisLabels.collectAsStateWithLifecycle()
+    val chartModel by model.chartModel.collectAsStateWithLifecycle()
 
-  chartModel?.let {
-    Chart(
-      chart = remember(lineChartCount, lineChartZaps) { lineChartCount.plus(lineChartZaps) },
-      model = it,
-      startAxis =
-        rememberStartAxis(
-          valueFormatter = CountAxisValueFormatter(),
-        ),
-      endAxis =
-        rememberEndAxis(
-          label = axisLabelComponent(color = BitcoinOrange),
-          valueFormatter = AmountAxisValueFormatter(model.shouldShowDecimalsInAxis),
-        ),
-      bottomAxis =
-        rememberBottomAxis(
-          valueFormatter = LabelValueFormatter(axisModel),
-        ),
-    )
-  }
+    chartModel?.let {
+        Chart(
+            chart = remember(lineChartCount, lineChartZaps) { lineChartCount.plus(lineChartZaps) },
+            model = it,
+            startAxis =
+                rememberStartAxis(
+                    valueFormatter = CountAxisValueFormatter(),
+                ),
+            endAxis =
+                rememberEndAxis(
+                    label = axisLabelComponent(color = BitcoinOrange),
+                    valueFormatter = AmountAxisValueFormatter(model.shouldShowDecimalsInAxis),
+                ),
+            bottomAxis =
+                rememberBottomAxis(
+                    valueFormatter = LabelValueFormatter(axisModel),
+                ),
+        )
+    }
 }
 
 @Stable
 class LabelValueFormatter(val axisLabels: State<List<String>>) :
-  AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
-  override fun formatValue(
-    value: Float,
-    chartValues: ChartValues,
-  ): String {
-    return axisLabels.value[value.roundToInt()]
-  }
+    AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
+    override fun formatValue(
+        value: Float,
+        chartValues: ChartValues,
+    ): String {
+        return axisLabels.value[value.roundToInt()]
+    }
 }
 
 @Stable
 class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start> {
-  override fun formatValue(
-    value: Float,
-    chartValues: ChartValues,
-  ): String {
-    return showCount(value.roundToInt())
-  }
+    override fun formatValue(
+        value: Float,
+        chartValues: ChartValues,
+    ): String {
+        return showCount(value.roundToInt())
+    }
 }
 
 @Stable
 class AmountAxisValueFormatter(val showDecimals: Boolean) :
-  AxisValueFormatter<AxisPosition.Vertical.End> {
-  override fun formatValue(
-    value: Float,
-    chartValues: ChartValues,
-  ): String {
-    return if (showDecimals) {
-      showAmount(value.toBigDecimal())
-    } else {
-      showAmountAxis(value.toBigDecimal())
+    AxisValueFormatter<AxisPosition.Vertical.End> {
+    override fun formatValue(
+        value: Float,
+        chartValues: ChartValues,
+    ): String {
+        return if (showDecimals) {
+            showAmount(value.toBigDecimal())
+        } else {
+            showAmountAxis(value.toBigDecimal())
+        }
     }
-  }
 }
 
 var dfG: DecimalFormat = DecimalFormat("#G")
@@ -308,13 +307,13 @@ var dfK: DecimalFormat = DecimalFormat("#k")
 var dfN: DecimalFormat = DecimalFormat("#")
 
 fun showAmountAxis(amount: BigDecimal?): String {
-  if (amount == null) return ""
-  if (amount.abs() < BigDecimal(0.01)) return ""
+    if (amount == null) return ""
+    if (amount.abs() < BigDecimal(0.01)) return ""
 
-  return when {
-    amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-    amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-    amount >= TenKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-    else -> dfN.format(amount)
-  }
+    return when {
+        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        else -> dfN.format(amount)
+    }
 }

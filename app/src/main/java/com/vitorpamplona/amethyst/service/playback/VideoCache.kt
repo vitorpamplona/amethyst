@@ -27,47 +27,47 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import java.io.File
 import okhttp3.OkHttpClient
+import java.io.File
 
 @SuppressLint("UnsafeOptInUsageError")
 class VideoCache {
-  var exoPlayerCacheSize: Long = 150 * 1024 * 1024 // 90MB
+    var exoPlayerCacheSize: Long = 150 * 1024 * 1024 // 90MB
 
-  var leastRecentlyUsedCacheEvictor = LeastRecentlyUsedCacheEvictor(exoPlayerCacheSize)
+    var leastRecentlyUsedCacheEvictor = LeastRecentlyUsedCacheEvictor(exoPlayerCacheSize)
 
-  lateinit var exoDatabaseProvider: StandaloneDatabaseProvider
-  lateinit var simpleCache: SimpleCache
+    lateinit var exoDatabaseProvider: StandaloneDatabaseProvider
+    lateinit var simpleCache: SimpleCache
 
-  lateinit var cacheDataSourceFactory: CacheDataSource.Factory
+    lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
-  @Synchronized
-  fun initFileCache(context: Context) {
-    exoDatabaseProvider = StandaloneDatabaseProvider(context)
+    @Synchronized
+    fun initFileCache(context: Context) {
+        exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
-    simpleCache =
-      SimpleCache(
-        File(context.cacheDir, "exoplayer"),
-        leastRecentlyUsedCacheEvictor,
-        exoDatabaseProvider,
-      )
-  }
+        simpleCache =
+            SimpleCache(
+                File(context.cacheDir, "exoplayer"),
+                leastRecentlyUsedCacheEvictor,
+                exoDatabaseProvider,
+            )
+    }
 
-  // This method should be called when proxy setting changes.
-  fun renewCacheFactory(client: OkHttpClient) {
-    cacheDataSourceFactory =
-      CacheDataSource.Factory()
-        .setCache(simpleCache)
-        .setUpstreamDataSourceFactory(
-          OkHttpDataSource.Factory(client),
-        )
-        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-  }
+    // This method should be called when proxy setting changes.
+    fun renewCacheFactory(client: OkHttpClient) {
+        cacheDataSourceFactory =
+            CacheDataSource.Factory()
+                .setCache(simpleCache)
+                .setUpstreamDataSourceFactory(
+                    OkHttpDataSource.Factory(client),
+                )
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
 
-  fun get(client: OkHttpClient): CacheDataSource.Factory {
-    // Renews the factory because OkHttpMight have changed.
-    renewCacheFactory(client)
+    fun get(client: OkHttpClient): CacheDataSource.Factory {
+        // Renews the factory because OkHttpMight have changed.
+        renewCacheFactory(client)
 
-    return cacheDataSourceFactory
-  }
+        return cacheDataSourceFactory
+    }
 }

@@ -37,47 +37,47 @@ import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 
 @Composable
 fun DisplayFollowingCommunityInPost(
-  baseNote: Note,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  Column(HalfStartPadding) {
-    Row(verticalAlignment = Alignment.CenterVertically) { DisplayCommunity(baseNote, nav) }
-  }
+    Column(HalfStartPadding) {
+        Row(verticalAlignment = Alignment.CenterVertically) { DisplayCommunity(baseNote, nav) }
+    }
 }
 
 @Composable
 private fun DisplayCommunity(
-  note: Note,
-  nav: (String) -> Unit,
+    note: Note,
+    nav: (String) -> Unit,
 ) {
-  val communityTag =
-    remember(note) { note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.KIND) } ?: return
+    val communityTag =
+        remember(note) { note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.KIND) } ?: return
 
-  val displayTag = remember(note) { AnnotatedString(getCommunityShortName(communityTag)) }
-  val route = remember(note) { "Community/${communityTag.toTag()}" }
+    val displayTag = remember(note) { AnnotatedString(getCommunityShortName(communityTag)) }
+    val route = remember(note) { "Community/${communityTag.toTag()}" }
 
-  ClickableText(
-    text = displayTag,
-    onClick = { nav(route) },
-    style =
-      LocalTextStyle.current.copy(
-        color =
-          MaterialTheme.colorScheme.primary.copy(
-            alpha = 0.52f,
-          ),
-      ),
-    maxLines = 1,
-  )
+    ClickableText(
+        text = displayTag,
+        onClick = { nav(route) },
+        style =
+            LocalTextStyle.current.copy(
+                color =
+                    MaterialTheme.colorScheme.primary.copy(
+                        alpha = 0.52f,
+                    ),
+            ),
+        maxLines = 1,
+    )
 }
 
 private fun getCommunityShortName(communityTag: ATag): String {
-  val name =
-    if (communityTag.dTag.length > 10) {
-      communityTag.dTag.take(10) + "..."
-    } else {
-      communityTag.dTag.take(10)
-    }
+    val name =
+        if (communityTag.dTag.length > 10) {
+            communityTag.dTag.take(10) + "..."
+        } else {
+            communityTag.dTag.take(10)
+        }
 
-  return "/n/$name"
+    return "/n/$name"
 }

@@ -29,72 +29,72 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class GiftWrapEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+    @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
-  fun cachedGift(
-    signer: NostrSigner,
-    onReady: (Event) -> Unit,
-  ) {
-    cachedInnerEvent[signer.pubKey]?.let {
-      onReady(it)
-      return
-    }
-    unwrap(signer) { gift ->
-      if (gift is WrappedEvent) {
-        gift.host = this
-      }
-      cachedInnerEvent = cachedInnerEvent + Pair(signer.pubKey, gift)
-
-      onReady(gift)
-    }
-  }
-
-  private fun unwrap(
-    signer: NostrSigner,
-    onReady: (Event) -> Unit,
-  ) {
-    try {
-      plainContent(signer) { onReady(fromJson(it)) }
-    } catch (e: Exception) {
-      // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
-    }
-  }
-
-  private fun plainContent(
-    signer: NostrSigner,
-    onReady: (String) -> Unit,
-  ) {
-    if (content.isEmpty()) return
-
-    signer.nip44Decrypt(content, pubKey, onReady)
-  }
-
-  fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
-
-  companion object {
-    const val KIND = 1059
-    const val ALT = "Encrypted event"
-
-    fun create(
-      event: Event,
-      recipientPubKey: HexKey,
-      createdAt: Long = TimeUtils.randomWithinAWeek(),
-      onReady: (GiftWrapEvent) -> Unit,
+    fun cachedGift(
+        signer: NostrSigner,
+        onReady: (Event) -> Unit,
     ) {
-      val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
-      val serializedContent = toJson(event)
-      val tags = arrayOf(arrayOf("p", recipientPubKey))
+        cachedInnerEvent[signer.pubKey]?.let {
+            onReady(it)
+            return
+        }
+        unwrap(signer) { gift ->
+            if (gift is WrappedEvent) {
+                gift.host = this
+            }
+            cachedInnerEvent = cachedInnerEvent + Pair(signer.pubKey, gift)
 
-      signer.nip44Encrypt(serializedContent, recipientPubKey) {
-        signer.sign(createdAt, KIND, tags, it, onReady)
-      }
+            onReady(gift)
+        }
     }
-  }
+
+    private fun unwrap(
+        signer: NostrSigner,
+        onReady: (Event) -> Unit,
+    ) {
+        try {
+            plainContent(signer) { onReady(fromJson(it)) }
+        } catch (e: Exception) {
+            // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
+        }
+    }
+
+    private fun plainContent(
+        signer: NostrSigner,
+        onReady: (String) -> Unit,
+    ) {
+        if (content.isEmpty()) return
+
+        signer.nip44Decrypt(content, pubKey, onReady)
+    }
+
+    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+
+    companion object {
+        const val KIND = 1059
+        const val ALT = "Encrypted event"
+
+        fun create(
+            event: Event,
+            recipientPubKey: HexKey,
+            createdAt: Long = TimeUtils.randomWithinAWeek(),
+            onReady: (GiftWrapEvent) -> Unit,
+        ) {
+            val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
+            val serializedContent = toJson(event)
+            val tags = arrayOf(arrayOf("p", recipientPubKey))
+
+            signer.nip44Encrypt(serializedContent, recipientPubKey) {
+                signer.sign(createdAt, KIND, tags, it, onReady)
+            }
+        }
+    }
 }

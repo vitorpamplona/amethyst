@@ -25,23 +25,23 @@ import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
 class BadgeDefinitionEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+    fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
 
-  fun thumb() = tags.firstOrNull { it.size > 1 && it[0] == "thumb" }?.get(1)
+    fun thumb() = tags.firstOrNull { it.size > 1 && it[0] == "thumb" }?.get(1)
 
-  fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
+    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
 
-  fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
+    fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
-  companion object {
-    const val KIND = 30009
-    const val ALT = "Badge definition"
-  }
+    companion object {
+        const val KIND = 30009
+        const val ALT = "Badge definition"
+    }
 }

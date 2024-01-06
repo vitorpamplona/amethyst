@@ -30,21 +30,21 @@ import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 fun ClickableUrl(
-  urlText: String,
-  url: String,
+    urlText: String,
+    url: String,
 ) {
-  val uri = LocalUriHandler.current
+    val uri = LocalUriHandler.current
 
-  val text = remember(urlText) { AnnotatedString(urlText) }
+    val text = remember(urlText) { AnnotatedString(urlText) }
 
-  ClickableText(
-    text = text,
-    onClick = {
-      runCatching {
-        val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
-        uri.openUri(doubleCheckedUrl)
-      }
-    },
-    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-  )
+    ClickableText(
+        text = text,
+        onClick = {
+            runCatching {
+                val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
+                uri.openUri(doubleCheckedUrl)
+            }
+        },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+    )
 }

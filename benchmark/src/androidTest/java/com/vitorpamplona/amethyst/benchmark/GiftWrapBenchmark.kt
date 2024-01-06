@@ -30,14 +30,14 @@ import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import junit.framework.TestCase
 import org.junit.Assert
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -47,148 +47,148 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class GiftWrapBenchmark {
-  @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule val benchmarkRule = BenchmarkRule()
 
-  fun basePerformanceTest(
-    message: String,
-    expectedLength: Int,
-  ) {
-    val sender = NostrSignerInternal(KeyPair())
-    val receiver = NostrSignerInternal(KeyPair())
-
-    var events: NIP24Factory.Result? = null
-    val countDownLatch = CountDownLatch(1)
-
-    NIP24Factory().createMsgNIP24(
-      message,
-      listOf(receiver.pubKey),
-      sender,
+    fun basePerformanceTest(
+        message: String,
+        expectedLength: Int,
     ) {
-      events = it
-      countDownLatch.countDown()
-    }
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-    assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        var events: NIP24Factory.Result? = null
+        val countDownLatch = CountDownLatch(1)
 
-    val countDownLatch2 = CountDownLatch(1)
-
-    Assert.assertEquals(
-      expectedLength,
-      events!!
-        .wraps
-        .map {
-          println("TEST ${it.toJson()}")
-          it.toJson()
+        NIP24Factory().createMsgNIP24(
+            message,
+            listOf(receiver.pubKey),
+            sender,
+        ) {
+            events = it
+            countDownLatch.countDown()
         }
-        .joinToString("")
-        .length,
-    )
 
-    // Simulate Receiver
-    events!!.wraps.forEach {
-      it.checkSignature()
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
-      val keyToUse = if (it.recipientPubKey() == sender.pubKey) sender else receiver
+        val countDownLatch2 = CountDownLatch(1)
 
-      it.cachedGift(keyToUse) { event ->
-        event.checkSignature()
+        Assert.assertEquals(
+            expectedLength,
+            events!!
+                .wraps
+                .map {
+                    println("TEST ${it.toJson()}")
+                    it.toJson()
+                }
+                .joinToString("")
+                .length,
+        )
 
-        if (event is SealedGossipEvent) {
-          event.cachedGossip(keyToUse) { innerData ->
-            Assert.assertEquals(message, innerData.content)
-            countDownLatch2.countDown()
-          }
-        } else {
-          Assert.fail("Wrong Event")
+        // Simulate Receiver
+        events!!.wraps.forEach {
+            it.checkSignature()
+
+            val keyToUse = if (it.recipientPubKey() == sender.pubKey) sender else receiver
+
+            it.cachedGift(keyToUse) { event ->
+                event.checkSignature()
+
+                if (event is SealedGossipEvent) {
+                    event.cachedGossip(keyToUse) { innerData ->
+                        Assert.assertEquals(message, innerData.content)
+                        countDownLatch2.countDown()
+                    }
+                } else {
+                    Assert.fail("Wrong Event")
+                }
+            }
         }
-      }
+
+        assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
     }
 
-    assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
-  }
+    fun receivePerformanceTest(message: String) {
+        val sender = NostrSignerInternal(KeyPair())
+        val receiver = NostrSignerInternal(KeyPair())
 
-  fun receivePerformanceTest(message: String) {
-    val sender = NostrSignerInternal(KeyPair())
-    val receiver = NostrSignerInternal(KeyPair())
+        var giftWrap: GiftWrapEvent? = null
+        val countDownLatch = CountDownLatch(1)
 
-    var giftWrap: GiftWrapEvent? = null
-    val countDownLatch = CountDownLatch(1)
-
-    NIP24Factory().createMsgNIP24(
-      message,
-      listOf(receiver.pubKey),
-      sender,
-    ) {
-      giftWrap = it.wraps.first()
-      countDownLatch.countDown()
-    }
-
-    assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-    val keyToUse = if (giftWrap!!.recipientPubKey() == sender.pubKey) sender else receiver
-    val giftWrapJson = giftWrap!!.toJson()
-
-    // Simulate Receiver
-    benchmarkRule.measureRepeated {
-      CryptoUtils.clearCache()
-      val counter = CountDownLatch(1)
-
-      val wrap = Event.fromJson(giftWrapJson) as GiftWrapEvent
-      wrap.checkSignature()
-
-      wrap.cachedGift(keyToUse) { seal ->
-        seal.checkSignature()
-
-        if (seal is SealedGossipEvent) {
-          seal.cachedGossip(keyToUse) { innerData ->
-            Assert.assertEquals(message, innerData.content)
-            counter.countDown()
-          }
-        } else {
-          Assert.fail("Wrong Event")
+        NIP24Factory().createMsgNIP24(
+            message,
+            listOf(receiver.pubKey),
+            sender,
+        ) {
+            giftWrap = it.wraps.first()
+            countDownLatch.countDown()
         }
-      }
 
-      TestCase.assertTrue(counter.await(1, TimeUnit.SECONDS))
+        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        val keyToUse = if (giftWrap!!.recipientPubKey() == sender.pubKey) sender else receiver
+        val giftWrapJson = giftWrap!!.toJson()
+
+        // Simulate Receiver
+        benchmarkRule.measureRepeated {
+            CryptoUtils.clearCache()
+            val counter = CountDownLatch(1)
+
+            val wrap = Event.fromJson(giftWrapJson) as GiftWrapEvent
+            wrap.checkSignature()
+
+            wrap.cachedGift(keyToUse) { seal ->
+                seal.checkSignature()
+
+                if (seal is SealedGossipEvent) {
+                    seal.cachedGossip(keyToUse) { innerData ->
+                        Assert.assertEquals(message, innerData.content)
+                        counter.countDown()
+                    }
+                } else {
+                    Assert.fail("Wrong Event")
+                }
+            }
+
+            TestCase.assertTrue(counter.await(1, TimeUnit.SECONDS))
+        }
     }
-  }
 
-  @Test
-  fun tinyMessageHardCoded() {
-    benchmarkRule.measureRepeated { basePerformanceTest("Hola, que tal?", 3402) }
-  }
-
-  @Test
-  fun regularMessageHardCoded() {
-    benchmarkRule.measureRepeated {
-      basePerformanceTest("Hi, honey, can you drop by the market and get some bread?", 3746)
+    @Test
+    fun tinyMessageHardCoded() {
+        benchmarkRule.measureRepeated { basePerformanceTest("Hola, que tal?", 3402) }
     }
-  }
 
-  @Test
-  fun longMessageHardCoded() {
-    benchmarkRule.measureRepeated {
-      basePerformanceTest(
-        "My queen, you are nothing short of royalty to me. You possess more beauty in the nail of your pinkie toe than everything else in this world combined. I am astounded by your grace, generosity, and graciousness. I am so lucky to know you. ",
-        5114,
-      )
+    @Test
+    fun regularMessageHardCoded() {
+        benchmarkRule.measureRepeated {
+            basePerformanceTest("Hi, honey, can you drop by the market and get some bread?", 3746)
+        }
     }
-  }
 
-  @Test
-  fun receivesTinyMessage() {
-    receivePerformanceTest("Hola, que tal?")
-  }
+    @Test
+    fun longMessageHardCoded() {
+        benchmarkRule.measureRepeated {
+            basePerformanceTest(
+                "My queen, you are nothing short of royalty to me. You possess more beauty in the nail of your pinkie toe than everything else in this world combined. I am astounded by your grace, generosity, and graciousness. I am so lucky to know you. ",
+                5114,
+            )
+        }
+    }
 
-  @Test
-  fun receivesRegularMessage() {
-    receivePerformanceTest("Hi, honey, can you drop by the market and get some bread?")
-  }
+    @Test
+    fun receivesTinyMessage() {
+        receivePerformanceTest("Hola, que tal?")
+    }
 
-  @Test
-  fun receivesLongMessageHardCoded() {
-    receivePerformanceTest(
-      "My queen, you are nothing short of royalty to me. You possess more beauty in the nail of your pinkie toe than everything else in this world combined. I am astounded by your grace, generosity, and graciousness. I am so lucky to know you. ",
-    )
-  }
+    @Test
+    fun receivesRegularMessage() {
+        receivePerformanceTest("Hi, honey, can you drop by the market and get some bread?")
+    }
+
+    @Test
+    fun receivesLongMessageHardCoded() {
+        receivePerformanceTest(
+            "My queen, you are nothing short of royalty to me. You possess more beauty in the nail of your pinkie toe than everything else in this world combined. I am astounded by your grace, generosity, and graciousness. I am so lucky to know you. ",
+        )
+    }
 }

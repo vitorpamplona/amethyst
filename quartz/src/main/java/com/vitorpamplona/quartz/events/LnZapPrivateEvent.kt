@@ -27,25 +27,25 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class LnZapPrivateEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  companion object {
-    const val KIND = 9733
-    const val ALT = "Private zap"
+    companion object {
+        const val KIND = 9733
+        const val ALT = "Private zap"
 
-    fun create(
-      signer: NostrSigner,
-      tags: Array<Array<String>> = emptyArray(),
-      content: String = "",
-      createdAt: Long = TimeUtils.now(),
-      onReady: (LnZapPrivateEvent) -> Unit,
-    ) {
-      signer.sign(createdAt, KIND, tags, content, onReady)
+        fun create(
+            signer: NostrSigner,
+            tags: Array<Array<String>> = emptyArray(),
+            content: String = "",
+            createdAt: Long = TimeUtils.now(),
+            onReady: (LnZapPrivateEvent) -> Unit,
+        ) {
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
-  }
 }

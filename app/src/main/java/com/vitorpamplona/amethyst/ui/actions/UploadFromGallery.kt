@@ -58,145 +58,145 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.GetMediaActivityResultContract
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun UploadFromGallery(
-  isUploading: Boolean,
-  tint: Color,
-  modifier: Modifier,
-  onImageChosen: (Uri) -> Unit,
+    isUploading: Boolean,
+    tint: Color,
+    modifier: Modifier,
+    onImageChosen: (Uri) -> Unit,
 ) {
-  val cameraPermissionState =
-    rememberPermissionState(
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        android.Manifest.permission.READ_MEDIA_IMAGES
-      } else {
-        android.Manifest.permission.READ_EXTERNAL_STORAGE
-      },
-    )
+    val cameraPermissionState =
+        rememberPermissionState(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                android.Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            },
+        )
 
-  if (cameraPermissionState.status.isGranted) {
-    var showGallerySelect by remember { mutableStateOf(false) }
-    if (showGallerySelect) {
-      GallerySelect(
-        onImageUri = { uri ->
-          showGallerySelect = false
-          if (uri != null) {
-            onImageChosen(uri)
-          }
-        },
-      )
+    if (cameraPermissionState.status.isGranted) {
+        var showGallerySelect by remember { mutableStateOf(false) }
+        if (showGallerySelect) {
+            GallerySelect(
+                onImageUri = { uri ->
+                    showGallerySelect = false
+                    if (uri != null) {
+                        onImageChosen(uri)
+                    }
+                },
+            )
+        }
+
+        UploadBoxButton(isUploading, tint, modifier) { showGallerySelect = true }
+    } else {
+        UploadBoxButton(isUploading, tint, modifier) { cameraPermissionState.launchPermissionRequest() }
     }
-
-    UploadBoxButton(isUploading, tint, modifier) { showGallerySelect = true }
-  } else {
-    UploadBoxButton(isUploading, tint, modifier) { cameraPermissionState.launchPermissionRequest() }
-  }
 }
 
 @Composable
 private fun UploadBoxButton(
-  isUploading: Boolean,
-  tint: Color,
-  modifier: Modifier,
-  onClick: () -> Unit,
+    isUploading: Boolean,
+    tint: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
 ) {
-  Box {
-    IconButton(
-      modifier = modifier.align(Alignment.Center),
-      enabled = !isUploading,
-      onClick = { onClick() },
-    ) {
-      if (!isUploading) {
-        Icon(
-          imageVector = Icons.Default.AddPhotoAlternate,
-          contentDescription = stringResource(id = R.string.upload_image),
-          modifier = Modifier.height(25.dp),
-          tint = tint,
-        )
-      } else {
-        LoadingAnimation()
-      }
+    Box {
+        IconButton(
+            modifier = modifier.align(Alignment.Center),
+            enabled = !isUploading,
+            onClick = { onClick() },
+        ) {
+            if (!isUploading) {
+                Icon(
+                    imageVector = Icons.Default.AddPhotoAlternate,
+                    contentDescription = stringResource(id = R.string.upload_image),
+                    modifier = Modifier.height(25.dp),
+                    tint = tint,
+                )
+            } else {
+                LoadingAnimation()
+            }
+        }
     }
-  }
 }
 
 val DefaultAnimationColors =
-  listOf(
-      Color(0xFF5851D8),
-      Color(0xFF833AB4),
-      Color(0xFFC13584),
-      Color(0xFFE1306C),
-      Color(0xFFFD1D1D),
-      Color(0xFFF56040),
-      Color(0xFFF77737),
-      Color(0xFFFCAF45),
-      Color(0xFFFFDC80),
-      Color(0xFF5851D8),
+    listOf(
+        Color(0xFF5851D8),
+        Color(0xFF833AB4),
+        Color(0xFFC13584),
+        Color(0xFFE1306C),
+        Color(0xFFFD1D1D),
+        Color(0xFFF56040),
+        Color(0xFFF77737),
+        Color(0xFFFCAF45),
+        Color(0xFFFFDC80),
+        Color(0xFF5851D8),
     )
-    .toImmutableList()
+        .toImmutableList()
 
 @Composable
 fun LoadingAnimation(
-  indicatorSize: Dp = 20.dp,
-  circleColors: ImmutableList<Color> = DefaultAnimationColors,
-  animationDuration: Int = 1000,
+    indicatorSize: Dp = 20.dp,
+    circleColors: ImmutableList<Color> = DefaultAnimationColors,
+    animationDuration: Int = 1000,
 ) {
-  val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition()
 
-  val rotateAnimation by
-    infiniteTransition.animateFloat(
-      initialValue = 0f,
-      targetValue = 360f,
-      animationSpec =
-        infiniteRepeatable(
-          animation =
-            tween(
-              durationMillis = animationDuration,
-              easing = LinearEasing,
-            ),
-        ),
+    val rotateAnimation by
+        infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            durationMillis = animationDuration,
+                            easing = LinearEasing,
+                        ),
+                ),
+        )
+
+    CircularProgressIndicator(
+        modifier =
+            Modifier.size(size = indicatorSize)
+                .rotate(degrees = rotateAnimation)
+                .border(
+                    width = 4.dp,
+                    brush = Brush.sweepGradient(circleColors),
+                    shape = CircleShape,
+                ),
+        progress = 1f,
+        strokeWidth = 1.dp,
+        color = MaterialTheme.colorScheme.background,
     )
-
-  CircularProgressIndicator(
-    modifier =
-      Modifier.size(size = indicatorSize)
-        .rotate(degrees = rotateAnimation)
-        .border(
-          width = 4.dp,
-          brush = Brush.sweepGradient(circleColors),
-          shape = CircleShape,
-        ),
-    progress = 1f,
-    strokeWidth = 1.dp,
-    color = MaterialTheme.colorScheme.background,
-  )
 }
 
 @Composable
 fun GallerySelect(onImageUri: (Uri?) -> Unit = {}) {
-  var hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
-  val launcher =
-    rememberLauncherForActivityResult(
-      contract = GetMediaActivityResultContract(),
-      onResult = { uri: Uri? ->
-        onImageUri(uri)
-        hasLaunched.set(false)
-      },
-    )
+    var hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = GetMediaActivityResultContract(),
+            onResult = { uri: Uri? ->
+                onImageUri(uri)
+                hasLaunched.set(false)
+            },
+        )
 
-  @Composable
-  fun LaunchGallery() {
-    SideEffect {
-      if (!hasLaunched.getAndSet(true)) {
-        launcher.launch("*/*")
-      }
+    @Composable
+    fun LaunchGallery() {
+        SideEffect {
+            if (!hasLaunched.getAndSet(true)) {
+                launcher.launch("*/*")
+            }
+        }
     }
-  }
 
-  LaunchGallery()
+    LaunchGallery()
 }

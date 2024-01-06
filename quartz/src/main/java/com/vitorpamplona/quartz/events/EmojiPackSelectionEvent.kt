@@ -28,34 +28,34 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class EmojiPackSelectionEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  override fun dTag() = FIXED_D_TAG
+    override fun dTag() = FIXED_D_TAG
 
-  companion object {
-    const val KIND = 10030
-    const val FIXED_D_TAG = ""
-    const val ALT = "Emoji selection"
+    companion object {
+        const val KIND = 10030
+        const val FIXED_D_TAG = ""
+        const val ALT = "Emoji selection"
 
-    fun create(
-      listOfEmojiPacks: List<ATag>?,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (EmojiPackSelectionEvent) -> Unit,
-    ) {
-      val msg = ""
-      val tags = mutableListOf<Array<String>>()
+        fun create(
+            listOfEmojiPacks: List<ATag>?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (EmojiPackSelectionEvent) -> Unit,
+        ) {
+            val msg = ""
+            val tags = mutableListOf<Array<String>>()
 
-      listOfEmojiPacks?.forEach { tags.add(arrayOf("a", it.toTag())) }
+            listOfEmojiPacks?.forEach { tags.add(arrayOf("a", it.toTag())) }
 
-      tags.add(arrayOf("alt", ALT))
+            tags.add(arrayOf("alt", ALT))
 
-      signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+        }
     }
-  }
 }

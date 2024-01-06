@@ -27,79 +27,79 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class ReactionEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun originalPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    fun originalPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-  fun originalAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    fun originalAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
-  companion object {
-    const val KIND = 7
+    companion object {
+        const val KIND = 7
 
-    fun createWarning(
-      originalNote: EventInterface,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ReactionEvent) -> Unit,
-    ) {
-      return create("\u26A0\uFE0F", originalNote, signer, createdAt, onReady)
+        fun createWarning(
+            originalNote: EventInterface,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ReactionEvent) -> Unit,
+        ) {
+            return create("\u26A0\uFE0F", originalNote, signer, createdAt, onReady)
+        }
+
+        fun createLike(
+            originalNote: EventInterface,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ReactionEvent) -> Unit,
+        ) {
+            return create("+", originalNote, signer, createdAt, onReady)
+        }
+
+        fun create(
+            content: String,
+            originalNote: EventInterface,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ReactionEvent) -> Unit,
+        ) {
+            var tags =
+                listOf(
+                    arrayOf("e", originalNote.id()),
+                    arrayOf("p", originalNote.pubKey()),
+                    arrayOf("k", originalNote.kind().toString()),
+                )
+            if (originalNote is AddressableEvent) {
+                tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
+            }
+
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
+
+        fun create(
+            emojiUrl: EmojiUrl,
+            originalNote: EventInterface,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ReactionEvent) -> Unit,
+        ) {
+            val content = ":${emojiUrl.code}:"
+
+            var tags =
+                arrayOf(
+                    arrayOf("e", originalNote.id()),
+                    arrayOf("p", originalNote.pubKey()),
+                    arrayOf("emoji", emojiUrl.code, emojiUrl.url),
+                )
+
+            if (originalNote is AddressableEvent) {
+                tags += arrayOf(arrayOf("a", originalNote.address().toTag()))
+            }
+
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
-
-    fun createLike(
-      originalNote: EventInterface,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ReactionEvent) -> Unit,
-    ) {
-      return create("+", originalNote, signer, createdAt, onReady)
-    }
-
-    fun create(
-      content: String,
-      originalNote: EventInterface,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ReactionEvent) -> Unit,
-    ) {
-      var tags =
-        listOf(
-          arrayOf("e", originalNote.id()),
-          arrayOf("p", originalNote.pubKey()),
-          arrayOf("k", originalNote.kind().toString()),
-        )
-      if (originalNote is AddressableEvent) {
-        tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
-      }
-
-      return signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
-    }
-
-    fun create(
-      emojiUrl: EmojiUrl,
-      originalNote: EventInterface,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (ReactionEvent) -> Unit,
-    ) {
-      val content = ":${emojiUrl.code}:"
-
-      var tags =
-        arrayOf(
-          arrayOf("e", originalNote.id()),
-          arrayOf("p", originalNote.pubKey()),
-          arrayOf("emoji", emojiUrl.code, emojiUrl.url),
-        )
-
-      if (originalNote is AddressableEvent) {
-        tags += arrayOf(arrayOf("a", originalNote.address().toTag()))
-      }
-
-      signer.sign(createdAt, KIND, tags, content, onReady)
-    }
-  }
 }

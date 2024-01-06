@@ -46,127 +46,119 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NostrUserProfileFollowsUserFeedViewModel(val user: User, val account: Account) :
-  UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
-  class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
-    override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(
-      modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>
-    ): NostrUserProfileFollowsUserFeedViewModel {
-      return NostrUserProfileFollowsUserFeedViewModel(user, account)
-        as NostrUserProfileFollowsUserFeedViewModel
+    UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>): NostrUserProfileFollowsUserFeedViewModel {
+            return NostrUserProfileFollowsUserFeedViewModel(user, account)
+                as NostrUserProfileFollowsUserFeedViewModel
+        }
     }
-  }
 }
 
 class NostrUserProfileFollowersUserFeedViewModel(val user: User, val account: Account) :
-  UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
-  class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
-    override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(
-      modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>
-    ): NostrUserProfileFollowersUserFeedViewModel {
-      return NostrUserProfileFollowersUserFeedViewModel(user, account)
-        as NostrUserProfileFollowersUserFeedViewModel
+    UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
+    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>): NostrUserProfileFollowersUserFeedViewModel {
+            return NostrUserProfileFollowersUserFeedViewModel(user, account)
+                as NostrUserProfileFollowersUserFeedViewModel
+        }
     }
-  }
 }
 
 class NostrHiddenAccountsFeedViewModel(val account: Account) :
-  UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
-  class Factory(val account: Account) : ViewModelProvider.Factory {
-    override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(
-      modelClass: Class<NostrHiddenAccountsFeedViewModel>
-    ): NostrHiddenAccountsFeedViewModel {
-      return NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
+    UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenAccountsFeedViewModel>): NostrHiddenAccountsFeedViewModel {
+            return NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
+        }
     }
-  }
 }
 
 class NostrSpammerAccountsFeedViewModel(val account: Account) :
-  UserFeedViewModel(SpammerAccountsFeedFilter(account)) {
-  class Factory(val account: Account) : ViewModelProvider.Factory {
-    override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(
-      modelClass: Class<NostrSpammerAccountsFeedViewModel>
-    ): NostrSpammerAccountsFeedViewModel {
-      return NostrSpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
+    UserFeedViewModel(SpammerAccountsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrSpammerAccountsFeedViewModel>): NostrSpammerAccountsFeedViewModel {
+            return NostrSpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
+        }
     }
-  }
 }
 
 @Stable
 open class UserFeedViewModel(val dataSource: FeedFilter<User>) :
-  ViewModel(), InvalidatableViewModel {
-  private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
-  val feedContent = _feedContent.asStateFlow()
+    ViewModel(), InvalidatableViewModel {
+    private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
+    val feedContent = _feedContent.asStateFlow()
 
-  private fun refresh() {
-    viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
-  }
-
-  private fun refreshSuspended() {
-    checkNotInMainThread()
-
-    val notes = dataSource.loadTop().toImmutableList()
-
-    val oldNotesState = _feedContent.value
-    if (oldNotesState is UserFeedState.Loaded) {
-      // Using size as a proxy for has changed.
-      if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
-        updateFeed(notes)
-      }
-    } else {
-      updateFeed(notes)
+    private fun refresh() {
+        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
-  }
 
-  private fun updateFeed(notes: ImmutableList<User>) {
-    viewModelScope.launch(Dispatchers.Main) {
-      val currentState = _feedContent.value
-      if (notes.isEmpty()) {
-        _feedContent.update { UserFeedState.Empty }
-      } else if (currentState is UserFeedState.Loaded) {
-        // updates the current list
-        currentState.feed.value = notes
-      } else {
-        _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
-      }
-    }
-  }
-
-  private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-  override fun invalidateData(ignoreIfDoing: Boolean) {
-    viewModelScope.launch(Dispatchers.IO) {
-      bundler.invalidate(ignoreIfDoing) {
-        // adds the time to perform the refresh into this delay
-        // holding off new updates in case of heavy refresh routines.
-        refreshSuspended()
-      }
-    }
-  }
-
-  var collectorJob: Job? = null
-
-  init {
-    Log.d("Init", "${this.javaClass.simpleName}")
-    collectorJob =
-      viewModelScope.launch(Dispatchers.IO) {
+    private fun refreshSuspended() {
         checkNotInMainThread()
 
-        LocalCache.live.newEventBundles.collect { newNotes ->
-          checkNotInMainThread()
+        val notes = dataSource.loadTop().toImmutableList()
 
-          invalidateData()
+        val oldNotesState = _feedContent.value
+        if (oldNotesState is UserFeedState.Loaded) {
+            // Using size as a proxy for has changed.
+            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
+                updateFeed(notes)
+            }
+        } else {
+            updateFeed(notes)
         }
-      }
-  }
+    }
 
-  override fun onCleared() {
-    Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-    bundler.cancel()
-    collectorJob?.cancel()
-    super.onCleared()
-  }
+    private fun updateFeed(notes: ImmutableList<User>) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val currentState = _feedContent.value
+            if (notes.isEmpty()) {
+                _feedContent.update { UserFeedState.Empty }
+            } else if (currentState is UserFeedState.Loaded) {
+                // updates the current list
+                currentState.feed.value = notes
+            } else {
+                _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
+            }
+        }
+    }
+
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
+
+    override fun invalidateData(ignoreIfDoing: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            bundler.invalidate(ignoreIfDoing) {
+                // adds the time to perform the refresh into this delay
+                // holding off new updates in case of heavy refresh routines.
+                refreshSuspended()
+            }
+        }
+    }
+
+    var collectorJob: Job? = null
+
+    init {
+        Log.d("Init", "${this.javaClass.simpleName}")
+        collectorJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                checkNotInMainThread()
+
+                LocalCache.live.newEventBundles.collect { newNotes ->
+                    checkNotInMainThread()
+
+                    invalidateData()
+                }
+            }
+    }
+
+    override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        bundler.cancel()
+        collectorJob?.cancel()
+        super.onCleared()
+    }
 }
 
 interface InvalidatableViewModel {
-  fun invalidateData(ignoreIfDoing: Boolean = false)
+    fun invalidateData(ignoreIfDoing: Boolean = false)
 }

@@ -37,12 +37,12 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class RobohashBenchmark {
-  @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule val benchmarkRule = BenchmarkRule()
 
-  val warmHex = "f4f016c739b8ec0d6313540a8b12cf48a72b485d38338627ec9d427583551f9a"
-  val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
-  val resultingSVG =
-    """
+    val warmHex = "f4f016c739b8ec0d6313540a8b12cf48a72b485d38338627ec9d427583551f9a"
+    val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
+    val resultingSVG =
+        """
         <svg
         	xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
         	<defs>
@@ -164,15 +164,15 @@ class RobohashBenchmark {
         	</g>
         </svg>
         """
-      .trimIndent()
+            .trimIndent()
 
-  @Test
-  fun createSVG() {
-    // warm up
-    Robohash.assemble(warmHex, true)
-    benchmarkRule.measureRepeated {
-      val result = Robohash.assemble(testHex, true)
-      assertEquals(resultingSVG, result)
+    @Test
+    fun createSVG() {
+        // warm up
+        Robohash.assemble(warmHex, true)
+        benchmarkRule.measureRepeated {
+            val result = Robohash.assemble(testHex, true)
+            assertEquals(resultingSVG, result)
+        }
     }
-  }
 }

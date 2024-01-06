@@ -27,35 +27,35 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CalendarRSVPEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun status() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
+    fun status() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
 
-  fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)
+    fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)
 
-  fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)
+    fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)
 
-  //    ["L", "status"],
-  //    ["l", "<accepted/declined/tentative>", "status"],
-  //    ["L", "freebusy"],
-  //    ["l", "<free/busy>", "freebusy"]
+    //    ["L", "status"],
+    //    ["l", "<accepted/declined/tentative>", "status"],
+    //    ["L", "freebusy"],
+    //    ["l", "<free/busy>", "freebusy"]
 
-  companion object {
-    const val KIND = 31925
-    const val ALT = "Calendar event's invitation response"
+    companion object {
+        const val KIND = 31925
+        const val ALT = "Calendar event's invitation response"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (CalendarRSVPEvent) -> Unit,
-    ) {
-      val tags = arrayOf(arrayOf("alt", ALT))
-      signer.sign(createdAt, KIND, tags, "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CalendarRSVPEvent) -> Unit,
+        ) {
+            val tags = arrayOf(arrayOf("alt", ALT))
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-  }
 }

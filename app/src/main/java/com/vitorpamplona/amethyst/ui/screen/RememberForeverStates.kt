@@ -36,104 +36,104 @@ private val savedScrollStates = mutableMapOf<String, ScrollState>()
 private data class ScrollState(val index: Int, val scrollOffsetFraction: Float)
 
 object ScrollStateKeys {
-  const val GLOBAL_SCREEN = "Global"
-  const val NOTIFICATION_SCREEN = "Notifications"
-  const val VIDEO_SCREEN = "Video"
-  const val DISCOVER_SCREEN = "Discover"
-  val HOME_FOLLOWS = Route.Home.base + "Follows"
-  val HOME_REPLIES = Route.Home.base + "FollowsReplies"
+    const val GLOBAL_SCREEN = "Global"
+    const val NOTIFICATION_SCREEN = "Notifications"
+    const val VIDEO_SCREEN = "Video"
+    const val DISCOVER_SCREEN = "Discover"
+    val HOME_FOLLOWS = Route.Home.base + "Follows"
+    val HOME_REPLIES = Route.Home.base + "FollowsReplies"
 
-  val DISCOVER_MARKETPLACE = Route.Home.base + "Marketplace"
-  val DISCOVER_LIVE = Route.Home.base + "Live"
-  val DISCOVER_COMMUNITY = Route.Home.base + "Communities"
-  val DISCOVER_CHATS = Route.Home.base + "Chats"
+    val DISCOVER_MARKETPLACE = Route.Home.base + "Marketplace"
+    val DISCOVER_LIVE = Route.Home.base + "Live"
+    val DISCOVER_COMMUNITY = Route.Home.base + "Communities"
+    val DISCOVER_CHATS = Route.Home.base + "Chats"
 }
 
 object PagerStateKeys {
-  const val HOME_SCREEN = "PagerHome"
-  const val DISCOVER_SCREEN = "PagerDiscover"
+    const val HOME_SCREEN = "PagerHome"
+    const val DISCOVER_SCREEN = "PagerDiscover"
 }
 
 @Composable
 fun rememberForeverLazyGridState(
-  key: String,
-  initialFirstVisibleItemIndex: Int = 0,
-  initialFirstVisibleItemScrollOffset: Int = 0,
+    key: String,
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Int = 0,
 ): LazyGridState {
-  val scrollState =
-    rememberSaveable(saver = LazyGridState.Saver) {
-      val savedValue = savedScrollStates[key]
-      val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
-      val savedOffset =
-        savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
-      LazyGridState(
-        savedIndex,
-        savedOffset.roundToInt(),
-      )
+    val scrollState =
+        rememberSaveable(saver = LazyGridState.Saver) {
+            val savedValue = savedScrollStates[key]
+            val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+            val savedOffset =
+                savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
+            LazyGridState(
+                savedIndex,
+                savedOffset.roundToInt(),
+            )
+        }
+    DisposableEffect(scrollState) {
+        onDispose {
+            val lastIndex = scrollState.firstVisibleItemIndex
+            val lastOffset = scrollState.firstVisibleItemScrollOffset
+            savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
+        }
     }
-  DisposableEffect(scrollState) {
-    onDispose {
-      val lastIndex = scrollState.firstVisibleItemIndex
-      val lastOffset = scrollState.firstVisibleItemScrollOffset
-      savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
-    }
-  }
-  return scrollState
+    return scrollState
 }
 
 @Composable
 fun rememberForeverLazyListState(
-  key: String,
-  initialFirstVisibleItemIndex: Int = 0,
-  initialFirstVisibleItemScrollOffset: Int = 0,
+    key: String,
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Int = 0,
 ): LazyListState {
-  val scrollState =
-    rememberSaveable(saver = LazyListState.Saver) {
-      val savedValue = savedScrollStates[key]
-      val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
-      val savedOffset =
-        savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
-      LazyListState(
-        savedIndex,
-        savedOffset.roundToInt(),
-      )
+    val scrollState =
+        rememberSaveable(saver = LazyListState.Saver) {
+            val savedValue = savedScrollStates[key]
+            val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+            val savedOffset =
+                savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
+            LazyListState(
+                savedIndex,
+                savedOffset.roundToInt(),
+            )
+        }
+    DisposableEffect(scrollState) {
+        onDispose {
+            val lastIndex = scrollState.firstVisibleItemIndex
+            val lastOffset = scrollState.firstVisibleItemScrollOffset
+            savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
+        }
     }
-  DisposableEffect(scrollState) {
-    onDispose {
-      val lastIndex = scrollState.firstVisibleItemIndex
-      val lastOffset = scrollState.firstVisibleItemScrollOffset
-      savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
-    }
-  }
-  return scrollState
+    return scrollState
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun rememberForeverPagerState(
-  key: String,
-  initialFirstVisibleItemIndex: Int = 0,
-  initialFirstVisibleItemScrollOffset: Float = 0.0f,
-  pageCount: () -> Int,
+    key: String,
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Float = 0.0f,
+    pageCount: () -> Int,
 ): PagerState {
-  val savedValue = savedScrollStates[key]
-  val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
-  val savedOffset = savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset
+    val savedValue = savedScrollStates[key]
+    val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+    val savedOffset = savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset
 
-  val scrollState =
-    rememberPagerState(
-      savedIndex,
-      savedOffset,
-      pageCount,
-    )
+    val scrollState =
+        rememberPagerState(
+            savedIndex,
+            savedOffset,
+            pageCount,
+        )
 
-  DisposableEffect(scrollState) {
-    onDispose {
-      val lastIndex = scrollState.currentPage
-      val lastOffset = scrollState.currentPageOffsetFraction
-      savedScrollStates[key] = ScrollState(lastIndex, lastOffset)
+    DisposableEffect(scrollState) {
+        onDispose {
+            val lastIndex = scrollState.currentPage
+            val lastOffset = scrollState.currentPageOffsetFraction
+            savedScrollStates[key] = ScrollState(lastIndex, lastOffset)
+        }
     }
-  }
 
-  return scrollState
+    return scrollState
 }

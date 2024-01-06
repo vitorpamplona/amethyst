@@ -27,39 +27,39 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CalendarTimeSlotEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
+    fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
 
-  fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)?.toLongOrNull()
+    fun start() = tags.firstOrNull { it.size > 1 && it[0] == "start" }?.get(1)?.toLongOrNull()
 
-  fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)?.toLongOrNull()
+    fun end() = tags.firstOrNull { it.size > 1 && it[0] == "end" }?.get(1)?.toLongOrNull()
 
-  fun startTmz() = tags.firstOrNull { it.size > 1 && it[0] == "start_tzid" }?.get(1)?.toLongOrNull()
+    fun startTmz() = tags.firstOrNull { it.size > 1 && it[0] == "start_tzid" }?.get(1)?.toLongOrNull()
 
-  fun endTmz() = tags.firstOrNull { it.size > 1 && it[0] == "end_tzid" }?.get(1)?.toLongOrNull()
+    fun endTmz() = tags.firstOrNull { it.size > 1 && it[0] == "end_tzid" }?.get(1)?.toLongOrNull()
 
-  //    ["start", "<Unix timestamp in seconds>"],
-  //    ["end", "<Unix timestamp in seconds>"],
-  //    ["start_tzid", "<IANA Time Zone Database identifier>"],
-  //    ["end_tzid", "<IANA Time Zone Database identifier>"],
+    //    ["start", "<Unix timestamp in seconds>"],
+    //    ["end", "<Unix timestamp in seconds>"],
+    //    ["start_tzid", "<IANA Time Zone Database identifier>"],
+    //    ["end_tzid", "<IANA Time Zone Database identifier>"],
 
-  companion object {
-    const val KIND = 31923
-    const val ALT = "Calendar time-slot event"
+    companion object {
+        const val KIND = 31923
+        const val ALT = "Calendar time-slot event"
 
-    fun create(
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (CalendarTimeSlotEvent) -> Unit,
-    ) {
-      val tags = arrayOf(arrayOf("alt", ALT))
-      signer.sign(createdAt, KIND, tags, "", onReady)
+        fun create(
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CalendarTimeSlotEvent) -> Unit,
+        ) {
+            val tags = arrayOf(arrayOf("alt", ALT))
+            signer.sign(createdAt, KIND, tags, "", onReady)
+        }
     }
-  }
 }

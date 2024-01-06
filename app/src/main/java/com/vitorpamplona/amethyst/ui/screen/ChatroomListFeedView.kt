@@ -40,75 +40,75 @@ import kotlin.time.ExperimentalTime
 
 @Composable
 fun ChatroomListFeedView(
-  viewModel: FeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  markAsRead: MutableState<Boolean>,
+    viewModel: FeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    markAsRead: MutableState<Boolean>,
 ) {
-  RefresheableView(viewModel, true) { CrossFadeState(viewModel, accountViewModel, nav, markAsRead) }
+    RefresheableView(viewModel, true) { CrossFadeState(viewModel, accountViewModel, nav, markAsRead) }
 }
 
 @Composable
 private fun CrossFadeState(
-  viewModel: FeedViewModel,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  markAsRead: MutableState<Boolean>,
+    viewModel: FeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    markAsRead: MutableState<Boolean>,
 ) {
-  val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-  Crossfade(
-    targetState = feedState,
-    animationSpec = tween(durationMillis = 100),
-  ) { state ->
-    when (state) {
-      is FeedState.Empty -> {
-        FeedEmpty { viewModel.invalidateData() }
-      }
-      is FeedState.FeedError -> {
-        FeedError(state.errorMessage) { viewModel.invalidateData() }
-      }
-      is FeedState.Loaded -> {
-        FeedLoaded(state, accountViewModel, nav, markAsRead)
-      }
-      FeedState.Loading -> {
-        LoadingFeed()
-      }
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100),
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty { viewModel.invalidateData() }
+            }
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is FeedState.Loaded -> {
+                FeedLoaded(state, accountViewModel, nav, markAsRead)
+            }
+            FeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
     }
-  }
 }
 
 @OptIn(ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
-  state: FeedState.Loaded,
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
-  markAsRead: MutableState<Boolean>,
+    state: FeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    markAsRead: MutableState<Boolean>,
 ) {
-  val listState = rememberLazyListState()
+    val listState = rememberLazyListState()
 
-  LaunchedEffect(key1 = markAsRead.value) {
-    if (markAsRead.value) {
-      accountViewModel.markAllAsRead(state.feed.value) { markAsRead.value = false }
+    LaunchedEffect(key1 = markAsRead.value) {
+        if (markAsRead.value) {
+            accountViewModel.markAllAsRead(state.feed.value) { markAsRead.value = false }
+        }
     }
-  }
 
-  LazyColumn(
-    contentPadding = FeedPadding,
-    state = listState,
-  ) {
-    itemsIndexed(
-      state.feed.value,
-      key = { index, item -> if (index == 0) index else item.idHex },
-    ) { _, item ->
-      Row(Modifier.fillMaxWidth()) {
-        ChatroomHeaderCompose(
-          item,
-          accountViewModel = accountViewModel,
-          nav = nav,
-        )
-      }
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(
+            state.feed.value,
+            key = { index, item -> if (index == 0) index else item.idHex },
+        ) { _, item ->
+            Row(Modifier.fillMaxWidth()) {
+                ChatroomHeaderCompose(
+                    item,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
     }
-  }
 }

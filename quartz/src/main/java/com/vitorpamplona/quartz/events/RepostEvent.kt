@@ -27,48 +27,48 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class RepostEvent(
-  id: HexKey,
-  pubKey: HexKey,
-  createdAt: Long,
-  tags: Array<Array<String>>,
-  content: String,
-  sig: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-  fun boostedPost() = taggedEvents()
+    fun boostedPost() = taggedEvents()
 
-  fun originalAuthor() = taggedUsers()
+    fun originalAuthor() = taggedUsers()
 
-  fun containedPost() =
-    try {
-      fromJson(content)
-    } catch (e: Exception) {
-      null
+    fun containedPost() =
+        try {
+            fromJson(content)
+        } catch (e: Exception) {
+            null
+        }
+
+    companion object {
+        const val KIND = 6
+        const val ALT = "Repost event"
+
+        fun create(
+            boostedPost: EventInterface,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (RepostEvent) -> Unit,
+        ) {
+            val content = boostedPost.toJson()
+
+            val replyToPost = arrayOf("e", boostedPost.id())
+            val replyToAuthor = arrayOf("p", boostedPost.pubKey())
+
+            var tags: Array<Array<String>> = arrayOf(replyToPost, replyToAuthor)
+
+            if (boostedPost is AddressableEvent) {
+                tags += listOf(arrayOf("a", boostedPost.address().toTag()))
+            }
+
+            tags += listOf(arrayOf("alt", ALT))
+
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
-
-  companion object {
-    const val KIND = 6
-    const val ALT = "Repost event"
-
-    fun create(
-      boostedPost: EventInterface,
-      signer: NostrSigner,
-      createdAt: Long = TimeUtils.now(),
-      onReady: (RepostEvent) -> Unit,
-    ) {
-      val content = boostedPost.toJson()
-
-      val replyToPost = arrayOf("e", boostedPost.id())
-      val replyToAuthor = arrayOf("p", boostedPost.pubKey())
-
-      var tags: Array<Array<String>> = arrayOf(replyToPost, replyToAuthor)
-
-      if (boostedPost is AddressableEvent) {
-        tags += listOf(arrayOf("a", boostedPost.address().toTag()))
-      }
-
-      tags += listOf(arrayOf("alt", ALT))
-
-      signer.sign(createdAt, KIND, tags, content, onReady)
-    }
-  }
 }

@@ -47,66 +47,66 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookmarkListScreen(
-  accountViewModel: AccountViewModel,
-  nav: (String) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
-  val publicFeedViewModel: NostrBookmarkPublicFeedViewModel =
-    viewModel(
-      key = "NotificationViewModel",
-      factory = NostrBookmarkPublicFeedViewModel.Factory(accountViewModel.account),
-    )
+    val publicFeedViewModel: NostrBookmarkPublicFeedViewModel =
+        viewModel(
+            key = "NotificationViewModel",
+            factory = NostrBookmarkPublicFeedViewModel.Factory(accountViewModel.account),
+        )
 
-  val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel =
-    viewModel(
-      key = "NotificationViewModel",
-      factory = NostrBookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
-    )
+    val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel =
+        viewModel(
+            key = "NotificationViewModel",
+            factory = NostrBookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
+        )
 
-  val userState by accountViewModel.account.decryptBookmarks.observeAsState()
+    val userState by accountViewModel.account.decryptBookmarks.observeAsState()
 
-  LaunchedEffect(userState) {
-    publicFeedViewModel.invalidateData()
-    privateFeedViewModel.invalidateData()
-  }
-
-  Column(Modifier.fillMaxHeight()) {
-    val pagerState = rememberPagerState { 2 }
-    val coroutineScope = rememberCoroutineScope()
-
-    TabRow(
-      containerColor = MaterialTheme.colorScheme.background,
-      contentColor = MaterialTheme.colorScheme.onBackground,
-      selectedTabIndex = pagerState.currentPage,
-      modifier = TabRowHeight,
-    ) {
-      Tab(
-        selected = pagerState.currentPage == 0,
-        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-        text = { Text(text = stringResource(R.string.private_bookmarks)) },
-      )
-      Tab(
-        selected = pagerState.currentPage == 1,
-        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-        text = { Text(text = stringResource(R.string.public_bookmarks)) },
-      )
+    LaunchedEffect(userState) {
+        publicFeedViewModel.invalidateData()
+        privateFeedViewModel.invalidateData()
     }
-    HorizontalPager(state = pagerState) { page ->
-      when (page) {
-        0 ->
-          RefresheableFeedView(
-            privateFeedViewModel,
-            null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-          )
-        1 ->
-          RefresheableFeedView(
-            publicFeedViewModel,
-            null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-          )
-      }
+
+    Column(Modifier.fillMaxHeight()) {
+        val pagerState = rememberPagerState { 2 }
+        val coroutineScope = rememberCoroutineScope()
+
+        TabRow(
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            selectedTabIndex = pagerState.currentPage,
+            modifier = TabRowHeight,
+        ) {
+            Tab(
+                selected = pagerState.currentPage == 0,
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                text = { Text(text = stringResource(R.string.private_bookmarks)) },
+            )
+            Tab(
+                selected = pagerState.currentPage == 1,
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                text = { Text(text = stringResource(R.string.public_bookmarks)) },
+            )
+        }
+        HorizontalPager(state = pagerState) { page ->
+            when (page) {
+                0 ->
+                    RefresheableFeedView(
+                        privateFeedViewModel,
+                        null,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                1 ->
+                    RefresheableFeedView(
+                        publicFeedViewModel,
+                        null,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+            }
+        }
     }
-  }
 }

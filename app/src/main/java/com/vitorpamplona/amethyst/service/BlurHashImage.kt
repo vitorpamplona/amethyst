@@ -37,58 +37,58 @@ import kotlin.math.roundToInt
 
 @Stable
 class BlurHashFetcher(
-  private val options: Options,
-  private val data: Uri,
+    private val options: Options,
+    private val data: Uri,
 ) : Fetcher {
-  override suspend fun fetch(): FetchResult {
-    checkNotInMainThread()
+    override suspend fun fetch(): FetchResult {
+        checkNotInMainThread()
 
-    val encodedHash = data.toString().removePrefix("bluehash:")
-    val hash = URLDecoder.decode(encodedHash, "utf-8")
+        val encodedHash = data.toString().removePrefix("bluehash:")
+        val hash = URLDecoder.decode(encodedHash, "utf-8")
 
-    val aspectRatio = BlurHashDecoder.aspectRatio(hash) ?: 1.0f
+        val aspectRatio = BlurHashDecoder.aspectRatio(hash) ?: 1.0f
 
-    val preferredWidth = 100
+        val preferredWidth = 100
 
-    val bitmap =
-      BlurHashDecoder.decode(
-        hash,
-        preferredWidth,
-        (preferredWidth * (1 / aspectRatio)).roundToInt(),
-      )
+        val bitmap =
+            BlurHashDecoder.decode(
+                hash,
+                preferredWidth,
+                (preferredWidth * (1 / aspectRatio)).roundToInt(),
+            )
 
-    if (bitmap == null) {
-      throw Exception("Unable to convert Bluehash $hash")
+        if (bitmap == null) {
+            throw Exception("Unable to convert Bluehash $hash")
+        }
+
+        return DrawableResult(
+            drawable = bitmap.toDrawable(options.context.resources),
+            isSampled = false,
+            dataSource = DataSource.MEMORY,
+        )
     }
 
-    return DrawableResult(
-      drawable = bitmap.toDrawable(options.context.resources),
-      isSampled = false,
-      dataSource = DataSource.MEMORY,
-    )
-  }
-
-  object Factory : Fetcher.Factory<Uri> {
-    override fun create(
-      data: Uri,
-      options: Options,
-      imageLoader: ImageLoader,
-    ): Fetcher {
-      return BlurHashFetcher(options, data)
+    object Factory : Fetcher.Factory<Uri> {
+        override fun create(
+            data: Uri,
+            options: Options,
+            imageLoader: ImageLoader,
+        ): Fetcher {
+            return BlurHashFetcher(options, data)
+        }
     }
-  }
 }
 
 object BlurHashRequester {
-  fun imageRequest(
-    context: Context,
-    message: String,
-  ): ImageRequest {
-    val encodedMessage = URLEncoder.encode(message, "utf-8")
+    fun imageRequest(
+        context: Context,
+        message: String,
+    ): ImageRequest {
+        val encodedMessage = URLEncoder.encode(message, "utf-8")
 
-    return ImageRequest.Builder(context)
-      .data("bluehash:$encodedMessage")
-      .fetcherFactory(BlurHashFetcher.Factory)
-      .build()
-  }
+        return ImageRequest.Builder(context)
+            .data("bluehash:$encodedMessage")
+            .fetcherFactory(BlurHashFetcher.Factory)
+            .build()
+    }
 }

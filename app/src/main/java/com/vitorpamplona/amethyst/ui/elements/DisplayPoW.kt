@@ -33,21 +33,21 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 @Composable
 @Preview
 fun DisplayPoWPreview() {
-  ThemeComparison(
-    onDark = { DisplayPoW(pow = 24) },
-    onLight = { DisplayPoW(pow = 24) },
-  )
+    ThemeComparison(
+        onDark = { DisplayPoW(pow = 24) },
+        onLight = { DisplayPoW(pow = 24) },
+    )
 }
 
 @Composable
 fun DisplayPoW(pow: Int) {
-  val powStr = remember(pow) { "PoW-$pow" }
+    val powStr = remember(pow) { "PoW-$pow" }
 
-  Text(
-    powStr,
-    color = MaterialTheme.colorScheme.lessImportantLink,
-    fontSize = Font14SP,
-    fontWeight = FontWeight.Bold,
-    maxLines = 1,
-  )
+    Text(
+        powStr,
+        color = MaterialTheme.colorScheme.lessImportantLink,
+        fontSize = Font14SP,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+    )
 }

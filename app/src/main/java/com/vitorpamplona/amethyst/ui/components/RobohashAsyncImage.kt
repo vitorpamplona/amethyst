@@ -55,141 +55,141 @@ import java.util.Base64
 
 @Composable
 fun RobohashAsyncImage(
-  robot: String,
-  modifier: Modifier = Modifier,
-  contentDescription: String? = null,
-  transform: (AsyncImagePainter.State) -> AsyncImagePainter.State =
-    AsyncImagePainter.DefaultTransform,
-  onState: ((AsyncImagePainter.State) -> Unit)? = null,
-  alignment: Alignment = Alignment.Center,
-  contentScale: ContentScale = ContentScale.Fit,
-  alpha: Float = DefaultAlpha,
-  colorFilter: ColorFilter? = null,
-  filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    robot: String,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    transform: (AsyncImagePainter.State) -> AsyncImagePainter.State =
+        AsyncImagePainter.DefaultTransform,
+    onState: ((AsyncImagePainter.State) -> Unit)? = null,
+    alignment: Alignment = Alignment.Center,
+    contentScale: ContentScale = ContentScale.Fit,
+    alpha: Float = DefaultAlpha,
+    colorFilter: ColorFilter? = null,
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
-  val context = LocalContext.current
-  val isLightTheme = MaterialTheme.colorScheme.isLight
+    val context = LocalContext.current
+    val isLightTheme = MaterialTheme.colorScheme.isLight
 
-  val imageRequest = remember(robot) { RobohashImageRequest.build(context, robot, isLightTheme) }
+    val imageRequest = remember(robot) { RobohashImageRequest.build(context, robot, isLightTheme) }
 
-  AsyncImage(
-    model = imageRequest,
-    contentDescription = contentDescription,
-    modifier = modifier,
-    transform = transform,
-    onState = onState,
-    alignment = alignment,
-    contentScale = contentScale,
-    alpha = alpha,
-    colorFilter = colorFilter,
-    filterQuality = filterQuality,
-  )
-}
-
-@Composable
-fun RobohashFallbackAsyncImage(
-  robot: String,
-  model: String?,
-  contentDescription: String?,
-  modifier: Modifier = Modifier,
-  alignment: Alignment = Alignment.Center,
-  contentScale: ContentScale = ContentScale.Fit,
-  alpha: Float = DefaultAlpha,
-  colorFilter: ColorFilter? = null,
-  filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
-  loadProfilePicture: Boolean,
-) {
-  val context = LocalContext.current
-  val isLightTheme = MaterialTheme.colorScheme.isLight
-  val painter =
-    rememberAsyncImagePainter(
-      model = RobohashImageRequest.build(context, robot, isLightTheme),
-    )
-
-  if (model != null && loadProfilePicture) {
-    val isBase64 by remember { derivedStateOf { model.startsWith("data:image/jpeg;base64,") } }
-
-    if (isBase64) {
-      val base64Painter =
-        rememberAsyncImagePainter(
-          model = Base64Requester.imageRequest(context, model),
-        )
-
-      Image(
-        painter = base64Painter,
-        contentDescription = null,
-        modifier = modifier,
-        alignment = alignment,
-        contentScale = contentScale,
-        colorFilter = colorFilter,
-      )
-    } else {
-      AsyncImage(
-        model = model,
+    AsyncImage(
+        model = imageRequest,
         contentDescription = contentDescription,
         modifier = modifier,
-        placeholder = painter,
-        fallback = painter,
-        error = painter,
+        transform = transform,
+        onState = onState,
         alignment = alignment,
         contentScale = contentScale,
         alpha = alpha,
         colorFilter = colorFilter,
         filterQuality = filterQuality,
-      )
-    }
-  } else {
-    Image(
-      painter = painter,
-      contentDescription = contentDescription,
-      modifier = modifier,
-      alignment = alignment,
-      contentScale = contentScale,
-      colorFilter = colorFilter,
     )
-  }
+}
+
+@Composable
+fun RobohashFallbackAsyncImage(
+    robot: String,
+    model: String?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    alignment: Alignment = Alignment.Center,
+    contentScale: ContentScale = ContentScale.Fit,
+    alpha: Float = DefaultAlpha,
+    colorFilter: ColorFilter? = null,
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    loadProfilePicture: Boolean,
+) {
+    val context = LocalContext.current
+    val isLightTheme = MaterialTheme.colorScheme.isLight
+    val painter =
+        rememberAsyncImagePainter(
+            model = RobohashImageRequest.build(context, robot, isLightTheme),
+        )
+
+    if (model != null && loadProfilePicture) {
+        val isBase64 by remember { derivedStateOf { model.startsWith("data:image/jpeg;base64,") } }
+
+        if (isBase64) {
+            val base64Painter =
+                rememberAsyncImagePainter(
+                    model = Base64Requester.imageRequest(context, model),
+                )
+
+            Image(
+                painter = base64Painter,
+                contentDescription = null,
+                modifier = modifier,
+                alignment = alignment,
+                contentScale = contentScale,
+                colorFilter = colorFilter,
+            )
+        } else {
+            AsyncImage(
+                model = model,
+                contentDescription = contentDescription,
+                modifier = modifier,
+                placeholder = painter,
+                fallback = painter,
+                error = painter,
+                alignment = alignment,
+                contentScale = contentScale,
+                alpha = alpha,
+                colorFilter = colorFilter,
+                filterQuality = filterQuality,
+            )
+        }
+    } else {
+        Image(
+            painter = painter,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            alignment = alignment,
+            contentScale = contentScale,
+            colorFilter = colorFilter,
+        )
+    }
 }
 
 object Base64Requester {
-  fun imageRequest(
-    context: Context,
-    message: String,
-  ): ImageRequest {
-    return ImageRequest.Builder(context).data(message).fetcherFactory(Base64Fetcher.Factory).build()
-  }
+    fun imageRequest(
+        context: Context,
+        message: String,
+    ): ImageRequest {
+        return ImageRequest.Builder(context).data(message).fetcherFactory(Base64Fetcher.Factory).build()
+    }
 }
 
 @Stable
 class Base64Fetcher(
-  private val options: Options,
-  private val data: Uri,
+    private val options: Options,
+    private val data: Uri,
 ) : Fetcher {
-  override suspend fun fetch(): FetchResult {
-    checkNotInMainThread()
+    override suspend fun fetch(): FetchResult {
+        checkNotInMainThread()
 
-    val base64String = data.toString().removePrefix("data:image/jpeg;base64,")
+        val base64String = data.toString().removePrefix("data:image/jpeg;base64,")
 
-    val byteArray = Base64.getDecoder().decode(base64String)
-    val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+        val byteArray = Base64.getDecoder().decode(base64String)
+        val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
 
-    if (bitmap == null) {
-      throw Exception("Unable to load base64 $base64String")
+        if (bitmap == null) {
+            throw Exception("Unable to load base64 $base64String")
+        }
+
+        return DrawableResult(
+            drawable = bitmap.toDrawable(options.context.resources),
+            isSampled = false,
+            dataSource = DataSource.MEMORY,
+        )
     }
 
-    return DrawableResult(
-      drawable = bitmap.toDrawable(options.context.resources),
-      isSampled = false,
-      dataSource = DataSource.MEMORY,
-    )
-  }
-
-  object Factory : Fetcher.Factory<Uri> {
-    override fun create(
-      data: Uri,
-      options: Options,
-      imageLoader: ImageLoader,
-    ): Fetcher {
-      return Base64Fetcher(options, data)
+    object Factory : Fetcher.Factory<Uri> {
+        override fun create(
+            data: Uri,
+            options: Options,
+            imageLoader: ImageLoader,
+        ): Fetcher {
+            return Base64Fetcher(options, data)
+        }
     }
-  }
 }
