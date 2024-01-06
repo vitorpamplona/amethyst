@@ -37,6 +37,7 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "benchmark-proguard-rules.pro"
         }
         release {
+            isDefault = false
             minifyEnabled true
         }
         create("benchmark") {

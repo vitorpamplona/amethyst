@@ -263,7 +263,7 @@ object CryptoUtils {
     }
   }
 
-  data class EncryptedInfoString(
+  class EncryptedInfoString(
     val ciphertext: String,
     val nonce: String,
     val v: Int,
