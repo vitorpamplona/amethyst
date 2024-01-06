@@ -129,6 +129,7 @@ class NewRelayListViewModel : ViewModel() {
                             localInfoFeedTypes,
                         )
                     }
+                    .distinctBy { it.url }
                     .sortedBy { it.downloadCountInBytes }
                     .reversed()
             } else {
@@ -152,6 +153,7 @@ class NewRelayListViewModel : ViewModel() {
                             it.feedTypes,
                         )
                     }
+                    .distinctBy { it.url }
                     .sortedBy { it.downloadCountInBytes }
                     .reversed()
             }
