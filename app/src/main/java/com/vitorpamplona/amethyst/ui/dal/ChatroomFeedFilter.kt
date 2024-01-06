@@ -43,9 +43,7 @@ class ChatroomFeedFilter(val withUser: ChatroomKey, val account: Account) :
   override fun applyFilter(collection: Set<Note>): Set<Note> {
     val messages = account.userProfile().privateChatrooms[withUser] ?: return emptySet()
 
-    return collection
-      .filter { it in messages.roomMessages && account.isAcceptable(it) == true }
-      .toSet()
+    return collection.filter { it in messages.roomMessages && account.isAcceptable(it) }.toSet()
   }
 
   override fun sort(collection: Set<Note>): List<Note> {

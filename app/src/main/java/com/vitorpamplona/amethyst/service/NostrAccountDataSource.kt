@@ -238,14 +238,16 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     if (LocalCache.justVerify(event)) {
       if (event is GiftWrapEvent) {
         // Avoid decrypting over and over again if the event already exist.
-        if (LocalCache.getNoteIfExists(event.id) != null) return
+        val note = LocalCache.getNoteIfExists(event.id)
+        if (note != null && relay.brief in note.relays) return
 
         event.cachedGift(account.signer) { this.consume(it, relay) }
       }
 
       if (event is SealedGossipEvent) {
         // Avoid decrypting over and over again if the event already exist.
-        if (LocalCache.getNoteIfExists(event.id) != null) return
+        val note = LocalCache.getNoteIfExists(event.id)
+        if (note != null && relay.brief in note.relays) return
 
         event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
       } else {
