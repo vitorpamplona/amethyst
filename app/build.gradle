@@ -88,7 +88,6 @@ android {
 
     buildTypes {
         release {
-            //signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
             minifyEnabled true
             resValue "string", "app_name", "@string/app_name_release"
@@ -97,6 +96,10 @@ android {
             applicationIdSuffix '.debug'
             versionNameSuffix '-DEBUG'
             resValue "string", "app_name", "@string/app_name_debug"
+        }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig signingConfigs.debug
         }
     }
 
