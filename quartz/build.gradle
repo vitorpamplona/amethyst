@@ -18,8 +18,12 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig signingConfigs.debug
         }
     }
     compileOptions {

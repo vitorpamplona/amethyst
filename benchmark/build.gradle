@@ -37,7 +37,12 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "benchmark-proguard-rules.pro"
         }
         release {
+            minifyEnabled true
+        }
+        create("benchmark") {
             isDefault = true
+            initWith(getByName("release"))
+            signingConfig signingConfigs.debug
         }
     }
 }
