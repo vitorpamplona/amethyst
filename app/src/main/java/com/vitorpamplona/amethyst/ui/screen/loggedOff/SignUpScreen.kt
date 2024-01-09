@@ -72,16 +72,23 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
-@Preview
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun SignUpPage() {
     val accountViewModel: AccountStateViewModel = viewModel()
 
-    SignUpPage(accountViewModel) {
-    }
+    ThemeComparisonRow(
+        onDark = {
+            SignUpPage(accountViewModel) {}
+        },
+        onLight = {
+            SignUpPage(accountViewModel) {}
+        },
+    )
 }
 
 @Composable

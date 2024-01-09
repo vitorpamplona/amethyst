@@ -51,13 +51,13 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparison
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 @Preview
 fun LeftPictureLayoutPreview() {
-    ThemeComparison(
+    ThemeComparisonColumn(
         onDark = { LeftPictureLayoutPreviewCard() },
         onLight = { LeftPictureLayoutPreviewCard() },
     )

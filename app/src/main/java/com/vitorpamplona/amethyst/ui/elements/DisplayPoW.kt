@@ -27,13 +27,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparison
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 
 @Composable
 @Preview
 fun DisplayPoWPreview() {
-    ThemeComparison(
+    ThemeComparisonColumn(
         onDark = { DisplayPoW(pow = 24) },
         onLight = { DisplayPoW(pow = 24) },
     )

@@ -24,7 +24,9 @@ import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -128,62 +130,92 @@ val RepostPictureBorderDark = Modifier.border(2.dp, DarkColorPalette.background,
 val RepostPictureBorderLight = Modifier.border(2.dp, LightColorPalette.background, CircleShape)
 
 val DarkImageModifier =
-    Modifier.fillMaxWidth().clip(shape = QuoteBorder).border(1.dp, DarkSubtleBorder, QuoteBorder)
+    Modifier
+        .fillMaxWidth()
+        .clip(shape = QuoteBorder)
+        .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightImageModifier =
-    Modifier.fillMaxWidth().clip(shape = QuoteBorder).border(1.dp, LightSubtleBorder, QuoteBorder)
+    Modifier
+        .fillMaxWidth()
+        .clip(shape = QuoteBorder)
+        .border(1.dp, LightSubtleBorder, QuoteBorder)
 
-val DarkProfile35dpModifier = Modifier.size(Size35dp).clip(shape = CircleShape)
+val DarkProfile35dpModifier =
+    Modifier
+        .size(Size35dp)
+        .clip(shape = CircleShape)
 
-val LightProfile35dpModifier = Modifier.fillMaxWidth().clip(shape = CircleShape)
+val LightProfile35dpModifier =
+    Modifier
+        .fillMaxWidth()
+        .clip(shape = CircleShape)
 
 val DarkReplyBorderModifier =
-    Modifier.padding(top = 5.dp)
+    Modifier
+        .padding(top = 5.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightReplyBorderModifier =
-    Modifier.padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+    Modifier
+        .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkInnerPostBorderModifier =
-    Modifier.padding(top = 5.dp)
+    Modifier
+        .padding(top = 5.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightInnerPostBorderModifier =
-    Modifier.padding(top = 5.dp)
+    Modifier
+        .padding(top = 5.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
 val DarkChannelNotePictureModifier =
-    Modifier.size(30.dp)
+    Modifier
+        .size(30.dp)
         .clip(shape = CircleShape)
         .background(DarkColorPalette.background)
         .border(2.dp, DarkColorPalette.background, CircleShape)
 
 val LightChannelNotePictureModifier =
-    Modifier.size(30.dp)
+    Modifier
+        .size(30.dp)
         .clip(shape = CircleShape)
         .background(LightColorPalette.background)
         .border(2.dp, LightColorPalette.background, CircleShape)
 
 val LightRelayIconModifier =
-    Modifier.size(Size13dp).clip(shape = CircleShape).background(LightColorPalette.background)
+    Modifier
+        .size(Size13dp)
+        .clip(shape = CircleShape)
+        .background(LightColorPalette.background)
 
 val DarkRelayIconModifier =
-    Modifier.size(Size13dp).clip(shape = CircleShape).background(DarkColorPalette.background)
+    Modifier
+        .size(Size13dp)
+        .clip(shape = CircleShape)
+        .background(DarkColorPalette.background)
 
 val LightLargeRelayIconModifier =
-    Modifier.size(Size55dp).clip(shape = CircleShape).background(LightColorPalette.background)
+    Modifier
+        .size(Size55dp)
+        .clip(shape = CircleShape)
+        .background(LightColorPalette.background)
 
 val DarkLargeRelayIconModifier =
-    Modifier.size(Size55dp).clip(shape = CircleShape).background(DarkColorPalette.background)
+    Modifier
+        .size(Size55dp)
+        .clip(shape = CircleShape)
+        .background(DarkColorPalette.background)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
@@ -203,7 +235,8 @@ val MarkDownStyleOnDark =
                         fontSize = Font14SP,
                     ),
                 modifier =
-                    Modifier.padding(0.dp)
+                    Modifier
+                        .padding(0.dp)
                         .fillMaxWidth()
                         .clip(shape = QuoteBorder)
                         .border(1.dp, DarkSubtleBorder, QuoteBorder)
@@ -240,7 +273,8 @@ val MarkDownStyleOnLight =
                         fontSize = Font14SP,
                     ),
                 modifier =
-                    Modifier.padding(0.dp)
+                    Modifier
+                        .padding(0.dp)
                         .fillMaxWidth()
                         .clip(shape = QuoteBorder)
                         .border(1.dp, LightSubtleBorder, QuoteBorder)
@@ -402,19 +436,49 @@ fun AmethystTheme(
 }
 
 @Composable
-fun ThemeComparison(
+fun ThemeComparisonColumn(
     onDark: @Composable () -> Unit,
     onLight: @Composable () -> Unit,
 ) {
     Column {
-        val darkTheme: SharedPreferencesViewModel = viewModel()
-        darkTheme.updateTheme(ThemeType.DARK)
-        AmethystTheme(darkTheme) { Surface(color = MaterialTheme.colorScheme.background) { onDark() } }
+        Box {
+            val darkTheme: SharedPreferencesViewModel = viewModel()
+            darkTheme.updateTheme(ThemeType.DARK)
+            AmethystTheme(darkTheme) {
+                Surface(color = MaterialTheme.colorScheme.background) { onDark() }
+            }
+        }
 
-        val lightTheme: SharedPreferencesViewModel = viewModel()
-        lightTheme.updateTheme(ThemeType.LIGHT)
-        AmethystTheme(lightTheme) {
-            Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+        Box {
+            val lightTheme: SharedPreferencesViewModel = viewModel()
+            lightTheme.updateTheme(ThemeType.LIGHT)
+            AmethystTheme(lightTheme) {
+                Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+            }
+        }
+    }
+}
+
+@Composable
+fun ThemeComparisonRow(
+    onDark: @Composable () -> Unit,
+    onLight: @Composable () -> Unit,
+) {
+    Row {
+        Box(modifier = Modifier.weight(1f)) {
+            val darkTheme: SharedPreferencesViewModel = viewModel()
+            darkTheme.updateTheme(ThemeType.DARK)
+            AmethystTheme(darkTheme) {
+                Surface(color = MaterialTheme.colorScheme.background) { onDark() }
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            val lightTheme: SharedPreferencesViewModel = viewModel()
+            lightTheme.updateTheme(ThemeType.LIGHT)
+            AmethystTheme(lightTheme) {
+                Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+            }
         }
     }
 }

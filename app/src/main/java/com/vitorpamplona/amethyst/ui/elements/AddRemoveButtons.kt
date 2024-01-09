@@ -35,12 +35,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparison
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
 @Preview
 fun AddButtonPreview() {
-    ThemeComparison(
+    ThemeComparisonColumn(
         onDark = {
             Row {
                 Column {

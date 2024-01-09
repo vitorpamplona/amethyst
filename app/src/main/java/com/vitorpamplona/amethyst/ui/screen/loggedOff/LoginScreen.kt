@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.SignerType
@@ -103,13 +104,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-@Preview
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun LoginPage() {
     val accountViewModel: AccountStateViewModel = viewModel()
 
-    LoginPage(accountViewModel, true) {
-    }
+    ThemeComparisonRow(
+        onDark = {
+            LoginPage(accountViewModel, true) {}
+        },
+        onLight = {
+            LoginPage(accountViewModel, true) {}
+        },
+    )
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
