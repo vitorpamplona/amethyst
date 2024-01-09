@@ -338,7 +338,43 @@ fun LoginPage(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        if (PackageUtils.isOrbotInstalled(context)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = useProxy.value,
+                    onCheckedChange = {
+                        if (it) {
+                            connectOrbotDialogOpen = true
+                        }
+                    },
+                )
+
+                Text(stringResource(R.string.connect_via_tor))
+            }
+
+            if (connectOrbotDialogOpen) {
+                ConnectOrbotDialog(
+                    onClose = { connectOrbotDialogOpen = false },
+                    onPost = {
+                        connectOrbotDialogOpen = false
+                        useProxy.value = true
+                    },
+                    onError = {
+                        scope.launch {
+                            Toast.makeText(
+                                context,
+                                it,
+                                Toast.LENGTH_LONG,
+                            )
+                                .show()
+                        }
+                    },
+                    proxyPort,
+                )
+            }
+        }
 
         if (isFirstLogin) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -384,43 +420,7 @@ fun LoginPage(
             }
         }
 
-        if (PackageUtils.isOrbotInstalled(context)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = useProxy.value,
-                    onCheckedChange = {
-                        if (it) {
-                            connectOrbotDialogOpen = true
-                        }
-                    },
-                )
-
-                Text(stringResource(R.string.connect_via_tor))
-            }
-
-            if (connectOrbotDialogOpen) {
-                ConnectOrbotDialog(
-                    onClose = { connectOrbotDialogOpen = false },
-                    onPost = {
-                        connectOrbotDialogOpen = false
-                        useProxy.value = true
-                    },
-                    onError = {
-                        scope.launch {
-                            Toast.makeText(
-                                context,
-                                it,
-                                Toast.LENGTH_LONG,
-                            )
-                                .show()
-                        }
-                    },
-                    proxyPort,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
             Button(
@@ -452,7 +452,7 @@ fun LoginPage(
         }
 
         if (PackageUtils.isAmberInstalled(context)) {
-            Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
+            Box(modifier = Modifier.padding(40.dp, 20.dp, 40.dp, 0.dp)) {
                 Button(
                     enabled = acceptedTerms.value,
                     onClick = {

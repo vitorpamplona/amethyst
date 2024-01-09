@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -169,7 +170,7 @@ fun SignUpPage(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
@@ -249,7 +250,7 @@ fun SignUpPage(
             }
         }
 
-        Spacer(modifier = Modifier.height(Size20dp))
+        Spacer(modifier = Modifier.height(Size10dp))
 
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
             Button(
