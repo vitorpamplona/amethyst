@@ -73,7 +73,7 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -121,7 +121,7 @@ fun AccountSwitchBottomSheet(
         ) {
             Surface(modifier = Modifier.fillMaxSize()) {
                 Box {
-                    LoginPage(accountStateViewModel, isFirstLogin = false)
+                    LoginOrSignupScreen(accountStateViewModel, isFirstLogin = false)
                     TopAppBar(
                         title = {
                             Text(text = stringResource(R.string.account_switch_add_account_dialog_title))

@@ -27,8 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
@@ -39,8 +37,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import java.io.ByteArrayInputStream
-import java.io.StringWriter
 
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var account: Account
@@ -97,59 +93,22 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun create() {
         // Tries to not delete any existing attribute that we do not work with.
-        val latest = account.userProfile().info?.latestMetadata
-        val currentJson =
-            if (latest != null) {
-                ObjectMapper()
-                    .readTree(
-                        ByteArrayInputStream(latest.content.toByteArray(Charsets.UTF_8)),
-                    ) as ObjectNode
-            } else {
-                ObjectMapper().createObjectNode()
-            }
-        currentJson.put("name", displayName.value.trim())
-        currentJson.put("display_name", displayName.value.trim())
-        currentJson.put("picture", picture.value.trim())
-        currentJson.put("banner", banner.value.trim())
-        currentJson.put("website", website.value.trim())
-        currentJson.put("about", about.value.trim())
-        currentJson.put("nip05", nip05.value.trim())
-        currentJson.put("lud16", lnAddress.value.trim())
-        currentJson.put("lud06", lnURL.value.trim())
-
-        var claims = latest?.identityClaims() ?: emptyList()
-
-        if (twitter.value.isBlank()) {
-            // delete twitter
-            claims = claims.filter { it !is TwitterIdentity }
-        }
-
-        if (github.value.isBlank()) {
-            // delete github
-            claims = claims.filter { it !is GitHubIdentity }
-        }
-
-        if (mastodon.value.isBlank()) {
-            // delete mastodon
-            claims = claims.filter { it !is MastodonIdentity }
-        }
-
-        // Updates while keeping other identities intact
-        val newClaims =
-            listOfNotNull(
-                TwitterIdentity.parseProofUrl(twitter.value),
-                GitHubIdentity.parseProofUrl(github.value),
-                MastodonIdentity.parseProofUrl(mastodon.value),
-            ) +
-                claims.filter { it !is TwitterIdentity && it !is GitHubIdentity && it !is MastodonIdentity }
-
-        val writer = StringWriter()
-        ObjectMapper().writeValue(writer, currentJson)
-
         viewModelScope.launch(Dispatchers.IO) {
-            account.sendNewUserMetadata(writer.buffer.toString(), displayName.value.trim(), newClaims)
+            account.sendNewUserMetadata(
+                name = displayName.value,
+                picture = picture.value,
+                banner = banner.value,
+                website = website.value,
+                about = about.value,
+                nip05 = nip05.value,
+                lnAddress = lnAddress.value,
+                lnURL = lnURL.value,
+                twitter = twitter.value,
+                mastodon = mastodon.value,
+                github = github.value,
+            )
+            clear()
         }
-        clear()
     }
 
     fun clear() {

@@ -66,7 +66,6 @@ import com.vitorpamplona.quartz.events.GeneralListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.events.IdentityClaim
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
@@ -541,14 +540,36 @@ class Account(
         }
     }
 
-    suspend fun sendNewUserMetadata(
-        toString: String,
-        newName: String,
-        identities: List<IdentityClaim>,
+    fun sendNewUserMetadata(
+        name: String? = null,
+        picture: String? = null,
+        banner: String? = null,
+        website: String? = null,
+        about: String? = null,
+        nip05: String? = null,
+        lnAddress: String? = null,
+        lnURL: String? = null,
+        twitter: String? = null,
+        mastodon: String? = null,
+        github: String? = null,
     ) {
         if (!isWriteable()) return
 
-        MetadataEvent.create(toString, newName, identities, signer) {
+        MetadataEvent.updateFromPast(
+            latest = userProfile().info?.latestMetadata,
+            name = name,
+            picture = picture,
+            banner = banner,
+            website = website,
+            about = about,
+            nip05 = nip05,
+            lnAddress = lnAddress,
+            lnURL = lnURL,
+            twitter = twitter,
+            mastodon = mastodon,
+            github = github,
+            signer = signer,
+        ) {
             Client.send(it)
             LocalCache.justConsume(it, null)
         }

@@ -130,8 +130,11 @@ object LocalPreferences {
         return currentAccount
     }
 
-    private suspend fun updateCurrentAccount(npub: String) {
-        if (currentAccount != npub) {
+    private fun updateCurrentAccount(npub: String?) {
+        if (npub == null) {
+            currentAccount = null
+            encryptedPreferences().edit().clear().apply()
+        } else if (currentAccount != npub) {
             currentAccount = npub
 
             encryptedPreferences().edit().apply { putString(PrefKeys.CURRENT_ACCOUNT, npub) }.apply()
@@ -250,7 +253,7 @@ object LocalPreferences {
             deleteUserPreferenceFile(accountInfo.npub)
 
             if (savedAccounts().isEmpty()) {
-                encryptedPreferences().edit().clear().apply()
+                updateCurrentAccount(null)
             } else if (currentAccount() == accountInfo.npub) {
                 updateCurrentAccount(savedAccounts().elementAt(0).npub)
             }

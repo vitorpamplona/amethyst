@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginPage
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import kotlinx.coroutines.launch
 
@@ -71,7 +71,7 @@ fun AccountScreen(
                 LoadingAccounts()
             }
             is AccountState.LoggedOff -> {
-                LoginPage(accountStateViewModel, isFirstLogin = true)
+                LoginOrSignupScreen(accountStateViewModel, isFirstLogin = true)
             }
             is AccountState.LoggedIn -> {
                 CompositionLocalProvider(

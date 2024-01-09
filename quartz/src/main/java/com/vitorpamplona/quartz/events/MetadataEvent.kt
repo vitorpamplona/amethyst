@@ -22,10 +22,13 @@ package com.vitorpamplona.quartz.events
 
 import android.util.Log
 import androidx.compose.runtime.Stable
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.io.ByteArrayInputStream
+import java.io.StringWriter
 
 @Stable
 abstract class IdentityClaim(
@@ -176,23 +179,115 @@ class MetadataEvent(
     companion object {
         const val KIND = 0
 
-        fun create(
-            contactMetaData: String,
-            newName: String,
-            identities: List<IdentityClaim>,
+        fun updateFromPast(
+            latest: MetadataEvent?,
+            name: String?,
+            picture: String?,
+            banner: String?,
+            website: String?,
+            about: String?,
+            nip05: String?,
+            lnAddress: String?,
+            lnURL: String?,
+            twitter: String?,
+            mastodon: String?,
+            github: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MetadataEvent) -> Unit,
         ) {
+            // Tries to not delete any existing attribute that we do not work with.
+            val currentJson =
+                if (latest != null) {
+                    ObjectMapper()
+                        .readTree(
+                            ByteArrayInputStream(latest.content.toByteArray(Charsets.UTF_8)),
+                        ) as ObjectNode
+                } else {
+                    ObjectMapper().createObjectNode()
+                }
+
+            name?.let { addIfNotBlank(currentJson, "name", it.trim()) }
+            name?.let { addIfNotBlank(currentJson, "display_name", it.trim()) }
+            picture?.let { addIfNotBlank(currentJson, "picture", it.trim()) }
+            banner?.let { addIfNotBlank(currentJson, "banner", it.trim()) }
+            website?.let { addIfNotBlank(currentJson, "website", it.trim()) }
+            about?.let { addIfNotBlank(currentJson, "about", it.trim()) }
+            nip05?.let { addIfNotBlank(currentJson, "nip05", it.trim()) }
+            lnAddress?.let { addIfNotBlank(currentJson, "lud16", it.trim()) }
+            lnURL?.let { addIfNotBlank(currentJson, "lud06", it.trim()) }
+
+            var claims = latest?.identityClaims() ?: emptyList()
+
+            if (twitter?.isBlank() == true) {
+                // delete twitter
+                claims = claims.filter { it !is TwitterIdentity }
+            }
+
+            if (github?.isBlank() == true) {
+                // delete github
+                claims = claims.filter { it !is GitHubIdentity }
+            }
+
+            if (mastodon?.isBlank() == true) {
+                // delete mastodon
+                claims = claims.filter { it !is MastodonIdentity }
+            }
+
+            // Updates while keeping other identities intact
+            val newClaims =
+                listOfNotNull(
+                    twitter?.let { TwitterIdentity.parseProofUrl(it) },
+                    github?.let { GitHubIdentity.parseProofUrl(it) },
+                    mastodon?.let { MastodonIdentity.parseProofUrl(it) },
+                ) +
+                    claims.filter { it !is TwitterIdentity && it !is GitHubIdentity && it !is MastodonIdentity }
+
+            val writer = StringWriter()
+            ObjectMapper().writeValue(writer, currentJson)
+
+            val tags = mutableListOf<Array<String>>()
+
+            tags.add(
+                arrayOf("alt", "User profile for ${name ?: currentJson.get("name").asText() ?: ""}"),
+            )
+
+            newClaims.forEach { tags.add(arrayOf("i", it.platformIdentity(), it.proof)) }
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), writer.buffer.toString(), onReady)
+        }
+
+        private fun addIfNotBlank(
+            currentJson: ObjectNode,
+            key: String,
+            value: String,
+        ) {
+            if (value.isBlank()) {
+                currentJson.remove(key)
+            } else {
+                currentJson.put(key, value.trim())
+            }
+        }
+
+        fun createFromScratch(
+            newName: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (MetadataEvent) -> Unit,
+        ) {
+            val prop = ObjectMapper().createObjectNode()
+            prop.put("name", newName.trim())
+
+            val writer = StringWriter()
+            ObjectMapper().writeValue(writer, prop)
+
             val tags = mutableListOf<Array<String>>()
 
             tags.add(
                 arrayOf("alt", "User profile for $newName"),
             )
 
-            identities.forEach { tags.add(arrayOf("i", it.platformIdentity(), it.proof)) }
-
-            signer.sign(createdAt, KIND, tags.toTypedArray(), contactMetaData, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), writer.buffer.toString(), onReady)
         }
     }
 }

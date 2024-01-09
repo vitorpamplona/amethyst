@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -75,19 +74,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.PackageUtils
@@ -96,8 +93,9 @@ import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.SignerType
@@ -105,11 +103,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+@Preview
+@Composable
+fun LoginPage() {
+    val accountViewModel: AccountStateViewModel = viewModel()
+
+    LoginPage(accountViewModel, true) {
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LoginPage(
     accountViewModel: AccountStateViewModel,
     isFirstLogin: Boolean,
+    onWantsToLogin: () -> Unit,
 ) {
     val key = remember { mutableStateOf(TextFieldValue("")) }
     var errorMessage by remember { mutableStateOf("") }
@@ -208,219 +216,103 @@ fun LoginPage(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.SpaceBetween,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(Size20dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // The first child is glued to the top.
-        // Hence we have nothing at the top, an empty box is used.
-        Box(modifier = Modifier.height(0.dp))
+        Image(
+            painterResource(id = R.drawable.amethyst),
+            contentDescription = stringResource(R.string.app_logo),
+            modifier = Modifier.size(150.dp),
+            contentScale = ContentScale.Inside,
+        )
 
-        // The second child, this column, is centered vertically.
-        Column(
-            modifier = Modifier.padding(20.dp).fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Image(
-                painterResource(id = R.drawable.amethyst),
-                contentDescription = stringResource(R.string.app_logo),
-                modifier = Modifier.size(200.dp),
-                contentScale = ContentScale.Inside,
+        Spacer(modifier = Modifier.height(40.dp))
+
+        var showPassword by remember { mutableStateOf(false) }
+
+        val autofillNode =
+            AutofillNode(
+                autofillTypes = listOf(AutofillType.Password),
+                onFill = { key.value = TextFieldValue(it) },
             )
+        val autofill = LocalAutofill.current
+        LocalAutofillTree.current += autofillNode
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            var showPassword by remember { mutableStateOf(false) }
-
-            val autofillNode =
-                AutofillNode(
-                    autofillTypes = listOf(AutofillType.Password),
-                    onFill = { key.value = TextFieldValue(it) },
-                )
-            val autofill = LocalAutofill.current
-            LocalAutofillTree.current += autofillNode
-
-            OutlinedTextField(
-                modifier =
-                    Modifier.onGloballyPositioned { coordinates ->
+        OutlinedTextField(
+            modifier =
+                Modifier
+                    .onGloballyPositioned { coordinates ->
                         autofillNode.boundingBox = coordinates.boundsInWindow()
                     }
-                        .onFocusChanged { focusState ->
-                            autofill?.run {
-                                if (focusState.isFocused) {
-                                    requestAutofillForNode(autofillNode)
-                                } else {
-                                    cancelAutofillForNode(autofillNode)
-                                }
-                            }
-                        },
-                value = key.value,
-                onValueChange = { key.value = it },
-                keyboardOptions =
-                    KeyboardOptions(
-                        autoCorrect = false,
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Go,
-                    ),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.nsec_npub_hex_private_key),
-                        color = MaterialTheme.colorScheme.placeholderText,
-                    )
-                },
-                trailingIcon = {
-                    Row {
-                        IconButton(onClick = { showPassword = !showPassword }) {
-                            Icon(
-                                imageVector =
-                                    if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription =
-                                    if (showPassword) {
-                                        stringResource(R.string.show_password)
-                                    } else {
-                                        stringResource(
-                                            R.string.hide_password,
-                                        )
-                                    },
-                            )
-                        }
-                    }
-                },
-                leadingIcon = {
-                    if (dialogOpen) {
-                        SimpleQrCodeScanner {
-                            dialogOpen = false
-                            if (!it.isNullOrEmpty()) {
-                                key.value = TextFieldValue(it)
+                    .onFocusChanged { focusState ->
+                        autofill?.run {
+                            if (focusState.isFocused) {
+                                requestAutofillForNode(autofillNode)
+                            } else {
+                                cancelAutofillForNode(autofillNode)
                             }
                         }
-                    }
-                    IconButton(onClick = { dialogOpen = true }) {
+                    },
+            value = key.value,
+            onValueChange = { key.value = it },
+            keyboardOptions =
+                KeyboardOptions(
+                    autoCorrect = false,
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Go,
+                ),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.nsec_npub_hex_private_key),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            trailingIcon = {
+                Row {
+                    IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_qrcode),
-                            null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            imageVector =
+                                if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                            contentDescription =
+                                if (showPassword) {
+                                    stringResource(R.string.show_password)
+                                } else {
+                                    stringResource(
+                                        R.string.hide_password,
+                                    )
+                                },
                         )
                     }
-                },
-                visualTransformation =
-                    if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardActions =
-                    KeyboardActions(
-                        onGo = {
-                            if (!acceptedTerms.value) {
-                                termsAcceptanceIsRequired =
-                                    context.getString(R.string.acceptance_of_terms_is_required)
-                            }
-
-                            if (key.value.text.isBlank()) {
-                                errorMessage = context.getString(R.string.key_is_required)
-                            }
-
-                            if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                                accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
-                                    errorMessage = context.getString(R.string.invalid_key)
-                                }
-                            }
-                        },
-                    ),
-            )
-            if (errorMessage.isNotBlank()) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            if (isFirstLogin) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = acceptedTerms.value,
-                        onCheckedChange = { acceptedTerms.value = it },
-                    )
-
-                    val regularText = SpanStyle(color = MaterialTheme.colorScheme.onBackground)
-
-                    val clickableTextStyle = SpanStyle(color = MaterialTheme.colorScheme.primary)
-
-                    val annotatedTermsString =
-                        buildAnnotatedString {
-                            withStyle(regularText) { append(stringResource(R.string.i_accept_the)) }
-
-                            withStyle(clickableTextStyle) {
-                                pushStringAnnotation("openTerms", "")
-                                append(stringResource(R.string.terms_of_use))
-                            }
-                        }
-
-                    ClickableText(
-                        text = annotatedTermsString,
-                    ) { spanOffset ->
-                        annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
-                                span ->
-                            if (span.tag == "openTerms") {
-                                runCatching {
-                                    uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
-                                }
-                            }
+                }
+            },
+            leadingIcon = {
+                if (dialogOpen) {
+                    SimpleQrCodeScanner {
+                        dialogOpen = false
+                        if (!it.isNullOrEmpty()) {
+                            key.value = TextFieldValue(it)
                         }
                     }
                 }
-
-                if (termsAcceptanceIsRequired.isNotBlank()) {
-                    Text(
-                        text = termsAcceptanceIsRequired,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                IconButton(onClick = { dialogOpen = true }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_qrcode),
+                        null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
-            }
-
-            if (PackageUtils.isOrbotInstalled(context)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = useProxy.value,
-                        onCheckedChange = {
-                            if (it) {
-                                connectOrbotDialogOpen = true
-                            }
-                        },
-                    )
-
-                    Text(stringResource(R.string.connect_via_tor))
-                }
-
-                if (connectOrbotDialogOpen) {
-                    ConnectOrbotDialog(
-                        onClose = { connectOrbotDialogOpen = false },
-                        onPost = {
-                            connectOrbotDialogOpen = false
-                            useProxy.value = true
-                        },
-                        onError = {
-                            scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    it,
-                                    Toast.LENGTH_LONG,
-                                )
-                                    .show()
-                            }
-                        },
-                        proxyPort,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
-                Button(
-                    enabled = acceptedTerms.value,
-                    onClick = {
+            },
+            visualTransformation =
+                if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardActions =
+                KeyboardActions(
+                    onGo = {
                         if (!acceptedTerms.value) {
                             termsAcceptanceIsRequired =
                                 context.getString(R.string.acceptance_of_terms_is_required)
@@ -436,60 +328,171 @@ fun LoginPage(
                             }
                         }
                     },
+                ),
+        )
+        if (errorMessage.isNotBlank()) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        if (isFirstLogin) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = acceptedTerms.value,
+                    onCheckedChange = { acceptedTerms.value = it },
+                )
+
+                val regularText = SpanStyle(color = MaterialTheme.colorScheme.onBackground)
+
+                val clickableTextStyle = SpanStyle(color = MaterialTheme.colorScheme.primary)
+
+                val annotatedTermsString =
+                    buildAnnotatedString {
+                        withStyle(regularText) { append(stringResource(R.string.i_accept_the)) }
+
+                        withStyle(clickableTextStyle) {
+                            pushStringAnnotation("openTerms", "")
+                            append(stringResource(R.string.terms_of_use))
+                        }
+                    }
+
+                ClickableText(
+                    text = annotatedTermsString,
+                ) { spanOffset ->
+                    annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
+                            span ->
+                        if (span.tag == "openTerms") {
+                            runCatching {
+                                uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (termsAcceptanceIsRequired.isNotBlank()) {
+                Text(
+                    text = termsAcceptanceIsRequired,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        if (PackageUtils.isOrbotInstalled(context)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = useProxy.value,
+                    onCheckedChange = {
+                        if (it) {
+                            connectOrbotDialogOpen = true
+                        }
+                    },
+                )
+
+                Text(stringResource(R.string.connect_via_tor))
+            }
+
+            if (connectOrbotDialogOpen) {
+                ConnectOrbotDialog(
+                    onClose = { connectOrbotDialogOpen = false },
+                    onPost = {
+                        connectOrbotDialogOpen = false
+                        useProxy.value = true
+                    },
+                    onError = {
+                        scope.launch {
+                            Toast.makeText(
+                                context,
+                                it,
+                                Toast.LENGTH_LONG,
+                            )
+                                .show()
+                        }
+                    },
+                    proxyPort,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
+            Button(
+                enabled = acceptedTerms.value,
+                onClick = {
+                    if (!acceptedTerms.value) {
+                        termsAcceptanceIsRequired =
+                            context.getString(R.string.acceptance_of_terms_is_required)
+                    }
+
+                    if (key.value.text.isBlank()) {
+                        errorMessage = context.getString(R.string.key_is_required)
+                    }
+
+                    if (acceptedTerms.value && key.value.text.isNotBlank()) {
+                        accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
+                            errorMessage = context.getString(R.string.invalid_key)
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(Size35dp),
+                modifier = Modifier.height(50.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.login),
+                    modifier = Modifier.padding(horizontal = 40.dp),
+                )
+            }
+        }
+
+        if (PackageUtils.isAmberInstalled(context)) {
+            Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
+                Button(
+                    enabled = acceptedTerms.value,
+                    onClick = {
+                        if (!acceptedTerms.value) {
+                            termsAcceptanceIsRequired =
+                                context.getString(R.string.acceptance_of_terms_is_required)
+                            return@Button
+                        }
+
+                        loginWithExternalSigner = true
+                        return@Button
+                    },
                     shape = RoundedCornerShape(Size35dp),
                     modifier = Modifier.height(50.dp),
                 ) {
                     Text(
-                        text = stringResource(R.string.login),
+                        text = stringResource(R.string.login_with_external_signer),
                         modifier = Modifier.padding(horizontal = 40.dp),
                     )
                 }
             }
-
-            if (PackageUtils.isAmberInstalled(context)) {
-                Box(modifier = Modifier.padding(40.dp, 40.dp, 40.dp, 0.dp)) {
-                    Button(
-                        enabled = acceptedTerms.value,
-                        onClick = {
-                            if (!acceptedTerms.value) {
-                                termsAcceptanceIsRequired =
-                                    context.getString(R.string.acceptance_of_terms_is_required)
-                                return@Button
-                            }
-
-                            loginWithExternalSigner = true
-                            return@Button
-                        },
-                        shape = RoundedCornerShape(Size35dp),
-                        modifier = Modifier.height(50.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.login_with_external_signer),
-                            modifier = Modifier.padding(horizontal = 40.dp),
-                        )
-                    }
-                }
-            }
         }
 
-        // The last child is glued to the bottom.
-        ClickableText(
-            text = AnnotatedString(stringResource(R.string.generate_a_new_key)),
-            modifier = Modifier.padding(20.dp).fillMaxWidth(),
-            onClick = {
-                if (acceptedTerms.value) {
-                    accountViewModel.newKey(useProxy.value, proxyPort.value.toInt())
-                } else {
-                    termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
-                }
-            },
-            style =
-                TextStyle(
-                    fontSize = Font14SP,
-                    textDecoration = TextDecoration.Underline,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                ),
-        )
+        Spacer(modifier = Modifier.height(Size40dp))
+
+        Text(text = stringResource(R.string.don_t_have_an_account))
+
+        Spacer(modifier = Modifier.height(Size20dp))
+
+        Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
+            Button(
+                onClick = onWantsToLogin,
+                shape = RoundedCornerShape(Size35dp),
+                modifier = Modifier.height(50.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.sign_up),
+                    modifier = Modifier.padding(horizontal = Size40dp),
+                )
+            }
+        }
     }
 }

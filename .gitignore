@@ -9,6 +9,7 @@
 /.idea/deploymentTargetDropDown.xml
 /.idea/appInsightsSettings.xml
 /.idea/ktlint-plugin.xml
+/.idea/ktfmt.xml
 .DS_Store
 /build
 /captures

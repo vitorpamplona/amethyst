@@ -93,6 +93,8 @@
     <string name="add_a_relay">Add a Relay</string>
     <string name="display_name">Display Name</string>
     <string name="my_display_name">My display name</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="welcome">Welcome Ostrich!</string>
     <string name="username">Username</string>
     <string name="my_username">My username</string>
     <string name="about_me">About me</string>
@@ -146,7 +148,14 @@
     <string name="terms_of_use">terms of use</string>
     <string name="acceptance_of_terms_is_required">Acceptance of terms is required</string>
     <string name="key_is_required">Key is required</string>
+    <string name="name_is_required">A name is required</string>
     <string name="login">Login</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="create_account">Create Account</string>
+    <string name="how_should_we_call_you">How should we call you?</string>
+    <string name="don_t_have_an_account">Don\'t have a Nostr account?</string>
+    <string name="already_have_an_account">Already have a Nostr account?</string>
+    <string name="create_a_new_account">Create a new account</string>
     <string name="generate_a_new_key">Generate a new key</string>
     <string name="loading_feed">Loading feed</string>
     <string name="loading_account">Loading account</string>
@@ -525,7 +534,7 @@
     <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
 
     <string name="paste_from_clipboard">Paste from clipboard</string>
-  
+
     <string name="language_description">For the App\'s Interface</string>
     <string name="theme_description">Dark, Light or System theme</string>
     <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>

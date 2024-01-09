@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.Nip19
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -65,8 +67,7 @@ class AccountStateViewModel() : ViewModel() {
 
     private suspend fun tryLoginExistingAccount() =
         withContext(Dispatchers.IO) {
-            LocalPreferences.loadCurrentAccountFromEncryptedStorage()?.let { startUI(it) }
-                ?: run { requestLoginUI() }
+            LocalPreferences.loadCurrentAccountFromEncryptedStorage()?.let { startUI(it) } ?: run { requestLoginUI() }
         }
 
     private suspend fun requestLoginUI() {
@@ -144,24 +145,32 @@ class AccountStateViewModel() : ViewModel() {
         startUI(account)
     }
 
-    suspend fun startUI(account: Account) =
-        withContext(Dispatchers.Main) {
-            if (account.isWriteable()) {
-                _accountContent.update { AccountState.LoggedIn(account) }
-            } else {
-                _accountContent.update { AccountState.LoggedInViewOnly(account) }
-            }
-
-            viewModelScope.launch(Dispatchers.IO) {
-                withContext(Dispatchers.Main) {
-                    // Prepares livedata objects on the main user.
-                    account.userProfile().live()
-                }
-                serviceManager?.restartIfDifferentAccount(account)
-            }
-
-            account.saveable.observeForever(saveListener)
+    suspend fun startUI(
+        account: Account,
+        onServicesReady: (() -> Unit)? = null,
+    ) = withContext(Dispatchers.Main) {
+        if (account.isWriteable()) {
+            _accountContent.update { AccountState.LoggedIn(account) }
+        } else {
+            _accountContent.update { AccountState.LoggedInViewOnly(account) }
         }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                // Prepares livedata objects on the main user.
+                account.userProfile().live()
+            }
+            serviceManager?.restartIfDifferentAccount(account)
+
+            if (onServicesReady != null) {
+                // waits for the connection to go through
+                delay(1000)
+                onServicesReady()
+            }
+        }
+
+        account.saveable.observeForever(saveListener)
+    }
 
     @OptIn(DelicateCoroutinesApi::class)
     private val saveListener: (com.vitorpamplona.amethyst.model.AccountState) -> Unit = {
@@ -204,6 +213,7 @@ class AccountStateViewModel() : ViewModel() {
     fun newKey(
         useProxy: Boolean,
         proxyPort: Int,
+        name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
@@ -220,7 +230,10 @@ class AccountStateViewModel() : ViewModel() {
 
             // saves to local preferences
             LocalPreferences.updatePrefsForLogin(account)
-            startUI(account)
+            startUI(account) {
+                account.userProfile().latestContactList?.let { Client.send(it) }
+                account.sendNewUserMetadata(name = name)
+            }
         }
     }
 
