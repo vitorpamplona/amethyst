@@ -2,4 +2,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">Покажите на КР код</string>
     <string name="show_qr">Прикажи КР</string>
+    <string name="profile_image">слика профила</string>
+    <string name="scan_qr">Скенирај QR</string>
+    <string name="show_anyway">Схов Аниваи</string>
+    <string name="post_was_flagged_as_inappropriate_by">Објаву је игнорисао или је пријавио</string>
+    <string name="post_not_found">Догађај се учитава или се не може пронаћи на вашој листи релеја</string>
+    <string name="channel_image">Слика канала</string>
+    <string name="referenced_event_not_found">Референтни догађај није пронађен</string>
+    <string name="could_not_decrypt_the_message">Није могуће дешифровати поруку</string>
+    <string name="group_picture">Групна слика</string>
 </resources>
