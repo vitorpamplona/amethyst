@@ -90,6 +90,8 @@
     <string name="add_a_relay">Voeg relay toe</string>
     <string name="display_name">Naam</string>
     <string name="my_display_name">Mijn naam</string>
+    <string name="my_awesome_name">Struisvogel McAwesome</string>
+    <string name="welcome">Welkom Struisvogel!</string>
     <string name="username">Gebruikersnaam</string>
     <string name="my_username">Mijn gebruikersnaam</string>
     <string name="about_me">Over mij</string>
@@ -143,7 +145,14 @@
     <string name="terms_of_use">gebruiksvoorwaarden</string>
     <string name="acceptance_of_terms_is_required">Accepteren van de voorwaarden is vereist</string>
     <string name="key_is_required">Sleutel is vereist</string>
+    <string name="name_is_required">Een naam is verplicht</string>
     <string name="login">Inloggen</string>
+    <string name="sign_up">Aanmelden</string>
+    <string name="create_account">Account aanmaken</string>
+    <string name="how_should_we_call_you">Hoe moeten we je noemen?</string>
+    <string name="don_t_have_an_account">Heb je geen Nostr account?</string>
+    <string name="already_have_an_account">Heb je al een Nostr account?</string>
+    <string name="create_a_new_account">Een nieuw account aanmaken</string>
     <string name="generate_a_new_key">Genereer een nieuwe sleutel</string>
     <string name="loading_feed">Feed laden…</string>
     <string name="loading_account">Account wordt geladen</string>
