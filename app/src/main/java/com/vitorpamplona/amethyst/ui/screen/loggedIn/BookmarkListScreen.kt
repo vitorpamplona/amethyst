@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookmarkListScreen(
     accountViewModel: AccountViewModel,
@@ -52,13 +51,13 @@ fun BookmarkListScreen(
 ) {
     val publicFeedViewModel: NostrBookmarkPublicFeedViewModel =
         viewModel(
-            key = "NotificationViewModel",
+            key = "NostrBookmarkPublicFeedViewModel",
             factory = NostrBookmarkPublicFeedViewModel.Factory(accountViewModel.account),
         )
 
     val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel =
         viewModel(
-            key = "NotificationViewModel",
+            key = "NostrBookmarkPrivateFeedViewModel",
             factory = NostrBookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
@@ -69,6 +68,18 @@ fun BookmarkListScreen(
         privateFeedViewModel.invalidateData()
     }
 
+
+    RenderBookmarkScreen(privateFeedViewModel, accountViewModel, nav, publicFeedViewModel)
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun RenderBookmarkScreen(
+    privateFeedViewModel: NostrBookmarkPrivateFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    publicFeedViewModel: NostrBookmarkPublicFeedViewModel,
+) {
     Column(Modifier.fillMaxHeight()) {
         val pagerState = rememberPagerState { 2 }
         val coroutineScope = rememberCoroutineScope()
@@ -99,6 +110,7 @@ fun BookmarkListScreen(
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+
                 1 ->
                     RefresheableFeedView(
                         publicFeedViewModel,
