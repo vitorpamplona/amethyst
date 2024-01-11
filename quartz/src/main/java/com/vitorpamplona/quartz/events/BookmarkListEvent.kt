@@ -38,6 +38,7 @@ class BookmarkListEvent(
     companion object {
         const val KIND = 30001
         const val ALT = "List of bookmarks"
+        const val DEFAULT_D_TAG_BOOKMARKS = "bookmark"
 
         fun addEvent(
             earlierVersion: BookmarkListEvent?,
@@ -107,7 +108,7 @@ class BookmarkListEvent(
                     ) { encryptedTags ->
                         create(
                             content = encryptedTags,
-                            tags = emptyArray(),
+                            tags = arrayOf(arrayOf("d", DEFAULT_D_TAG_BOOKMARKS)),
                             signer = signer,
                             createdAt = createdAt,
                             onReady = onReady,
@@ -117,7 +118,7 @@ class BookmarkListEvent(
             } else {
                 create(
                     content = earlierVersion?.content ?: "",
-                    tags = (earlierVersion?.tags ?: emptyArray()).plus(listNewTags),
+                    tags = (earlierVersion?.tags ?: arrayOf(arrayOf("d", DEFAULT_D_TAG_BOOKMARKS))).plus(listNewTags),
                     signer = signer,
                     createdAt = createdAt,
                     onReady = onReady,
