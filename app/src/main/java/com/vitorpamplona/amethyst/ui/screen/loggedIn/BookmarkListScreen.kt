@@ -68,7 +68,6 @@ fun BookmarkListScreen(
         privateFeedViewModel.invalidateData()
     }
 
-
     RenderBookmarkScreen(privateFeedViewModel, accountViewModel, nav, publicFeedViewModel)
 }
 

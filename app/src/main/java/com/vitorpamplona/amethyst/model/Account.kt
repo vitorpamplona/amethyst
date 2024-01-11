@@ -454,11 +454,21 @@ class Account(
 
     val liveHiddenUsers = flowHiddenUsers.asLiveData()
 
-    val decryptBookmarks: LiveData<BookmarkListEvent> by lazy {
+    val decryptBookmarks: LiveData<BookmarkListEvent?> by lazy {
         userProfile().live().innerBookmarks.switchMap { userState ->
             liveData(Dispatchers.IO) {
-                userState.user.latestBookmarkList?.privateTags(signer) {
-                    scope.launch(Dispatchers.IO) { userState.user.latestBookmarkList?.let { emit(it) } }
+                if (userState.user.latestBookmarkList == null) {
+                    emit(null)
+                } else {
+                    emit(
+                        withTimeoutOrNull(1000) {
+                            suspendCancellableCoroutine { continuation ->
+                                userState.user.latestBookmarkList?.privateTags(signer) {
+                                    continuation.resume(userState.user.latestBookmarkList)
+                                }
+                            }
+                        },
+                    )
                 }
             }
         }
