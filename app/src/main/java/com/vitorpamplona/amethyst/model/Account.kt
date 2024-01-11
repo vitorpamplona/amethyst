@@ -1784,7 +1784,14 @@ class Account(
         note: Note,
         onReady: (Boolean) -> Unit,
     ) {
-        if (!isWriteable()) return
+        if (!isWriteable()) {
+            onReady(false)
+            false
+        }
+        if (userProfile().latestBookmarkList == null) {
+            onReady(false)
+            false
+        }
 
         if (note is AddressableNote) {
             userProfile().latestBookmarkList?.privateTaggedAddresses(signer) {
