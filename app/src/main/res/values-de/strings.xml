@@ -90,6 +90,8 @@
     <string name="add_a_relay">Relay hinzufügen</string>
     <string name="display_name">Anzeigename</string>
     <string name="my_display_name">Mein Anzeigename</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="welcome">Willkommen Ostrich!</string>
     <string name="username">Benutzername</string>
     <string name="my_username">Mein Benutzername</string>
     <string name="about_me">Über mich</string>
@@ -147,7 +149,14 @@ erie gespeichert</string>
 
 anz der Bedingungen ist erforderlich</string>
     <string name="key_is_required">Schlüssel ist erforderlich</string>
+    <string name="name_is_required">Ein Name wird benötigt</string>
     <string name="login">Anmeldung</string>
+    <string name="sign_up">Anmelden</string>
+    <string name="create_account">Konto erstellen</string>
+    <string name="how_should_we_call_you">Wie sollen wir Sie nennen?</string>
+    <string name="don_t_have_an_account">Sie haben kein Nostr-Konto?</string>
+    <string name="already_have_an_account">Haben Sie schon ein Nostr-Konto?</string>
+    <string name="create_a_new_account">Neues Konto anlegen</string>
     <string name="generate_a_new_key">Neuen Schlüssel generieren</string>
     <string name="loading_feed">Feed wird geladen</string>
     <string name="loading_account">Konto wird geladen</string>

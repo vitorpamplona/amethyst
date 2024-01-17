@@ -143,7 +143,14 @@
     <string name="terms_of_use">conditions d\'utilisation</string>
     <string name="acceptance_of_terms_is_required">L\'acceptation des conditions est requise</string>
     <string name="key_is_required">La clé est requise</string>
+    <string name="name_is_required">Un nom est requis</string>
     <string name="login">Connexion</string>
+    <string name="sign_up">Inscription</string>
+    <string name="create_account">Créer un Compte</string>
+    <string name="how_should_we_call_you">Comment devrions-nous vous appeler ?</string>
+    <string name="don_t_have_an_account">Vous n\'avez pas de compte Nostr ?</string>
+    <string name="already_have_an_account">Vous avez déjà un compte Nostr ?</string>
+    <string name="create_a_new_account">Créer un nouveau compte</string>
     <string name="generate_a_new_key">Générer une nouvelle clé</string>
     <string name="loading_feed">Chargement du flux</string>
     <string name="loading_account">Chargement du compte</string>
@@ -571,4 +578,11 @@
     <string name="classifieds_category_food">Nourriture</string>
     <string name="classifieds_category_misc">Divers</string>
     <string name="classifieds_category_other">Autres</string>
+    <string name="failed_to_upload_media_no_details">Échec du téléversement du fichier</string>
+    <string name="could_not_open_the_compressed_file">Impossible d\'ouvrir le fichier compressé</string>
+    <string name="error_when_compressing_media">Erreur lors de la compression du média : %1$s</string>
+    <string name="failed_to_upload_media">Erreur de téléversement : %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Le serveur n\'a pas fourni d\'URL après le téléversement</string>
+    <string name="could_not_download_from_the_server">Impossible de télécharger le média depuis le serveur</string>
+    <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
 </resources>
