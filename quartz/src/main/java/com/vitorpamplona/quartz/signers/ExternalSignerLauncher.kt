@@ -252,33 +252,38 @@ class ExternalSignerLauncher(
                 arrayOf(event.toJson(), event.pubKey()),
                 columnName,
             )
-        if (result == null) {
-            openSignerApp(
-                event.toJson(),
-                SignerType.SIGN_EVENT,
-                "",
-                event.id(),
-                onReady,
-            )
-        } else {
-            onReady(result)
-        }
+        result.fold(
+            onFailure = { },
+            onSuccess = {
+                if (it == null) {
+                    openSignerApp(
+                        event.toJson(),
+                        SignerType.SIGN_EVENT,
+                        "",
+                        event.id(),
+                        onReady,
+                    )
+                } else {
+                    onReady(it)
+                }
+            },
+        )
     }
 
-    fun getDataFromResolver(
+    private fun getDataFromResolver(
         signerType: SignerType,
         data: Array<out String>,
         columnName: String = "signature",
-    ): String? {
+    ): kotlin.Result<String?> {
         return getDataFromResolver(signerType, data, columnName, contentResolver)
     }
 
-    fun getDataFromResolver(
+    private fun getDataFromResolver(
         signerType: SignerType,
         data: Array<out String>,
         columnName: String = "signature",
         contentResolver: (() -> ContentResolver)? = null,
-    ): String? {
+    ): kotlin.Result<String?> {
         val localData =
             if (signerType !== SignerType.GET_PUBLIC_KEY) {
                 data.toList().plus(npub).toTypedArray()
@@ -292,29 +297,33 @@ class ExternalSignerLauncher(
                 ?.query(
                     Uri.parse("content://$signerPackageName.$signerType"),
                     localData,
-                    null,
+                    "1",
                     null,
                     null,
                 )
                 .use {
                     if (it == null) {
-                        return null
+                        return kotlin.Result.success(null)
                     }
                     if (it.moveToFirst()) {
+                        if (it.getColumnIndex("rejected") > -1) {
+                            Log.d("getDataFromResolver", "Permission denied")
+                            return kotlin.Result.failure(Exception("Permission denied"))
+                        }
                         val index = it.getColumnIndex(columnName)
                         if (index < 0) {
                             Log.d("getDataFromResolver", "column '$columnName' not found")
-                            return null
+                            return kotlin.Result.success(null)
                         }
-                        return it.getString(index)
+                        return kotlin.Result.success(it.getString(index))
                     }
                 }
         } catch (e: Exception) {
             Log.e("ExternalSignerLauncher", "Failed to query the Signer app in the background")
-            return null
+            return kotlin.Result.success(null)
         }
 
-        return null
+        return kotlin.Result.success(null)
     }
 
     fun decrypt(
@@ -325,17 +334,22 @@ class ExternalSignerLauncher(
     ) {
         val id = (encryptedContent + pubKey + onReady.toString()).hashCode().toString()
         val result = getDataFromResolver(signerType, arrayOf(encryptedContent, pubKey))
-        if (result == null) {
-            openSignerApp(
-                encryptedContent,
-                signerType,
-                pubKey,
-                id,
-                onReady,
-            )
-        } else {
-            onReady(result)
-        }
+        result.fold(
+            onFailure = { },
+            onSuccess = {
+                if (it == null) {
+                    openSignerApp(
+                        encryptedContent,
+                        signerType,
+                        pubKey,
+                        id,
+                        onReady,
+                    )
+                } else {
+                    onReady(it)
+                }
+            },
+        )
     }
 
     fun encrypt(
@@ -346,17 +360,22 @@ class ExternalSignerLauncher(
     ) {
         val id = (decryptedContent + pubKey + onReady.toString()).hashCode().toString()
         val result = getDataFromResolver(signerType, arrayOf(decryptedContent, pubKey))
-        if (result == null) {
-            openSignerApp(
-                decryptedContent,
-                signerType,
-                pubKey,
-                id,
-                onReady,
-            )
-        } else {
-            onReady(result)
-        }
+        result.fold(
+            onFailure = { },
+            onSuccess = {
+                if (it == null) {
+                    openSignerApp(
+                        decryptedContent,
+                        signerType,
+                        pubKey,
+                        id,
+                        onReady,
+                    )
+                } else {
+                    onReady(it)
+                }
+            },
+        )
     }
 
     fun decryptZapEvent(
@@ -365,16 +384,21 @@ class ExternalSignerLauncher(
     ) {
         val result =
             getDataFromResolver(SignerType.DECRYPT_ZAP_EVENT, arrayOf(event.toJson(), event.pubKey))
-        if (result == null) {
-            openSignerApp(
-                event.toJson(),
-                SignerType.DECRYPT_ZAP_EVENT,
-                event.pubKey,
-                event.id,
-                onReady,
-            )
-        } else {
-            onReady(result)
-        }
+        result.fold(
+            onFailure = { },
+            onSuccess = {
+                if (it == null) {
+                    openSignerApp(
+                        event.toJson(),
+                        SignerType.DECRYPT_ZAP_EVENT,
+                        event.pubKey,
+                        event.id,
+                        onReady,
+                    )
+                } else {
+                    onReady(it)
+                }
+            },
+        )
     }
 }
