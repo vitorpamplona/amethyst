@@ -90,6 +90,8 @@
     <string name="add_a_relay">Adicionar um Relay</string>
     <string name="display_name">Nome de Exibição</string>
     <string name="my_display_name">Meu nome de exibição</string>
+    <string name="my_awesome_name">McAwesome Ostrich</string>
+    <string name="welcome">Bem-vindo, Ostrich!</string>
     <string name="username">Usuário</string>
     <string name="my_username">Meu usuário</string>
     <string name="about_me">Sobre mim</string>
@@ -143,7 +145,14 @@
     <string name="terms_of_use">termos de uso</string>
     <string name="acceptance_of_terms_is_required">É necessário aceitar os termos de uso</string>
     <string name="key_is_required">Chave é obrigatória</string>
+    <string name="name_is_required">Um nome é necessário</string>
     <string name="login">Entrar</string>
+    <string name="sign_up">Enviar</string>
+    <string name="create_account">Criar Conta</string>
+    <string name="how_should_we_call_you">Como deveríamos chamar você?</string>
+    <string name="don_t_have_an_account">Não tem uma conta Nostr?</string>
+    <string name="already_have_an_account">Já tem uma conta Nostr?</string>
+    <string name="create_a_new_account">Criar uma nova conta</string>
     <string name="generate_a_new_key">Gerar uma nova chave</string>
     <string name="loading_feed">Carregando feed</string>
     <string name="loading_account">Carregando conta</string>

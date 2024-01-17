@@ -90,6 +90,8 @@
     <string name="add_a_relay">Lägg till Relä</string>
     <string name="display_name">Visningsnamn</string>
     <string name="my_display_name">Mitt visningsnamn</string>
+    <string name="my_awesome_name">Struts McAwesome</string>
+    <string name="welcome">Välkommen struts!</string>
     <string name="username">Användarnamn</string>
     <string name="my_username">Mitt användarnamn</string>
     <string name="about_me">Om mig</string>
@@ -143,7 +145,14 @@
     <string name="terms_of_use">villkor</string>
     <string name="acceptance_of_terms_is_required">Godkännande av villkor krävs</string>
     <string name="key_is_required">Nyckel krävs</string>
+    <string name="name_is_required">Namn är obligatoriskt</string>
     <string name="login">Inloggning</string>
+    <string name="sign_up">Registrera dig</string>
+    <string name="create_account">Skapa ett konto</string>
+    <string name="how_should_we_call_you">Hur ska vi kalla dig?</string>
+    <string name="don_t_have_an_account">Har du inget Nostr konto?</string>
+    <string name="already_have_an_account">Har du redan ett Nostr konto?</string>
+    <string name="create_a_new_account">Skapa ett nytt konto</string>
     <string name="generate_a_new_key">Skapa en ny nyckel</string>
     <string name="loading_feed">Ladda flöde</string>
     <string name="loading_account">Laddar kontot</string>
