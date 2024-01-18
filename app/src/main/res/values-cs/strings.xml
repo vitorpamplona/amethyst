@@ -90,6 +90,8 @@
     <string name="add_a_relay">Přidat přeposílání</string>
     <string name="display_name">Zobrazované jméno</string>
     <string name="my_display_name">Moje zobrazované jméno</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="welcome">Vítejte Ostrich!</string>
     <string name="username">Uživatelské jméno</string>
     <string name="my_username">Moje uživatelské jméno</string>
     <string name="about_me">O mně</string>
@@ -143,7 +145,14 @@
     <string name="terms_of_use">podmínkami použití</string>
     <string name="acceptance_of_terms_is_required">Je vyžadováno přijetí podmínek</string>
     <string name="key_is_required">Klíč je povinný</string>
+    <string name="name_is_required">Jméno je povinné</string>
     <string name="login">Přihlásit se</string>
+    <string name="sign_up">Registrovat se</string>
+    <string name="create_account">Vytvořit účet</string>
+    <string name="how_should_we_call_you">Jak bychom vám měli říkat?</string>
+    <string name="don_t_have_an_account">Nemáte Nostr účet?</string>
+    <string name="already_have_an_account">Máte již Nostr účet?</string>
+    <string name="create_a_new_account">Vytvořit nový účet</string>
     <string name="generate_a_new_key">Vygenerovat nový klíč</string>
     <string name="loading_feed">Načítání zdroje</string>
     <string name="loading_account">Načítání účtu</string>

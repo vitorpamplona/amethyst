@@ -90,6 +90,8 @@
     <string name="add_a_relay">Csomópont hozzáadása</string>
     <string name="display_name">Megjelenítendő Név</string>
     <string name="my_display_name">Az én megjelenített névem</string>
+    <string name="my_awesome_name">Király McStrucc</string>
+    <string name="welcome">Üdvözlünk Strucc!</string>
     <string name="username">Felhasználónév</string>
     <string name="my_username">Felhasználónevem</string>
     <string name="about_me">Rólam</string>
@@ -143,7 +145,14 @@
     <string name="terms_of_use">használati feltételeket</string>
     <string name="acceptance_of_terms_is_required">A feltételek elfogadása szükséges</string>
     <string name="key_is_required">Kulcs szükséges</string>
+    <string name="name_is_required">Név megadása kötelező</string>
     <string name="login">Bejelentkezés</string>
+    <string name="sign_up">Regisztráció</string>
+    <string name="create_account">Fiók létrehozása</string>
+    <string name="how_should_we_call_you">Hogyan szólíthatunk?</string>
+    <string name="don_t_have_an_account">Nincs Nostr fiókod?</string>
+    <string name="already_have_an_account">Van már Nostr-fiókod?</string>
+    <string name="create_a_new_account">Új fiók létrehozása</string>
     <string name="generate_a_new_key">Új kulcs létrehozása</string>
     <string name="loading_feed">Lista betöltése</string>
     <string name="loading_account">Fiók betöltése</string>
