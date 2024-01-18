@@ -25,7 +25,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexValidator
-import java.lang.StringBuilder
 
 object Robohash {
     private fun encodeColor(

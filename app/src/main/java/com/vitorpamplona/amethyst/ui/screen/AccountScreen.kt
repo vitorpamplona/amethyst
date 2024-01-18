@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
-import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(

@@ -36,8 +36,6 @@ package com.vitorpamplona.quartz.encoders
  * limitations under the License.
  */
 
-import kotlin.jvm.JvmStatic
-
 /**
  * Bech32 works with 5 bits values, we use this type to make it explicit: whenever you see Int5 it
  * means 5 bits values, and whenever you see Byte it means 8 bits values.
