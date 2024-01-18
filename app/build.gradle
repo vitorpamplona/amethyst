@@ -99,6 +99,7 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
+            profileable true
             signingConfig signingConfigs.debug
         }
     }
