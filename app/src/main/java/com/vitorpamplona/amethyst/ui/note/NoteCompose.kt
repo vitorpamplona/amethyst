@@ -795,7 +795,11 @@ fun ShortCommunityHeader(
         }
 
         Column(
-            modifier = Modifier.padding(start = 10.dp).height(Size35dp).weight(1f),
+            modifier =
+                Modifier
+                    .padding(start = 10.dp)
+                    .height(Size35dp)
+                    .weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = CenterVertically) {
@@ -808,7 +812,10 @@ fun ShortCommunityHeader(
         }
 
         Row(
-            modifier = Modifier.height(Size35dp).padding(start = 5.dp),
+            modifier =
+                Modifier
+                    .height(Size35dp)
+                    .padding(start = 5.dp),
             verticalAlignment = CenterVertically,
         ) {
             ShortCommunityActionOptions(baseNote, accountViewModel, nav)
@@ -1429,7 +1436,8 @@ fun RenderAppDefinition(
                     contentDescription = stringResource(id = R.string.profile_image),
                     contentScale = ContentScale.FillWidth,
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .height(125.dp)
                             .combinedClickable(
                                 onClick = {},
@@ -1449,12 +1457,19 @@ fun RenderAppDefinition(
                     painter = painterResource(R.drawable.profile_banner),
                     contentDescription = stringResource(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth().height(125.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(125.dp),
                 )
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 75.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
+                        .padding(top = 75.dp),
             ) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1469,11 +1484,12 @@ fun RenderAppDefinition(
                                 contentDescription = null,
                                 contentScale = ContentScale.FillWidth,
                                 modifier =
-                                    Modifier.border(
-                                        3.dp,
-                                        MaterialTheme.colorScheme.background,
-                                        CircleShape,
-                                    )
+                                    Modifier
+                                        .border(
+                                            3.dp,
+                                            MaterialTheme.colorScheme.background,
+                                            CircleShape,
+                                        )
                                         .clip(shape = CircleShape)
                                         .fillMaxSize()
                                         .background(MaterialTheme.colorScheme.background)
@@ -1496,7 +1512,10 @@ fun RenderAppDefinition(
                     Spacer(Modifier.weight(1f))
 
                     Row(
-                        modifier = Modifier.height(Size35dp).padding(bottom = 3.dp),
+                        modifier =
+                            Modifier
+                                .height(Size35dp)
+                                .padding(bottom = 3.dp),
                     ) {}
                 }
 
@@ -1681,7 +1700,10 @@ fun DisplayRelaySet(
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth().padding(5.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(5.dp),
         textAlign = TextAlign.Center,
     )
 
@@ -1690,7 +1712,10 @@ fun DisplayRelaySet(
             text = it,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(5.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(5.dp),
             textAlign = TextAlign.Center,
             color = Color.Gray,
         )
@@ -1705,7 +1730,10 @@ fun DisplayRelaySet(
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 10.dp, bottom = 5.dp).weight(1f),
+                        modifier =
+                            Modifier
+                                .padding(start = 10.dp, bottom = 5.dp)
+                                .weight(1f),
                     )
 
                     Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -1720,7 +1748,8 @@ fun DisplayRelaySet(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
@@ -1785,7 +1814,10 @@ fun DisplayPeopleList(
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth().padding(5.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(5.dp),
         textAlign = TextAlign.Center,
     )
 
@@ -1810,7 +1842,8 @@ fun DisplayPeopleList(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
@@ -1840,7 +1873,10 @@ private fun RenderBadgeAward(
     FlowRow(modifier = Modifier.padding(top = 5.dp)) {
         awardees.take(100).forEach { user ->
             Row(
-                modifier = Modifier.size(size = Size35dp).clickable { nav("User/${user.pubkeyHex}") },
+                modifier =
+                    Modifier
+                        .size(size = Size35dp)
+                        .clickable { nav("User/${user.pubkeyHex}") },
                 verticalAlignment = CenterVertically,
             ) {
                 ClickableUserPicture(
@@ -1952,7 +1988,10 @@ fun RenderPostApproval(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(5.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(5.dp),
             textAlign = TextAlign.Center,
         )
 
@@ -2076,7 +2115,10 @@ public fun RenderEmojiPack(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1F).padding(5.dp),
+            modifier =
+                Modifier
+                    .weight(1F)
+                    .padding(5.dp),
             textAlign = TextAlign.Center,
         )
 
@@ -2116,7 +2158,8 @@ public fun RenderEmojiPack(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
@@ -2189,7 +2232,10 @@ fun RenderPinListEvent(
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth().padding(5.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(5.dp),
         textAlign = TextAlign.Center,
     )
 
@@ -2221,7 +2267,8 @@ fun RenderPinListEvent(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
@@ -2320,7 +2367,8 @@ private fun RenderReport(
             baseNote = it,
             isQuotedNote = true,
             modifier =
-                Modifier.padding(top = 5.dp)
+                Modifier
+                    .padding(top = 5.dp)
                     .fillMaxWidth()
                     .clip(shape = QuoteBorder)
                     .border(
@@ -2925,7 +2973,8 @@ fun BadgeDisplay(baseNote: Note) {
 
     Row(
         modifier =
-            Modifier.padding(10.dp)
+            Modifier
+                .padding(10.dp)
                 .clip(shape = CutCornerShape(20, 20, 20, 20))
                 .border(
                     5.dp,
@@ -2975,7 +3024,10 @@ private fun RenderBadge(
                 text = it,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp),
                 color = backgroundFromImage,
             )
         }
@@ -2985,7 +3037,10 @@ private fun RenderBadge(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
                 color = Color.Gray,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
@@ -3103,7 +3158,10 @@ fun VideoDisplay(
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (isYouTube) {
@@ -3139,7 +3197,10 @@ fun VideoDisplay(
                     fontWeight = FontWeight.Bold,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 5.dp),
                 )
             }
 
@@ -3291,9 +3352,11 @@ fun AudioTrackHeader(
                 Row(
                     verticalAlignment = CenterVertically,
                     modifier =
-                        Modifier.padding(top = 5.dp, start = 10.dp, end = 10.dp).clickable {
-                            nav("User/${it.second.pubkeyHex}")
-                        },
+                        Modifier
+                            .padding(top = 5.dp, start = 10.dp, end = 10.dp)
+                            .clickable {
+                                nav("User/${it.second.pubkeyHex}")
+                            },
                 ) {
                     ClickableUserPicture(it.second, 25.dp, accountViewModel)
                     Spacer(Modifier.width(5.dp))
@@ -3373,7 +3436,10 @@ fun AudioHeader(
             content?.let {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 5.dp),
                 ) {
                     TranslatableRichTextViewer(
                         content = it,
@@ -3432,7 +3498,10 @@ fun RenderLiveActivityEventInner(
 
     Row(
         verticalAlignment = CenterVertically,
-        modifier = Modifier.padding(vertical = 5.dp).fillMaxWidth(),
+        modifier =
+            Modifier
+                .padding(vertical = 5.dp)
+                .fillMaxWidth(),
     ) {
         subject?.let {
             Text(
@@ -3492,7 +3561,10 @@ fun RenderLiveActivityEventInner(
                 } else {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(10.dp).height(100.dp),
+                        modifier =
+                            Modifier
+                                .padding(10.dp)
+                                .height(100.dp),
                     ) {
                         Text(
                             text = stringResource(id = R.string.live_stream_is_offline),
@@ -3505,7 +3577,10 @@ fun RenderLiveActivityEventInner(
         } else if (status == STATUS_ENDED) {
             Row(
                 verticalAlignment = CenterVertically,
-                modifier = Modifier.padding(10.dp).height(100.dp),
+                modifier =
+                    Modifier
+                        .padding(10.dp)
+                        .height(100.dp),
             ) {
                 Text(
                     text = stringResource(id = R.string.live_stream_has_ended),
@@ -3519,7 +3594,10 @@ fun RenderLiveActivityEventInner(
     participantUsers.forEach {
         Row(
             verticalAlignment = CenterVertically,
-            modifier = Modifier.padding(vertical = 5.dp).clickable { nav("User/${it.second.pubkeyHex}") },
+            modifier =
+                Modifier
+                    .padding(vertical = 5.dp)
+                    .clickable { nav("User/${it.second.pubkeyHex}") },
         ) {
             ClickableUserPicture(it.second, 25.dp, accountViewModel)
             Spacer(StdHorzSpacer)
@@ -3551,7 +3629,8 @@ private fun LongFormHeader(
 
     Row(
         modifier =
-            Modifier.padding(top = Size5dp)
+            Modifier
+                .padding(top = Size5dp)
                 .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
@@ -3582,7 +3661,10 @@ private fun LongFormHeader(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
                 )
             }
 
@@ -3590,7 +3672,10 @@ private fun LongFormHeader(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
                     color = Color.Gray,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
@@ -3616,7 +3701,8 @@ private fun RenderClassifieds(
 
     Row(
         modifier =
-            Modifier.clip(shape = QuoteBorder)
+            Modifier
+                .clip(shape = QuoteBorder)
                 .border(
                     1.dp,
                     MaterialTheme.colorScheme.subtleBorder,
@@ -3674,7 +3760,12 @@ private fun RenderClassifieds(
                         maxLines = 1,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
-                        modifier = remember { Modifier.clip(SmallBorder).padding(start = 5.dp) },
+                        modifier =
+                            remember {
+                                Modifier
+                                    .clip(SmallBorder)
+                                    .padding(start = 5.dp)
+                            },
                     )
                 }
             }
@@ -3767,11 +3858,22 @@ fun CreateImageHeader(
                 painter = painterResource(R.drawable.profile_banner),
                 contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
-                modifier = remember { Modifier.fillMaxWidth().height(150.dp) },
+                modifier =
+                    remember {
+                        Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                    },
             )
 
         Box(
-            remember { Modifier.width(75.dp).height(75.dp).padding(10.dp).align(Alignment.BottomStart) },
+            remember {
+                Modifier
+                    .width(75.dp)
+                    .height(75.dp)
+                    .padding(10.dp)
+                    .align(Alignment.BottomStart)
+            },
         ) {
             NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = Size55dp)
         }
