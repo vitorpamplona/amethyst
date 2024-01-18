@@ -62,8 +62,8 @@ object Constants {
                 write = true,
                 feedTypes = activeTypesChats,
             ),
-            RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypesChats),
-            RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypesGlobalChats),
+            RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypesGlobalChats),
             // Less Reliable
             // NewRelayListViewModel.Relay("wss://nostr.orangepill.dev", read = true, write = true,
             // feedTypes = activeTypes),
