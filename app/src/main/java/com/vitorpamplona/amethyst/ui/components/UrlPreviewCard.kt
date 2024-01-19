@@ -20,18 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -42,15 +50,58 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 
 @Composable
+private fun CopyToClipboard(
+    popupExpanded: MutableState<Boolean>,
+    content: String,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = popupExpanded.value,
+        onDismissRequest = onDismiss,
+    ) {
+        val clipboardManager = LocalClipboardManager.current
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
+            onClick = {
+                clipboardManager.setText(AnnotatedString(content))
+                onDismiss()
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 fun UrlPreviewCard(
     url: String,
     previewInfo: UrlInfoItem,
 ) {
     val uri = LocalUriHandler.current
+    val popupExpanded =
+        remember {
+            mutableStateOf(false)
+        }
+
+    if (popupExpanded.value) {
+        CopyToClipboard(
+            popupExpanded = popupExpanded,
+            content = url,
+        ) {
+            popupExpanded.value = false
+        }
+    }
 
     Column(
         modifier =
-            MaterialTheme.colorScheme.innerPostModifier.clickable { runCatching { uri.openUri(url) } },
+            MaterialTheme.colorScheme.innerPostModifier
+                .combinedClickable(
+                    onClick = {
+                        runCatching { uri.openUri(url) }
+                    },
+                    onLongClick = {
+                        popupExpanded.value = true
+                    },
+                ),
     ) {
         AsyncImage(
             model = previewInfo.imageUrlFullPath,
