@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -213,6 +214,14 @@ open class NewPostViewModel() : ViewModel() {
         zapRaiserAmount = null
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val draft = loadDraft()
+            if (draft != null) {
+                message = TextFieldValue(draft)
+                updateMessage(message)
+            }
+        }
     }
 
     fun sendPost(relayList: List<Relay>? = null) {
@@ -535,6 +544,10 @@ open class NewPostViewModel() : ViewModel() {
         userSuggestionAnchor = null
         userSuggestionsMainMessage = null
 
+        viewModelScope.launch(Dispatchers.IO) {
+            clearDraft()
+        }
+
         NostrSearchEventOrUserDataSource.clear()
     }
 
@@ -550,7 +563,24 @@ open class NewPostViewModel() : ViewModel() {
         pTags = pTags?.filter { it != userToRemove }
     }
 
+    open fun saveDraft(message: String) {
+        account?.let { LocalPreferences.saveDraft(message, it) }
+    }
+
+    open fun loadDraft(): String? {
+        account?.let { return LocalPreferences.loadDraft(it) }
+
+        return null
+    }
+
+    open fun clearDraft() {
+        account?.let { LocalPreferences.clearDraft(it) }
+    }
+
     open fun updateMessage(it: TextFieldValue) {
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft(it.text)
+        }
         message = it
         urlPreview = findUrlInMessage()
 
