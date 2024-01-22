@@ -458,7 +458,7 @@ fun LoginPage(
             }
         }
 
-        if (PackageUtils.isAmberInstalled(context)) {
+        if (PackageUtils.isExternalSignerInstalled(context)) {
             Box(modifier = Modifier.padding(40.dp, 20.dp, 40.dp, 0.dp)) {
                 Button(
                     enabled = acceptedTerms.value,
