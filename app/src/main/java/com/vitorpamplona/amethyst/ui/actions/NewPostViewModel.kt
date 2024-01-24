@@ -670,6 +670,9 @@ open class NewPostViewModel() : ViewModel() {
                         message.text.replaceRange(lastWordStart, it.end, wordToInsert),
                         TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
                     )
+                viewModelScope.launch(Dispatchers.IO) {
+                    saveDraft(message.text)
+                }
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.addItem(item)
                 forwardZapToEditting = TextFieldValue("")
@@ -852,6 +855,9 @@ open class NewPostViewModel() : ViewModel() {
                             ),
                     )
                 urlPreview = findUrlInMessage()
+                viewModelScope.launch(Dispatchers.IO) {
+                    saveDraft(message.text)
+                }
             },
             onError = {
                 isUploadingImage = false
@@ -915,7 +921,10 @@ open class NewPostViewModel() : ViewModel() {
 
                         isUploadingImage = false
 
-                        note?.let { message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent()) }
+                        note?.let {
+                            message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent())
+                            saveDraft(message.text)
+                        }
 
                         urlPreview = findUrlInMessage()
                     }
