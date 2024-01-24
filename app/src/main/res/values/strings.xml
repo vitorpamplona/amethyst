@@ -701,4 +701,5 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+    <string name="edit_draft">Edit draft</string>
 </resources>

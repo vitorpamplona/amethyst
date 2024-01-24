@@ -20,17 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,6 +41,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -49,9 +53,12 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -75,16 +82,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
+import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -155,7 +168,10 @@ fun DrawerContent(
             )
 
             ListContent(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 drawerState,
                 openSheet,
                 accountViewModel,
@@ -227,7 +243,8 @@ fun ProfileContentTemplate(
                 model = profilePicture,
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier =
-                    Modifier.width(100.dp)
+                    Modifier
+                        .width(100.dp)
                         .height(100.dp)
                         .clip(shape = CircleShape)
                         .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
@@ -240,7 +257,10 @@ fun ProfileContentTemplate(
                 CreateTextWithEmoji(
                     text = bestDisplayName,
                     tags = tags,
-                    modifier = Modifier.padding(top = 7.dp).clickable(onClick = onClick),
+                    modifier =
+                        Modifier
+                            .padding(top = 7.dp)
+                            .clickable(onClick = onClick),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     maxLines = 1,
@@ -450,8 +470,26 @@ fun ListContent(
     val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
     val context = LocalContext.current
 
+    var draftText by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var showDraft by remember { mutableStateOf(false) }
+
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            launch(Dispatchers.IO) {
+                Log.d("draftText", "loading draft")
+                draftText = LocalPreferences.loadDraft(accountViewModel.account)
+            }
+        }
+    }
+
     Column(
-        modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
+        modifier =
+            modifier
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()),
     ) {
         NavigationRow(
             title = stringResource(R.string.profile),
@@ -523,6 +561,18 @@ fun ListContent(
             },
         )
 
+        draftText?.let {
+            IconRow(
+                title = stringResource(R.string.edit_draft),
+                icon = R.drawable.ic_lists,
+                tint = MaterialTheme.colorScheme.onBackground,
+                onClick = {
+                    coroutineScope.launch { drawerState.close() }
+                    showDraft = true
+                },
+            )
+        }
+
         NavigationRow(
             title = stringResource(R.string.settings),
             icon = Route.Settings.icon,
@@ -567,6 +617,17 @@ fun ListContent(
         )
     }
 
+    if (showDraft) {
+        EditDraftDialog(
+            {
+                draftText = null
+                showDraft = false
+            },
+            { },
+            draftText!!,
+        )
+    }
+
     if (disconnectTorDialog) {
         AlertDialog(
             title = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title)) },
@@ -591,6 +652,61 @@ fun ListContent(
                 }
             },
         )
+    }
+}
+
+@Composable
+fun EditDraftDialog(
+    onClose: () -> Unit,
+    onPost: () -> Unit,
+    draftText: String,
+) {
+    var message by remember {
+        mutableStateOf(TextFieldValue(draftText))
+    }
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    CloseButton(onPress = { onClose() })
+                }
+
+                Column(
+                    modifier = Modifier.padding(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = message,
+                        onValueChange = { message = it },
+                        keyboardOptions =
+                            KeyboardOptions.Default.copy(
+                                capitalization = KeyboardCapitalization.Sentences,
+                            ),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(8.dp),
+                                ),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                            ),
+                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -658,7 +774,8 @@ fun IconRow(
 ) {
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
@@ -689,10 +806,16 @@ fun IconRowRelays(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() },
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 15.dp, horizontal = 25.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -733,7 +856,10 @@ fun BottomContent(
             thickness = DividerThickness,
         )
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
