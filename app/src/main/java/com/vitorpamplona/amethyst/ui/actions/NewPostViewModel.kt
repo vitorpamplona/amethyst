@@ -515,6 +515,7 @@ open class NewPostViewModel() : ViewModel() {
         urlPreview = null
         isUploadingImage = false
         pTags = null
+        eTags = null
 
         wantsDirectMessage = false
 
@@ -543,6 +544,7 @@ open class NewPostViewModel() : ViewModel() {
         userSuggestions = emptyList()
         userSuggestionAnchor = null
         userSuggestionsMainMessage = null
+        originalNote = null
 
         viewModelScope.launch(Dispatchers.IO) {
             clearDraft()
@@ -564,7 +566,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     open fun saveDraft(message: String) {
-        account?.let { LocalPreferences.saveDraft(message, it) }
+        account?.let { LocalPreferences.saveDraft(message, originalNote?.idHex, it) }
     }
 
     open fun loadDraft(): String? {

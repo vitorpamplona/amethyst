@@ -638,7 +638,7 @@ fun ListContent(
             },
             {
                 coroutineScope.launch(Dispatchers.IO) {
-                    LocalPreferences.saveDraft(it, accountViewModel.account)
+                    LocalPreferences.saveDraft(it, null, accountViewModel.account)
                     draftText = null
                     showDraft = false
                     wantsToPost = true

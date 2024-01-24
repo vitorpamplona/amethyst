@@ -112,6 +112,7 @@ private object PrefKeys {
     const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val NEW_POST_DRAFT = "draft_new_post"
+    const val DRAFT_REPLY_POST = "draft_reply_post"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
@@ -461,13 +462,20 @@ object LocalPreferences {
 
     fun saveDraft(
         message: String,
+        replyPost: String?,
         account: Account,
     ) {
         val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
         with(prefs.edit()) {
             putString(PrefKeys.NEW_POST_DRAFT, message)
+            putString(PrefKeys.DRAFT_REPLY_POST, replyPost)
             apply()
         }
+    }
+
+    fun loadReplyDraft(account: Account): String? {
+        val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
+        return prefs.getString(PrefKeys.DRAFT_REPLY_POST, null)
     }
 
     fun loadDraft(account: Account): String? {
@@ -478,6 +486,7 @@ object LocalPreferences {
     fun clearDraft(account: Account) {
         val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
         with(prefs.edit()) {
+            remove(PrefKeys.DRAFT_REPLY_POST)
             remove(PrefKeys.NEW_POST_DRAFT)
             apply()
         }
