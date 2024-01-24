@@ -472,7 +472,7 @@ object LocalPreferences {
 
     fun loadDraft(account: Account): String? {
         val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
-        return prefs.getString(PrefKeys.NEW_POST_DRAFT, "")
+        return prefs.getString(PrefKeys.NEW_POST_DRAFT, null)
     }
 
     fun clearDraft(account: Account) {
