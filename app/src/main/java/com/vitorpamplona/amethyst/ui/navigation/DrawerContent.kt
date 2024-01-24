@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -98,7 +97,9 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -475,11 +476,11 @@ fun ListContent(
     }
 
     var showDraft by remember { mutableStateOf(false) }
+    var wantsToPost by remember { mutableStateOf(false) }
 
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
             launch(Dispatchers.IO) {
-                Log.d("draftText", "loading draft")
                 draftText = LocalPreferences.loadDraft(accountViewModel.account)
             }
         }
@@ -617,13 +618,32 @@ fun ListContent(
         )
     }
 
+    if (wantsToPost) {
+        NewPostView(
+            {
+                wantsToPost = false
+                draftText = null
+                coroutineScope.launch { drawerState.close() }
+            },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
     if (showDraft) {
         EditDraftDialog(
             {
                 draftText = null
                 showDraft = false
             },
-            { },
+            {
+                coroutineScope.launch(Dispatchers.IO) {
+                    LocalPreferences.saveDraft(it, accountViewModel.account)
+                    draftText = null
+                    showDraft = false
+                    wantsToPost = true
+                }
+            },
             draftText!!,
         )
     }
@@ -658,7 +678,7 @@ fun ListContent(
 @Composable
 fun EditDraftDialog(
     onClose: () -> Unit,
-    onPost: () -> Unit,
+    onPost: (String) -> Unit,
     draftText: String,
 ) {
     var message by remember {
@@ -678,6 +698,7 @@ fun EditDraftDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     CloseButton(onPress = { onClose() })
+                    PostButton(isActive = true, onPost = { onPost(message.text) })
                 }
 
                 Column(
