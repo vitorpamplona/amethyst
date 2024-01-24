@@ -51,6 +51,8 @@ object HttpClient {
 
     fun start(proxy: Proxy?) {
         if (internalProxy != proxy) {
+            Log.d("HttpClient", "Changing proxy to: ${proxy != null}")
+            this.defaultHttpClient = null
             this.internalProxy = proxy
             this.defaultHttpClient = getHttpClient()
         }
@@ -59,6 +61,7 @@ object HttpClient {
     fun changeTimeouts(timeout: Duration) {
         Log.d("HttpClient", "Changing timeout to: $timeout")
         if (this.defaultTimeout.seconds != timeout.seconds) {
+            this.defaultHttpClient = null
             this.defaultTimeout = timeout
             this.defaultHttpClient = getHttpClient()
         }

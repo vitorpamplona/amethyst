@@ -106,7 +106,7 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Relay", "Relay.connect $url")
+        Log.d("Relay", "Relay.connect $url hasProxy: ${this.httpClient.proxy != null}")
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
