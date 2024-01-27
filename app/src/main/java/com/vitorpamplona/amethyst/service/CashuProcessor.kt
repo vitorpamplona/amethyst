@@ -119,7 +119,7 @@ class CashuProcessor {
         checkNotInMainThread()
 
         try {
-            val client = HttpClient.getHttpClient()
+            val client = HttpClientManager.getHttpClient()
             val url = "$mintAddress/checkfees" // Melt cashu tokens at Mint
 
             val factory = Event.mapper.nodeFactory
@@ -170,7 +170,7 @@ class CashuProcessor {
         context: Context,
     ) {
         try {
-            val client = HttpClient.getHttpClient()
+            val client = HttpClientManager.getHttpClient()
             val url = token.mint + "/melt" // Melt cashu tokens at Mint
 
             val factory = Event.mapper.nodeFactory

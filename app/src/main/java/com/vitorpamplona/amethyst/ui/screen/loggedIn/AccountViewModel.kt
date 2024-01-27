@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
@@ -1042,7 +1042,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             account.proxyPort = portNumber.value.toInt()
-            account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
+            account.proxy = HttpClientManager.initProxy(checked, "127.0.0.1", account.proxyPort)
             account.saveable.invalidateData()
             serviceManager?.forceRestart()
         }

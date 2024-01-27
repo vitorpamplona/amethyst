@@ -64,7 +64,7 @@ class Nip05NostrAddressVerifier() {
                     .url(url)
                     .build()
 
-            HttpClient.getHttpClient()
+            HttpClientManager.getHttpClient()
                 .newCall(request)
                 .enqueue(
                     object : Callback {

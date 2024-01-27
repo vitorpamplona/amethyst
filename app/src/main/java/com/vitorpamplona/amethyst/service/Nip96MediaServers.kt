@@ -87,7 +87,7 @@ class Nip96Retriever {
                 .url(baseUrl.removeSuffix("/") + "/.well-known/nostr/nip96.json")
                 .build()
 
-        HttpClient.getHttpClient().newCall(request).execute().use { response ->
+        HttpClientManager.getHttpClient().newCall(request).execute().use { response ->
             checkNotInMainThread()
             response.use {
                 val body = it.body.string()

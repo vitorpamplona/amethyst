@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
@@ -62,7 +62,7 @@ class Relay(
         const val RECONNECTING_IN_SECONDS = 60 * 3
     }
 
-    private val httpClient = HttpClient.getHttpClientForRelays()
+    private val httpClient = HttpClientManager.getHttpClient()
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null

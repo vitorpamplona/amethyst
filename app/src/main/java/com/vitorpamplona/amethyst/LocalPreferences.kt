@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseThemeType
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -570,7 +570,7 @@ object LocalPreferences {
                 val hideNIP24WarningDialog = getBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, false)
                 val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
                 val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
-                val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+                val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
 
                 val showSensitiveContent =
                     if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {

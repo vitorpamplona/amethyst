@@ -31,7 +31,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 
 @UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
@@ -42,12 +42,12 @@ class PlaybackService : MediaSessionService() {
     private var managerLocal: MultiPlayerPlaybackManager? = null
 
     fun newHslDataSource(): MediaSource.Factory {
-        return HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClient.getHttpClient()))
+        return HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
     }
 
     fun newProgressiveDataSource(): MediaSource.Factory {
         return ProgressiveMediaSource.Factory(
-            (applicationContext as Amethyst).videoCache.get(HttpClient.getHttpClient()),
+            (applicationContext as Amethyst).videoCache.get(HttpClientManager.getHttpClient()),
         )
     }
 
@@ -90,7 +90,7 @@ class PlaybackService : MediaSessionService() {
         Log.d("Lifetime Event", "PlaybackService.onCreate")
 
         // Stop all videos and recreates all managers when the proxy changes.
-        HttpClient.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
+        HttpClientManager.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
     }
 
     private fun onProxyUpdated() {
@@ -114,7 +114,7 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         Log.d("Lifetime Event", "PlaybackService.onDestroy")
 
-        HttpClient.proxyChangeListeners.remove(this@PlaybackService::onProxyUpdated)
+        HttpClientManager.proxyChangeListeners.remove(this@PlaybackService::onProxyUpdated)
 
         managerHls?.releaseAppPlayers()
         managerLocal?.releaseAppPlayers()

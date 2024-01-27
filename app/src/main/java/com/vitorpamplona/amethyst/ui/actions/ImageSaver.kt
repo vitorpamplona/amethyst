@@ -30,7 +30,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Request
@@ -55,7 +55,7 @@ object ImageSaver {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        val client = HttpClient.getHttpClient()
+        val client = HttpClientManager.getHttpClient()
 
         val request =
             Request.Builder()

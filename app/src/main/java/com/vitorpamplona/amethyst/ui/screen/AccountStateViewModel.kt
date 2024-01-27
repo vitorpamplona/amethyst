@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
@@ -85,7 +85,7 @@ class AccountStateViewModel() : ViewModel() {
     ) = withContext(Dispatchers.IO) {
         val parsed = Nip19.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
-        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+        val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         if (loginWithExternalSigner && pubKeyParsed == null) {
             throw Exception("Invalid key while trying to login with external signer")
@@ -216,7 +216,7 @@ class AccountStateViewModel() : ViewModel() {
         name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+            val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
             val keyPair = KeyPair()
             val account =
                 Account(

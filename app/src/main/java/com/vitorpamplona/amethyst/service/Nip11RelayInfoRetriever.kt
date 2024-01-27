@@ -84,7 +84,7 @@ class Nip11Retriever {
             val request: Request =
                 Request.Builder().header("Accept", "application/nostr+json").url(url).build()
 
-            HttpClient.getHttpClient()
+            HttpClientManager.getHttpClient()
                 .newCall(request)
                 .enqueue(
                     object : Callback {

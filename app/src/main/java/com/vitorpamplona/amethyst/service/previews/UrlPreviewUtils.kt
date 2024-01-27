@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.previews
 
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
@@ -90,7 +90,7 @@ suspend fun getDocument(
 ): UrlInfoItem =
     withContext(Dispatchers.IO) {
         val request: Request = Request.Builder().url(url).get().build()
-        HttpClient.getHttpClient().newCall(request).execute().use {
+        HttpClientManager.getHttpClient().newCall(request).execute().use {
             if (it.isSuccessful) {
                 val mimeType =
                     it.headers.get("Content-Type")?.toMediaType()

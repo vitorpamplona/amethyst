@@ -30,7 +30,7 @@ import coil.decode.SvgDecoder
 import coil.size.Precision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -83,7 +83,7 @@ class ServiceManager {
         val myAccount = account
 
         // Resets Proxy Use
-        HttpClient.start(account?.proxy)
+        HttpClientManager.setDefaultProxy(account?.proxy)
         LocalCache.antiSpam.active = account?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
@@ -96,7 +96,7 @@ class ServiceManager {
                     }
                     add(SvgDecoder.Factory())
                 } // .logger(DebugLogger())
-                .okHttpClient { HttpClient.getHttpClient() }
+                .okHttpClient { HttpClientManager.getHttpClient() }
                 .precision(Precision.INEXACT)
                 .respectCacheHeaders(false)
                 .build()

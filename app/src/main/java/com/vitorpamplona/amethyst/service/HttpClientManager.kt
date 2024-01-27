@@ -32,14 +32,13 @@ import java.net.Proxy
 import java.time.Duration
 import kotlin.properties.Delegates
 
-object HttpClient {
-    val DEFAULT_TIMEOUT_ON_WIFI = Duration.ofSeconds(10L)
-    val DEFAULT_TIMEOUT_ON_MOBILE = Duration.ofSeconds(30L)
+object HttpClientManager {
+    val DEFAULT_TIMEOUT_ON_WIFI: Duration = Duration.ofSeconds(10L)
+    val DEFAULT_TIMEOUT_ON_MOBILE: Duration = Duration.ofSeconds(30L)
 
     var proxyChangeListeners = ArrayList<() -> Unit>()
-    var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
-
-    var defaultHttpClient: OkHttpClient? = null
+    private var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
+    private var defaultHttpClient: OkHttpClient? = null
 
     // fires off every time value of the property changes
     private var internalProxy: Proxy? by
@@ -49,29 +48,34 @@ object HttpClient {
             }
         }
 
-    fun start(proxy: Proxy?) {
+    fun setDefaultProxy(proxy: Proxy?) {
         if (internalProxy != proxy) {
             Log.d("HttpClient", "Changing proxy to: ${proxy != null}")
-            this.defaultHttpClient = null
             this.internalProxy = proxy
-            this.defaultHttpClient = getHttpClient()
+
+            // recreates singleton
+            this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
         }
     }
 
-    fun changeTimeouts(timeout: Duration) {
+    fun setDefaultTimeout(timeout: Duration) {
         Log.d("HttpClient", "Changing timeout to: $timeout")
         if (this.defaultTimeout.seconds != timeout.seconds) {
-            this.defaultHttpClient = null
             this.defaultTimeout = timeout
-            this.defaultHttpClient = getHttpClient()
+
+            // recreates singleton
+            this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
         }
     }
 
-    fun getHttpClient(timeout: Duration): OkHttpClient {
-        val seconds = if (internalProxy != null) timeout.seconds * 2 else timeout.seconds
+    private fun buildHttpClient(
+        proxy: Proxy?,
+        timeout: Duration,
+    ): OkHttpClient {
+        val seconds = if (proxy != null) timeout.seconds * 2 else timeout.seconds
         val duration = Duration.ofSeconds(seconds)
         return OkHttpClient.Builder()
-            .proxy(internalProxy)
+            .proxy(proxy)
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
@@ -94,22 +98,11 @@ object HttpClient {
         }
     }
 
-    fun getHttpClientForRelays(): OkHttpClient {
-        if (this.defaultHttpClient == null) {
-            this.defaultHttpClient = getHttpClient(defaultTimeout)
-        }
-        return defaultHttpClient!!
-    }
-
     fun getHttpClient(): OkHttpClient {
         if (this.defaultHttpClient == null) {
-            this.defaultHttpClient = getHttpClient(defaultTimeout)
+            this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
         }
         return defaultHttpClient!!
-    }
-
-    fun getProxy(): Proxy? {
-        return internalProxy
     }
 
     fun initProxy(

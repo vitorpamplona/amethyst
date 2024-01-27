@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -106,7 +106,7 @@ class RegisterAccounts(
                     .post(body)
                     .build()
 
-            val client = HttpClient.getHttpClient()
+            val client = HttpClientManager.getHttpClient()
 
             val isSucess = client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: java.lang.Exception) {

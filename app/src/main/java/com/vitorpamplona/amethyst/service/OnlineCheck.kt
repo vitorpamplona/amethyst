@@ -59,7 +59,7 @@ object OnlineChecker {
                     .build()
 
             val result =
-                HttpClient.getHttpClient().newCall(request).execute().use {
+                HttpClientManager.getHttpClient().newCall(request).execute().use {
                     checkNotInMainThread()
                     it.isSuccessful
                 }

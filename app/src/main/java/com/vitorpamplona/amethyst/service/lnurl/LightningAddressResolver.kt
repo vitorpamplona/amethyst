@@ -24,7 +24,7 @@ import android.content.Context
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Lud06
@@ -35,7 +35,7 @@ import java.math.RoundingMode
 import java.net.URLEncoder
 
 class LightningAddressResolver() {
-    val client = HttpClient.getHttpClient()
+    val client = HttpClientManager.getHttpClient()
 
     fun assembleUrl(lnaddress: String): String? {
         val parts = lnaddress.split("@")
