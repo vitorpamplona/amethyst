@@ -279,6 +279,7 @@ fun ImageVideoPost(
         modifier = Modifier.fillMaxWidth(),
     ) {
         SettingSwitchItem(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
             checked = postViewModel.sensitiveContent,
             onCheckedChange = { postViewModel.sensitiveContent = it },
             title = R.string.add_sensitive_content_label,

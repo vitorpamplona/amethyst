@@ -264,7 +264,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         val urls = findURLs(tagger.message)
-        val usedAttachments = nip94attachments.filter { it.urls().intersect(urls).isNotEmpty() }
+        val usedAttachments = nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
         usedAttachments.forEach { account?.sendHeader(it, relayList, {}) }
 
         if (originalNote?.channelHex() != null) {
@@ -846,9 +846,7 @@ open class NewPostViewModel() : ViewModel() {
                 alt?.ifBlank { null }?.let { "alt=${URLEncoder.encode(it, "utf-8")}" },
                 blurHash?.ifBlank { null }?.let { "blurhash=${URLEncoder.encode(it, "utf-8")}" },
                 x?.ifBlank { null }?.let { "x=${URLEncoder.encode(it, "utf-8")}" },
-                sensitiveContent
-                    ?.ifBlank { null }
-                    ?.let { "content-warning=${URLEncoder.encode(it, "utf-8")}" },
+                sensitiveContent?.let { "content-warning=${URLEncoder.encode(it, "utf-8")}" },
             )
                 .joinToString("&")
 

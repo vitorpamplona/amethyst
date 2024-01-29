@@ -103,6 +103,7 @@ class RichTextParser() {
                 hash = frags["x"],
                 blurhash = frags["blurhash"],
                 dim = frags["dim"],
+                contentWarning = frags["content-warning"],
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip44UrlParser().parse(fullUrl)
@@ -112,6 +113,7 @@ class RichTextParser() {
                 hash = frags["x"],
                 blurhash = frags["blurhash"],
                 dim = frags["dim"],
+                contentWarning = frags["content-warning"],
             )
         } else {
             null

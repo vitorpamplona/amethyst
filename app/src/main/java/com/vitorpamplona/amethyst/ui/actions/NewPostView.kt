@@ -1716,6 +1716,7 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 SettingSwitchItem(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     checked = sensitiveContent,
                     onCheckedChange = { sensitiveContent = it },
                     title = R.string.add_sensitive_content_label,
@@ -1764,7 +1765,7 @@ fun ImageVideoDescription(
 
 @Composable
 fun SettingSwitchItem(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     title: Int,
@@ -1774,8 +1775,6 @@ fun SettingSwitchItem(
     Row(
         modifier =
             modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .toggleable(
                     value = checked,
                     enabled = enabled,
@@ -1786,7 +1785,7 @@ fun SettingSwitchItem(
     ) {
         Column(
             modifier = Modifier.weight(1.0f),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             Text(
                 text = stringResource(id = title),
