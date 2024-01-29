@@ -2,7 +2,7 @@
 
 <img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px"/>
 
-Amethyst brings the best social network to your Android phone. Just insert your Nostr private key and start posting. 
+Amethyst brings the best social network to your Android phone. Just insert your Nostr private key and start posting.
 
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
@@ -59,6 +59,7 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] Nostr Connect (NIP-46)
 - [x] Wallet Connect API (NIP-47)
 - [ ] Proxy Tags (NIP-48, Not applicable)
+- [ ] Private key encryption for import/export (NIP-49)
 - [x] Online Relay Search (NIP-50)
 - [x] Lists (NIP-51)
 - [ ] Calendar Events (NIP-52)
@@ -103,7 +104,7 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 
 # Development Overview
 
-## Overall Architecture 
+## Overall Architecture
 
 This is a native Android app made with Kotlin and Jetpack Compose.
 The app uses a modified version of the [nostrpostrlib](https://github.com/Giszmo/NostrPostr/tree/master/nostrpostrlib) to talk to Nostr relays.
@@ -186,7 +187,7 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 8. Download the `aab` file and upload it to the` PlayStore.
 
 # Privacy on Relays & nostr
-Your internet protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN) from trackers online. 
+Your internet protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN) from trackers online.
 
 The relay also learns which public keys you are requesting, meaning your public key will be tied to your IP address.
 
@@ -197,11 +198,11 @@ While the content of direct messages (DMs) is only visible to you and your DM co
 
 # Visibility & Permanence of Your Content on nostr
 ## Information Visibility ##
-Content that you share can be shared to other relays. 
+Content that you share can be shared to other relays.
 Information that you share publicly is visible to anyone reading from relays that have your information. Your information may also be visible to nostr users who do not share relays with you.
 
 ## Information Permanence ##
-Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee edit or deletion of any content once posted. 
+Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee edit or deletion of any content once posted.
 
 # Screenshots
 
