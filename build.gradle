@@ -3,14 +3,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 buildscript {
     ext {
         fragment_version = "1.6.2"
-        lifecycle_version = '2.6.2'
-        compose_ui_version = '1.5.4'
+        lifecycle_version = '2.7.0'
+        compose_ui_version = '1.6.0'
         nav_version = '2.7.6'
         room_version = "2.4.3"
-        accompanist_version = '0.32.0'
+        accompanist_version = '0.34.0'
         coil_version = '2.5.0'
         vico_version = '1.13.1'
-        media3_version = '1.2.0'
+        media3_version = '1.2.1'
         core_ktx_version = '1.12.0'
         material3_version = '1.1.2'
     }

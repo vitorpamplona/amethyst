@@ -388,7 +388,7 @@ fun CreateTextWithEmoji(
                 .merge(
                     TextStyle(
                         color = textColor,
-                        textAlign = textAlign,
+                        textAlign = TextAlign.Unspecified,
                         fontWeight = fontWeight,
                         fontSize = fontSize,
                     ),
@@ -446,7 +446,7 @@ fun CreateTextWithEmoji(
                     .merge(
                         TextStyle(
                             color = textColor,
-                            textAlign = textAlign,
+                            textAlign = TextAlign.Unspecified,
                             fontWeight = fontWeight,
                             fontSize = fontSize,
                         ),
