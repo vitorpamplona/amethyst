@@ -625,6 +625,7 @@
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct.\n\nException was: %3$s</string>
     <string name="could_not_fetch_invoice_from">Could not fetch invoice from %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address. Check the user\'s lightning setup</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL not found in the User\'s lightning address server configuration</string>

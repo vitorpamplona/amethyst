@@ -101,9 +101,10 @@ class LightningAddressResolver() {
                 context.getString(R.string.error_unable_to_fetch_invoice),
                 context.getString(
                     R.string
-                        .could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct,
+                        .could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception,
                     url,
                     lnaddress,
+                    e.suppressedExceptions.getOrNull(0)?.message ?: e.cause?.message ?: e.message,
                 ),
             )
         }
