@@ -580,7 +580,7 @@ fun BechLink(
             )
         }
     } else if (loadedLink?.nip19 != null) {
-        Row { ClickableRoute(loadedLink?.nip19!!, accountViewModel, nav) }
+        ClickableRoute(loadedLink?.nip19!!, accountViewModel, nav)
     } else {
         val text =
             remember(word) {
