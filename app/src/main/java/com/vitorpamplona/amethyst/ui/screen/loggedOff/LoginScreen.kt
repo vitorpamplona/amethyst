@@ -49,6 +49,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -490,7 +491,7 @@ fun LoginPage(
         Spacer(modifier = Modifier.height(Size20dp))
 
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            Button(
+            OutlinedButton(
                 onClick = onWantsToLogin,
                 shape = RoundedCornerShape(Size35dp),
                 modifier = Modifier.height(50.dp),
