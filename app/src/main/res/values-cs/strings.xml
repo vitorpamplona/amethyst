@@ -532,6 +532,7 @@
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nepodařilo se sestavit LNUrl z Lightning adresy \"%1$s\". Zkontrolujte nastavení uživatele</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Služba blesku příjemce v %1$s není k dispozici. Byla vypočtena z adresy blesku \"%2$s\". Chyba: %3$s. Zkontrolujte, zda je server aktivní a zda je adresa blesku správná</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná.\n\nVýjimka byla: %3$s</string>
     <string name="could_not_fetch_invoice_from">Nepodařilo se načíst fakturu z %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Chyba při analýze JSON z Lightning adresy. Zkontrolujte uživatelovo bleskové nastavení</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL adresa zpětného volání nebyla nalezena v konfiguraci serveru pro bleskovou adresu uživatele</string>
