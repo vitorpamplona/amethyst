@@ -212,6 +212,8 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 
 # Contributing
 
+You can send patches in Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac
+
 [Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) are very welcome.
 
 ## Contributors
