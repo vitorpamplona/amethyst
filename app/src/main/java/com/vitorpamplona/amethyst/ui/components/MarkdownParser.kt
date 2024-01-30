@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import kotlinx.coroutines.CancellationException
 
 class MarkdownParser {
     private fun getDisplayNameAndNIP19FromTag(
@@ -39,6 +40,7 @@ class MarkdownParser {
                 matcher.find()
                 Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.w("Tag Parser", "Couldn't link tag $tag", e)
                 Pair(null, null)
             }
@@ -161,6 +163,7 @@ class MarkdownParser {
                                 hashtagMatcher.find()
                                 Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
                                 Pair(null, null)
                             }

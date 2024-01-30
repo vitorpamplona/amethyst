@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Call
@@ -96,7 +97,8 @@ class Nip05NostrAddressVerifier() {
                         }
                     },
                 )
-        } catch (e: java.lang.Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
             onError("Could not resolve '$url': ${e.message}")
         }
     }
@@ -122,7 +124,8 @@ class Nip05NostrAddressVerifier() {
                 val nip05url =
                     try {
                         mapper.readTree(it.lowercase())
-                    } catch (t: Throwable) {
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         onError("Error Parsing JSON from Lightning Address. Check the user's lightning setup")
                         null
                     }

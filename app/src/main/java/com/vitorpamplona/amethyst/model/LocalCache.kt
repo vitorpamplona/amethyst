@@ -98,6 +98,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -1397,6 +1398,7 @@ object LocalCache {
             try {
                 Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 null
             }
 
@@ -1446,6 +1448,7 @@ object LocalCache {
             try {
                 Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 null
             }
 
@@ -1738,6 +1741,7 @@ object LocalCache {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.w("Event failed retest ${event.kind}", (e.message ?: "") + event.toJson())
             }
             false
@@ -1831,6 +1835,7 @@ object LocalCache {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
         }
     }

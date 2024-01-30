@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var account: Account
@@ -197,6 +198,7 @@ class NewUserMetadataViewModel : ViewModel() {
                                 }
                             }
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             onUploading(false)
                             viewModelScope.launch {
                                 imageUploadingError.emit("Failed to upload the image / video")

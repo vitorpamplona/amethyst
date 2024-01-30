@@ -103,6 +103,7 @@ import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 
 class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))
@@ -149,6 +150,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
                 try {
                     decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     null
                 }
 
@@ -168,6 +170,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
                 try {
                     unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     null
                 }
 

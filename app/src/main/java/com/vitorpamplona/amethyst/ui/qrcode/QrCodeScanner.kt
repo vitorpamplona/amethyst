@@ -30,6 +30,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.quartz.encoders.Nip19
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
@@ -51,6 +52,7 @@ fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
                 onScan(null)
             }
         } catch (e: Throwable) {
+            if (e is CancellationException) throw e
             Log.e("NIP19 Scanner", "Error parsing $it", e)
             // QR can be anything, do not throw errors.
             onScan(null)

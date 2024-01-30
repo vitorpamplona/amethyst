@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
 data class RangesChanges(val original: TextRange, val modified: TextRange)
@@ -113,6 +114,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
                                         word
                                     }
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     // if it can't parse the key, don't try to change.
                                     builderBefore.append("$word ")
                                     builderAfter.append("$word ")

@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -166,6 +167,7 @@ fun DisplayAccount(
                             decodePublicKey(acc.npub).toHexKey(),
                         )
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         null
                     }
             }

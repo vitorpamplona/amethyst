@@ -22,12 +22,14 @@ package com.vitorpamplona.amethyst.service
 
 import java.net.URI
 import java.net.URLDecoder
+import kotlin.coroutines.cancellation.CancellationException
 
 class Nip44UrlParser {
     fun parse(url: String): Map<String, String> {
         return try {
             fragments(URI(url))
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             emptyMap()
         }
     }

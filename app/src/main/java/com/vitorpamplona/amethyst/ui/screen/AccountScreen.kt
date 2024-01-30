@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun AccountScreen(
@@ -143,6 +144,7 @@ fun LoggedInPage(
                         activity.prepareToLaunchSigner()
                         launcher.launch(it)
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.e("Signer", "Error opening Signer app", e)
                         accountViewModel.toast(
                             R.string.error_opening_external_signer,

@@ -33,6 +33,7 @@ import okhttp3.Request
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
+import kotlin.coroutines.cancellation.CancellationException
 
 class LightningAddressResolver() {
     val client = HttpClientManager.getHttpClient()
@@ -96,6 +97,7 @@ class LightningAddressResolver() {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
             onError(
                 context.getString(R.string.error_unable_to_fetch_invoice),
@@ -184,6 +186,7 @@ class LightningAddressResolver() {
                     try {
                         mapper.readTree(lnAddressJson)
                     } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
                         onError(
                             context.getString(R.string.error_unable_to_fetch_invoice),
                             context.getString(
@@ -219,6 +222,7 @@ class LightningAddressResolver() {
                                 try {
                                     mapper.readTree(it)
                                 } catch (t: Throwable) {
+                                    if (t is CancellationException) throw t
                                     onError(
                                         context.getString(R.string.error_unable_to_fetch_invoice),
                                         context.getString(

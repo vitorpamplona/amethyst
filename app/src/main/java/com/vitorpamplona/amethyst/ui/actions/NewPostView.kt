@@ -179,6 +179,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -1674,6 +1675,7 @@ fun ImageVideoDescription(
                             try {
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 onError("Unable to load thumbnail")
                                 Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                             }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection
 import java.net.URL
@@ -57,6 +58,7 @@ class ImageDownloader {
                         null
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     tentatives++
                     delay(1000)
                     null

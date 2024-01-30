@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -341,6 +342,7 @@ fun uriToRoute(uri: String?): String? {
                     Route.Home.base + "?nip47=" + encodedUri
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 null
             }
     }

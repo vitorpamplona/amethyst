@@ -24,6 +24,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 
 object Nip96MediaServers {
@@ -100,6 +101,7 @@ class Nip96Retriever {
                         )
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.e("RelayInfoFail", "Resulting Message from $baseUrl in not parseable: $body", e)
                     throw e
                 }

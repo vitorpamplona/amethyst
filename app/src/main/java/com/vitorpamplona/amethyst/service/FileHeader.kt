@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import io.trbl.blurhash.BlurHash
+import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import kotlin.math.roundToInt
 
@@ -59,6 +60,7 @@ class FileHeader(
                     onError(null)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
                 onError(e.message)
             }
@@ -174,6 +176,7 @@ class FileHeader(
 
                 onReady(FileHeader(mimeType, hash, size, dim, blurHash))
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
                 onError(e.message)
             }

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.toNpub
+import kotlinx.coroutines.CancellationException
 
 class NewMessageTagger(
     var message: String,
@@ -196,6 +197,7 @@ class NewMessageTagger(
                 ) // no way to know when they address ends and dirt begins
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
         }
 

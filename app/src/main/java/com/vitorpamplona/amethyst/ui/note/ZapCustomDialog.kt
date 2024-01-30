@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
@@ -107,6 +108,7 @@ class ZapOptionstViewModel : ViewModel() {
         return try {
             customAmount.text.trim().toLongOrNull()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             null
         }
     }
@@ -446,6 +448,7 @@ fun payViaIntent(
 
         ContextCompat.startActivity(context, intent, null)
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         if (e.message != null) {
             onError(context.getString(R.string.no_wallet_found_with_error, e.message!!))
         } else {

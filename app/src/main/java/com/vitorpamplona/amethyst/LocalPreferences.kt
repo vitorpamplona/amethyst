@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -368,6 +369,7 @@ object LocalPreferences {
             return try {
                 getString(PrefKeys.SHARED_SETTINGS, "{}")?.let { Event.mapper.readValue<Settings>(it) }
             } catch (e: Throwable) {
+                if (e is CancellationException) throw e
                 Log.w(
                     "LocalPreferences",
                     "Unable to decode shared preferences: ${getString(PrefKeys.SHARED_SETTINGS, null)}",
@@ -510,6 +512,7 @@ object LocalPreferences {
                         }
                             ?: Nip96MediaServers.DEFAULT[0]
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.w("LocalPreferences", "Failed to decode saved File Server", e)
                         e.printStackTrace()
                         Nip96MediaServers.DEFAULT[0]
@@ -521,6 +524,7 @@ object LocalPreferences {
                             Event.mapper.readValue<Nip47URI?>(it)
                         }
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Zap Payment Request Server ${getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)}",
@@ -541,6 +545,7 @@ object LocalPreferences {
                             }
                         }
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
@@ -556,6 +561,7 @@ object LocalPreferences {
                         }
                             ?: mapOf()
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Language Preferences ${getString(PrefKeys.LANGUAGE_PREFS, null)}",
@@ -588,6 +594,7 @@ object LocalPreferences {
                         }
                             ?: mapOf()
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Last Read per route ${getString(PrefKeys.LAST_READ_PER_ROUTE, null)}",

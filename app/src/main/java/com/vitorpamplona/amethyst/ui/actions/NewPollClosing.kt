@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun NewPollClosing(pollViewModel: NewPostViewModel) {
@@ -58,6 +59,7 @@ fun NewPollClosing(pollViewModel: NewPostViewModel) {
                 pollViewModel.closedAt = int
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             pollViewModel.isValidClosedAt.value = false
         }
     }

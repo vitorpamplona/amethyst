@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -356,6 +357,7 @@ fun GetMediaItem(
                                         null
                                     }
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     null
                                 },
                             )

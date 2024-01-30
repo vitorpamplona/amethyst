@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -126,6 +127,7 @@ class ServiceManager {
                     try {
                         it.npub.bechToBytes().toHexKey()
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         null
                     }
                 }

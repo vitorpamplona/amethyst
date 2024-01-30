@@ -42,6 +42,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.CancellationException
 import java.util.regex.Pattern
 
 @Immutable
@@ -285,6 +286,7 @@ class RichTextParser() {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w("Tag Parser", "Couldn't link tag $word", e)
         }
 
@@ -299,6 +301,7 @@ class RichTextParser() {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
         }
 

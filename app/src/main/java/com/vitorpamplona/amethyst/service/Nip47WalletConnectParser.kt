@@ -24,6 +24,7 @@ import android.net.Uri
 import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlinx.coroutines.CancellationException
 
 // Rename to the corect nip number when ready.
 object Nip47WalletConnectParser {
@@ -42,6 +43,7 @@ object Nip47WalletConnectParser {
             try {
                 decodePublicKey(pubkey).toHexKey()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 throw IllegalArgumentException("Hostname is not a valid Nostr Pubkey")
             }
 

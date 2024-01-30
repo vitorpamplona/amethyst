@@ -131,6 +131,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -650,6 +651,7 @@ fun aspectRatio(dim: String?): Float? {
             width / height
         }
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         null
     }
 }

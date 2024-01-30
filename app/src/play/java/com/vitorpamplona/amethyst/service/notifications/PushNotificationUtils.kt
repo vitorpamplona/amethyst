@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
 import com.vitorpamplona.amethyst.AccountInfo
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
@@ -38,6 +39,7 @@ object PushNotificationUtils {
             try {
                 RegisterAccounts(accounts).go(FirebaseMessaging.getInstance().token.await())
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("Firebase token", "failed to get firebase token", e)
             }
         }

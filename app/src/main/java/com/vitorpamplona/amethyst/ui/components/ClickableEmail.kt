@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ClickableEmail(email: String) {
@@ -58,6 +59,7 @@ fun Context.sendMail(
     } catch (e: ActivityNotFoundException) {
         // TODO: Handle case where no email app is available
     } catch (t: Throwable) {
+        if (t is CancellationException) throw t
         // TODO: Handle potential other type of exceptions
     }
 }

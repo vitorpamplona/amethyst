@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -204,6 +205,7 @@ class AccountStateViewModel() : ViewModel() {
             try {
                 loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("Login", "Could not sign in", e)
                 onError()
             }

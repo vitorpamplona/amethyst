@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.SignerType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -173,6 +174,7 @@ fun LoginPage(
                         activity.prepareToLaunchSigner()
                         launcher.launch(it)
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.e("Signer", "Error opening Signer app", e)
                         scope.launch(Dispatchers.Main) {
                             Toast.makeText(

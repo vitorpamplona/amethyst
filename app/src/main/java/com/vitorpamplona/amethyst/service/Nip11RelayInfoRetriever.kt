@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.amethyst.model.RelayInformation
+import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Request
@@ -102,6 +103,7 @@ class Nip11Retriever {
                                         onError(dirtyUrl, ErrorCode.FAIL_WITH_HTTP_STATUS, it.code.toString())
                                     }
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     Log.e(
                                         "RelayInfoFail",
                                         "Resulting Message from Relay $dirtyUrl in not parseable: $body",
@@ -122,6 +124,7 @@ class Nip11Retriever {
                     },
                 )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("RelayInfoFail", "Invalid URL $dirtyUrl", e)
             onError(dirtyUrl, ErrorCode.FAIL_TO_ASSEMBLE_URL, e.message)
         }

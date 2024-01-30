@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.events.findURLs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -476,6 +477,7 @@ open class NewPostViewModel() : ViewModel() {
                                         )
                                     }
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     Log.e(
                                         "ImageUploader",
                                         "Failed to upload ${e.message}",
@@ -942,6 +944,7 @@ open class NewPostViewModel() : ViewModel() {
                     valueMinimum = int
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         } else {
             valueMinimum = null
@@ -960,6 +963,7 @@ open class NewPostViewModel() : ViewModel() {
                     valueMaximum = int
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         } else {
             valueMaximum = null

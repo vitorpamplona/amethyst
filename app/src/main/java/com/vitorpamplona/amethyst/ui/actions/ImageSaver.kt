@@ -31,6 +31,7 @@ import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClientManager
+import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Request
@@ -102,6 +103,7 @@ object ImageSaver {
                             }
                             onSuccess()
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             e.printStackTrace()
                             onError(e)
                         }
@@ -138,6 +140,7 @@ object ImageSaver {
             }
             onSuccess()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
             onError(e)
         }
@@ -176,6 +179,7 @@ object ImageSaver {
 
             outputStream.use { contentSource.readAll(it.sink()) }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             contentResolver.delete(uri, null, null)
             throw e
         }

@@ -29,6 +29,7 @@ import android.location.LocationManager
 import android.os.HandlerThread
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class LocationUtil(context: Context) {
@@ -105,6 +106,7 @@ class ReverseGeoLocationUtil {
                         .joinToString(", ")
                 }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
             return null
         }

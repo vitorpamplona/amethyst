@@ -33,6 +33,7 @@ import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -115,6 +116,7 @@ class MediaCompressor {
                     }
                 onReady(compressedImageFile.toUri(), contentType, compressedImageFile.length())
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 e.printStackTrace()
                 onReady(uri, contentType, null)
             }

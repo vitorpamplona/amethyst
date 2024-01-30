@@ -25,6 +25,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.Request
+import kotlin.coroutines.cancellation.CancellationException
 
 @Immutable data class OnlineCheckResult(val timeInMs: Long, val online: Boolean)
 
@@ -66,6 +67,7 @@ object OnlineChecker {
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), result))
             result
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), false))
             Log.e("LiveActivities", "Failed to check streaming url $url", e)
             false

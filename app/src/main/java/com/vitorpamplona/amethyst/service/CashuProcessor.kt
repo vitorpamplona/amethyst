@@ -32,6 +32,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Base64
+import kotlin.coroutines.cancellation.CancellationException
 
 @Immutable
 data class CashuToken(
@@ -59,6 +60,7 @@ class CashuProcessor {
 
             return GenericLoadable.Loaded(CashuToken(cashuToken, mint, totalAmount, proofs))
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             return GenericLoadable.Error<CashuToken>("Could not parse this cashu token")
         }
     }
@@ -154,6 +156,7 @@ class CashuProcessor {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             onError(
                 context.getString(R.string.cashu_successful_redemption),
                 context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message),
@@ -211,6 +214,7 @@ class CashuProcessor {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             onError(
                 context.getString(R.string.cashu_successful_redemption),
                 context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message),

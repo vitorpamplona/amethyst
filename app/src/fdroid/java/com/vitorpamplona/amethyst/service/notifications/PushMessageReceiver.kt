@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrC
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,6 +61,7 @@ class PushMessageReceiver : MessagingReceiver() {
             try {
                 parseMessage(messageStr)?.let { receiveIfNew(it) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.d(TAG, "Message could not be parsed: ${e.message}")
             }
         }

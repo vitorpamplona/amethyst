@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import kotlin.coroutines.cancellation.CancellationException
 
 object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
     private var searchString: String? = null
@@ -67,6 +68,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
 
                 Nip19.uriToRoute(mySearchString)?.hex ?: isAStraightHex
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 null
             }
 

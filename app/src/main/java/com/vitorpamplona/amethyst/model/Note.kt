@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
@@ -644,6 +645,7 @@ open class Note(val idHex: String) {
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice)
                         } catch (e: java.lang.Exception) {
+                            if (e is CancellationException) throw e
                             null
                         }
 
@@ -694,6 +696,7 @@ open class Note(val idHex: String) {
                     try {
                         BigDecimal(it.event?.content())
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         null
                         // do nothing if it can't convert to bigdecimal
                     }
@@ -709,6 +712,7 @@ open class Note(val idHex: String) {
                 try {
                     BigDecimal(it.event?.content())
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     null
                     // do nothing if it can't convert to bigdecimal
                 }
