@@ -248,19 +248,11 @@ abstract class NostrDataSource(val debugName: String) {
                         if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
                             Client.close(updatedSubscription.id)
                             if (active) {
-                                Log.d(
-                                    this@NostrDataSource.javaClass.simpleName,
-                                    "Update Filter 1 ${updatedSubscription.id} ${Client.isSubscribed(clientListener)}",
-                                )
                                 Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
                             }
                         } else {
                             // hasn't changed, does nothing.
                             if (active) {
-                                Log.d(
-                                    this@NostrDataSource.javaClass.simpleName,
-                                    "Update Filter 2 ${updatedSubscription.id} ${Client.isSubscribed(clientListener)}",
-                                )
                                 Client.sendFilterOnlyIfDisconnected(
                                     updatedSubscription.id,
                                     updatedSubscriptionNewFilters,
