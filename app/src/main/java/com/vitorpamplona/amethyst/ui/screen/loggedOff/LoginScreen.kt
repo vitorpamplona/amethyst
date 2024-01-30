@@ -123,7 +123,7 @@ fun LoginPage() {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LoginPage(
-    accountViewModel: AccountStateViewModel,
+    accountStateViewModel: AccountStateViewModel,
     isFirstLogin: Boolean,
     onWantsToLogin: () -> Unit,
 ) {
@@ -209,7 +209,7 @@ fun LoginPage(
                 }
 
                 if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                    accountViewModel.login(
+                    accountStateViewModel.login(
                         key.value.text,
                         useProxy.value,
                         proxyPort.value.toInt(),
@@ -331,7 +331,7 @@ fun LoginPage(
                         }
 
                         if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                            accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
+                            accountStateViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
                         }
@@ -444,7 +444,7 @@ fun LoginPage(
                     }
 
                     if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                        accountViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
+                        accountStateViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
                             errorMessage = context.getString(R.string.invalid_key)
                         }
                     }

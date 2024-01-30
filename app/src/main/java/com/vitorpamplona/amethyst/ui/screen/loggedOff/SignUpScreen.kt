@@ -94,7 +94,7 @@ fun SignUpPage() {
 
 @Composable
 fun SignUpPage(
-    accountViewModel: AccountStateViewModel,
+    accountStateViewModel: AccountStateViewModel,
     onWantsToLogin: () -> Unit,
 ) {
     val displayName = remember { mutableStateOf(TextFieldValue("")) }
@@ -163,7 +163,7 @@ fun SignUpPage(
                         }
 
                         if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                            accountViewModel.login(displayName.value.text, useProxy.value, proxyPort.value.toInt()) {
+                            accountStateViewModel.login(displayName.value.text, useProxy.value, proxyPort.value.toInt()) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
                         }
@@ -273,7 +273,7 @@ fun SignUpPage(
                     }
 
                     if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                        accountViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
+                        accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
                     }
                 },
                 shape = RoundedCornerShape(Size35dp),

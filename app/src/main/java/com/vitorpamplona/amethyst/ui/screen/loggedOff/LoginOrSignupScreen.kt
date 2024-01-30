@@ -39,11 +39,11 @@ fun LoginOrSignupScreen(
 
     Crossfade(wantsNewUser, label = "LoginOrSignupScreen") {
         if (it) {
-            SignUpPage(accountViewModel = accountViewModel) {
+            SignUpPage(accountStateViewModel = accountViewModel) {
                 wantsNewUser = false
             }
         } else {
-            LoginPage(accountViewModel = accountViewModel, isFirstLogin = isFirstLogin) {
+            LoginPage(accountStateViewModel = accountViewModel, isFirstLogin = isFirstLogin) {
                 wantsNewUser = true
             }
         }
