@@ -141,7 +141,8 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.5.3"
+        // Should match compose version : https://developer.android.com/jetpack/androidx/releases/compose-kotlin
+        kotlinCompilerExtensionVersion "1.5.8"
     }
 
     packagingOptions {
