@@ -75,7 +75,8 @@ fun routeToMessage(
     val withKey = ChatroomKey(persistentSetOf(user))
     accountViewModel.account.userProfile().createChatroom(withKey)
     return if (draftMessage != null) {
-        "Room/${withKey.hashCode()}?message=$draftMessage"
+        val encodedMessage = URLEncoder.encode(draftMessage, "utf-8")
+        "Room/${withKey.hashCode()}?message=$encodedMessage"
     } else {
         "Room/${withKey.hashCode()}"
     }

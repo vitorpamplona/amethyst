@@ -59,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -284,26 +285,27 @@ fun Modifier.drawReplyLevel(
     color: Color,
     selected: Color,
 ): Modifier =
-    this.drawBehind {
-        val paddingDp = 2
-        val strokeWidthDp = 2
-        val levelWidthDp = strokeWidthDp + 1
+    this
+        .drawBehind {
+            val paddingDp = 2
+            val strokeWidthDp = 2
+            val levelWidthDp = strokeWidthDp + 1
 
-        val padding = paddingDp.dp.toPx()
-        val strokeWidth = strokeWidthDp.dp.toPx()
-        val levelWidth = levelWidthDp.dp.toPx()
+            val padding = paddingDp.dp.toPx()
+            val strokeWidth = strokeWidthDp.dp.toPx()
+            val levelWidth = levelWidthDp.dp.toPx()
 
-        repeat(level) {
-            this.drawLine(
-                if (it == level - 1) selected else color,
-                Offset(padding + it * levelWidth, 0f),
-                Offset(padding + it * levelWidth, size.height),
-                strokeWidth = strokeWidth,
-            )
+            repeat(level) {
+                this.drawLine(
+                    if (it == level - 1) selected else color,
+                    Offset(padding + it * levelWidth, 0f),
+                    Offset(padding + it * levelWidth, size.height),
+                    strokeWidth = strokeWidth,
+                )
+            }
+
+            return@drawBehind
         }
-
-        return@drawBehind
-    }
         .padding(start = (2 + (level * 3)).dp)
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -353,11 +355,14 @@ fun NoteMaster(
         )
     } else {
         Column(
-            modifier.fillMaxWidth().padding(top = 10.dp),
+            modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
         ) {
             Row(
                 modifier =
-                    Modifier.padding(start = 12.dp, end = 12.dp)
+                    Modifier
+                        .padding(start = 12.dp, end = 12.dp)
                         .clickable(onClick = { note.author?.let { nav("User/${it.pubkeyHex}") } }),
             ) {
                 NoteAuthorPicture(
@@ -443,7 +448,8 @@ fun NoteMaster(
 
             Row(
                 modifier =
-                    Modifier.padding(horizontal = 12.dp)
+                    Modifier
+                        .padding(horizontal = 12.dp)
                         .combinedClickable(
                             onClick = {},
                             onLongClick = { popupExpanded = true },
@@ -669,7 +675,9 @@ private fun RenderClassifiedsReaderForThread(
             }
 
             Row(
-                Modifier.padding(start = 20.dp, end = 20.dp, bottom = 5.dp, top = 15.dp).fillMaxWidth(),
+                Modifier
+                    .padding(start = 20.dp, end = 20.dp, bottom = 5.dp, top = 15.dp)
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -686,7 +694,9 @@ private fun RenderClassifiedsReaderForThread(
 
             Row(
                 modifier =
-                    Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp, top = 5.dp).fillMaxWidth(),
+                    Modifier
+                        .padding(start = 10.dp, end = 10.dp, bottom = 5.dp, top = 5.dp)
+                        .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -703,6 +713,7 @@ private fun RenderClassifiedsReaderForThread(
                     }
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
+                val scope = rememberCoroutineScope()
 
                 TextField(
                     value = message,
@@ -725,7 +736,11 @@ private fun RenderClassifiedsReaderForThread(
                             isActive = message.text.isNotBlank(),
                             modifier = EditFieldTrailingIconModifier,
                         ) {
-                            note.author?.let { nav(routeToMessage(it, msg, accountViewModel)) }
+                            scope.launch(Dispatchers.IO) {
+                                note.author?.let {
+                                    nav(routeToMessage(it, note.toNostrUri() + "\n\n" + msg, accountViewModel))
+                                }
+                            }
                         }
                     },
                     colors =

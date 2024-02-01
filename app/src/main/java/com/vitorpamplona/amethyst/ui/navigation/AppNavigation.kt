@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 @Composable
 fun AppNavigation(
@@ -288,9 +289,13 @@ fun AppNavigation(
                 route.route,
                 route.arguments,
                 content = {
+                    val decodedMessage =
+                        it.arguments?.getString("message")?.let {
+                            URLDecoder.decode(it, "utf-8")
+                        }
                     ChatroomScreen(
                         roomId = it.arguments?.getString("id"),
-                        draftMessage = it.arguments?.getString("message"),
+                        draftMessage = decodedMessage,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
