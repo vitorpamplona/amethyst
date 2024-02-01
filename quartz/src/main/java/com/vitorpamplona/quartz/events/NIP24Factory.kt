@@ -77,6 +77,7 @@ class NIP24Factory {
         markAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
         onReady: (Result) -> Unit,
     ) {
         val senderPublicKey = signer.pubKey
@@ -92,6 +93,7 @@ class NIP24Factory {
             markAsSensitive = markAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
         ) { senderMessage ->
             createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
                 onReady(

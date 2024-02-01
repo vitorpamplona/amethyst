@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip29
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -78,7 +79,7 @@ class PollNoteEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
-            nip94attachments: List<Event>? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
             onReady: (PollNoteEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -104,7 +105,9 @@ class PollNoteEvent(
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             nip94attachments?.let {
                 it.forEach {
-                    // tags.add(arrayOf("nip94", it.toJson()))
+                    Nip29().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
                 }
             }
             tags.add(arrayOf("alt", ALT))

@@ -62,17 +62,17 @@ class FileHeaderEvent(
         const val KIND = 1063
         const val ALT_DESCRIPTION = "Verifiable file url"
 
-        private const val URL = "url"
-        private const val ENCRYPTION_KEY = "aes-256-gcm"
-        private const val MIME_TYPE = "m"
-        private const val FILE_SIZE = "size"
-        private const val DIMENSION = "dim"
-        private const val HASH = "x"
-        private const val MAGNET_URI = "magnet"
-        private const val TORRENT_INFOHASH = "i"
-        private const val BLUR_HASH = "blurhash"
-        private const val ORIGINAL_HASH = "ox"
-        private const val ALT = "alt"
+        const val URL = "url"
+        const val ENCRYPTION_KEY = "aes-256-gcm"
+        const val MIME_TYPE = "m"
+        const val FILE_SIZE = "size"
+        const val DIMENSION = "dim"
+        const val HASH = "x"
+        const val MAGNET_URI = "magnet"
+        const val TORRENT_INFOHASH = "i"
+        const val BLUR_HASH = "blurhash"
+        const val ORIGINAL_HASH = "ox"
+        const val ALT = "alt"
 
         fun create(
             url: String,

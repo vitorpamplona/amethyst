@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -184,7 +185,7 @@ private fun RenderRegular(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val state by remember(content) { mutableStateOf(CachedRichTextParser.parseText(content, tags)) }
+    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags)) }
 
     val currentTextStyle = LocalTextStyle.current
     val currentTextColor = LocalContentColor.current
@@ -416,8 +417,8 @@ private fun RenderContentAsMarkdown(
                     onMediaCompose = { title, destination ->
                         ZoomableContentView(
                             content =
-                                remember(destination) {
-                                    RichTextParser().parseMediaUrl(destination) ?: ZoomableUrlImage(url = destination)
+                                remember(destination, tags) {
+                                    RichTextParser().parseMediaUrl(destination, tags ?: EmptyTagList) ?: ZoomableUrlImage(url = destination)
                                 },
                             roundedCorner = true,
                             accountViewModel = accountViewModel,

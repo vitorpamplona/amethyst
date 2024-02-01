@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
@@ -324,6 +325,9 @@ fun ChatroomScreen(
         // LAST ROW
         PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
+                val urls = findURLs(newPostModel.message.text)
+                val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+
                 if (newPostModel.nip24 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
                     accountViewModel.account.sendNIP24PrivateMessage(
                         message = newPostModel.message.text,
@@ -331,6 +335,7 @@ fun ChatroomScreen(
                         replyingTo = replyTo.value,
                         mentions = null,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 } else {
                     accountViewModel.account.sendPrivateMessage(
@@ -339,6 +344,7 @@ fun ChatroomScreen(
                         replyingTo = replyTo.value,
                         mentions = null,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 }
 

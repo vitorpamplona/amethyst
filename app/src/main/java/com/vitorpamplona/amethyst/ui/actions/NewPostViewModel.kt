@@ -71,7 +71,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -89,6 +88,7 @@ open class NewPostViewModel() : ViewModel() {
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
+    var imetaTags = mutableStateListOf<Array<String>>()
 
     var nip94attachments by mutableStateOf<List<FileHeaderEvent>>(emptyList())
     var nip95attachments by
@@ -266,44 +266,46 @@ open class NewPostViewModel() : ViewModel() {
 
         val urls = findURLs(tagger.message)
         val usedAttachments = nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
-        usedAttachments.forEach { account?.sendHeader(it, relayList, {}) }
+        // Doesn't send as nip94 yet because we don't know if it makes sense.
+        // usedAttachments.forEach { account?.sendHeader(it, relayList, {}) }
 
         if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
                 account?.sendLiveMessage(
-                    tagger.message,
-                    originalNote?.address()!!,
-                    tagger.eTags,
-                    tagger.pTags,
-                    zapReceiver,
-                    wantsToMarkAsSensitive,
-                    localZapRaiserAmount,
-                    geoHash,
+                    message = tagger.message,
+                    toChannel = originalNote?.address()!!,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash,
                     nip94attachments = usedAttachments,
                 )
             } else {
                 account?.sendChannelMessage(
-                    tagger.message,
-                    tagger.channelHex!!,
-                    tagger.eTags,
-                    tagger.pTags,
-                    zapReceiver,
-                    wantsToMarkAsSensitive,
-                    localZapRaiserAmount,
-                    geoHash,
+                    message = tagger.message,
+                    toChannel = tagger.channelHex!!,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash,
                     nip94attachments = usedAttachments,
                 )
             }
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(
-                tagger.message,
-                originalNote!!.author!!,
-                originalNote!!,
-                tagger.pTags,
-                zapReceiver,
-                wantsToMarkAsSensitive,
-                localZapRaiserAmount,
-                geoHash,
+                message = tagger.message,
+                toUser = originalNote!!.author!!,
+                replyingTo = originalNote!!,
+                mentions = tagger.pTags,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
+                geohash = geoHash,
+                nip94attachments = usedAttachments,
             )
         } else if (originalNote?.event is ChatMessageEvent) {
             val receivers =
@@ -324,6 +326,7 @@ open class NewPostViewModel() : ViewModel() {
                 zapReceiver = zapReceiver,
                 zapRaiserAmount = localZapRaiserAmount,
                 geohash = geoHash,
+                nip94attachments = usedAttachments,
             )
         } else if (!dmUsers.isNullOrEmpty()) {
             if (nip24 || dmUsers.size > 1) {
@@ -337,6 +340,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
+                    nip94attachments = usedAttachments,
                 )
             } else {
                 account?.sendPrivateMessage(
@@ -348,6 +352,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
+                    nip94attachments = usedAttachments,
                 )
             }
         } else {
@@ -461,21 +466,12 @@ open class NewPostViewModel() : ViewModel() {
                                                 onProgress = {},
                                             )
 
-                                    if (!isPrivate) {
-                                        createNIP94Record(
-                                            uploadingResult = result,
-                                            localContentType = contentType,
-                                            alt = alt,
-                                            sensitiveContent = sensitiveContent,
-                                        )
-                                    } else {
-                                        noNIP94(
-                                            uploadingResult = result,
-                                            localContentType = contentType,
-                                            alt = alt,
-                                            sensitiveContent = sensitiveContent,
-                                        )
-                                    }
+                                    createNIP94Record(
+                                        uploadingResult = result,
+                                        localContentType = contentType,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent,
+                                    )
                                 } catch (e: Exception) {
                                     if (e is CancellationException) throw e
                                     Log.e(
@@ -508,6 +504,7 @@ open class NewPostViewModel() : ViewModel() {
         urlPreview = null
         isUploadingImage = false
         pTags = null
+        imetaTags.clear()
 
         wantsDirectMessage = false
 
@@ -703,21 +700,6 @@ open class NewPostViewModel() : ViewModel() {
             contentToAddUrl == null
     }
 
-    fun includePollHashtagInMessage(
-        include: Boolean,
-        hashtag: String,
-    ) {
-        if (include) {
-            updateMessage(TextFieldValue(message.text + " $hashtag"))
-        } else {
-            updateMessage(
-                TextFieldValue(
-                    message.text.replace(" $hashtag", "").replace(hashtag, ""),
-                ),
-            )
-        }
-    }
-
     suspend fun createNIP94Record(
         uploadingResult: Nip96Uploader.PartialEvent,
         localContentType: String?,
@@ -751,25 +733,13 @@ open class NewPostViewModel() : ViewModel() {
             mimeType = remoteMimeType ?: localContentType,
             dimPrecomputed = dim,
             onReady = { header: FileHeader ->
-                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) {
-                        event,
-                    ->
+                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
                     isUploadingImage = false
                     nip94attachments = nip94attachments + event
-                    val contentWarning = if (sensitiveContent) "" else null
+
                     message =
                         TextFieldValue(
-                            message.text +
-                                "\n" +
-                                addInlineMetadataAsNIP54(
-                                    imageUrl,
-                                    header.dim,
-                                    header.mimeType,
-                                    alt,
-                                    header.blurHash,
-                                    header.hash,
-                                    contentWarning,
-                                ),
+                            message.text + "\n" + imageUrl,
                         )
                     urlPreview = findUrlInMessage()
                 }
@@ -779,84 +749,6 @@ open class NewPostViewModel() : ViewModel() {
                 viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
             },
         )
-    }
-
-    suspend fun noNIP94(
-        uploadingResult: Nip96Uploader.PartialEvent,
-        localContentType: String?,
-        alt: String?,
-        sensitiveContent: Boolean,
-    ) {
-        // Images don't seem to be ready immediately after upload
-        val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
-        val remoteMimeType =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
-        val dim =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
-
-        if (imageUrl.isNullOrBlank()) {
-            Log.e("ImageDownload", "Couldn't download image from server")
-            cancel()
-            isUploadingImage = false
-            viewModelScope.launch { imageUploadingError.emit("Server failed to return a url") }
-            return
-        }
-
-        FileHeader.prepare(
-            fileUrl = imageUrl,
-            mimeType = remoteMimeType ?: localContentType,
-            dimPrecomputed = dim,
-            onReady = { header: FileHeader ->
-                isUploadingImage = false
-                val contentWarning = if (sensitiveContent) "" else null
-                message =
-                    TextFieldValue(
-                        message.text +
-                            "\n" +
-                            addInlineMetadataAsNIP54(
-                                imageUrl,
-                                header.dim,
-                                header.mimeType,
-                                alt,
-                                header.blurHash,
-                                header.hash,
-                                contentWarning,
-                            ),
-                    )
-                urlPreview = findUrlInMessage()
-            },
-            onError = {
-                isUploadingImage = false
-                viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
-            },
-        )
-    }
-
-    fun addInlineMetadataAsNIP54(
-        imageUrl: String,
-        dim: String?,
-        m: String?,
-        alt: String?,
-        blurHash: String?,
-        x: String?,
-        sensitiveContent: String?,
-    ): String {
-        val extension =
-            listOfNotNull(
-                m?.ifBlank { null }?.let { "m=${URLEncoder.encode(it, "utf-8")}" },
-                dim?.ifBlank { null }?.let { "dim=${URLEncoder.encode(it, "utf-8")}" },
-                alt?.ifBlank { null }?.let { "alt=${URLEncoder.encode(it, "utf-8")}" },
-                blurHash?.ifBlank { null }?.let { "blurhash=${URLEncoder.encode(it, "utf-8")}" },
-                x?.ifBlank { null }?.let { "x=${URLEncoder.encode(it, "utf-8")}" },
-                sensitiveContent?.let { "content-warning=${URLEncoder.encode(it, "utf-8")}" },
-            )
-                .joinToString("&")
-
-        return if (imageUrl.contains("#")) {
-            "$imageUrl&$extension"
-        } else {
-            "$imageUrl#$extension"
-        }
     }
 
     fun createNIP95Record(

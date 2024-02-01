@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
+import com.vitorpamplona.quartz.encoders.Nip54
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentSetOf
@@ -122,14 +123,24 @@ class PrivateDmEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
             onReady: (PrivateDmEvent) -> Unit,
         ) {
-            val message =
+            var message = msg
+            nip94attachments?.forEach {
+                val myUrl = it.url()
+                if (myUrl != null) {
+                    message = message.replace(myUrl, Nip54().createUrl(myUrl, it.tags))
+                }
+            }
+
+            message =
                 if (advertiseNip18) {
-                    NIP_18_ADVERTISEMENT
+                    NIP_18_ADVERTISEMENT + message
                 } else {
-                    ""
-                } + msg
+                    message
+                }
+
             val tags = mutableListOf<Array<String>>()
             publishedRecipientPubKey?.let { tags.add(arrayOf("p", publishedRecipientPubKey)) }
             replyTos?.forEach { tags.add(arrayOf("e", it)) }
@@ -142,6 +153,15 @@ class PrivateDmEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
+            /* Privacy issue: DO NOT ADD THESE TO THE TAGS.
+            nip94attachments?.let {
+                it.forEach {
+                    Nip29().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
+                }
+            }*/
+
             tags.add(arrayOf("alt", ALT))
 
             signer.nip04Encrypt(message, recipientPubKey) { content ->

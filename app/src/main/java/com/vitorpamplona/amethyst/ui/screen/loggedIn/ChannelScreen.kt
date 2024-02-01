@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.events.findURLs
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -300,6 +301,10 @@ fun ChannelScreen(
                         dao = accountViewModel,
                     )
                 tagger.run()
+
+                val urls = findURLs(tagger.message)
+                val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+
                 if (channel is PublicChatChannel) {
                     accountViewModel.account.sendChannelMessage(
                         message = tagger.message,
@@ -307,6 +312,7 @@ fun ChannelScreen(
                         replyTo = tagger.eTags,
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 } else if (channel is LiveActivitiesChannel) {
                     accountViewModel.account.sendLiveMessage(
@@ -315,6 +321,7 @@ fun ChannelScreen(
                         replyTo = tagger.eTags,
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 }
                 newPostModel.message = TextFieldValue("")

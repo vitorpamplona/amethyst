@@ -25,6 +25,7 @@ import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip29
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -55,7 +56,7 @@ class TextNoteEvent(
             root: String?,
             directMentions: Set<HexKey>,
             geohash: String? = null,
-            nip94attachments: List<Event>? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteEvent) -> Unit,
@@ -106,7 +107,9 @@ class TextNoteEvent(
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             nip94attachments?.let {
                 it.forEach {
-                    // tags.add(arrayOf("nip94", it.toJson()))
+                    Nip29().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
                 }
             }
 

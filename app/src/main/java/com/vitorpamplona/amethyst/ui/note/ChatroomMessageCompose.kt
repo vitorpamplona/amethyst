@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -619,19 +620,18 @@ private fun RenderRegularTextNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
-    val modifier = remember { Modifier.padding(top = 5.dp) }
-
     LoadDecryptedContentOrNull(note = note, accountViewModel = accountViewModel) { eventContent ->
         if (eventContent != null) {
             SensitivityWarning(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
+                val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
                 TranslatableRichTextViewer(
-                    content = eventContent!!,
+                    content = eventContent,
                     canPreview = canPreview,
-                    modifier = modifier,
+                    modifier = HalfTopPadding,
                     tags = tags,
                     backgroundColor = backgroundBubbleColor,
                     accountViewModel = accountViewModel,
@@ -642,8 +642,8 @@ private fun RenderRegularTextNote(
             TranslatableRichTextViewer(
                 content = stringResource(id = R.string.could_not_decrypt_the_message),
                 canPreview = true,
-                modifier = modifier,
-                tags = tags,
+                modifier = HalfTopPadding,
+                tags = EmptyTagList,
                 backgroundColor = backgroundBubbleColor,
                 accountViewModel = accountViewModel,
                 nav = nav,

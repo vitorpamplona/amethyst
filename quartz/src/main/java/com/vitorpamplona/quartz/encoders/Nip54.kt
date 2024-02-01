@@ -18,13 +18,47 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.quartz.encoders
 
+import com.vitorpamplona.quartz.events.FileHeaderEvent
 import java.net.URI
 import java.net.URLDecoder
+import java.net.URLEncoder
 import kotlin.coroutines.cancellation.CancellationException
 
-class Nip44UrlParser {
+class Nip54 {
+    fun convertFromFileHeader(header: FileHeaderEvent): String? {
+        val myUrl = header.url() ?: return null
+        return createUrl(
+            myUrl,
+            header.tags,
+        )
+    }
+
+    fun createUrl(
+        imageUrl: String,
+        tags: Array<Array<String>>,
+    ): String {
+        val extension =
+            tags.mapNotNull {
+                if (it.isNotEmpty() && it[0] != "url") {
+                    if (it.size > 1) {
+                        "${it[0]}=${URLEncoder.encode(it[1], "utf-8")}"
+                    } else {
+                        "${it[0]}}="
+                    }
+                } else {
+                    null
+                }
+            }.joinToString("&")
+
+        return if (imageUrl.contains("#")) {
+            "$imageUrl&$extension"
+        } else {
+            "$imageUrl#$extension"
+        }
+    }
+
     fun parse(url: String): Map<String, String> {
         return try {
             fragments(URI(url))

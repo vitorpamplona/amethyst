@@ -34,6 +34,9 @@ import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
 import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
+import com.vitorpamplona.quartz.encoders.Nip29
+import com.vitorpamplona.quartz.encoders.Nip54
+import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -94,27 +97,33 @@ val HTTPRegex =
         .toRegex(RegexOption.IGNORE_CASE)
 
 class RichTextParser() {
-    fun parseMediaUrl(fullUrl: String): ZoomableUrlContent? {
+    fun parseMediaUrl(
+        fullUrl: String,
+        tags: ImmutableListOfLists<String>,
+    ): ZoomableUrlContent? {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-            val frags = Nip44UrlParser().parse(fullUrl)
+            val frags = Nip54().parse(fullUrl)
+            val tags = Nip29().parse(fullUrl, tags.lists)
+
             ZoomableUrlImage(
                 url = fullUrl,
-                description = frags["alt"],
-                hash = frags["x"],
-                blurhash = frags["blurhash"],
-                dim = frags["dim"],
-                contentWarning = frags["content-warning"],
+                description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
+                hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
+                blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
+                dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
+                contentWarning = frags["content-warning"] ?: tags["content-warning"],
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-            val frags = Nip44UrlParser().parse(fullUrl)
+            val frags = Nip54().parse(fullUrl)
+            val tags = Nip29().parse(fullUrl, tags.lists)
             ZoomableUrlVideo(
                 url = fullUrl,
-                description = frags["alt"],
-                hash = frags["x"],
-                blurhash = frags["blurhash"],
-                dim = frags["dim"],
-                contentWarning = frags["content-warning"],
+                description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
+                hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
+                blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
+                dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
+                contentWarning = frags["content-warning"] ?: tags["content-warning"],
             )
         } else {
             null
@@ -146,7 +155,7 @@ class RichTextParser() {
             }
 
         val imagesForPager =
-            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl) }.associateBy { it.url }
+            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags) }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
         val emojiMap =

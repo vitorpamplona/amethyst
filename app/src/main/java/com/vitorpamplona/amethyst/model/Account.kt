@@ -1325,7 +1325,7 @@ class Account(
         directMentions: Set<HexKey>,
         relayList: List<Relay>? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1381,7 +1381,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1428,7 +1428,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1461,7 +1461,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1495,6 +1495,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         sendPrivateMessage(
             message,
@@ -1505,6 +1506,7 @@ class Account(
             wantsToMarkAsSensitive,
             zapRaiserAmount,
             geohash,
+            nip94attachments,
         )
     }
 
@@ -1517,6 +1519,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1533,6 +1536,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer,
             advertiseNip18 = false,
         ) {
@@ -1551,6 +1555,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1567,6 +1572,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer,
         ) {
             broadcastPrivately(it)
