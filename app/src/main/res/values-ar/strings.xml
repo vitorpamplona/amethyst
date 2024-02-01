@@ -85,9 +85,12 @@
     <string name="private_message_feed"> الرسائل الخاصة</string>
     <string name="public_chat_feed">الرسائل العامة</string>
     <string name="global_feed">الموجز العام</string>
+    <string name="search_feed">البحث</string>
     <string name="add_a_relay">أضف Relay</string>
     <string name="display_name">إسم العرض</string>
     <string name="my_display_name">إسم العرض الخاص بي</string>
+    <string name="my_awesome_name">اسمي المميز</string>
+    <string name="welcome">مرحبا بك!</string>
     <string name="username">اسم المستخدم</string>
     <string name="my_username">اسم المستخدم الخاص بي</string>
     <string name="about_me">ْعَنِّي</string>
@@ -126,6 +129,7 @@
     <string name="send_a_direct_message">إرسال رسالة مباشرة</string>
     <string name="edits_the_user_s_metadata">القيام بتحرير metadata للمستخدم</string>
     <string name="follow">متابعة</string>
+    <string name="follow_back">إرجاع المتابعة</string>
     <string name="unblock">رفع الحظر</string>
     <string name="copy_user_id">نسخ معرف المستخدم</string>
     <string name="unblock_user">إلغاء حظر عن مستخدم</string>
@@ -140,7 +144,14 @@
     <string name="terms_of_use">شروط الاستخدام</string>
     <string name="acceptance_of_terms_is_required">يجب قبول شروط الإستخدام</string>
     <string name="key_is_required">المفتاح مطلوب</string>
+    <string name="name_is_required">يجب ادخال اسم</string>
     <string name="login">تسجيل دخول</string>
+    <string name="sign_up">التسجيل</string>
+    <string name="create_account">انشاء حساب</string>
+    <string name="how_should_we_call_you">كيف ينبغي أن ندعوك؟</string>
+    <string name="don_t_have_an_account">ليس لديك حساب؟</string>
+    <string name="already_have_an_account">هل لديك حساب nostr بالفعل؟</string>
+    <string name="create_a_new_account">أنشئ حسابًا جديدًا</string>
     <string name="generate_a_new_key">إنشاء مفتاح جديد</string>
     <string name="loading_feed">بإنتظار التحديثات</string>
     <string name="loading_account">جاري تحميل الحساب</string>
@@ -249,6 +260,7 @@
     <string name="remove_from_private_bookmarks">إزالة من المفضلات الخاصة</string>
     <string name="remove_from_public_bookmarks">إزالة من المفضلات العامة</string>
     <string name="wallet_connect_service">خدمة Wallet Connect </string>
+    <string name="wallet_connect_service_explainer">السماح لمفتاحك السري بدفع ال zaps بدون الحاجة الى لخروج من التطبيق (دع مفتاحك السري ٱمن و استخدم خادم خاص إن امكن)</string>
     <string name="wallet_connect_service_relay">خادم Wallet Connect </string>
     <string name="wallet_connect_service_secret">كلمة سر خدمة Wallet Connect</string>
     <string name="wallet_connect_service_show_secret">إظهار كلمة السر</string>
@@ -293,6 +305,7 @@
     <string name="zap_type_anonymous_explainer">المستقبل والجمهور لا يعرفان من الذي قام بإرسال الدفع</string>
     <string name="zap_type_nonzap_explainer">لا يوجد أثر في نوستر،  فقط على شبكة الLightning</string>
     <string name="file_server">خادم الملفات</string>
+    <string name="zap_forward_lnAddress"> user@ او Lnaddres  </string>
     <string name="upload_server_relays_nip95">المرحلات الخاصة بك (NIP-95)</string>
     <string name="connect_via_tor_short">إعداد Tor/Orbot</string>
     <string name="connect_via_tor">الاتصال من خلال إعدادات Orbot الخاص بك</string>
@@ -303,6 +316,9 @@
     <string name="follow_list_selection">قائمة المتابعة</string>
     <string name="follow_list_kind3follows">جميع المتابعات</string>
     <string name="follow_list_global">العالمي</string>
+    <string name="follow_list_mute_list">قائمة الحسابات المكتومة</string>
+    <string name="app_notification_dms_channel_name">الرسائل الخاصة</string>
+    <string name="app_notification_dms_channel_description">التنبيه عند وصول رسالة خاصة</string>
     <string name="app_notification_zaps_channel_message_from">من طرف %1$s</string>
     <string name="app_notification_zaps_channel_message_for">ل %1$s</string>
     <string name="reply_notify">تنبيه: </string>
@@ -347,6 +363,8 @@
     <string name="auth">المصادقة</string>
     <string name="payment">الدفع</string>
     <string name="cashu">Cashu Token</string>
+    <string name="cashu_copy_token">تسخ الtoken</string>
+    <string name="copied_token_to_clipboard">نسخ الtoken من المحفظة</string>
     <string name="are_you_sure_you_want_to_log_out">تسجيل الخروج سوف يؤدي الى جميع المعلومات المحلية الخاصة بك. تأكد من وجود نسخة احتياطية لمفاتحك السرية لتجنب فقدان حسابك.
  هل تريد الاستمرار؟</string>
     <string name="followed_tags">العلامات المُتابعة</string>
@@ -416,6 +434,12 @@
     <string name="error_dialog_button_ok">موافق</string>
     <string name="relay_information_document_error_assemble_url">فشل الوصول إلى  
 %1$s: %2$s</string>
+    <string name="active_for_home">الصفحة الرئيسية</string>
+    <string name="active_for_search">البحث</string>
+    <string name="error_opening_external_signer">خطأ في فتح تطبيق الموقِّع (signer app)</string>
+    <string name="hidden_words">الكلمات المخفية</string>
+    <string name="hide_new_word_label">إخفاء كلمة أو جملة جديدة</string>
+    <string name="select_an_option">حدد خيارا</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats أرسلت الى محفظتك
 (الرسوم: sats %2$s ) </string>
     <string name="error_unable_to_fetch_invoice">تعذر جلب الinvoice من خوادم المستلم</string>
@@ -436,4 +460,31 @@
     <string name="push_server_install_app_description">لاستخدام الإشعارات حمل أي تطبيق يدعم ال [Unified Push](https://unifiedpush.org/)
 مثل [Nfty](https://ntfy.sh/).
 بعد تثبيتك التطبيق قم باختياره من الإعدادات</string>
+    <string name="classifieds_title">العنوان</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">الشرط</string>
+    <string name="classifieds_category">الفئة</string>
+    <string name="classifieds_location">الموقع الجغرافيّ</string>
+    <string name="classifieds_condition_like_new">كالجديد</string>
+    <string name="classifieds_condition_like_new_explainer">مستعمل، لكن لا تظهر عليه أي ٱثار للاستعمال</string>
+    <string name="classifieds_condition_good">بحالة جيدة</string>
+    <string name="classifieds_condition_good_explainer">لديه بعض علامات الاستخدام السطحية</string>
+    <string name="classifieds_condition_fair">جيد</string>
+    <string name="classifieds_condition_fair_explainer">لا يزال في شكل مقبول وعملي</string>
+    <string name="classifieds_category_clothing">ملابس</string>
+    <string name="classifieds_category_accessories">اكسسوارات</string>
+    <string name="classifieds_category_electronics">إلكترونيات</string>
+    <string name="classifieds_category_furniture">أثاث</string>
+    <string name="classifieds_category_books">كتب</string>
+    <string name="classifieds_category_pets">حيوانات أليفة</string>
+    <string name="classifieds_category_sports">الرياضة</string>
+    <string name="classifieds_category_fitness">اللياقة البدنية</string>
+    <string name="classifieds_category_art">فن</string>
+    <string name="classifieds_category_crafts">الحرف</string>
+    <string name="classifieds_category_home">الصفحة الرئيسية</string>
+    <string name="classifieds_category_office">المكتب</string>
+    <string name="classifieds_category_food">طعام</string>
+    <string name="classifieds_category_other">أخرى</string>
+    <string name="failed_to_upload_media_no_details">فشل في تحميل الوسائط</string>
+    <string name="failed_to_upload_media">خطأ في التحميل: %1$s</string>
 </resources>
