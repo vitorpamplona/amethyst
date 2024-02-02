@@ -100,7 +100,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.EmptyTagList
@@ -607,7 +606,7 @@ private fun DisplayFullNote(
     NoteCompose(
         baseNote = it,
         accountViewModel = accountViewModel,
-        modifier = MaterialTheme.colorScheme.replyModifier,
+        modifier = MaterialTheme.colorScheme.innerPostModifier,
         parentBackgroundColor = backgroundColor,
         isQuotedNote = true,
         nav = nav,
