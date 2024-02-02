@@ -27,7 +27,7 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] WebBrowser Signer (NIP-07, Not applicable)
 - [x] Old-style mentions (NIP-08)
 - [x] Event Deletion (NIP-09)
-- [x] Replies, mentions, Threads and Notifications (NIP-10)
+- [x] Replies, mentions, Threads, and Notifications (NIP-10)
 - [x] Relay Information Document (NIP-11)
 - [x] Generic Tag Queries (NIP-12)
 - [x] Proof of Work Display (NIP-13)
@@ -113,13 +113,13 @@ The overall architecture consists of the UI, which uses the usual State/ViewMode
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
 
 The repository layer stores Nostr Events as Notes and Users separately. Those classes use LiveData objects to
-allow the UI and other parts of the app to subscribe to each individual Note/User and receive updates when they happen.
+allow the UI and other parts of the app to subscribe to each Note/User and receive updates when they happen.
 They are also responsible for updating viewModels when needed. Filters react to changes in the screen. As the user
 sees different Events, the Datasource classes are used to receive more information about those particular Events.
 
 Most of the UI is reactive to changes in the repository classes. The service layer assembles Nostr filters for each need of the app,
 receives the data from the Relay, and sends it to the repository. Connection with relays is never closed during the use of the app.
-The UI receives a notification that objects were updated. Instances of User and Notes are mutable directly.
+The UI receives a notification that objects have been updated. Instances of User and Notes are mutable directly.
 There will never be two Notes with the same ID or two User instances with the same pubkey.
 
 Lastly, the user's account information (priv key/pub key) is stored in the Android KeyStore for security.
@@ -131,7 +131,7 @@ Make sure to have the following pre-requisites installed:
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 
-Fork and clone this repository and import into Android Studio
+Fork and clone this repository and import it into Android Studio
 ```bash
 git clone https://github.com/vitorpamplona/amethyst.git
 ```
@@ -174,7 +174,7 @@ For the Play build:
 
 Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
 
-You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to `naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac`
+You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
 
 ## How to Deploy
 
@@ -193,7 +193,7 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 5. Tag the commit with `v{x.x.x}`
 6. Let the [Create Release GitHub Action](https://github.com/vitorpamplona/amethyst/actions/workflows/create-release.yml) build a new `aab` file.
 7. Add your CHANGE LOG to the description of the new release
-8. Download the `aab` file and upload it to the` PlayStore.
+8. Download the `aab` file and upload it to the PlayStore.
 
 # Privacy on Relays & nostr
 Your internet protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN) from trackers online.
