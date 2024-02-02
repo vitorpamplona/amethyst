@@ -105,12 +105,7 @@ class ZapOptionstViewModel : ViewModel() {
     }
 
     fun value(): Long? {
-        return try {
-            customAmount.text.trim().toLongOrNull()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
+        return customAmount.text.trim().toLongOrNull()
     }
 
     fun cancel() {}
@@ -285,7 +280,7 @@ fun ZapButton(
     onPost: () -> Unit,
 ) {
     Button(
-        onClick = { onPost() },
+        onClick = { if (isActive) onPost() },
         shape = ButtonBorder,
         colors =
             ButtonDefaults.buttonColors(
