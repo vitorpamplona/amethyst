@@ -615,7 +615,7 @@ open class Note(val idHex: String) {
 
         // Regular Zap Receipts
         zaps.forEach {
-            val noteEvent = it?.value?.event
+            val noteEvent = it.value?.event
             if (noteEvent is LnZapEvent) {
                 sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
             }

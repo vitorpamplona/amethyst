@@ -56,11 +56,9 @@ fun buildAnnotatedStringWithUrlHighlighting(
             val builderAfter = StringBuilder() // important to correctly measure Tag start and end
             append(
                 text
-                    .split('\n')
-                    .map { paragraph: String ->
+                    .split('\n').joinToString("\n") { paragraph: String ->
                         paragraph
-                            .split(' ')
-                            .map { word: String ->
+                            .split(' ').joinToString(" ") { word: String ->
                                 try {
                                     if (word.startsWith("@npub") && word.length >= 64) {
                                         val keyB32 = word.substring(0, 64)
@@ -121,9 +119,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
                                     word
                                 }
                             }
-                            .joinToString(" ")
-                    }
-                    .joinToString("\n"),
+                    },
             )
 
             substitutions.forEach {
@@ -143,9 +139,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
         object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
                 val inInsideRange =
-                    substitutions
-                        .filter { offset > it.original.start && offset < it.original.end }
-                        .firstOrNull()
+                    substitutions.firstOrNull { offset > it.original.start && offset < it.original.end }
 
                 if (inInsideRange != null) {
                     val percentInRange =
@@ -165,9 +159,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
 
             override fun transformedToOriginal(offset: Int): Int {
                 val inInsideRange =
-                    substitutions
-                        .filter { offset > it.modified.start && offset < it.modified.end }
-                        .firstOrNull()
+                    substitutions.firstOrNull { offset > it.modified.start && offset < it.modified.end }
 
                 if (inInsideRange != null) {
                     val percentInRange =
