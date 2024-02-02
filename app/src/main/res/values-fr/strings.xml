@@ -90,6 +90,7 @@
     <string name="add_a_relay">Ajouter un relais</string>
     <string name="display_name">Nom visible du public</string>
     <string name="my_display_name">Mon nom visible du public</string>
+    <string name="welcome">Bienvenue Ostrich!</string>
     <string name="username">Nom d\'utilisateur</string>
     <string name="my_username">Mon nom d\'utilisateur</string>
     <string name="about_me">Biographie</string>
@@ -393,6 +394,8 @@
     <string name="payment">Paiement</string>
     <string name="cashu">Jeton Cashu</string>
     <string name="cashu_redeem">Échanger</string>
+    <string name="cashu_redeem_to_zap">Envoyer vers le portefeuille Zap</string>
+    <string name="cashu_redeem_to_cashu">Ouvrir dans le portefeuille Cashu</string>
     <string name="cashu_copy_token">Copier le Jeton</string>
     <string name="no_lightning_address_set">Adresse Lightning non définie</string>
     <string name="copied_token_to_clipboard">Jeton copié dans le presse-papiers</string>
@@ -513,9 +516,13 @@
     <string name="error_dialog_pay_invoice_error">Impossible de payer la facture</string>
     <string name="error_dialog_pay_withdraw_error">Impossible de retirer</string>
     <string name="error_parsing_nip47_title">Impossible de configurer Wallet Connect</string>
+    <string name="cashu_failed_redemption">Impossible d\'utiliser ce Cashu</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Les jetons de cashu sont déjà dépensés.</string>
     <string name="cashu_successful_redemption">Cashu reçu</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats ont été envoyés à votre portefeuille. (Frais : %2$s sats)</string>
+    <string name="cashu_no_wallet_found">Aucun portefeuille Cashu compatible trouvé dans le système</string>
     <string name="error_unable_to_fetch_invoice">Impossible de récupérer la facture depuis les serveurs du destinataire</string>
+    <string name="wallet_connect_pay_invoice_error_error">Le fournisseur de connexion de votre portefeuille a retourné l\'erreur suivante : %1$s</string>
     <string name="could_not_connect_to_tor">Impossible de se connecter à Tor</string>
     <string name="unable_to_download_relay_document">Téléchargement du document relais indisponible</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Impossible d\'assembler LNUrl à partir de l\'adresse Lightning \"%1$s\". Vérifiez la configuration de l\'utilisateur</string>
