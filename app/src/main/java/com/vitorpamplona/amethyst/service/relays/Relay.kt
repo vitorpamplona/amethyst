@@ -77,7 +77,7 @@ class Relay(
     var errorCounter = 0
     var pingInMs: Long? = null
 
-    var closingTimeInSeconds = 0L
+    var lastConnectTentative: Long = 0L
 
     var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
@@ -119,6 +119,8 @@ class Relay(
         checkNotInMainThread()
 
         if (socket != null) return
+
+        lastConnectTentative = TimeUtils.now()
 
         try {
             val request =
@@ -251,7 +253,6 @@ class Relay(
         this.isReady = false
         this.usingCompression = false
         this.resetEOSEStatuses()
-        this.closingTimeInSeconds = TimeUtils.now()
     }
 
     fun processNewRelayMessage(newMessage: String) {
@@ -331,7 +332,7 @@ class Relay(
         Log.d("Relay", "Relay.disconnect $url")
         checkNotInMainThread()
 
-        closingTimeInSeconds = TimeUtils.now()
+        lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
         socket?.cancel()
         socket = null
         isReady = false
@@ -373,7 +374,7 @@ class Relay(
                 }
             } else {
                 // waits 60 seconds to reconnect after disconnected.
-                if (TimeUtils.now() > closingTimeInSeconds + RECONNECTING_IN_SECONDS) {
+                if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
                     // sends all filters after connection is successful.
                     connect()
                 }
@@ -413,7 +414,7 @@ class Relay(
 
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > closingTimeInSeconds + RECONNECTING_IN_SECONDS) {
+            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
                 // println("sendfilter Only if Disconnected ${url} ")
                 connect()
             }
