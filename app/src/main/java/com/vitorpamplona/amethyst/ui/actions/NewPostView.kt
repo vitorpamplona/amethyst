@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -304,25 +305,38 @@ fun NewPostView(
         ) { pad ->
             Surface(
                 modifier =
-                    Modifier.padding(
-                        start = Size10dp,
-                        top = pad.calculateTopPadding(),
-                        end = Size10dp,
-                        bottom = pad.calculateBottomPadding(),
-                    )
+                    Modifier
+                        .padding(
+                            start = Size10dp,
+                            top = pad.calculateTopPadding(),
+                            end = Size10dp,
+                            bottom = pad.calculateBottomPadding(),
+                        )
                         .fillMaxSize(),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
                 ) {
                     Column(
-                        modifier = Modifier.imePadding().weight(1f),
+                        modifier =
+                            Modifier
+                                .imePadding()
+                                .weight(1f),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth().verticalScroll(scrollState),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(scrollState),
                             ) {
                                 postViewModel.originalNote?.let {
                                     Row(Modifier.heightIn(max = 200.dp)) {
@@ -474,7 +488,8 @@ fun NewPostView(
                                                     contentDescription = myUrlPreview,
                                                     contentScale = ContentScale.FillWidth,
                                                     modifier =
-                                                        Modifier.padding(top = 4.dp)
+                                                        Modifier
+                                                            .padding(top = 4.dp)
                                                             .fillMaxWidth()
                                                             .clip(shape = QuoteBorder)
                                                             .border(
@@ -529,64 +544,75 @@ fun NewPostView(
                             }
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            UploadFromGallery(
-                                isUploading = postViewModel.isUploadingImage,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier,
-                            ) {
-                                postViewModel.selectImage(it)
-                            }
-
-                            if (postViewModel.canUsePoll) {
-                                // These should be hashtag recommendations the user selects in the future.
-                                // val hashtag = stringResource(R.string.poll_hashtag)
-                                // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
-                                AddPollButton(postViewModel.wantsPoll) {
-                                    postViewModel.wantsPoll = !postViewModel.wantsPoll
-                                    if (postViewModel.wantsPoll) {
-                                        postViewModel.wantsProduct = false
-                                    }
-                                }
-                            }
-
-                            AddClassifiedsButton(postViewModel) {
-                                postViewModel.wantsProduct = !postViewModel.wantsProduct
-                                if (postViewModel.wantsProduct) {
-                                    postViewModel.wantsPoll = false
-                                }
-                            }
-
-                            if (postViewModel.canAddInvoice) {
-                                AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                                    postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-                                }
-                            }
-
-                            if (postViewModel.canAddZapRaiser) {
-                                AddZapraiserButton(postViewModel.wantsZapraiser) {
-                                    postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
-                                }
-                            }
-
-                            MarkAsSensitive(postViewModel) {
-                                postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
-                            }
-
-                            AddGeoHash(postViewModel) {
-                                postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
-                            }
-
-                            ForwardZapTo(postViewModel) {
-                                postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
-                            }
-                        }
+                        BottomRowActions(postViewModel)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BottomRowActions(postViewModel: NewPostViewModel) {
+    val scrollState = rememberScrollState()
+
+    Row(
+        modifier =
+            Modifier
+                .horizontalScroll(scrollState)
+                .fillMaxWidth()
+                .height(50.dp),
+        verticalAlignment = CenterVertically,
+    ) {
+        UploadFromGallery(
+            isUploading = postViewModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            postViewModel.selectImage(it)
+        }
+
+        if (postViewModel.canUsePoll) {
+            // These should be hashtag recommendations the user selects in the future.
+            // val hashtag = stringResource(R.string.poll_hashtag)
+            // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
+            AddPollButton(postViewModel.wantsPoll) {
+                postViewModel.wantsPoll = !postViewModel.wantsPoll
+                if (postViewModel.wantsPoll) {
+                    postViewModel.wantsProduct = false
+                }
+            }
+        }
+
+        AddClassifiedsButton(postViewModel) {
+            postViewModel.wantsProduct = !postViewModel.wantsProduct
+            if (postViewModel.wantsProduct) {
+                postViewModel.wantsPoll = false
+            }
+        }
+
+        if (postViewModel.canAddInvoice) {
+            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
+            }
+        }
+
+        if (postViewModel.canAddZapRaiser) {
+            AddZapraiserButton(postViewModel.wantsZapraiser) {
+                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
+            }
+        }
+
+        MarkAsSensitive(postViewModel) {
+            postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
+        }
+
+        AddGeoHash(postViewModel) {
+            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
+        }
+
+        ForwardZapTo(postViewModel) {
+            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
     }
 }
@@ -644,7 +670,8 @@ private fun MessageField(postViewModel: NewPostViewModel) {
                 capitalization = KeyboardCapitalization.Sentences,
             ),
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.surface,
@@ -684,21 +711,32 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
         ) {
             Box(
-                Modifier.height(20.dp).width(25.dp),
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
                     contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    modifier =
+                        Modifier
+                            .size(18.dp)
+                            .align(Alignment.BottomStart),
                     tint = Color.Red,
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
                     contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .align(Alignment.TopEnd),
                     tint = Color.Yellow,
                 )
             }
@@ -921,7 +959,10 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 placeholder = conditionTypes.filter { it.first == postViewModel.condition }.first().second,
                 options = conditionOptions,
                 onSelect = { postViewModel.condition = conditionTypes[it].first },
-                modifier = Modifier.weight(1f).padding(end = 5.dp, bottom = 1.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
                 MyTextField(
                     value = TextFieldValue(currentOption),
@@ -982,7 +1023,10 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         ?: "",
                 options = categoryOptions,
                 onSelect = { postViewModel.category = TextFieldValue(categoryTypes[it].second) },
-                modifier = Modifier.weight(1f).padding(end = 5.dp, bottom = 1.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
                 MyTextField(
                     value = TextFieldValue(currentOption),
@@ -1047,21 +1091,32 @@ fun FowardZapTo(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
         ) {
             Box(
-                Modifier.height(20.dp).width(25.dp),
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart),
                     tint = BitcoinOrange,
                 )
                 Icon(
                     imageVector = Icons.Outlined.ArrowForwardIos,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.CenterEnd),
                     tint = BitcoinOrange,
                 )
             }
@@ -1161,10 +1216,15 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
             ) {
                 Box(
-                    Modifier.height(20.dp).width(20.dp),
+                    Modifier
+                        .height(20.dp)
+                        .width(20.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
@@ -1305,32 +1365,46 @@ private fun AddZapraiserButton(
         onClick = { onClick() },
     ) {
         Box(
-            Modifier.height(20.dp).width(25.dp),
+            Modifier
+                .height(20.dp)
+                .width(25.dp),
         ) {
             if (!isLnInvoiceActive) {
                 Icon(
                     imageVector = Icons.Default.ShowChart,
                     null,
-                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.TopStart),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.BottomEnd),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.BottomEnd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.ShowChart,
                     null,
-                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.TopStart),
                     tint = BitcoinOrange,
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.BottomEnd),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.BottomEnd),
                     tint = BitcoinOrange,
                 )
             }
@@ -1399,32 +1473,46 @@ private fun ForwardZapTo(
         onClick = { onClick() },
     ) {
         Box(
-            Modifier.height(20.dp).width(25.dp),
+            Modifier
+                .height(20.dp)
+                .width(25.dp),
         ) {
             if (!postViewModel.wantsForwardZapTo) {
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForwardIos,
                     contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.CenterEnd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart),
                     tint = BitcoinOrange,
                 )
                 Icon(
                     imageVector = Icons.Outlined.ArrowForwardIos,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.CenterEnd),
                     tint = BitcoinOrange,
                 )
             }
@@ -1467,32 +1555,46 @@ private fun MarkAsSensitive(
         onClick = { onClick() },
     ) {
         Box(
-            Modifier.height(20.dp).width(23.dp),
+            Modifier
+                .height(20.dp)
+                .width(23.dp),
         ) {
             if (!postViewModel.wantsToMarkAsSensitive) {
                 Icon(
                     imageVector = Icons.Default.Visibility,
                     contentDescription = stringResource(R.string.content_warning),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    modifier =
+                        Modifier
+                            .size(18.dp)
+                            .align(Alignment.BottomStart),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
                     contentDescription = stringResource(R.string.content_warning),
-                    modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .align(Alignment.TopEnd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
                     contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    modifier =
+                        Modifier
+                            .size(18.dp)
+                            .align(Alignment.BottomStart),
                     tint = Color.Red,
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
                     contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .align(Alignment.TopEnd),
                     tint = Color.Yellow,
                 )
             }
@@ -1601,7 +1703,8 @@ fun ImageVideoDescription(
 
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 30.dp, end = 30.dp)
                 .clip(shape = QuoteBorder)
                 .border(
@@ -1611,11 +1714,17 @@ fun ImageVideoDescription(
                 ),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(30.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(30.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
             ) {
                 Text(
                     text =
@@ -1633,13 +1742,17 @@ fun ImageVideoDescription(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier =
-                        Modifier.padding(start = 10.dp)
+                        Modifier
+                            .padding(start = 10.dp)
                             .weight(1.0f)
                             .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                 )
 
                 IconButton(
-                    modifier = Modifier.size(30.dp).padding(end = 5.dp),
+                    modifier =
+                        Modifier
+                            .size(30.dp)
+                            .padding(end = 5.dp),
                     onClick = onCancel,
                 ) {
                     CancelIcon()
@@ -1651,7 +1764,8 @@ fun ImageVideoDescription(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .padding(bottom = 10.dp)
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
@@ -1661,7 +1775,8 @@ fun ImageVideoDescription(
                         contentDescription = uri.toString(),
                         contentScale = ContentScale.FillWidth,
                         modifier =
-                            Modifier.padding(top = 4.dp)
+                            Modifier
+                                .padding(top = 4.dp)
                                 .fillMaxWidth()
                                 .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                     )
@@ -1687,7 +1802,10 @@ fun ImageVideoDescription(
                             bitmap = it.asImageBitmap(),
                             contentDescription = "some useful description",
                             contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
+                            modifier =
+                                Modifier
+                                    .padding(top = 4.dp)
+                                    .fillMaxWidth(),
                         )
                     }
                 } else {
@@ -1709,7 +1827,10 @@ fun ImageVideoDescription(
                             ?: fileServers[0].server.name,
                     options = fileServerOptions,
                     onSelect = { selectedServer = fileServers[it] },
-                    modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),
+                    modifier =
+                        Modifier
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                            .weight(1f),
                 )
             }
 
@@ -1718,7 +1839,10 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 SettingSwitchItem(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
                     checked = sensitiveContent,
                     onCheckedChange = { sensitiveContent = it },
                     title = R.string.add_sensitive_content_label,
@@ -1729,12 +1853,16 @@ fun ImageVideoDescription(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
-                    Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+                    Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
                 OutlinedTextField(
                     label = { Text(text = stringResource(R.string.content_description)) },
                     modifier =
-                        Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+                        Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                     value = message,
                     onValueChange = { message = it },
                     placeholder = {
@@ -1751,7 +1879,10 @@ fun ImageVideoDescription(
             }
 
             Button(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
                 onClick = { onAdd(message, selectedServer, sensitiveContent) },
                 shape = QuoteBorder,
                 colors =
@@ -1767,7 +1898,10 @@ fun ImageVideoDescription(
 
 @Composable
 fun SettingSwitchItem(
-    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    modifier: Modifier =
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     title: Int,
