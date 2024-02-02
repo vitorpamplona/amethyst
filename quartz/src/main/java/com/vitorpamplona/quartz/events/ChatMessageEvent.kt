@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip29
+import com.vitorpamplona.quartz.encoders.Nip92
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableSet
@@ -99,7 +99,7 @@ class ChatMessageEvent(
             subject?.let { tags.add(arrayOf("subject", it)) }
             nip94attachments?.let {
                 it.forEach {
-                    Nip29().convertFromFileHeader(it)?.let {
+                    Nip92().convertFromFileHeader(it)?.let {
                         tags.add(it)
                     }
                 }

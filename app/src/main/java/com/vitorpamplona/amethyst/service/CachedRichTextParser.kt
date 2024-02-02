@@ -34,8 +34,8 @@ import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
 import com.vitorpamplona.amethyst.ui.components.tagIndex
 import com.vitorpamplona.amethyst.ui.components.videoExtensions
-import com.vitorpamplona.quartz.encoders.Nip29
 import com.vitorpamplona.quartz.encoders.Nip54
+import com.vitorpamplona.quartz.encoders.Nip92
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
@@ -104,7 +104,7 @@ class RichTextParser() {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54().parse(fullUrl)
-            val tags = Nip29().parse(fullUrl, tags.lists)
+            val tags = Nip92().parse(fullUrl, tags.lists)
 
             ZoomableUrlImage(
                 url = fullUrl,
@@ -116,7 +116,7 @@ class RichTextParser() {
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54().parse(fullUrl)
-            val tags = Nip29().parse(fullUrl, tags.lists)
+            val tags = Nip92().parse(fullUrl, tags.lists)
             ZoomableUrlVideo(
                 url = fullUrl,
                 description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],

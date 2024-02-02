@@ -156,7 +156,7 @@ class PrivateDmEvent(
             /* Privacy issue: DO NOT ADD THESE TO THE TAGS.
             nip94attachments?.let {
                 it.forEach {
-                    Nip29().convertFromFileHeader(it)?.let {
+                    Nip92().convertFromFileHeader(it)?.let {
                         tags.add(it)
                     }
                 }

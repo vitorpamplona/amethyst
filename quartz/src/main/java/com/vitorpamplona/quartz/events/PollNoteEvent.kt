@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip29
+import com.vitorpamplona.quartz.encoders.Nip92
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -105,7 +105,7 @@ class PollNoteEvent(
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             nip94attachments?.let {
                 it.forEach {
-                    Nip29().convertFromFileHeader(it)?.let {
+                    Nip92().convertFromFileHeader(it)?.let {
                         tags.add(it)
                     }
                 }
