@@ -90,6 +90,8 @@
     <string name="add_a_relay">افزودن رله</string>
     <string name="display_name">نمایش نام</string>
     <string name="my_display_name">نام من</string>
+    <string name="my_awesome_name">استریچ باحالیان</string>
+    <string name="welcome">خوش آمدی استریچ!</string>
     <string name="username">نام کاربری</string>
     <string name="my_username">نام کاربری من</string>
     <string name="about_me">درباره من</string>
@@ -143,7 +145,14 @@
     <string name="terms_of_use">شرایط استفاده</string>
     <string name="acceptance_of_terms_is_required">پذیرش شرایط الازمیست</string>
     <string name="key_is_required">کلید الزامیست</string>
+    <string name="name_is_required">نام الزامی است</string>
     <string name="login">ورود</string>
+    <string name="sign_up">ثبت نام</string>
+    <string name="create_account">ایجاد حساب کاربری</string>
+    <string name="how_should_we_call_you">شما را چی صدا بزنیم؟</string>
+    <string name="don_t_have_an_account">حساب کاربری ناستر ندارید؟</string>
+    <string name="already_have_an_account">از قبل حساب کاربری ناستر دارید؟</string>
+    <string name="create_a_new_account">ایجاد حساب کاربری جدید</string>
     <string name="generate_a_new_key">ساختن جفت کلید جدید</string>
     <string name="loading_feed">در حال بارگیری خبرنامه</string>
     <string name="loading_account">بارگذاری حساب کاربری</string>
@@ -318,6 +327,7 @@
     <string name="follow_list_selection">لیست دنبال ها</string>
     <string name="follow_list_kind3follows">همه دنبال ها</string>
     <string name="follow_list_global">همگانی</string>
+    <string name="follow_list_mute_list">لیست خموش</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## از طریق Tor با Orbot متصل شوید
         \n\n1. نصب کنید [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. شروع Orbot
@@ -385,6 +395,9 @@
     <string name="payment">پرداخت</string>
     <string name="cashu">توکن Cashu</string>
     <string name="cashu_redeem">بازپرداخت</string>
+    <string name="cashu_redeem_to_zap">ارسال به کیف پول زپ</string>
+    <string name="cashu_redeem_to_cashu">باز کردن در کیف پول Cashu</string>
+    <string name="cashu_copy_token">کپی کردن توکن</string>
     <string name="no_lightning_address_set">آدرس لایتنینگ تنظیم نشده است</string>
     <string name="copied_token_to_clipboard">توکن به کلیپبورد کپی شد</string>
     <string name="live_stream_live_tag">زنده</string>
@@ -396,6 +409,7 @@
     <string name="are_you_sure_you_want_to_log_out">خروج همه اطلاعات محلی شما را پاک می کند. مطمئن شوید که کلید خصوصی خود را بکاپ گرفته و ذخیره کرده اید تا حساب کاربری تان را از دست ندهید. می خواهید ادامه دهید؟</string>
     <string name="followed_tags">برچسب های دنبال شده</string>
     <string name="relay_setup">رله ها</string>
+    <string name="discover_marketplace">بازار</string>
     <string name="discover_live">زنده</string>
     <string name="discover_community">انجمن</string>
     <string name="discover_chat">گپ</string>
@@ -454,6 +468,7 @@
     <string name="automatically_play_videos_description">پخش خودکار ویدئوها و جیف ها</string>
     <string name="automatically_show_url_preview_description">نشان دادن پیش نمایش URL</string>
     <string name="load_image_description">هنگام بارگیری تصاویر</string>
+    <string name="copy_to_clipboard">کپی به کلیپ‌بورد</string>
     <string name="copy_url_to_clipboard">کپی URL به کلیپبورد</string>
     <string name="copy_the_note_id_to_the_clipboard">کپی شناسه یادداشت به کلیپبورد</string>
     <string name="created_at">ایجاد شده در</string>
@@ -489,6 +504,9 @@
     <string name="paid">پرداخت شد</string>
     <string name="wallet_number">کیف پول %1$s</string>
     <string name="error_opening_external_signer">خطا در بازکردن اپلیکیشن امضا کننده</string>
+    <string name="error_opening_external_signer_description">اپ امضا کننده یافت نشد. بررسی کنید که اپ حذف نشده باشد.</string>
+    <string name="sign_request_rejected">اپ امضا کننده رد کرد</string>
+    <string name="sign_request_rejected_description">مطمئن شوید که اپ امضا کننده این تراکنش را تایید کرده است</string>
     <string name="no_wallet_found_with_error">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد (خطا: %1$s). لطفا کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
     <string name="no_wallet_found">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد. لطفا یک کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
     <string name="hidden_words">کلمات پنهان</string>
@@ -506,6 +524,7 @@
     <string name="cashu_failed_redemption_explainer_already_spent">توکن Cashu خرج شده است.</string>
     <string name="cashu_successful_redemption">Cashu دریافت شد</string>
     <string name="cashu_successful_redemption_explainer">%1$s ساتوشی به کیف پول شما ارسال شد. (کارمزد: %2$s ساتوشی)</string>
+    <string name="cashu_no_wallet_found">هیچ کیف پول Cashu سازگاری در سیستم یافت نشد</string>
     <string name="error_unable_to_fetch_invoice">صورتحساب از سرور گیرنده دریافت نشد</string>
     <string name="wallet_connect_pay_invoice_error_error">ارائه دهنده اتصال کیف پول شما خطای روبرو را داد: %1$s</string>
     <string name="could_not_connect_to_tor">نمی توان به Tor وصل شد</string>
@@ -513,6 +532,7 @@
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">LNUrl از آدرس لایتنینگ \"%1$s\" بدست نیامد. تنظیمات کاربر را بررسی کنید.</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">خدمات لایتنینگ %1$s گیرنده دردسترس نیست. از آدرس لایتنینگ \"%2$s\" محاسبه شد. خطا: %3$s. بررسی کنید آیا سرور کار می کند و آیا آدرس لایتنینگ صحیح است.</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">مشکل %1$s حل نشد. بررسی کنید که به اینترنت متصل باشید، سرور کار کند و آدرس لایتنینگ %2$s صحیح باشد.</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">مشکل %1$s حل نشد. بررسی کنید که به اینترنت متصل باشید، سرور کار کند و آدرس لایتنینگ %2$s صحیح باشد. \n\nخطای %3$s</string>
     <string name="could_not_fetch_invoice_from">صورتحساب از %1$s گرفته نشد</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">خطا در تفسیر JSON از آدرس لایتنینگ. تنظیمات لایتنینگ کاربر را بررسی کنید.</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL بازخوانی در پیکربندی سرور آدرس لایتنینگ یافت نشد</string>
@@ -532,4 +552,49 @@
     <string name="push_server_install_app_description">برای دریافت اعلان ها، می توانید هر اپلیکیشنی که از [Unified Push](https://unifiedpush.org/) پشتیبانی می کند نصب کنید، مانند[Nfty](https://ntfy.sh/).
         پس از نصب، اپلیکیشنی را که می خواهید استفاده کنید در تنظیمات انتخاب کنید.
     </string>
+    <string name="payment_required_title">پیغام از طرف %1$s</string>
+    <string name="thread_title">رسته</string>
+    <string name="send_the_seller_a_message">به فروشنده پیغام دهید</string>
+    <string name="hi_seller_is_this_still_available">سلام %1$s، هنوز موجوده؟</string>
+    <string name="hi_there_is_this_still_available">سلام، هنوز موجوده؟</string>
+    <string name="classifieds">چیزی بفروشید</string>
+    <string name="classifieds_title">عنوان</string>
+    <string name="classifieds_title_placeholder">آیفون 13</string>
+    <string name="classifieds_condition">شرایط</string>
+    <string name="classifieds_category">دسته بندی</string>
+    <string name="classifieds_price">قیمت (به ساتوشی)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">موقعیت مکانی</string>
+    <string name="classifieds_location_placeholder">شهر، استان، کشور</string>
+    <string name="classifieds_condition_new">جدید</string>
+    <string name="classifieds_condition_new_explainer">این مورد نو هست، در بسته بندی اصلی</string>
+    <string name="classifieds_condition_like_new">در حد نو</string>
+    <string name="classifieds_condition_like_new_explainer">دست دوم است، اما ظاهرش تمیز است</string>
+    <string name="classifieds_condition_good">خوب</string>
+    <string name="classifieds_condition_good_explainer">کمی در ظاهر نشان می دهد که دست دوم است</string>
+    <string name="classifieds_condition_fair">منصفانه</string>
+    <string name="classifieds_condition_fair_explainer">هنوز مناسب است و کار می کند</string>
+    <string name="classifieds_category_clothing">پوشاک</string>
+    <string name="classifieds_category_accessories">لوازم جانبی</string>
+    <string name="classifieds_category_electronics">الکترونیکی</string>
+    <string name="classifieds_category_furniture">مبلمان</string>
+    <string name="classifieds_category_collectibles">یادگاری</string>
+    <string name="classifieds_category_books">کتاب</string>
+    <string name="classifieds_category_pets">حیوانات خانگی</string>
+    <string name="classifieds_category_sports">ورزش</string>
+    <string name="classifieds_category_fitness">تناسب اندام</string>
+    <string name="classifieds_category_art">هنر</string>
+    <string name="classifieds_category_crafts">دست سازه</string>
+    <string name="classifieds_category_home">خانه</string>
+    <string name="classifieds_category_office">اداره</string>
+    <string name="classifieds_category_food">خوراکی</string>
+    <string name="classifieds_category_misc">گوناگون</string>
+    <string name="classifieds_category_other">سایر</string>
+    <string name="failed_to_upload_media_no_details">رسانه بارگذاری نشد</string>
+    <string name="could_not_open_the_compressed_file">فایل فشرده باز نشد</string>
+    <string name="error_when_compressing_media">خطا در فشرده سازی رسانه: %1$s</string>
+    <string name="failed_to_upload_media">خطای بارگیری: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">سرور پس از بارگذاری URL نداد</string>
+    <string name="could_not_download_from_the_server">فایل بارگذاری شده از سرور بارگیری نشد</string>
+    <string name="could_not_prepare_local_file_to_upload">فایل محلی برای بارگذاری آماده نشد: %1$s</string>
 </resources>
