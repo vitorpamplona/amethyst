@@ -192,7 +192,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
 
     // Zoomable images
-    implementation 'net.engawapg.lib:zoomable:1.5.3'
+    implementation 'net.engawapg.lib:zoomable:1.6.0'
 
     // Biometrics
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
@@ -229,7 +229,7 @@ dependencies {
     implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
 
     // For QR generation
-    implementation 'com.google.zxing:core:3.5.2'
+    implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
     // Markdown
