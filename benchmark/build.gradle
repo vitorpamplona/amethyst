@@ -54,6 +54,7 @@ dependencies {
     androidTestImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.benchmark:benchmark-junit4:1.2.3'
     androidTestImplementation project(path: ':quartz')
+    androidTestImplementation project(path: ':commons')
 
     // Add your dependencies here. Note that you cannot benchmark code
     // in an app module this way - you will need to move any code you
