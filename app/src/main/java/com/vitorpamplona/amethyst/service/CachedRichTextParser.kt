@@ -45,6 +45,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CancellationException
 import java.util.regex.Pattern
 
@@ -99,12 +100,12 @@ val HTTPRegex =
 class RichTextParser() {
     fun parseMediaUrl(
         fullUrl: String,
-        tags: ImmutableListOfLists<String>,
+        eventTags: ImmutableListOfLists<String>,
     ): ZoomableUrlContent? {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54().parse(fullUrl)
-            val tags = Nip92().parse(fullUrl, tags.lists)
+            val tags = Nip92().parse(fullUrl, eventTags.lists)
 
             ZoomableUrlImage(
                 url = fullUrl,
@@ -116,7 +117,7 @@ class RichTextParser() {
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54().parse(fullUrl)
-            val tags = Nip92().parse(fullUrl, tags.lists)
+            val tags = Nip92().parse(fullUrl, eventTags.lists)
             ZoomableUrlVideo(
                 url = fullUrl,
                 description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
@@ -179,34 +180,34 @@ class RichTextParser() {
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): ImmutableList<ParagraphState> {
-        var paragraphSegments = persistentListOf<ParagraphState>()
+        val lines = content.split('\n')
+        val paragraphSegments = ArrayList<ParagraphState>(lines.size)
 
-        content.split('\n').forEach { paragraph ->
-            var segments = persistentListOf<Segment>()
+        lines.forEach { paragraph ->
             var isDirty = false
-
             val isRTL = isArabic(paragraph)
 
             val wordList = paragraph.trimEnd().split(' ')
+            val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
                 val wordSegment = wordIdentifier(word, images, urls, emojis, tags)
                 if (wordSegment !is RegularTextSegment) {
                     isDirty = true
                 }
-                segments = segments.add(wordSegment)
+                segments.add(wordSegment)
             }
 
             val newSegments =
                 if (isDirty) {
-                    ParagraphState(segments, isRTL)
+                    ParagraphState(segments.toPersistentList(), isRTL)
                 } else {
                     ParagraphState(persistentListOf<Segment>(RegularTextSegment(paragraph)), isRTL)
                 }
 
-            paragraphSegments = paragraphSegments.add(newSegments)
+            paragraphSegments.add(newSegments)
         }
 
-        return paragraphSegments
+        return paragraphSegments.toImmutableList()
     }
 
     fun isNumber(word: String): Boolean {
