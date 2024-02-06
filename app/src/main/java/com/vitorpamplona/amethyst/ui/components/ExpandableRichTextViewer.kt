@@ -64,7 +64,7 @@ fun ExpandableRichTextViewer(
 ) {
     var showFullText by remember { mutableStateOf(false) }
 
-    val whereToCut = remember(content) { ExpandableTextParser().computeWhereToCutIfPostIsTooLong(content) }
+    val whereToCut = remember(content) { ExpandableTextParser.computeWhereToCutIfPostIsTooLong(content) }
 
     val text by
         remember(content) {

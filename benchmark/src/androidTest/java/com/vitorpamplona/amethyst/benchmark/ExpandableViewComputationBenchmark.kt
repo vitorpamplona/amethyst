@@ -24,6 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.ExpandableTextParser
+import com.vitorpamplona.amethyst.commons.nthIndexOf
 import junit.framework.TestCase
 import org.junit.Rule
 import org.junit.Test
@@ -38,8 +39,8 @@ class ExpandableViewComputationBenchmark {
     fun computeTestCase1() {
         benchmarkRule.measureRepeated {
             TestCase.assertEquals(
-                294,
-                ExpandableTextParser().computeWhereToCutIfPostIsTooLong(testCase1),
+                293,
+                testCase1.nthIndexOf('\n', 10),
             )
         }
     }
@@ -48,8 +49,28 @@ class ExpandableViewComputationBenchmark {
     fun computeTestCase2() {
         benchmarkRule.measureRepeated {
             TestCase.assertEquals(
+                423,
+                testCase2.nthIndexOf('\n', 10),
+            )
+        }
+    }
+
+    @Test
+    fun computeTestCase1All() {
+        benchmarkRule.measureRepeated {
+            TestCase.assertEquals(
+                293,
+                ExpandableTextParser.computeWhereToCutIfPostIsTooLong(testCase1),
+            )
+        }
+    }
+
+    @Test
+    fun computeTestCase2All() {
+        benchmarkRule.measureRepeated {
+            TestCase.assertEquals(
                 355,
-                ExpandableTextParser().computeWhereToCutIfPostIsTooLong(testCase2),
+                ExpandableTextParser.computeWhereToCutIfPostIsTooLong(testCase2),
             )
         }
     }

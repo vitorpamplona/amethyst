@@ -22,31 +22,35 @@ package com.vitorpamplona.amethyst.commons
 
 class ExpandableTextParser {
     companion object {
-        const val SHORT_TEXT_LENGTH = 350
-        const val SHORTEN_AFTER_LINES = 10
-    }
+        private const val SHORT_TEXT_LENGTH = 350
+        private const val SHORTEN_AFTER_LINES = 10
 
-    fun computeWhereToCutIfPostIsTooLong(content: String): Int {
-        // Cuts the text in the first space or new line after SHORT_TEXT_LENGTH characters
-        val firstSpaceAfterCut =
-            content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
-        val firstNewLineAfterCut =
-            content.indexOf('\n', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+        fun computeWhereToCutIfPostIsTooLong(content: String): Int {
+            // Cuts the text in the first space or new line after SHORT_TEXT_LENGTH characters
+            val firstSpaceAfterCut =
+                content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+            val firstNewLineAfterCut =
+                content.indexOf('\n', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+            val firstLineAfterLineLimits =
+                content.nthIndexOf('\n', SHORTEN_AFTER_LINES).let { if (it < 0) content.length else it }
 
-        // or after SHORTEN_AFTER_LINES lines
-        val numberOfLines = content.count { it == '\n' }
-
-        var charactersInLines = minOf(firstSpaceAfterCut, firstNewLineAfterCut)
-
-        if (numberOfLines > SHORTEN_AFTER_LINES) {
-            val shortContent = content.lines().take(SHORTEN_AFTER_LINES)
-            charactersInLines = 0
-            for (line in shortContent) {
-                // +1 because new line character is omitted from .lines
-                charactersInLines += (line.length + 1)
-            }
+            return minOf(firstSpaceAfterCut, firstNewLineAfterCut, firstLineAfterLineLimits)
         }
-
-        return minOf(firstSpaceAfterCut, firstNewLineAfterCut, charactersInLines)
     }
+}
+
+fun String.nthIndexOf(
+    ch: Char,
+    N: Int,
+): Int {
+    var occur = N
+    var pos = -1
+
+    while (occur > 0) {
+        // calling the native function multiple times is faster than looping just once
+        pos = indexOf(ch, pos + 1)
+        occur--
+    }
+
+    return if (occur == 0) pos else -1
 }
