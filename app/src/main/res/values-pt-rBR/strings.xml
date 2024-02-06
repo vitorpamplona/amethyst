@@ -4,7 +4,7 @@
     <string name="show_qr">Mostrar QR</string>
     <string name="profile_image">Imagem de perfil</string>
     <string name="your_profile_image">Sua Foto de Perfil</string>
-    <string name="scan_qr">Escanear QR</string>
+    <string name="scan_qr">Ler QR</string>
     <string name="show_anyway">Mostrar de qualquer maneira</string>
     <string name="post_was_flagged_as_inappropriate_by">A postagem foi sinalizada como imprópria por</string>
     <string name="post_not_found">postagem não encontrada</string>
@@ -70,7 +70,7 @@
     <string name="new_channel">Novo Canal</string>
     <string name="channel_name">Nome do Canal</string>
     <string name="my_awesome_group">Meu grupo</string>
-    <string name="picture_url">Url da foto</string>
+    <string name="picture_url">URL da foto</string>
     <string name="description">Descrição</string>
     <string name="about_us">"Sobre nós.. "</string>
     <string name="what_s_on_your_mind">O que você está pensando?</string>
@@ -316,7 +316,7 @@
     <string name="connect_via_tor_short">Configuração do Tor/Orbot</string>
     <string name="connect_via_tor">Conecte-se através da configuração do Orbot</string>
     <string name="do_you_really_want_to_disable_tor_title">Desconectar do Orbot/Tor?</string>
-    <string name="do_you_really_want_to_disable_tor_text">Seus dados serão transferidos imediatamente na rede regular</string>
+    <string name="do_you_really_want_to_disable_tor_text">Seus dados serão transferidos imediatamente na rede aberta</string>
     <string name="yes">Sim</string>
     <string name="no">Não</string>
     <string name="follow_list_selection">Lista de seguidores</string>
@@ -442,7 +442,7 @@
     <string name="zap_forward_title">Encaminhar Zaps para:</string>
     <string name="zap_forward_explainer">Os clientes que suportam encaminharão zaps para o endereço lightning ou perfil de usuário abaixo, em vez do seu</string>
     <string name="geohash_title">Expor localização como </string>
-    <string name="geohash_explainer">Adiciona um Geohash da sua localização à postagem. O público saberá que você está a 5 km (3 milhas) do local atual</string>
+    <string name="geohash_explainer">Adicione um geohash da sua localização à postagem. O público saberá que você está a 5 km (3 milhas) do local atual</string>
     <string name="add_sensitive_content_explainer">Adiciona aviso de conteúdo sensível antes de mostrar seu conteúdo. Isso é ideal para qualquer conteúdo NSFW ou conteúdo que algumas pessoas possam considerar ofensivo ou perturbador</string>
     <string name="new_feature_nip24_might_not_be_available_title">Novo recurso</string>
     <string name="new_feature_nip24_might_not_be_available_description">Ativando este modo requer o Amethyst para enviar uma mensagem de NIP-24 (GiftWrapped, Sealed Direct and Group Messages). NIP-24 é novo e a maioria dos clientes ainda não o implementaram. Certifique-se de que o destinatário está usando um cliente compatível.</string>
@@ -459,7 +459,7 @@
     <string name="messages_new_subject_message_placeholder">Mudando o nome dos novos objetivos.</string>
     <string name="paste_from_clipboard">Colar da área de transferência</string>
     <string name="language_description">Para a interface do aplicativo</string>
-    <string name="theme_description">Tema Escuro, Claro ou Sistema</string>
+    <string name="theme_description">Tema Escuro, Claro ou Padrão</string>
     <string name="automatically_load_images_gifs_description">Carregar automaticamente imagens e GIFs</string>
     <string name="automatically_play_videos_description">Reproduz automaticamente vídeos e GIFs</string>
     <string name="automatically_show_url_preview_description">Mostrar visualizações de URL</string>
@@ -471,7 +471,7 @@
     <string name="created_at">Criado em</string>
     <string name="rules">Regras</string>
     <string name="login_with_external_signer">Login com Amber</string>
-    <string name="status_update">Atualize seu status</string>
+    <string name="status_update">O que você está fazendo?</string>
     <string name="lightning_wallets_not_found">Erro ao analisar mensagem de erro</string>
     <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
     <string name="error_dialog_zap_error">Não foi possível enviar o Zap</string>
