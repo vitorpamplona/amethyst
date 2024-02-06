@@ -49,6 +49,7 @@ fun String.nthIndexOf(
     while (occur > 0) {
         // calling the native function multiple times is faster than looping just once
         pos = indexOf(ch, pos + 1)
+        if (pos == -1) return -1
         occur--
     }
 

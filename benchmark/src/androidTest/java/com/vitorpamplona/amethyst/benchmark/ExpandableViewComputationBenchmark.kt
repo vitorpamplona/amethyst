@@ -75,6 +75,16 @@ class ExpandableViewComputationBenchmark {
         }
     }
 
+    @Test
+    fun computeTestCase3All() {
+        benchmarkRule.measureRepeated {
+            TestCase.assertEquals(
+                65,
+                ExpandableTextParser.computeWhereToCutIfPostIsTooLong(testCase3),
+            )
+        }
+    }
+
     val testCase1 = """
 #Amethyst v0.83.10
 
@@ -137,4 +147,9 @@ Download:
 - [Play Edition](https://github.com/vitorpamplona/amethyst/releases/download/v0.83.10/amethyst-googleplay-universal-v0.83.10.apk )
 - [FOSS Edition - No translations](https://github.com/vitorpamplona/amethyst/releases/download/v0.83.10/amethyst-fdroid-universal-v0.83.10.apk )
 """
+
+    val testCase3 = """#100aDayUntil100k
+Day 5 ✔️
+
+Seems like they may be getting easier"""
 }
