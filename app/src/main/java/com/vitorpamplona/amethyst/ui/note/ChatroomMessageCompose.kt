@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -492,8 +493,14 @@ private fun RenderReply(
     onWantsToReply: (Note) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        val replyTo by remember { derivedStateOf { note.replyTo?.lastOrNull() } }
-        replyTo?.let { note ->
+        val replyTo =
+            produceState(initialValue = note.replyTo?.lastOrNull()) {
+                accountViewModel.unwrapIfNeeded(value) {
+                    value = it
+                }
+            }
+
+        replyTo.value?.let { note ->
             ChatroomMessageCompose(
                 note,
                 null,

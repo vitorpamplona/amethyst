@@ -38,6 +38,10 @@ class GiftWrapEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
+    fun preCachedGift(signer: NostrSigner): Event? {
+        return cachedInnerEvent[signer.pubKey]
+    }
+
     fun cachedGift(
         signer: NostrSigner,
         onReady: (Event) -> Unit,

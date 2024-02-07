@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -1173,6 +1174,55 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     account.userProfile().toBestDisplayName(),
                 ),
             )
+        }
+    }
+
+    fun unwrapIfNeeded(
+        event: EventInterface?,
+        onReady: (Note) -> Unit,
+    ) {
+        when (event) {
+            is GiftWrapEvent -> {
+                event.cachedGift(account.signer) {
+                    val existingNote = LocalCache.getNoteIfExists(it.id)
+                    if (existingNote != null) {
+                        unwrapIfNeeded(existingNote.event, onReady)
+                    } else {
+                        LocalCache.verifyAndConsume(it, null)
+                        unwrapIfNeeded(it, onReady)
+                    }
+                }
+            }
+            is SealedGossipEvent -> {
+                event.cachedGossip(account.signer) {
+                    val existingNote = LocalCache.getNoteIfExists(it.id)
+                    if (existingNote != null) {
+                        unwrapIfNeeded(existingNote.event, onReady)
+                    } else {
+                        // this is not verifiable
+                        LocalCache.justConsume(it, null)
+                        unwrapIfNeeded(it, onReady)
+                    }
+                }
+            }
+            else -> {
+                event?.id()?.let {
+                    LocalCache.getNoteIfExists(it)?.let {
+                        onReady(it)
+                    }
+                }
+            }
+        }
+    }
+
+    fun unwrapIfNeeded(
+        note: Note?,
+        onReady: (Note) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            unwrapIfNeeded(note?.event) {
+                onReady(it)
+            }
         }
     }
 }
