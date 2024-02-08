@@ -312,7 +312,10 @@ fun LoginPage(
                 IconButton(onClick = { dialogOpen = true }) {
                     Icon(
                         painter = painterResource(R.drawable.ic_qrcode),
-                        null,
+                        contentDescription =
+                            stringResource(
+                                R.string.login_with_qr_code,
+                            ),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )

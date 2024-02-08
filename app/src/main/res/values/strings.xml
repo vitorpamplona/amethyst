@@ -3,7 +3,8 @@
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Point to the QR Code</string>
     <string name="show_qr">Show QR</string>
-    <string name="profile_image">Profile Image</string>
+    <string name="profile_image">Profile Picture</string>
+    <string name="your_profile_image">Your Profile Picture</string>
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
@@ -523,6 +524,7 @@
     <string name="new_feature_nip24_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
+    <string name="messages_create_public_private_chat_desription">New Public or Private Group</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>
@@ -543,6 +545,7 @@
     <string name="load_image_description">When to load images</string>
 
     <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
 
@@ -702,4 +705,52 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+
+    <string name="login_with_qr_code">Login with QR Code</string>
+    <string name="route">Route</string>
+    <string name="route_home">Home</string>
+    <string name="route_search">Search</string>
+    <string name="route_discover">Discover</string>
+    <string name="route_messages">Messages</string>
+    <string name="route_notifications">Notifications</string>
+    <string name="route_global">Global</string>
+    <string name="route_video">Shorts</string>
+    <string name="route_security_filters">Security Filters</string>
+
+    <string name="new_post">New Post</string>
+    <string name="new_short">New Shorts: images or videos</string>
+    <string name="new_community_note">New Community Note</string>
+
+    <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
+    <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
+
+    <string name="reply_description">Reply</string>
+    <string name="boost_or_quote_description">Boost Or Quote</string>
+    <string name="like_description">Like</string>
+    <string name="zap_description">Zap</string>
+
+    <string name="profile_image_of_user">Profile Picture of %1$s</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="expand_relay_list">Expand relay list</string>
+    <string name="note_options">Note options</string>
+    <string name="relay_list_selector">Relay list selector</string>
+    <string name="poll">Poll</string>
+    <string name="disable_poll">Disable Poll</string>
+
+    <string name="add_bitcoin_invoice">Bitcoin Invoice</string>
+    <string name="cancel_bitcoin_invoice">Cancel Bitcoin Invoice</string>
+    <string name="cancel_classifieds">Cancel Sell an Item</string>
+
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="cancel_zapraiser">Cancel Zapraiser</string>
+
+    <string name="add_location">Location</string>
+    <string name="remove_location">Remove Location</string>
+
+    <string name="add_zap_split">Zap splits</string>
+    <string name="cancel_zap_split">Cancel Zap split</string>
+
+    <string name="add_content_warning">Add content warning</string>
+    <string name="remove_content_warning">Remove content warning</string>
+    <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
 </resources>

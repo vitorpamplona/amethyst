@@ -2658,7 +2658,7 @@ fun MoreOptionsButton(
         modifier = Size24Modifier,
         onClick = enablePopup,
     ) {
-        VerticalDotsIcon()
+        VerticalDotsIcon(R.string.note_options)
 
         NoteDropDownMenu(
             baseNote,

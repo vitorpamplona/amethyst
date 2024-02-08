@@ -542,23 +542,17 @@ private fun LoggedInUserPictureDrawer(
 ) {
     val profilePicture by
         accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
-    val pubkeyHex = remember { accountViewModel.userProfile().pubkeyHex }
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     IconButton(
         onClick = onClick,
     ) {
         RobohashFallbackAsyncImage(
-            robot = pubkeyHex,
+            robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringResource(id = R.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
-            loadProfilePicture = automaticallyShowProfilePicture,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         )
     }
 }

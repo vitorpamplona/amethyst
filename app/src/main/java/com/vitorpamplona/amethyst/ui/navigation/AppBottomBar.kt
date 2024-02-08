@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -180,7 +181,7 @@ private fun NotifiableIcon(
     Box(route.notifSize) {
         Icon(
             painter = painterResource(id = route.icon),
-            contentDescription = null,
+            contentDescription = stringResource(route.contentDescriptor),
             modifier = route.iconSize,
             tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
         )
@@ -216,7 +217,12 @@ private fun NotificationDotIcon(modifier: Modifier) {
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 fontSize = Font12SP,
-                modifier = remember { Modifier.wrapContentHeight().align(Alignment.TopEnd) },
+                modifier =
+                    remember {
+                        Modifier
+                            .wrapContentHeight()
+                            .align(Alignment.TopEnd)
+                    },
             )
         }
     }

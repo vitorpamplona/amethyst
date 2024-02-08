@@ -213,7 +213,10 @@ fun DrawPlayName(name: String) {
 @Composable
 fun DrawPlayNameIcon(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = StdButtonSizeModifier) {
-        PlayIcon(modifier = StdButtonSizeModifier, tint = MaterialTheme.colorScheme.placeholderText)
+        PlayIcon(
+            modifier = StdButtonSizeModifier,
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
     }
 }
 

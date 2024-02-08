@@ -119,7 +119,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.ChevronRight,
-            null,
+            contentDescription = stringResource(id = R.string.expand_relay_list),
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -156,7 +156,8 @@ fun RenderRelay(
 
     val clickableModifier =
         remember(relay) {
-            Modifier.padding(1.dp)
+            Modifier
+                .padding(1.dp)
                 .size(Size15dp)
                 .clickable(
                     role = Role.Button,
@@ -175,18 +176,21 @@ fun RenderRelay(
                                                 url,
                                                 exceptionMessage,
                                             )
+
                                         Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
                                             context.getString(
                                                 R.string.relay_information_document_error_assemble_url,
                                                 url,
                                                 exceptionMessage,
                                             )
+
                                         Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
                                             context.getString(
                                                 R.string.relay_information_document_error_assemble_url,
                                                 url,
                                                 exceptionMessage,
                                             )
+
                                         Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
                                             context.getString(
                                                 R.string.relay_information_document_error_assemble_url,
@@ -223,7 +227,7 @@ fun RenderRelayIcon(
     RobohashFallbackAsyncImage(
         robot = displayUrl,
         model = iconUrl,
-        contentDescription = stringResource(id = R.string.relay_icon),
+        contentDescription = stringResource(id = R.string.relay_info, displayUrl),
         colorFilter = RelayIconFilter,
         modifier = iconModifier,
         loadProfilePicture = loadProfilePicture,

@@ -379,9 +379,9 @@ private fun RenderShowIndividualReactionsButton(wantsToSeeReactions: MutableStat
             label = "RenderShowIndividualReactionsButton",
         ) {
             if (it) {
-                ExpandLessIcon(modifier = Size22Modifier)
+                ExpandLessIcon(modifier = Size22Modifier, R.string.close_all_reactions_to_this_post)
             } else {
-                ExpandMoreIcon(modifier = Size22Modifier)
+                ExpandMoreIcon(modifier = Size22Modifier, R.string.open_all_reactions_to_this_post)
             }
         }
     }

@@ -340,10 +340,11 @@ fun BaseUserPicture(
     val myIconSize by remember(size) { derivedStateOf { size.div(3.5f) } }
 
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        LoadUserProfilePicture(baseUser) { userProfilePicture ->
+        LoadUserProfilePicture(baseUser) { userProfilePicture, userName ->
             InnerUserPicture(
                 userHex = baseUser.pubkeyHex,
                 userPicture = userProfilePicture,
+                userName = userName,
                 size = size,
                 modifier = innerModifier,
                 accountViewModel = accountViewModel,
@@ -357,17 +358,18 @@ fun BaseUserPicture(
 @Composable
 fun LoadUserProfilePicture(
     baseUser: User,
-    innerContent: @Composable (String?) -> Unit,
+    innerContent: @Composable (String?, String?) -> Unit,
 ) {
-    val userProfile by baseUser.live().profilePictureChanges.observeAsState(baseUser.profilePicture())
+    val userProfile by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
-    innerContent(userProfile)
+    innerContent(userProfile?.profilePicture(), userProfile?.bestDisplayName() ?: userProfile?.bestDisplayName())
 }
 
 @Composable
 fun InnerUserPicture(
     userHex: String,
     userPicture: String?,
+    userName: String?,
     size: Dp,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
@@ -386,7 +388,12 @@ fun InnerUserPicture(
     RobohashFallbackAsyncImage(
         robot = userHex,
         model = userPicture,
-        contentDescription = stringResource(id = R.string.profile_image),
+        contentDescription =
+            if (userName != null) {
+                stringResource(id = R.string.profile_image_of_user, userName)
+            } else {
+                stringResource(id = R.string.profile_image)
+            },
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,
         loadProfilePicture = automaticallyShowProfilePicture,

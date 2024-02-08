@@ -117,7 +117,7 @@ fun RobohashFallbackAsyncImage(
 
             Image(
                 painter = base64Painter,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 modifier = modifier,
                 alignment = alignment,
                 contentScale = contentScale,

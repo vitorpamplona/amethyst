@@ -264,7 +264,7 @@ fun NewPostView(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.relays),
-                                        contentDescription = null,
+                                        contentDescription = stringResource(id = R.string.relay_list_selector),
                                         modifier = Modifier.height(25.dp),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                     )
@@ -1381,7 +1381,7 @@ private fun AddZapraiserButton(
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
+                    contentDescription = stringResource(R.string.add_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -1400,7 +1400,7 @@ private fun AddZapraiserButton(
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
+                    contentDescription = stringResource(R.string.cancel_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -1423,14 +1423,14 @@ fun AddGeoHash(
         if (!postViewModel.wantsToAddGeoHash) {
             Icon(
                 imageVector = Icons.Default.LocationOff,
-                null,
+                contentDescription = stringResource(id = R.string.add_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.LocationOn,
-                null,
+                contentDescription = stringResource(id = R.string.remove_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -1449,14 +1449,14 @@ private fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                null,
+                contentDescription = stringResource(id = R.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                null,
+                contentDescription = stringResource(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -1480,7 +1480,7 @@ private fun ForwardZapTo(
             if (!postViewModel.wantsForwardZapTo) {
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
+                    contentDescription = stringResource(R.string.add_zap_split),
                     modifier =
                         Modifier
                             .size(20.dp)
@@ -1489,7 +1489,7 @@ private fun ForwardZapTo(
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForwardIos,
-                    contentDescription = stringResource(R.string.zaps),
+                    contentDescription = null,
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -1499,7 +1499,7 @@ private fun ForwardZapTo(
             } else {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
-                    contentDescription = stringResource(id = R.string.zaps),
+                    contentDescription = stringResource(id = R.string.cancel_zap_split),
                     modifier =
                         Modifier
                             .size(20.dp)
@@ -1508,7 +1508,7 @@ private fun ForwardZapTo(
                 )
                 Icon(
                     imageVector = Icons.Outlined.ArrowForwardIos,
-                    contentDescription = stringResource(id = R.string.zaps),
+                    contentDescription = null,
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -1538,7 +1538,7 @@ private fun AddClassifiedsButton(
         } else {
             Icon(
                 imageVector = Icons.Default.Sell,
-                contentDescription = stringResource(id = R.string.classifieds),
+                contentDescription = stringResource(id = R.string.cancel_classifieds),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -1562,7 +1562,7 @@ private fun MarkAsSensitive(
             if (!postViewModel.wantsToMarkAsSensitive) {
                 Icon(
                     imageVector = Icons.Default.Visibility,
-                    contentDescription = stringResource(R.string.content_warning),
+                    contentDescription = stringResource(R.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -1571,7 +1571,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(R.string.content_warning),
+                    contentDescription = null,
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -1581,7 +1581,7 @@ private fun MarkAsSensitive(
             } else {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = stringResource(id = R.string.content_warning),
+                    contentDescription = stringResource(id = R.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -1590,7 +1590,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(id = R.string.content_warning),
+                    contentDescription = null,
                     modifier =
                         Modifier
                             .size(10.dp)

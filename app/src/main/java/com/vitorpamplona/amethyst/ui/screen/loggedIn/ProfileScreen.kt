@@ -390,7 +390,10 @@ private fun RenderSurface(
         var tabsSize by remember { mutableStateOf(IntSize.Zero) }
 
         Column(
-            modifier = Modifier.fillMaxSize().onSizeChanged { columnSize = it },
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { columnSize = it },
         ) {
             val coroutineScope = rememberCoroutineScope()
             val scrollState = rememberScrollState()
@@ -403,7 +406,8 @@ private fun RenderSurface(
             Box(
                 modifier =
                     remember {
-                        Modifier.verticalScroll(scrollState)
+                        Modifier
+                            .verticalScroll(scrollState)
                             .nestedScroll(
                                 object : NestedScrollConnection {
                                     override fun onPreScroll(
@@ -726,10 +730,17 @@ private fun ProfileHeader(
         DrawBanner(baseUser, accountViewModel)
 
         Box(
-            modifier = Modifier.padding(horizontal = 10.dp).size(40.dp).align(Alignment.TopEnd),
+            modifier =
+                Modifier
+                    .padding(horizontal = 10.dp)
+                    .size(40.dp)
+                    .align(Alignment.TopEnd),
         ) {
             Button(
-                modifier = Modifier.size(30.dp).align(Alignment.Center),
+                modifier =
+                    Modifier
+                        .size(30.dp)
+                        .align(Alignment.Center),
                 onClick = { popupExpanded = true },
                 shape = ButtonBorder,
                 colors =
@@ -754,7 +765,11 @@ private fun ProfileHeader(
         }
 
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 75.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp)
+                    .padding(top = 75.dp),
         ) {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -789,7 +804,10 @@ private fun ProfileHeader(
                 Spacer(Modifier.weight(1f))
 
                 Row(
-                    modifier = Modifier.height(Size35dp).padding(bottom = 3.dp),
+                    modifier =
+                        Modifier
+                            .height(Size35dp)
+                            .padding(bottom = 3.dp),
                 ) {
                     MessageButton(baseUser, accountViewModel, nav)
 
@@ -969,12 +987,15 @@ private fun DrawAdditionalInfo(
         )
 
         IconButton(
-            modifier = Modifier.size(25.dp).padding(start = 5.dp),
+            modifier =
+                Modifier
+                    .size(25.dp)
+                    .padding(start = 5.dp),
             onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())) },
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
-                null,
+                contentDescription = stringResource(id = R.string.copy_npub_to_clipboard),
                 modifier = Modifier.size(15.dp),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -1000,7 +1021,7 @@ private fun DrawAdditionalInfo(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_qrcode),
-                null,
+                contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
                 modifier = Modifier.size(15.dp),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -1059,7 +1080,10 @@ private fun DrawAdditionalInfo(
                     text = AnnotatedString(identity.identity),
                     onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
                     style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp).weight(1f),
+                    modifier =
+                        Modifier
+                            .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                            .weight(1f),
                 )
             }
         }
@@ -1131,7 +1155,10 @@ fun DisplayLNAddress(
                 text = AnnotatedString(lud16),
                 onClick = { zapExpanded = !zapExpanded },
                 style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp).weight(1f),
+                modifier =
+                    Modifier
+                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
+                        .weight(1f),
             )
         }
 
@@ -1223,12 +1250,21 @@ private fun WatchApp(
 
     appLogo?.let {
         Box(
-            remember { Modifier.size(Size35dp).clickable { nav("Note/${baseApp.idHex}") } },
+            remember {
+                Modifier
+                    .size(Size35dp)
+                    .clickable { nav("Note/${baseApp.idHex}") }
+            },
         ) {
             AsyncImage(
                 model = appLogo,
                 contentDescription = null,
-                modifier = remember { Modifier.size(Size35dp).clip(shape = CircleShape) },
+                modifier =
+                    remember {
+                        Modifier
+                            .size(Size35dp)
+                            .clip(shape = CircleShape)
+                    },
             )
         }
     }
@@ -1343,7 +1379,11 @@ fun BadgeThumb(
     onClick: ((String) -> Unit)? = null,
 ) {
     Box(
-        remember { Modifier.width(size).height(size) },
+        remember {
+            Modifier
+                .width(size)
+                .height(size)
+        },
     ) {
         WatchAndRenderBadgeImage(baseNote, loadProfilePicture, size, pictureModifier, onClick)
     }
@@ -1373,7 +1413,13 @@ private fun WatchAndRenderBadgeImage(
         RobohashAsyncImage(
             robot = "authornotfound",
             contentDescription = stringResource(R.string.unknown_author),
-            modifier = remember { pictureModifier.width(size).height(size).background(bgColor) },
+            modifier =
+                remember {
+                    pictureModifier
+                        .width(size)
+                        .height(size)
+                        .background(bgColor)
+                },
         )
     } else {
         RobohashFallbackAsyncImage(
@@ -1418,7 +1464,8 @@ fun DrawBanner(
             contentDescription = stringResource(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .height(125.dp)
                     .combinedClickable(
                         onClick = { zoomImageDialogOpen = true },
@@ -1438,7 +1485,10 @@ fun DrawBanner(
             painter = painterResource(R.drawable.profile_banner),
             contentDescription = stringResource(id = R.string.profile_banner),
             contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth().height(125.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(125.dp),
         )
     }
 }
@@ -1692,7 +1742,10 @@ private fun MessageButton(
     val scope = rememberCoroutineScope()
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
         onClick = {
             scope.launch(Dispatchers.IO) { accountViewModel.createChatRoomFor(user) { nav("Room/$it") } }
         },
@@ -1727,7 +1780,10 @@ private fun InnerEditButtonPreview() {
 @Composable
 private fun InnerEditButton(onClick: () -> Unit) {
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
         onClick = onClick,
         contentPadding = ZeroPadding,
     ) {

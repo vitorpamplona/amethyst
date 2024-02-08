@@ -37,6 +37,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -87,7 +89,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                null,
+                contentDescription = stringResource(id = R.string.expand_relay_list),
                 modifier = ShowMoreRelaysButtonIconModifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
