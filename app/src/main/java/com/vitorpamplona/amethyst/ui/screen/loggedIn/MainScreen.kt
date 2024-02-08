@@ -270,6 +270,7 @@ fun MainScreen(
                                 videoFeedViewModel.sendToTop()
                             }
                             Route.Discover.base -> {
+                                discoverMarketplaceFeedViewModel.sendToTop()
                                 discoveryLiveFeedViewModel.sendToTop()
                                 discoveryCommunityFeedViewModel.sendToTop()
                                 discoveryChatFeedViewModel.sendToTop()
