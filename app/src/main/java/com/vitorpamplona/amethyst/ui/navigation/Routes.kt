@@ -107,9 +107,9 @@ sealed class Route(
         Route(
             route = "Discover",
             icon = R.drawable.ic_sensors,
-            hasNewItems = { accountViewModel, newNotes ->
-                DiscoverLatestItem.hasNewItems(accountViewModel, newNotes)
-            },
+            // hasNewItems = { accountViewModel, newNotes ->
+            //    DiscoverLatestItem.hasNewItems(accountViewModel, newNotes)
+            // },
         )
 
     object Notification :
