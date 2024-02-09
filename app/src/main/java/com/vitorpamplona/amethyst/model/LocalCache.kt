@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.events.CalendarRSVPEvent
 import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelHideMessageEvent
+import com.vitorpamplona.quartz.events.ChannelListEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChannelMuteUserEvent
@@ -57,6 +58,7 @@ import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
@@ -458,6 +460,20 @@ object LocalCache {
 
     fun consume(
         event: MuteListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: CommunityListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: ChannelListEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -1772,6 +1788,7 @@ object LocalCache {
                 is CalendarTimeSlotEvent -> consume(event, relay)
                 is CalendarRSVPEvent -> consume(event, relay)
                 is ChannelCreateEvent -> consume(event)
+                is ChannelListEvent -> consume(event, relay)
                 is ChannelHideMessageEvent -> consume(event)
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
@@ -1779,6 +1796,7 @@ object LocalCache {
                 is ChatMessageEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
+                is CommunityListEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
                     event.containedPost()?.let { verifyAndConsume(it, relay) }
                     consume(event)

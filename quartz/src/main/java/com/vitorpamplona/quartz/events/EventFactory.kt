@@ -53,14 +53,14 @@ class EventFactory {
             ChannelCreateEvent.KIND -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelHideMessageEvent.KIND ->
                 ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
+            ChannelListEvent.KIND -> ChannelListEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.KIND -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
             ChatMessageEvent.KIND -> {
                 if (id.isBlank()) {
-                    val newId = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
                     ChatMessageEvent(
-                        newId,
+                        Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey(),
                         pubKey,
                         createdAt,
                         tags,
@@ -74,6 +74,7 @@ class EventFactory {
             ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.KIND ->
                 CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+            CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.KIND ->
                 CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
