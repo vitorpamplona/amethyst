@@ -128,6 +128,8 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -396,13 +398,13 @@ fun NoteMaster(
                         )
 
                         IconButton(
-                            modifier = Modifier.then(Modifier.size(24.dp)),
+                            modifier = Size24Modifier,
                             onClick = enablePopup,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
-                                modifier = Modifier.size(15.dp),
+                                modifier = Size15Modifier,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
 

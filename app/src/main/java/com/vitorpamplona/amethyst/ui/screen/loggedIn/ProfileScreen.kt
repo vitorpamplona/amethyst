@@ -155,7 +155,9 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -996,7 +998,7 @@ private fun DrawAdditionalInfo(
             Icon(
                 imageVector = Icons.Default.ContentCopy,
                 contentDescription = stringResource(id = R.string.copy_npub_to_clipboard),
-                modifier = Modifier.size(15.dp),
+                modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }
@@ -1016,13 +1018,13 @@ private fun DrawAdditionalInfo(
         }
 
         IconButton(
-            modifier = Modifier.size(25.dp),
+            modifier = Size25Modifier,
             onClick = { dialogOpen = true },
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_qrcode),
                 contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
-                modifier = Modifier.size(15.dp),
+                modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

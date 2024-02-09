@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
@@ -162,7 +163,7 @@ fun BadgeCompose(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 null,
-                                modifier = Modifier.size(15.dp),
+                                modifier = Size15Modifier,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
 
