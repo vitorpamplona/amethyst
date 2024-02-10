@@ -605,6 +605,7 @@
     <string name="route_discover">Upptäck</string>
     <string name="route_messages">Meddelanden</string>
     <string name="route_notifications">Aviseringar</string>
+    <string name="route_global">Globalt</string>
     <string name="route_video">Kortfilmer</string>
     <string name="route_security_filters">Säkerhetsfilter</string>
     <string name="new_post">Nytt inlägg</string>
@@ -615,6 +616,7 @@
     <string name="reply_description">Svara</string>
     <string name="boost_or_quote_description">Boosta eller citera</string>
     <string name="like_description">Gilla</string>
+    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
     <string name="relay_info">Relä %1$s</string>
     <string name="expand_relay_list">Expandera relälistan</string>
