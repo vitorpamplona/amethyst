@@ -34,7 +34,7 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
     }
 
     override fun feed(): List<User> {
-        return account.flowHiddenUsers.value.hiddenUsers.map { LocalCache.getOrCreateUser(it) }
+        return account.flowHiddenUsers.value.hiddenUsers.reversed().map { LocalCache.getOrCreateUser(it) }
     }
 }
 
