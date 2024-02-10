@@ -607,6 +607,7 @@
     <string name="route_discover">Descobrir</string>
     <string name="route_messages">Mensagens</string>
     <string name="route_notifications">Notificações</string>
+    <string name="route_global">Global</string>
     <string name="route_video">Vídeos Curtos</string>
     <string name="route_security_filters">Filtros de Segurança</string>
     <string name="new_post">Novo Post</string>
@@ -617,6 +618,7 @@
     <string name="reply_description">Responder</string>
     <string name="boost_or_quote_description">Impulsionar ou Citar</string>
     <string name="like_description">Gostar</string>
+    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>
     <string name="relay_info">Repassar %1$s</string>
     <string name="expand_relay_list">Expandir lista de repasse</string>

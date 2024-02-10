@@ -605,11 +605,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
+    <string name="route">Route</string>
     <string name="route_home">Startseite</string>
     <string name="route_search">Suche</string>
     <string name="route_discover">Entdecken</string>
     <string name="route_messages">Nachrichten</string>
     <string name="route_notifications">Benachrichtigungen</string>
+    <string name="route_global">Global</string>
     <string name="route_video">Kurzfilme</string>
     <string name="route_security_filters">Sicherheitsfilter</string>
     <string name="new_post">Neuer Beitrag</string>
@@ -620,6 +622,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="reply_description">Antworten</string>
     <string name="boost_or_quote_description">Boosten oder Zitieren</string>
     <string name="like_description">Gefällt mir</string>
+    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">Profilbild von %1$s</string>
     <string name="relay_info">%1$s weiterleiten</string>
     <string name="expand_relay_list">Rela-Liste erweitern</string>
