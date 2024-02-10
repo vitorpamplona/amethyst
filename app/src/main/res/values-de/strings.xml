@@ -601,4 +601,56 @@ anz der Bedingungen ist erforderlich</string>
     <string name="server_did_not_provide_a_url_after_uploading">Der Server hat nach dem Hochladen keine URL angegeben</string>
     <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
+
+    <string name="login_with_qr_code">Einloggen mit QR-Code</string>
+    <string name="route">Route</string>
+    <string name="route_home">Startseite</string>
+    <string name="route_search">Suche</string>
+    <string name="route_discover">Entdecken</string>
+    <string name="route_messages">Nachrichten</string>
+    <string name="route_notifications">Benachrichtigungen</string>
+    <string name="route_global">Global</string>
+    <string name="route_video">Kurzfilme</string>
+    <string name="route_security_filters">Sicherheitsfilter</string>
+
+    <string name="new_post">Neuer Beitrag</string>
+    <string name="new_short">Neue Kurzfilme: Bilder oder Videos</string>
+    <string name="new_community_note">Neue Community-Notiz</string>
+
+    <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
+    <string name="close_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag schließen</string>
+
+    <string name="reply_description">Antworten</string>
+    <string name="boost_or_quote_description">Boosten oder Zitieren</string>
+    <string name="like_description">Gefällt mir</string>
+    <string name="zap_description">Zap</string>
+
+    <string name="profile_image_of_user">Profilbild von %1$s</string>
+    <string name="relay_info">%1$s weiterleiten</string>
+    <string name="expand_relay_list">Rela-Liste erweitern</string>
+    <string name="note_options">Notizoptionen</string>
+    <string name="relay_list_selector">Rela-Listenauswahl</string>
+    <string name="poll">Umfrage</string>
+    <string name="disable_poll">Umfrage deaktivieren</string>
+
+    <string name="add_bitcoin_invoice">Bitcoin-Rechnung hinzufügen</string>
+    <string name="cancel_bitcoin_invoice">Bitcoin-Rechnung abbrechen</string>
+    <string name="cancel_classifieds">Verkauf eines Artikels abbrechen</string>
+
+    <string name="add_zapraiser">Zapraiser hinzufügen</string>
+    <string name="cancel_zapraiser">Zapraiser abbrechen</string>
+
+    <string name="add_location">Ort hinzufügen</string>
+    <string name="remove_location">Ort entfernen</string>
+
+    <string name="add_zap_split">Zap-Aufteilung hinzufügen</string>
+    <string name="cancel_zap_split">Zap-Aufteilung abbrechen</string>
+
+    <string name="add_content_warning">Inhaltswarnung hinzufügen</string>
+    <string name="remove_content_warning">Inhaltswarnung entfernen</string>
+    <string name="show_npub_as_a_qr_code">Npub als QR-Code anzeigen</string>
+
+    <string name="your_profile_image">Dein Profilbild</string>
+    <string name="messages_create_public_private_chat_desription">Neue öffentliche oder private Gruppe</string>
+    <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
 </resources>

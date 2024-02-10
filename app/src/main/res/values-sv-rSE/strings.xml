@@ -595,4 +595,56 @@
     <string name="server_did_not_provide_a_url_after_uploading">Servern gav inte en URL efter uppladdning</string>
     <string name="could_not_download_from_the_server">Kunde inte ladda ner uppladdade medier från servern</string>
     <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
+
+    <string name="login_with_qr_code">Logga in med QR-kod</string>
+    <string name="route">Rutt</string>
+    <string name="route_home">Hem</string>
+    <string name="route_search">Sök</string>
+    <string name="route_discover">Upptäck</string>
+    <string name="route_messages">Meddelanden</string>
+    <string name="route_notifications">Aviseringar</string>
+    <string name="route_global">Global</string>
+    <string name="route_video">Kortfilmer</string>
+    <string name="route_security_filters">Säkerhetsfilter</string>
+
+    <string name="new_post">Nytt inlägg</string>
+    <string name="new_short">Nya kort: bilder eller videor</string>
+    <string name="new_community_note">Nytt Community-meddelande</string>
+
+    <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
+    <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
+
+    <string name="reply_description">Svara</string>
+    <string name="boost_or_quote_description">Boosta eller citera</string>
+    <string name="like_description">Gilla</string>
+    <string name="zap_description">Zap</string>
+
+    <string name="profile_image_of_user">%1$s Profilbild</string>
+    <string name="relay_info">Relä %1$s</string>
+    <string name="expand_relay_list">Expandera relälistan</string>
+    <string name="note_options">Notalternativ</string>
+    <string name="relay_list_selector">Relälistväljare</string>
+    <string name="poll">Omröstning</string>
+    <string name="disable_poll">Inaktivera omröstning</string>
+
+    <string name="add_bitcoin_invoice">Bitcoin-faktura</string>
+    <string name="cancel_bitcoin_invoice">Avbryt Bitcoin-faktura</string>
+    <string name="cancel_classifieds">Avbryt Sälja en artikel</string>
+
+    <string name="add_zapraiser">Zappraiser</string>
+    <string name="cancel_zapraiser">Avbryt Zappraiser</string>
+
+    <string name="add_location">Plats</string>
+    <string name="remove_location">Ta bort plats</string>
+
+    <string name="add_zap_split">Zap-split</string>
+    <string name="cancel_zap_split">Avbryt Zap-split</string>
+
+    <string name="add_content_warning">Lägg till varning för innehåll</string>
+    <string name="remove_content_warning">Ta bort varning för innehåll</string>
+    <string name="show_npub_as_a_qr_code">Visa npub som en QR-kod</string>
+
+    <string name="your_profile_image">Din profilbild</string>
+    <string name="messages_create_public_private_chat_desription">Ny offentlig eller privat grupp</string>
+    <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
 </resources>
