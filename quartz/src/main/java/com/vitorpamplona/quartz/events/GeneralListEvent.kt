@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
+import java.util.HashSet
 
 @Immutable
 abstract class GeneralListEvent(
@@ -61,12 +62,13 @@ abstract class GeneralListEvent(
         key: String,
         privateTags: Array<Array<String>>?,
     ): ImmutableSet<String> {
-        val privateUserList =
-            privateTags?.let { it.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet() }
-                ?: emptySet()
-        val publicUserList = tags.filter { it.size > 1 && it[0] == key }.map { it[1] }.toSet()
+        val result = HashSet<String>(tags.size + (privateTags?.size ?: 0))
 
-        return (privateUserList + publicUserList).toImmutableSet()
+        privateTags?.let { it.filter { it.size > 1 && it[0] == key }.mapTo(result) { it[1] } }
+
+        tags.filter { it.size > 1 && it[0] == key }.mapTo(result) { it[1] }
+
+        return result.toImmutableSet()
     }
 
     fun isTagged(
