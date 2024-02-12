@@ -113,7 +113,9 @@ class MainActivity : AppCompatActivity() {
                     val accountStateViewModel: AccountStateViewModel = viewModel()
                     accountStateViewModel.serviceManager = serviceManager
 
-                    LaunchedEffect(key1 = Unit) { accountStateViewModel.tryLoginExistingAccountAsync() }
+                    LaunchedEffect(key1 = Unit) {
+                        accountStateViewModel.tryLoginExistingAccountAsync()
+                    }
 
                     AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
                 }
@@ -158,7 +160,9 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         Log.d("Lifetime Event", "MainActivity.onPause")
 
-        LanguageTranslatorService.clear()
+        GlobalScope.launch(Dispatchers.IO) {
+            LanguageTranslatorService.clear()
+        }
         serviceManager.cleanObservers()
 
         // if (BuildConfig.DEBUG) {
