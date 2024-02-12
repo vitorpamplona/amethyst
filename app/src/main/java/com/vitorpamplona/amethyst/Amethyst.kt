@@ -26,6 +26,7 @@ import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
 import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
 import coil.ImageLoader
 import coil.disk.DiskCache
 import com.vitorpamplona.amethyst.service.playback.VideoCache
@@ -85,6 +86,10 @@ class Amethyst : Application() {
 
     fun imageLoaderBuilder(): ImageLoader.Builder {
         return ImageLoader.Builder(applicationContext).diskCache { imageCache }
+    }
+
+    fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences {
+        return EncryptedStorage.preferences(instance, npub)
     }
 
     companion object {

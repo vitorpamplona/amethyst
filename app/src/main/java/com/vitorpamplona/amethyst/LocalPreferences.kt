@@ -233,7 +233,7 @@ object LocalPreferences {
                 if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
-            return EncryptedStorage.preferences(npub)
+            return Amethyst.instance.encryptedStorage(npub)
         }
     }
 
