@@ -42,13 +42,26 @@ open class BaseTextNoteEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun mentions() = taggedUsers()
 
-    open fun replyTos() = taggedEvents()
+    open fun replyTos(): List<HexKey> {
+        val oldStylePositional = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
+
+        val newStyleReplyTos = listOfNotNull(newStyleReply, newStyleRoot)
+
+        return if (newStyleReplyTos.isNotEmpty()) {
+            newStyleReplyTos
+        } else {
+            oldStylePositional
+        }
+    }
 
     fun replyingTo(): HexKey? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it[0] == "e" }?.get(1)
-        val newStyle = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
 
-        return newStyle ?: oldStylePositional
+        return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
     @Transient private var citedUsersCache: Set<HexKey>? = null
