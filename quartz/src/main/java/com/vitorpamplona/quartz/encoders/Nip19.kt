@@ -97,7 +97,12 @@ object Nip19 {
                     "naddr1" -> naddr(bytes)
                     else -> null
                 }
-            parsed?.copy(additionalChars = additionalChars ?: "")
+
+            if (parsed?.hex?.isBlank() == true) {
+                null
+            } else {
+                parsed?.copy(additionalChars = additionalChars ?: "")
+            }
         } catch (e: Throwable) {
             Log.w("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)
             null

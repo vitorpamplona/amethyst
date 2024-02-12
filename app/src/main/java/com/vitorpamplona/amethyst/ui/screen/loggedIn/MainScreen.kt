@@ -473,12 +473,22 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
     openDialogMsg.value?.let { obj ->
         when (obj) {
             is ResourceToastMsg ->
-                InformationDialog(
-                    context.getString(obj.titleResId),
-                    context.getString(obj.resourceId),
-                ) {
-                    accountViewModel.clearToasts()
+                if (obj.params != null) {
+                    InformationDialog(
+                        context.getString(obj.titleResId),
+                        context.getString(obj.resourceId, *obj.params),
+                    ) {
+                        accountViewModel.clearToasts()
+                    }
+                } else {
+                    InformationDialog(
+                        context.getString(obj.titleResId),
+                        context.getString(obj.resourceId),
+                    ) {
+                        accountViewModel.clearToasts()
+                    }
                 }
+
             is StringToastMsg ->
                 InformationDialog(
                     obj.title,

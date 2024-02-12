@@ -753,4 +753,7 @@
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
     <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
+
+    <string name="invalid_nip19_uri">Invalid address</string>
+    <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
 </resources>

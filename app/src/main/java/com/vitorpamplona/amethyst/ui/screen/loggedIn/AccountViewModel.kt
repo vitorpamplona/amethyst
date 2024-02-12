@@ -105,7 +105,11 @@ import kotlin.time.measureTimedValue
 
 @Immutable class StringToastMsg(val title: String, val msg: String) : ToastMsg()
 
-@Immutable class ResourceToastMsg(val titleResId: Int, val resourceId: Int) : ToastMsg()
+@Immutable class ResourceToastMsg(
+    val titleResId: Int,
+    val resourceId: Int,
+    val params: Array<out String>? = null,
+) : ToastMsg()
 
 @Stable
 class AccountViewModel(val account: Account, val settings: SettingsState) : ViewModel(), Dao {
@@ -139,6 +143,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         resourceId: Int,
     ) {
         viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId)) }
+    }
+
+    fun toast(
+        titleResId: Int,
+        resourceId: Int,
+        vararg params: String,
+    ) {
+        viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId, params)) }
     }
 
     fun isWriteable(): Boolean {
