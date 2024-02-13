@@ -623,14 +623,6 @@ private fun DisplayFullNote(
 
 @Composable
 fun HashTag(
-    word: HashTagSegment,
-    nav: (String) -> Unit,
-) {
-    RenderHashtag(word, nav)
-}
-
-@Composable
-private fun RenderHashtag(
     segment: HashTagSegment,
     nav: (String) -> Unit,
 ) {

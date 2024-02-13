@@ -32,6 +32,7 @@ fun checkForHashtagWithIcon(
     primary: Color,
 ): HashtagIcon? {
     return when (tag.lowercase()) {
+        "₿itcoin",
         "bitcoin",
         "btc",
         "timechain",
