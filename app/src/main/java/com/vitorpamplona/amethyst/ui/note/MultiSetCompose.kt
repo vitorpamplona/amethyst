@@ -542,11 +542,6 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     author: User,
     accountViewModel: AccountViewModel,
 ) {
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     WatchUserMetadata(author) { baseUserPicture ->
         // Crossfade(targetState = baseUserPicture) { userPicture ->
         RobohashFallbackAsyncImage(
@@ -555,7 +550,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
-            loadProfilePicture = automaticallyShowProfilePicture,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         )
         // }
     }
