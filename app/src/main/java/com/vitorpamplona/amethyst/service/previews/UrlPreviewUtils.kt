@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.previews
 
 import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
@@ -91,6 +92,7 @@ suspend fun getDocument(
     withContext(Dispatchers.IO) {
         val request: Request = Request.Builder().url(url).get().build()
         HttpClientManager.getHttpClient().newCall(request).execute().use {
+            checkNotInMainThread()
             if (it.isSuccessful) {
                 val mimeType =
                     it.headers.get("Content-Type")?.toMediaType()
