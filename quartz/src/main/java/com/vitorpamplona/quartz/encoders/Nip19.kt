@@ -32,6 +32,7 @@ object Nip19 {
         EVENT,
         RELAY,
         ADDRESS,
+        NSEC,
     }
 
     enum class TlvTypes(val id: Byte) {

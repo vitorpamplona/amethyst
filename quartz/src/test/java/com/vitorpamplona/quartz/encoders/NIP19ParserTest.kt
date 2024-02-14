@@ -25,6 +25,18 @@ import org.junit.Test
 
 class NIP19ParserTest {
     @Test
+    fun nCryptSecParser() {
+        val result =
+            Nip19.uriToRoute(
+                "nostr:ncryptsec1qgg9947rlpvqu76pj5ecreduf9jxhselq2nae2kghhvd5g7dgjtcxfqtd67p9m0w57lspw8gsq6yphnm8623nsl8xn9j4jdzz84zm3frztj3z7s35vpzmqf6ksu8r89qk5z2zxfmu5gv8th8wclt0h4p",
+            )
+        assertEquals(
+            "30023:460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c:",
+            result?.hex,
+        )
+    }
+
+    @Test
     fun nAddrParser() {
         val result =
             Nip19.uriToRoute(

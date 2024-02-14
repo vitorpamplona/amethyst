@@ -54,6 +54,8 @@ dependencies {
     // immutable collections to avoid recomposition
     api('org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7')
 
+    api('com.lambdaworks:scrypt:1.4.0')
+
     // Parses URLs from Text:
     api "io.github.url-detector:url-detector:0.1.23"
 
