@@ -194,12 +194,6 @@
     <string name="mark_all_new_as_read">Marcar todos los nuevos como leídos</string>
     <string name="mark_all_as_read">Marcar todos como leídos</string>
     <string name="backup_keys">Respaldar claves</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Consejos sobre la protección y la copia de seguridad de las claves
-        \n\nTu cuenta está protegida por una clave secreta. Esta clave es una cadena aleatoria y larga que empieza por **nsec1**. Cualquiera que tenga acceso a tu clave secreta puede publicar contenido usando tu identidad.
-        \n\n- **No** guardes la clave secreta en ningún sitio web o software en los que no confíes.
-        \n- Los desarrolladores de Amethyst **nunca** te pedirán la clave secreta.
-        \n- **Sí** puedes realizar una copia de seguridad de la clave secreta para recuperar la cuenta. Para ello, te recomendamos usar un gestor de contraseñas.
-    </string>
     <string name="secret_key_copied_to_clipboard">Clave secreta (nsec) copiada al portapapeles</string>
     <string name="copy_my_secret_key">Copiar mi clave secreta</string>
     <string name="biometric_authentication_failed">Error de autenticación</string>

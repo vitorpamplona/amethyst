@@ -193,12 +193,6 @@
     <string name="mark_all_new_as_read">ضع علامة على جميع الرسائل/الاشعارات الجديدة كمقروء</string>
     <string name="mark_all_as_read">ضع علامة على جميع الرسائل/الاشعارات كمقروء</string>
     <string name="backup_keys">قم بعمل نسخة احتياطية للمفاتيح</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## النصائح الرئيسية للنسخ الاحتياطي والسلامة
-        \n\n- يتم تأمين حسابك بمفتاح سري. المفتاح السري هو سلسلة عشوائية طويلة تبدأ بـ **nsec1**. أي شخص لديه حق الوصول إلى مفتاحك السري يمكنه نشر المحتوى باستخدام هويتك.
-        \n\n- لا تقم بوضع مفتاحك السري في أي موقع أو برنامج لا تثق به.
-        \n- مطوري Amethyst لن يطلبوا منك **أبدا** المفتاح السري الخاص بك.
-        \n- حافظ على نسخة احتياطية آمنة لمفتاحك السري لاسترداد الحساب. نوصي باستخدام برنامج لادارة كلمات المرور.
-    </string>
     <string name="secret_key_copied_to_clipboard">مفتاحك السري (nsec) قد تم نسخه في الحافظة</string>
     <string name="copy_my_secret_key">إنسخ مفتاحي السري</string>
     <string name="biometric_authentication_failed">فشلت المصادقة</string>

@@ -195,12 +195,6 @@
     <string name="mark_all_new_as_read">Marcar todas novas solicitações como lidas</string>
     <string name="mark_all_as_read">Marcar todas como lidas</string>
     <string name="backup_keys">Copia de segurança das chaves</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Backup de chaves e dicas de segurança
-        \n\nSua conta é protegida por uma chave secreta. A chave é uma string aleatória longa começando com **nsec1**. Qualquer pessoa que tenha acesso à sua chave secreta pode publicar conteúdo usando sua identidade.
-        \n\n- **Não** coloque sua chave secreta em qualquer site ou software em que não confie.
-        \n- Os desenvolvedores do Amethyst **nunca** pedirão sua chave secreta.
-        \n- **Faça** um backup seguro de sua chave secreta para recuperação de conta. Recomendamos o uso de um gerenciador de senhas.
-    </string>
     <string name="secret_key_copied_to_clipboard">Chave secreta (nsec) copiada</string>
     <string name="copy_my_secret_key">Copiar minha chave secreta</string>
     <string name="biometric_authentication_failed">Autenticação falhou</string>

@@ -177,12 +177,6 @@
     <string name="mark_all_new_as_read">すべての「新規リクエスト」を既読にする</string>
     <string name="mark_all_as_read">すべて既読にする</string>
     <string name="backup_keys">鍵をバックアップ</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## 鍵のバックアップと安全に利用するためのTips
-        \n\nあなたのアカウントは秘密鍵によって保護されています。秘密鍵は **nsec1** から始まる長いランダムな文字列です。秘密鍵にアクセスできる人は、あなたのアカウントを使用してコンテンツを公開することができます。
-        \n\n- 信頼できないウェブサイトやソフトウェアには、秘密鍵を **渡さない** でください。
-        \n- Amethystの開発者があなたに秘密鍵をお聞きすることは **ありません** 。
-        \n- アカウント復旧のために、秘密鍵を安全な方法で **バックアップして** ください 。パスワードマネージャーの利用を推奨しています。
-    </string>
     <string name="secret_key_copied_to_clipboard">秘密鍵 (nsec) をクリップボードにコピーしました</string>
     <string name="copy_my_secret_key">秘密鍵をコピー</string>
     <string name="biometric_authentication_failed">認証に失敗しました</string>

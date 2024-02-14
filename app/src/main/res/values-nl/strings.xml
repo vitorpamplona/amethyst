@@ -195,12 +195,6 @@
     <string name="mark_all_new_as_read">Nieuwe markeren als gelezen</string>
     <string name="mark_all_as_read">Alles markeren als gelezen</string>
     <string name="backup_keys">Back-up sleutels</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Sleutel back-up en veiligheidstips
-        \n\nUw account is beveiligd met een privésleutel. De sleutel is een lange, willekeurige reeks die begint met **nsec1**. Iedereen die toegang heeft tot uw privésleutel kan inhoud publiceren met uw identiteit.
-        \n\n- Voer uw privésleutel **nooit** in een website of software die u niet vertrouwt.
-        \n- Amethyst ontwikkelaars zullen u **nooit** om uw privésleutel vragen.
-        \n- **Bewaar** een veilige back-up van uw privésleutel voor accountherstel. Wij raden u aan een wachtwoordmanager te gebruiken.
-    </string>
     <string name="secret_key_copied_to_clipboard">Privésleutel (nsec) gekopieerd naar klembord</string>
     <string name="copy_my_secret_key">Kopieer mijn privésleutel</string>
     <string name="biometric_authentication_failed">Authenticatie mislukt</string>
