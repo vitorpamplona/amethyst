@@ -176,6 +176,10 @@ Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-
 
 You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
 
+By contributing to this repository, you agree to license your work under the MIT license. Any work
+contributed where you are not the original author must contain its license header with the original
+author(s) and source.
+
 ## How to Deploy
 
 1. Generate a new signing key
